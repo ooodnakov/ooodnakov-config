@@ -84,6 +84,22 @@ Set-Location $HOME\src\ooodnakov-config
 .\scripts\setup.ps1
 ```
 
+## Removal
+
+To remove the managed Unix symlinks and restore the latest backups when available:
+
+```bash
+cd ~/src/ooodnakov-config
+chmod +x ./scripts/delete.sh
+./scripts/delete.sh
+```
+
+To remove only the managed links without restoring backups:
+
+```bash
+./scripts/delete.sh remove
+```
+
 ## Fonts
 
 The repo now includes the Meslo Nerd Font files used by the tracked prompt and WezTerm config:
