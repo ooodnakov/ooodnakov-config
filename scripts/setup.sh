@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOME_DIR="${HOME}"
@@ -13,6 +13,7 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 DEPENDENCY_SUMMARY=()
 TOOL_SUMMARY=()
+FAILURES=()
 PACKAGE_MANAGER=""
 APT_UPDATED=0
 
@@ -99,10 +100,17 @@ run_with_spinner() {
       printf "[failed] %s\n" "$label"
     fi
     cat "$logfile" >&2
+    FAILURES+=("$label")
   fi
 
   rm -f "$logfile"
   return $status
+}
+
+record_failure() {
+  local label="$1"
+  FAILURES+=("$label")
+  printf "[failed] %s\n" "$label" >&2
 }
 
 detect_package_manager() {
@@ -238,8 +246,14 @@ link_file() {
   local source="$1"
   local target="$2"
   mkdir -p "$(dirname "$target")"
-  backup_target "$source" "$target"
-  ln -sfn "$source" "$target"
+  backup_target "$source" "$target" || {
+    record_failure "Backing up $target"
+    return 1
+  }
+  ln -sfn "$source" "$target" || {
+    record_failure "Linking $target"
+    return 1
+  }
   echo "linked $target"
 }
 
@@ -279,11 +293,11 @@ sync_repo() {
   local target="$3"
 
   if [ ! -d "$target/.git" ]; then
-    run_with_spinner "Cloning $(basename "$target")" git clone "$repo_url" "$target"
+    run_with_spinner "Cloning $(basename "$target")" git clone "$repo_url" "$target" || return 1
   fi
 
-  run_with_spinner "Updating $(basename "$target")" git -C "$target" fetch origin "$ref"
-  run_with_spinner "Pinning $(basename "$target")" git -c advice.detachedHead=false -C "$target" checkout "$ref"
+  run_with_spinner "Updating $(basename "$target")" git -C "$target" fetch origin "$ref" || return 1
+  run_with_spinner "Pinning $(basename "$target")" git -c advice.detachedHead=false -C "$target" checkout "$ref" || return 1
 }
 
 ensure_ssh_include() {
@@ -295,8 +309,10 @@ ensure_ssh_include() {
   touch "$ssh_config"
 
   if ! grep -Fqx "$include_line" "$ssh_config"; then
-    printf "%s\n\n" "$include_line" | cat - "$ssh_config" > "$ssh_config.tmp"
-    mv "$ssh_config.tmp" "$ssh_config"
+    printf "%s\n\n" "$include_line" | cat - "$ssh_config" > "$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config" || {
+      record_failure "Updating SSH include config"
+      return 1
+    }
   fi
 }
 
@@ -305,7 +321,7 @@ install_fonts() {
 
   if [ -d "$source_dir" ]; then
     mkdir -p "$FONT_TARGET_DIR"
-    cp "$source_dir"/*.ttf "$FONT_TARGET_DIR"/
+    cp "$source_dir"/*.ttf "$FONT_TARGET_DIR"/ || record_failure "Copying bundled fonts"
     if command -v fc-cache >/dev/null 2>&1; then
       run_with_spinner "Refreshing font cache" fc-cache -f "$FONT_TARGET_DIR" >/dev/null 2>&1 || true
     fi
@@ -315,18 +331,13 @@ install_fonts() {
 install_managed_tools() {
   local bin_dir="$STATE_HOME/bin"
 
-  sync_repo "$NVM_REPO" "$NVM_REF" "$HOME_DIR/.nvm"
-  TOOL_SUMMARY+=("nvm: synced")
-  sync_repo "$K_REPO" "$K_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/k"
-  TOOL_SUMMARY+=("k: synced")
-  sync_repo "$MARKER_REPO" "$MARKER_REF" "$STATE_HOME/marker"
-  TOOL_SUMMARY+=("marker: synced")
-  sync_repo "$TODO_REPO" "$TODO_REF" "$STATE_HOME/todo"
-  TOOL_SUMMARY+=("todo.txt-cli: synced")
+  sync_repo "$NVM_REPO" "$NVM_REF" "$HOME_DIR/.nvm" && TOOL_SUMMARY+=("nvm: synced") || TOOL_SUMMARY+=("nvm: failed")
+  sync_repo "$K_REPO" "$K_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/k" && TOOL_SUMMARY+=("k: synced") || TOOL_SUMMARY+=("k: failed")
+  sync_repo "$MARKER_REPO" "$MARKER_REF" "$STATE_HOME/marker" && TOOL_SUMMARY+=("marker: synced") || TOOL_SUMMARY+=("marker: failed")
+  sync_repo "$TODO_REPO" "$TODO_REF" "$STATE_HOME/todo" && TOOL_SUMMARY+=("todo.txt-cli: synced") || TOOL_SUMMARY+=("todo.txt-cli: failed")
 
   mkdir -p "$bin_dir"
-  ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh"
-  TOOL_SUMMARY+=("todo.sh: linked into $bin_dir")
+  ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh" && TOOL_SUMMARY+=("todo.sh: linked into $bin_dir") || TOOL_SUMMARY+=("todo.sh: link failed")
 
   if command -v python3 >/dev/null 2>&1 && [ -f "$STATE_HOME/marker/install.py" ]; then
     if python3 "$STATE_HOME/marker/install.py" >/dev/null 2>&1; then
@@ -360,6 +371,13 @@ print_summary() {
   for item in "${TOOL_SUMMARY[@]}"; do
     echo "  - $item"
   done
+
+  if [ "${#FAILURES[@]}" -gt 0 ]; then
+    echo "Failures:"
+    for item in "${FAILURES[@]}"; do
+      echo "  - $item"
+    done
+  fi
 }
 
 update_repo() {
@@ -403,24 +421,24 @@ mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
 
 install_optional_dependencies
 
-sync_repo "$OH_MY_ZSH_REPO" "$OH_MY_ZSH_REF" "$STATE_HOME/oh-my-zsh"
-sync_repo "$P10K_REPO" "$P10K_REF" "$STATE_HOME/powerlevel10k"
-sync_repo "$ZSH_AUTOSUGGESTIONS_REPO" "$ZSH_AUTOSUGGESTIONS_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions"
-sync_repo "$ZSH_HIGHLIGHTING_REPO" "$ZSH_HIGHLIGHTING_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
-sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search"
-sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete"
+sync_repo "$OH_MY_ZSH_REPO" "$OH_MY_ZSH_REF" "$STATE_HOME/oh-my-zsh" || TOOL_SUMMARY+=("oh-my-zsh: failed")
+sync_repo "$P10K_REPO" "$P10K_REF" "$STATE_HOME/powerlevel10k" || TOOL_SUMMARY+=("powerlevel10k: failed")
+sync_repo "$ZSH_AUTOSUGGESTIONS_REPO" "$ZSH_AUTOSUGGESTIONS_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" || TOOL_SUMMARY+=("zsh-autosuggestions: failed")
+sync_repo "$ZSH_HIGHLIGHTING_REPO" "$ZSH_HIGHLIGHTING_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" || TOOL_SUMMARY+=("zsh-syntax-highlighting: failed")
+sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" || TOOL_SUMMARY+=("zsh-history-substring-search: failed")
+sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" || TOOL_SUMMARY+=("zsh-autocomplete: failed")
 install_managed_tools
 
-link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
-link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"
-link_file "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm"
-link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov"
+link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc" || true
+link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh" || true
+link_file "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm" || true
+link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
 
 mkdir -p "$CONFIG_HOME/ohmyposh" "$CONFIG_HOME/powershell"
-link_file "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json"
-link_file "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1"
+link_file "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json" || true
+link_file "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1" || true
 
-ensure_ssh_include
+ensure_ssh_include || true
 install_fonts
 
 if is_interactive && [ -f "$HOME_DIR/.zshrc" ]; then
