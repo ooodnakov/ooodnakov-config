@@ -182,7 +182,7 @@ sync_repo() {
   fi
 
   git -C "$target" fetch origin "$ref"
-  git -C "$target" checkout "$ref"
+  git -c advice.detachedHead=false -C "$target" checkout "$ref"
 }
 
 ensure_ssh_include() {
