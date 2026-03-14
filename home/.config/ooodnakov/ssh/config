@@ -1,0 +1,16 @@
+Host site
+    HostName 45.12.138.163
+    User root
+
+Host site2
+    HostName 45.12.138.163
+    User alex
+
+Host orange
+    HostName 192.168.1.201
+    User rem
+
+Host router
+    HostName 192.168.1.1
+    User root
+

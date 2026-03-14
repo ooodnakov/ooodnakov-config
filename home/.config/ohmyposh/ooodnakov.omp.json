@@ -1,0 +1,73 @@
+{
+  "final_space": true,
+  "console_title": true,
+  "console_title_style": "template",
+  "console_title_template": "{{if .Root}}root :: {{end}}{{.Shell}} :: {{.Folder}}",
+  "blocks": [
+    {
+      "type": "rprompt",
+      "alignment": "right",
+      "segments": [
+        {
+          "type": "executiontime",
+          "style": "plain",
+          "foreground": "#FFCE5C",
+          "background": "#2f2f2f",
+          "properties": {
+            "threshold": 500,
+            "postfix": "<#fafafa> \uf252 </>"
+          }
+        },
+        {
+          "type": "time",
+          "style": "diamond",
+          "foreground": "#fafafa",
+          "background": "#2f2f2f",
+          "leading_diamond": "\ue0ba",
+          "trailing_diamond": "\ue0bc",
+          "properties": {
+            "time_format": "15:04:05",
+            "postfix": "<#007ACC> \uf64f </>"
+          }
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+        {
+          "type": "os",
+          "style": "diamond",
+          "foreground": "#ffffff",
+          "background": "#2f2f2f",
+          "leading_diamond": "\ue0ba",
+          "properties": {
+            "linux": "\ue712",
+            "macos": "\ue711",
+            "windows": "\ue70f",
+            "wsl": "\ue712"
+          }
+        },
+        {
+          "type": "path",
+          "style": "diamond",
+          "foreground": "#3FA5A6",
+          "background": "#2f2f2f",
+          "properties": {
+            "style": "folder",
+            "home_icon": "\uf015 ~"
+          }
+        },
+        {
+          "type": "git",
+          "style": "diamond",
+          "foreground": "#ffffff",
+          "background": "#3c873a"
+        }
+      ]
+    }
+  ],
+  "version": 3
+}
+
