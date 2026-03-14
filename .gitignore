@@ -10,3 +10,5 @@ home/.config/ooodnakov/local/*.lua
 home/.config/ooodnakov/local/*.ssh
 
 .zcompdump*
+
+.history
