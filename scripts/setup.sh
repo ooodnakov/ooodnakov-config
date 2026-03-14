@@ -273,6 +273,7 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" zsh zsh "default shell support"
   maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
   maybe_install_dependency "$manager" eza eza "modern ls aliases"
+  maybe_install_dependency "$manager" dua dua-cli "disk usage analysis"
   maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
   maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
   maybe_note_dependency k "manual install if you want the standalone k command"
