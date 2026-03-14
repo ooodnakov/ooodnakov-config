@@ -4,7 +4,6 @@ This directory keeps reference copies of upstream or locally diverged config tre
 
 ## Layout
 
-- `upstream/wezterm-config`: snapshot of `KevinSilvester/wezterm-config`
 - `upstream/ezsh`: snapshot of `jotyGill/ezsh`
 - `local-snapshots/wezterm-current`: snapshot of the current local WezTerm checkout from this machine
 

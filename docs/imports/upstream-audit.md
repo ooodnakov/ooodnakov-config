@@ -6,7 +6,6 @@ This file records what was inspected and what was imported into this repo.
 
 Clean upstream snapshots were copied into:
 
-- `third_party/upstream/wezterm-config`
 - `third_party/upstream/ezsh`
 
 Your current local WezTerm checkout was also preserved as:
@@ -36,6 +35,7 @@ Interpretation:
 
 - the local WezTerm tree is effectively a personal fork
 - keeping a reference copy in `third_party/local-snapshots/wezterm-current` is justified
+- the vendored upstream snapshot was later removed to keep repo size down; upstream provenance remains documented here
 - the active tracked config in `home/.config/wezterm` should stay smaller and more reproducible than this fork
 
 ### jotyGill/ezsh
