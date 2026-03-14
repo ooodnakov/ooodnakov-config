@@ -20,6 +20,7 @@ The repo keeps only opinionated config and bootstrap logic. Secrets, tokens, key
 
 - subtree-managed upstream copy of `ezsh`
 - snapshot of the current local WezTerm fork from this machine
+- bundled `MesloLGS NF` font files used by the shell and WezTerm defaults
 - audit notes from inspecting local config and remote hosts `orange` and `site`
 
 These live under [`third_party`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/third_party) and [`docs/imports`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/docs/imports). They are not installed by the setup scripts.
@@ -48,6 +49,16 @@ git clone git@github.com:ooodnakov/ooodnakov-config.git $HOME\src\ooodnakov-conf
 Set-Location $HOME\src\ooodnakov-config
 .\scripts\setup.ps1
 ```
+
+## Fonts
+
+The repo now includes the Meslo Nerd Font files used by the tracked prompt and WezTerm config:
+
+- [`fonts/meslo`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/fonts/meslo)
+
+On Linux, `./scripts/setup.sh` installs these into `~/.local/share/fonts/ooodnakov` and refreshes the font cache when `fc-cache` is available.
+
+On Windows and macOS, the files are bundled here for manual installation if needed.
 
 ## Environment layout
 
