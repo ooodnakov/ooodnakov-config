@@ -14,6 +14,7 @@ INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 DEPENDENCY_SUMMARY=()
 TOOL_SUMMARY=()
 PACKAGE_MANAGER=""
+APT_UPDATED=0
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
@@ -61,6 +62,49 @@ prompt_yes_no() {
   esac
 }
 
+run_with_spinner() {
+  local label="$1"
+  shift
+  local logfile pid spinner_index=0
+  local -a frames=('-' '\' '|' '/')
+
+  logfile="$(mktemp)"
+  (
+    "$@"
+  ) >"$logfile" 2>&1 &
+  pid=$!
+
+  if is_interactive; then
+    while kill -0 "$pid" 2>/dev/null; do
+      printf "\r[%s] %s" "${frames[$spinner_index]}" "$label" > /dev/tty
+      spinner_index=$(((spinner_index + 1) % ${#frames[@]}))
+      sleep 0.12
+    done
+    printf "\r" > /dev/tty
+  fi
+
+  wait "$pid"
+  local status=$?
+
+  if [ $status -eq 0 ]; then
+    if is_interactive; then
+      printf "[ok] %s\n" "$label" > /dev/tty
+    else
+      printf "[ok] %s\n" "$label"
+    fi
+  else
+    if is_interactive; then
+      printf "[failed] %s\n" "$label" > /dev/tty
+    else
+      printf "[failed] %s\n" "$label"
+    fi
+    cat "$logfile" >&2
+  fi
+
+  rm -f "$logfile"
+  return $status
+}
+
 detect_package_manager() {
   if command -v apt-get >/dev/null 2>&1; then
     echo apt
@@ -82,20 +126,23 @@ install_packages() {
   shift
   case "$manager" in
     apt)
-      sudo apt-get update
-      sudo apt-get install -y "$@"
+      if [ "$APT_UPDATED" -eq 0 ]; then
+        run_with_spinner "Updating apt package index" sudo apt-get -qq update
+        APT_UPDATED=1
+      fi
+      run_with_spinner "Installing packages: $*" sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@"
       ;;
     dnf)
-      sudo dnf install -y "$@"
+      run_with_spinner "Installing packages: $*" sudo dnf install -y "$@"
       ;;
     pacman)
-      sudo pacman -Sy --needed --noconfirm "$@"
+      run_with_spinner "Installing packages: $*" sudo pacman -Sy --needed --noconfirm "$@"
       ;;
     zypper)
-      sudo zypper install -y "$@"
+      run_with_spinner "Installing packages: $*" sudo zypper install -y "$@"
       ;;
     brew)
-      HOMEBREW_NO_AUTO_UPDATE=1 brew install "$@"
+      run_with_spinner "Installing packages: $*" env HOMEBREW_NO_AUTO_UPDATE=1 brew install "$@"
       ;;
     *)
       return 1
@@ -193,11 +240,11 @@ sync_repo() {
   local target="$3"
 
   if [ ! -d "$target/.git" ]; then
-    git clone "$repo_url" "$target"
+    run_with_spinner "Cloning $(basename "$target")" git clone "$repo_url" "$target"
   fi
 
-  git -C "$target" fetch origin "$ref"
-  git -c advice.detachedHead=false -C "$target" checkout "$ref"
+  run_with_spinner "Updating $(basename "$target")" git -C "$target" fetch origin "$ref"
+  run_with_spinner "Pinning $(basename "$target")" git -c advice.detachedHead=false -C "$target" checkout "$ref"
 }
 
 ensure_ssh_include() {
@@ -221,7 +268,7 @@ install_fonts() {
     mkdir -p "$FONT_TARGET_DIR"
     cp "$source_dir"/*.ttf "$FONT_TARGET_DIR"/
     if command -v fc-cache >/dev/null 2>&1; then
-      fc-cache -f "$FONT_TARGET_DIR" >/dev/null 2>&1 || true
+      run_with_spinner "Refreshing font cache" fc-cache -f "$FONT_TARGET_DIR" >/dev/null 2>&1 || true
     fi
   fi
 }
