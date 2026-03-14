@@ -10,6 +10,7 @@ FONT_TARGET_DIR="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
 COMMAND="${1:-install}"
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
@@ -23,6 +24,108 @@ ZSH_HISTORY_REPO="https://github.com/zsh-users/zsh-history-substring-search.git"
 ZSH_HISTORY_REF="14c8d2e0ffaee98f2df9850b19944f32546fdea5"
 ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
 ZSH_AUTOCOMPLETE_REF="2be4e7f0b435138b0237d4f068b2a882fb06edc4"
+
+is_interactive() {
+  case "$INTERACTIVE" in
+    always) return 0 ;;
+    never) return 1 ;;
+    auto) [ -t 0 ] && [ -t 1 ] ;;
+    *) return 1 ;;
+  esac
+}
+
+prompt_yes_no() {
+  local prompt="$1"
+  local reply
+
+  if ! is_interactive; then
+    return 1
+  fi
+
+  printf "%s [y/N] " "$prompt" >&2
+  read -r reply
+  case "$reply" in
+    y|Y|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+detect_package_manager() {
+  if command -v apt-get >/dev/null 2>&1; then
+    echo apt
+  elif command -v dnf >/dev/null 2>&1; then
+    echo dnf
+  elif command -v pacman >/dev/null 2>&1; then
+    echo pacman
+  elif command -v zypper >/dev/null 2>&1; then
+    echo zypper
+  elif command -v brew >/dev/null 2>&1; then
+    echo brew
+  else
+    echo none
+  fi
+}
+
+install_packages() {
+  local manager="$1"
+  shift
+  case "$manager" in
+    apt)
+      sudo apt-get update
+      sudo apt-get install -y "$@"
+      ;;
+    dnf)
+      sudo dnf install -y "$@"
+      ;;
+    pacman)
+      sudo pacman -Sy --needed --noconfirm "$@"
+      ;;
+    zypper)
+      sudo zypper install -y "$@"
+      ;;
+    brew)
+      brew install "$@"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+maybe_install_dependency() {
+  local manager="$1"
+  local command_name="$2"
+  local package_name="$3"
+  local description="$4"
+
+  if command -v "$command_name" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [ "$manager" = "none" ]; then
+    echo "missing optional dependency: $command_name ($description)" >&2
+    return 1
+  fi
+
+  if prompt_yes_no "Install $package_name for $description?"; then
+    install_packages "$manager" "$package_name"
+  else
+    echo "skipping $package_name" >&2
+  fi
+}
+
+maybe_note_dependency() {
+  local command_name="$1"
+  local description="$2"
+
+  if command -v "$command_name" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if is_interactive; then
+    echo "Optional tool not found: $command_name ($description)." >&2
+  fi
+}
 
 link_file() {
   local source="$1"
@@ -106,6 +209,17 @@ update_repo() {
   git -C "$REPO_ROOT" pull --ff-only
 }
 
+install_optional_dependencies() {
+  local manager
+  manager="$(detect_package_manager)"
+
+  echo "Dependency check:"
+  maybe_install_dependency "$manager" zsh zsh "default shell support"
+  maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
+  maybe_install_dependency "$manager" eza eza "modern ls aliases"
+  maybe_note_dependency k "manual install if you want the standalone k command"
+}
+
 case "$COMMAND" in
   install)
     ;;
@@ -119,6 +233,8 @@ case "$COMMAND" in
 esac
 
 mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
+
+install_optional_dependencies
 
 sync_repo "$OH_MY_ZSH_REPO" "$OH_MY_ZSH_REF" "$STATE_HOME/oh-my-zsh"
 sync_repo "$P10K_REPO" "$P10K_REF" "$STATE_HOME/powerlevel10k"
