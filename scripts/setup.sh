@@ -13,6 +13,7 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 DEPENDENCY_SUMMARY=()
 TOOL_SUMMARY=()
+PACKAGE_MANAGER=""
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
@@ -242,8 +243,19 @@ install_managed_tools() {
   TOOL_SUMMARY+=("todo.sh: linked into $bin_dir")
 
   if command -v python3 >/dev/null 2>&1 && [ -f "$STATE_HOME/marker/install.py" ]; then
-    python3 "$STATE_HOME/marker/install.py" >/dev/null 2>&1 || true
-    TOOL_SUMMARY+=("marker: install.py attempted")
+    if python3 "$STATE_HOME/marker/install.py" >/dev/null 2>&1; then
+      TOOL_SUMMARY+=("marker: install.py succeeded")
+    else
+      TOOL_SUMMARY+=("marker: install.py failed")
+      if [ "$PACKAGE_MANAGER" = "apt" ] && prompt_yes_no "marker install failed. Install python-is-python3 and retry?"; then
+        install_packages "$PACKAGE_MANAGER" python-is-python3
+        if python3 "$STATE_HOME/marker/install.py" >/dev/null 2>&1; then
+          TOOL_SUMMARY+=("marker: retry succeeded after python-is-python3")
+        else
+          TOOL_SUMMARY+=("marker: retry failed after python-is-python3")
+        fi
+      fi
+    fi
   else
     TOOL_SUMMARY+=("marker: install.py skipped")
   fi
@@ -271,6 +283,7 @@ update_repo() {
 install_optional_dependencies() {
   local manager
   manager="$(detect_package_manager)"
+  PACKAGE_MANAGER="$manager"
 
   echo "Dependency check:"
   maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
