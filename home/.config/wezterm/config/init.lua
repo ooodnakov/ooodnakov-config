@@ -6,6 +6,14 @@ for key, value in pairs(require("config.general")) do
   config[key] = value
 end
 
+for key, value in pairs(require("config.appearance")) do
+  config[key] = value
+end
+
+for key, value in pairs(require("config.bindings")) do
+  config[key] = value
+end
+
 for key, value in pairs(require("config.fonts")) do
   config[key] = value
 end
