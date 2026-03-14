@@ -34,6 +34,16 @@ This repo keeps a smaller active config inspired by them, plus a few upstream/re
 
 ## Quick start
 
+### One-line bootstrap
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh | bash
+```
+
+This clones the repo into `~/src/ooodnakov-config` by default and runs the normal Unix setup.
+If the repo is already present there, it is updated in place first.
+If managed target files already exist, they are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
+
 ### Linux or macOS
 
 ```bash
@@ -48,6 +58,14 @@ To update an existing machine from the repo and reapply the managed config:
 ```bash
 cd ~/src/ooodnakov-config
 ./scripts/setup.sh update
+```
+
+This also preserves replaced files by moving them into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
+
+You can also rerun the bootstrap:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh | bash
 ```
 
 ### Windows PowerShell

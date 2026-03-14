@@ -8,6 +8,8 @@ DATA_HOME="${XDG_DATA_HOME:-$HOME_DIR/.local/share}"
 STATE_HOME="$DATA_HOME/ooodnakov-config"
 FONT_TARGET_DIR="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
 COMMAND="${1:-install}"
+BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
@@ -26,8 +28,39 @@ link_file() {
   local source="$1"
   local target="$2"
   mkdir -p "$(dirname "$target")"
+  backup_target "$source" "$target"
   ln -sfn "$source" "$target"
   echo "linked $target"
+}
+
+backup_target() {
+  local source="$1"
+  local target="$2"
+  local target_dir target_name backup_dir
+
+  if [ -L "$target" ]; then
+    local current
+    current="$(readlink "$target")"
+    if [ "$current" = "$source" ]; then
+      return
+    fi
+  fi
+
+  if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+    return
+  fi
+
+  target_dir="$(dirname "$target")"
+  target_name="$(basename "$target")"
+  backup_dir="$BACKUP_ROOT$target_dir"
+  mkdir -p "$backup_dir"
+
+  if [ -d "$target" ] && [ ! -L "$target" ]; then
+    mv "$target" "$backup_dir/${target_name}.${TIMESTAMP}"
+  else
+    mv "$target" "$backup_dir/${target_name}.${TIMESTAMP}"
+  fi
+  echo "backed up $target -> $backup_dir/${target_name}.${TIMESTAMP}"
 }
 
 sync_repo() {
