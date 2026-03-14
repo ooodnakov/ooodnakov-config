@@ -214,10 +214,12 @@ install_optional_dependencies() {
   manager="$(detect_package_manager)"
 
   echo "Dependency check:"
+  maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
   maybe_install_dependency "$manager" zsh zsh "default shell support"
   maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
   maybe_install_dependency "$manager" eza eza "modern ls aliases"
   maybe_note_dependency k "manual install if you want the standalone k command"
+  maybe_note_dependency python3 "needed only for extra ezsh-style tools not currently installed here"
 }
 
 case "$COMMAND" in
@@ -254,6 +256,12 @@ link_file "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" 
 
 ensure_ssh_include
 install_fonts
+
+if is_interactive && [ -f "$HOME_DIR/.zshrc" ]; then
+  # This only updates the current setup process; it cannot mutate the parent shell session.
+  # shellcheck disable=SC1090
+  . "$HOME_DIR/.zshrc" || true
+fi
 
 echo
 echo "Bootstrap complete."

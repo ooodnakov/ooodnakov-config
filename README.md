@@ -63,6 +63,7 @@ cd ~/src/ooodnakov-config
 
 This also preserves replaced files by moving them into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
 In interactive terminals it also offers to install common optional dependencies via the detected package manager.
+At the end of setup it also sources `~/.zshrc` inside the installer process, but you may still want to open a fresh shell session for a fully clean environment.
 
 You can also rerun the bootstrap:
 
