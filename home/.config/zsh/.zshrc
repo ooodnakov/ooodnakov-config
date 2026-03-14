@@ -17,7 +17,6 @@ plugins=(
   extract
   z
   history
-  tmux
   screen
   colorize
   debian

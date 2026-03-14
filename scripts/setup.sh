@@ -7,6 +7,7 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME_DIR/.local/share}"
 STATE_HOME="$DATA_HOME/ooodnakov-config"
 FONT_TARGET_DIR="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
+COMMAND="${1:-install}"
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
@@ -67,6 +68,22 @@ install_fonts() {
     fi
   fi
 }
+
+update_repo() {
+  git -C "$REPO_ROOT" pull --ff-only
+}
+
+case "$COMMAND" in
+  install)
+    ;;
+  update)
+    update_repo
+    ;;
+  *)
+    echo "Usage: $0 [install|update]" >&2
+    exit 1
+    ;;
+esac
 
 mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
 

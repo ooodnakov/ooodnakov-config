@@ -39,7 +39,15 @@ This repo keeps a smaller active config inspired by them, plus a few upstream/re
 ```bash
 git clone git@github.com:ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
 cd ~/src/ooodnakov-config
+chmod +x ./scripts/setup.sh
 ./scripts/setup.sh
+```
+
+To update an existing machine from the repo and reapply the managed config:
+
+```bash
+cd ~/src/ooodnakov-config
+./scripts/setup.sh update
 ```
 
 ### Windows PowerShell
