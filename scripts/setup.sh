@@ -37,7 +37,7 @@ is_interactive() {
   case "$INTERACTIVE" in
     always) return 0 ;;
     never) return 1 ;;
-    auto) [ -t 0 ] && [ -t 1 ] ;;
+    auto) [ -t 1 ] && [ -r /dev/tty ] ;;
     *) return 1 ;;
   esac
 }
@@ -50,8 +50,8 @@ prompt_yes_no() {
     return 1
   fi
 
-  printf "%s [y/N] " "$prompt" >&2
-  read -r reply
+  printf "%s [y/N] " "$prompt" > /dev/tty
+  read -r reply < /dev/tty
   case "$reply" in
     y|Y|yes|YES) return 0 ;;
     *) return 1 ;;
@@ -92,7 +92,7 @@ install_packages() {
       sudo zypper install -y "$@"
       ;;
     brew)
-      brew install "$@"
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install "$@"
       ;;
     *)
       return 1
