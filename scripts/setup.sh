@@ -26,6 +26,8 @@ ZSH_HISTORY_REPO="https://github.com/zsh-users/zsh-history-substring-search.git"
 ZSH_HISTORY_REF="14c8d2e0ffaee98f2df9850b19944f32546fdea5"
 ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
 ZSH_AUTOCOMPLETE_REF="2be4e7f0b435138b0237d4f068b2a882fb06edc4"
+NVM_REPO="https://github.com/nvm-sh/nvm.git"
+NVM_REF="6b307d0c75041ce5f25829b225470540f2711882"
 K_REPO="https://github.com/supercrabtree/k.git"
 K_REF="e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e"
 MARKER_REPO="https://github.com/jotyGill/marker.git"
@@ -226,6 +228,8 @@ install_fonts() {
 install_managed_tools() {
   local bin_dir="$STATE_HOME/bin"
 
+  sync_repo "$NVM_REPO" "$NVM_REF" "$HOME_DIR/.nvm"
+  TOOL_SUMMARY+=("nvm: synced")
   sync_repo "$K_REPO" "$K_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/k"
   TOOL_SUMMARY+=("k: synced")
   sync_repo "$MARKER_REPO" "$MARKER_REF" "$STATE_HOME/marker"
@@ -274,10 +278,14 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
   maybe_install_dependency "$manager" eza eza "modern ls aliases"
   maybe_install_dependency "$manager" dua dua-cli "disk usage analysis"
+  maybe_install_dependency "$manager" node nodejs "Node.js runtime"
+  maybe_install_dependency "$manager" npm npm "Node package manager"
   maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
   maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
+  maybe_install_dependency "$manager" uv uv "Python package manager"
+  maybe_install_dependency "$manager" cargo cargo "Rust package manager"
   maybe_note_dependency k "manual install if you want the standalone k command"
-  maybe_install_dependency "$manager" python3 python3 "extra ezsh-style tools such as marker and helper scripts"
+  maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
 }
 
 case "$COMMAND" in
