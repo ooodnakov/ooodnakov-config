@@ -24,6 +24,12 @@ ZSH_HISTORY_REPO="https://github.com/zsh-users/zsh-history-substring-search.git"
 ZSH_HISTORY_REF="14c8d2e0ffaee98f2df9850b19944f32546fdea5"
 ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
 ZSH_AUTOCOMPLETE_REF="2be4e7f0b435138b0237d4f068b2a882fb06edc4"
+K_REPO="https://github.com/supercrabtree/k.git"
+K_REF="e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e"
+MARKER_REPO="https://github.com/jotyGill/marker.git"
+MARKER_REF="c123085891228e51cfa58d555708bad67ed98f02"
+TODO_REPO="https://github.com/todotxt/todo.txt-cli.git"
+TODO_REF="b20f9b45e210129ef020d3ba212d86b9ba9cf70d"
 
 is_interactive() {
   case "$INTERACTIVE" in
@@ -205,6 +211,21 @@ install_fonts() {
   fi
 }
 
+install_managed_tools() {
+  local bin_dir="$STATE_HOME/bin"
+
+  sync_repo "$K_REPO" "$K_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/k"
+  sync_repo "$MARKER_REPO" "$MARKER_REF" "$STATE_HOME/marker"
+  sync_repo "$TODO_REPO" "$TODO_REF" "$STATE_HOME/todo"
+
+  mkdir -p "$bin_dir"
+  ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh"
+
+  if command -v python3 >/dev/null 2>&1 && [ -f "$STATE_HOME/marker/install.py" ]; then
+    python3 "$STATE_HOME/marker/install.py" >/dev/null 2>&1 || true
+  fi
+}
+
 update_repo() {
   git -C "$REPO_ROOT" pull --ff-only
 }
@@ -246,6 +267,7 @@ sync_repo "$ZSH_AUTOSUGGESTIONS_REPO" "$ZSH_AUTOSUGGESTIONS_REF" "$STATE_HOME/oh
 sync_repo "$ZSH_HIGHLIGHTING_REPO" "$ZSH_HIGHLIGHTING_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
 sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search"
 sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete"
+install_managed_tools
 
 link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
 link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"

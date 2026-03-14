@@ -13,6 +13,7 @@ ZSH_THEME=""
 plugins=(
   git
   git-extras
+  k
   sudo
   extract
   z

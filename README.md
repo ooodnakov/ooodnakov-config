@@ -11,6 +11,7 @@ The repo keeps only opinionated config and bootstrap logic. Secrets, tokens, key
 ## What is managed
 
 - `zsh` with `oh-my-zsh` and pinned plugin/theme checkouts
+- managed shell helpers: `k`, `marker`, `todo.txt-cli`
 - `wezterm`
 - PowerShell profile
 - `oh-my-posh`
@@ -44,6 +45,7 @@ This clones the repo into `~/src/ooodnakov-config` by default and runs the norma
 If the repo is already present there, it is updated in place first.
 If managed target files already exist, they are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
 When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `fzf`, `eza`, `autoconf`, `python3`, and `fontconfig`.
+The Unix setup also installs pinned copies of `k`, `marker`, and `todo.txt-cli`.
 
 ### Linux or macOS
 

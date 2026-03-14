@@ -9,6 +9,7 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/bin:$PATH"
 
 NPM_PACKAGES="$HOME/.npm"
 export PATH="$NPM_PACKAGES/bin:$PATH"
@@ -22,3 +23,7 @@ esac
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+
+if [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/marker/marker.sh" ]; then
+  . "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/marker/marker.sh"
+fi
