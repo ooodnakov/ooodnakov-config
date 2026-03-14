@@ -11,6 +11,8 @@ COMMAND="${1:-install}"
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
+DEPENDENCY_SUMMARY=()
+TOOL_SUMMARY=()
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
@@ -105,18 +107,26 @@ maybe_install_dependency() {
   local description="$4"
 
   if command -v "$command_name" >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("$command_name: present")
     return 0
   fi
 
   if [ "$manager" = "none" ]; then
     echo "missing optional dependency: $command_name ($description)" >&2
+    DEPENDENCY_SUMMARY+=("$command_name: missing (no supported package manager)")
     return 1
   fi
 
   if prompt_yes_no "Install $package_name for $description?"; then
     install_packages "$manager" "$package_name"
+    if command -v "$command_name" >/dev/null 2>&1; then
+      DEPENDENCY_SUMMARY+=("$command_name: installed")
+    else
+      DEPENDENCY_SUMMARY+=("$command_name: install attempted")
+    fi
   else
     echo "skipping $package_name" >&2
+    DEPENDENCY_SUMMARY+=("$command_name: skipped")
   fi
 }
 
@@ -125,12 +135,14 @@ maybe_note_dependency() {
   local description="$2"
 
   if command -v "$command_name" >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("$command_name: present")
     return 0
   fi
 
   if is_interactive; then
     echo "Optional tool not found: $command_name ($description)." >&2
   fi
+  DEPENDENCY_SUMMARY+=("$command_name: missing (manual install)")
 }
 
 link_file() {
@@ -215,15 +227,37 @@ install_managed_tools() {
   local bin_dir="$STATE_HOME/bin"
 
   sync_repo "$K_REPO" "$K_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/k"
+  TOOL_SUMMARY+=("k: synced")
   sync_repo "$MARKER_REPO" "$MARKER_REF" "$STATE_HOME/marker"
+  TOOL_SUMMARY+=("marker: synced")
   sync_repo "$TODO_REPO" "$TODO_REF" "$STATE_HOME/todo"
+  TOOL_SUMMARY+=("todo.txt-cli: synced")
 
   mkdir -p "$bin_dir"
   ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh"
+  TOOL_SUMMARY+=("todo.sh: linked into $bin_dir")
 
   if command -v python3 >/dev/null 2>&1 && [ -f "$STATE_HOME/marker/install.py" ]; then
     python3 "$STATE_HOME/marker/install.py" >/dev/null 2>&1 || true
+    TOOL_SUMMARY+=("marker: install.py attempted")
+  else
+    TOOL_SUMMARY+=("marker: install.py skipped")
   fi
+}
+
+print_summary() {
+  local item
+
+  echo
+  echo "Dependency summary:"
+  for item in "${DEPENDENCY_SUMMARY[@]}"; do
+    echo "  - $item"
+  done
+
+  echo "Managed tools:"
+  for item in "${TOOL_SUMMARY[@]}"; do
+    echo "  - $item"
+  done
 }
 
 update_repo() {
@@ -286,6 +320,8 @@ if is_interactive && [ -f "$HOME_DIR/.zshrc" ]; then
   # shellcheck disable=SC1090
   . "$HOME_DIR/.zshrc" || true
 fi
+
+print_summary
 
 echo
 echo "Bootstrap complete."
