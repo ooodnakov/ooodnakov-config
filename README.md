@@ -85,6 +85,8 @@ Set-Location $HOME\src\ooodnakov-config
 .\scripts\setup.ps1
 ```
 
+On Windows, the PowerShell setup can also prompt to install missing core tools with `winget`, including WezTerm and `oh-my-posh`.
+
 ## Removal
 
 To remove the managed Unix symlinks and restore the latest backups when available:

@@ -5,6 +5,49 @@ $ConfigHome = Join-Path $HOME ".config"
 $OhMyPoshDir = Join-Path $ConfigHome "ohmyposh"
 $PowerShellDir = Join-Path $HOME "Documents/PowerShell"
 $SshDir = Join-Path $HOME ".ssh"
+$InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
+
+function Test-Interactive {
+    switch ($InteractiveMode) {
+        "always" { return $true }
+        "never" { return $false }
+        default { return $Host.Name -ne "ServerRemoteHost" }
+    }
+}
+
+function Confirm-Install {
+    param(
+        [Parameter(Mandatory = $true)][string]$Prompt
+    )
+
+    if (-not (Test-Interactive)) {
+        return $false
+    }
+
+    $reply = Read-Host "$Prompt [y/N]"
+    return $reply -match '^(?i:y|yes)$'
+}
+
+function Install-WingetPackageIfMissing {
+    param(
+        [Parameter(Mandatory = $true)][string]$CommandName,
+        [Parameter(Mandatory = $true)][string]$WingetId,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    if (Get-Command $CommandName -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        Write-Host "winget is not available; skipping $Description"
+        return
+    }
+
+    if (Confirm-Install "Install $Description with winget?") {
+        winget install --exact --id $WingetId --accept-package-agreements --accept-source-agreements
+    }
+}
 
 function New-Symlink {
     param(
@@ -42,6 +85,10 @@ function Ensure-SshInclude {
         @($includeLine, "") + $existing | Set-Content -Path $configPath
     }
 }
+
+Install-WingetPackageIfMissing -CommandName "wezterm" -WingetId "wez.wezterm" -Description "WezTerm"
+Install-WingetPackageIfMissing -CommandName "oh-my-posh" -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh"
+Install-WingetPackageIfMissing -CommandName "git" -WingetId "Git.Git" -Description "Git"
 
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
