@@ -43,7 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/boo
 This clones the repo into `~/src/ooodnakov-config` by default and runs the normal Unix setup.
 If the repo is already present there, it is updated in place first.
 If managed target files already exist, they are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
-When run in a real terminal, setup also prompts for optional dependencies such as `zsh`, `fzf`, and `eza` if they are missing.
+When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `fzf`, `eza`, `autoconf`, `python3`, and `fontconfig`.
 
 ### Linux or macOS
 

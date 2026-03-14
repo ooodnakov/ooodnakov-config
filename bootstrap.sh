@@ -5,11 +5,99 @@ REPO_URL="${OOODNAKOV_CONFIG_REPO_URL:-git@github.com:ooodnakov/ooodnakov-config
 HTTPS_REPO_URL="${OOODNAKOV_CONFIG_HTTPS_REPO_URL:-https://github.com/ooodnakov/ooodnakov-config.git}"
 TARGET_DIR="${OOODNAKOV_CONFIG_DIR:-$HOME/src/ooodnakov-config}"
 BRANCH="${OOODNAKOV_CONFIG_BRANCH:-main}"
+INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 
-if ! command -v git >/dev/null 2>&1; then
-  echo "git is required" >&2
-  exit 1
-fi
+is_interactive() {
+  case "$INTERACTIVE" in
+    always) return 0 ;;
+    never) return 1 ;;
+    auto) [ -t 0 ] && [ -t 1 ] ;;
+    *) return 1 ;;
+  esac
+}
+
+prompt_yes_no() {
+  local prompt="$1"
+  local reply
+
+  if ! is_interactive; then
+    return 1
+  fi
+
+  printf "%s [y/N] " "$prompt" >&2
+  read -r reply
+  case "$reply" in
+    y|Y|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+detect_package_manager() {
+  if command -v apt-get >/dev/null 2>&1; then
+    echo apt
+  elif command -v dnf >/dev/null 2>&1; then
+    echo dnf
+  elif command -v pacman >/dev/null 2>&1; then
+    echo pacman
+  elif command -v zypper >/dev/null 2>&1; then
+    echo zypper
+  elif command -v brew >/dev/null 2>&1; then
+    echo brew
+  else
+    echo none
+  fi
+}
+
+install_packages() {
+  local manager="$1"
+  shift
+  case "$manager" in
+    apt)
+      sudo apt-get update
+      sudo apt-get install -y "$@"
+      ;;
+    dnf)
+      sudo dnf install -y "$@"
+      ;;
+    pacman)
+      sudo pacman -Sy --needed --noconfirm "$@"
+      ;;
+    zypper)
+      sudo zypper install -y "$@"
+      ;;
+    brew)
+      brew install "$@"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+ensure_bootstrap_dependencies() {
+  local manager
+  manager="$(detect_package_manager)"
+
+  if command -v git >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [ "$manager" = "none" ]; then
+    echo "git is required" >&2
+    exit 1
+  fi
+
+  if prompt_yes_no "Install git, zsh, and wget before bootstrap?"; then
+    install_packages "$manager" git zsh wget
+  fi
+
+  if ! command -v git >/dev/null 2>&1; then
+    echo "git is required" >&2
+    exit 1
+  fi
+}
+
+ensure_bootstrap_dependencies
 
 mkdir -p "$(dirname "$TARGET_DIR")"
 

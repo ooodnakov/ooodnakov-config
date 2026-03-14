@@ -218,8 +218,10 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" zsh zsh "default shell support"
   maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
   maybe_install_dependency "$manager" eza eza "modern ls aliases"
+  maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
+  maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
   maybe_note_dependency k "manual install if you want the standalone k command"
-  maybe_note_dependency python3 "needed only for extra ezsh-style tools not currently installed here"
+  maybe_install_dependency "$manager" python3 python3 "extra ezsh-style tools such as marker and helper scripts"
 }
 
 case "$COMMAND" in
