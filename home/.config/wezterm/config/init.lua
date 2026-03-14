@@ -1,31 +1,33 @@
-local wezterm = require("wezterm")
+local wezterm = require('wezterm')
 
-local config = wezterm.config_builder()
+---@class Config
+---@field options table
+local Config = {}
+Config.__index = Config
 
-for key, value in pairs(require("config.general")) do
-  config[key] = value
+---Initialize Config
+---@return Config
+function Config:init()
+   local config = setmetatable({ options = {} }, self)
+   return config
 end
 
-for key, value in pairs(require("config.appearance")) do
-  config[key] = value
+---Append to `Config.options`
+---@param new_options table new options to append
+---@return Config
+function Config:append(new_options)
+   for k, v in pairs(new_options) do
+      if self.options[k] ~= nil then
+         wezterm.log_warn(
+            'Duplicate config option detected: ',
+            { old = self.options[k], new = new_options[k] }
+         )
+         goto continue
+      end
+      self.options[k] = v
+      ::continue::
+   end
+   return self
 end
 
-for key, value in pairs(require("config.bindings")) do
-  config[key] = value
-end
-
-for key, value in pairs(require("config.fonts")) do
-  config[key] = value
-end
-
-for key, value in pairs(require("config.launch")) do
-  config[key] = value
-end
-
-for key, value in pairs(require("config.domains")) do
-  config[key] = value
-end
-
-require("events.right-status").setup()
-
-return config
+return Config
