@@ -195,6 +195,45 @@ maybe_note_dependency() {
   DEPENDENCY_SUMMARY+=("$command_name: missing (manual install)")
 }
 
+maybe_install_eza() {
+  local manager="$1"
+
+  if command -v eza >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("eza: present")
+    return 0
+  fi
+
+  case "$manager" in
+    brew|pacman|zypper)
+      if prompt_yes_no "Install eza for modern ls aliases?"; then
+        install_packages "$manager" eza
+        if command -v eza >/dev/null 2>&1; then
+          DEPENDENCY_SUMMARY+=("eza: installed")
+        else
+          DEPENDENCY_SUMMARY+=("eza: install attempted")
+        fi
+      else
+        DEPENDENCY_SUMMARY+=("eza: skipped")
+      fi
+      ;;
+    dnf)
+      DEPENDENCY_SUMMARY+=("eza: manual install recommended on Fedora 42+")
+      if is_interactive; then
+        echo "eza upstream notes Fedora 42+ may require manual install or cargo; skipping automatic dnf install." > /dev/tty
+      fi
+      ;;
+    apt)
+      DEPENDENCY_SUMMARY+=("eza: manual apt repo setup required")
+      if is_interactive; then
+        echo "eza on Debian/Ubuntu uses an upstream APT repo; skipping automatic apt install." > /dev/tty
+      fi
+      ;;
+    *)
+      DEPENDENCY_SUMMARY+=("eza: missing (manual install)")
+      ;;
+  esac
+}
+
 link_file() {
   local source="$1"
   local target="$2"
@@ -336,7 +375,7 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
   maybe_install_dependency "$manager" zsh zsh "default shell support"
   maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
-  maybe_install_dependency "$manager" eza eza "modern ls aliases"
+  maybe_install_eza "$manager"
   maybe_install_dependency "$manager" dua dua-cli "disk usage analysis"
   maybe_install_dependency "$manager" node nodejs "Node.js runtime"
   maybe_install_dependency "$manager" npm npm "Node package manager"
