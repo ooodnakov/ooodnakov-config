@@ -17,6 +17,8 @@ ZSH_HIGHLIGHTING_REPO="https://github.com/zsh-users/zsh-syntax-highlighting.git"
 ZSH_HIGHLIGHTING_REF="1d85c692615a25fe2293bdd44b34c217d5d2bf04"
 ZSH_HISTORY_REPO="https://github.com/zsh-users/zsh-history-substring-search.git"
 ZSH_HISTORY_REF="14c8d2e0ffaee98f2df9850b19944f32546fdea5"
+ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
+ZSH_AUTOCOMPLETE_REF="2be4e7f0b435138b0237d4f068b2a882fb06edc4"
 
 link_file() {
   local source="$1"
@@ -60,6 +62,7 @@ sync_repo "$P10K_REPO" "$P10K_REF" "$STATE_HOME/powerlevel10k"
 sync_repo "$ZSH_AUTOSUGGESTIONS_REPO" "$ZSH_AUTOSUGGESTIONS_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions"
 sync_repo "$ZSH_HIGHLIGHTING_REPO" "$ZSH_HIGHLIGHTING_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
 sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search"
+sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete"
 
 link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
 link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"

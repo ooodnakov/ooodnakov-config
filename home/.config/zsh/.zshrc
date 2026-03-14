@@ -21,6 +21,7 @@ plugins=(
   history-substring-search
   zsh-autosuggestions
   zsh-syntax-highlighting
+  zsh-autocomplete
 )
 
 for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
@@ -28,6 +29,10 @@ for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
 done
 
 source "$ZSH/oh-my-zsh.sh"
+
+zmodload zsh/complist 2>/dev/null
+bindkey -M menuselect '^M' .accept-line
+bindkey -M menuselect '\r' .accept-line
 
 if [ -f "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme" ]; then
   source "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme"

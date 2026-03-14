@@ -2,7 +2,7 @@ Host site
     HostName 45.12.138.163
     User root
 
-Host site2
+Host sitealex
     HostName 45.12.138.163
     User alex
 
