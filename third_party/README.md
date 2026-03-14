@@ -4,7 +4,7 @@ This directory keeps reference copies of upstream or locally diverged config tre
 
 ## Layout
 
-- `upstream/ezsh`: snapshot of `jotyGill/ezsh`
+- `upstream/ezsh`: subtree-managed upstream copy of `jotyGill/ezsh`
 - `local-snapshots/wezterm-current`: snapshot of the current local WezTerm checkout from this machine
 
 These trees are not installed by the bootstrap scripts. They are here for auditability and future extraction work.

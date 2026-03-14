@@ -18,7 +18,7 @@ The repo keeps only opinionated config and bootstrap logic. Secrets, tokens, key
 
 ## What is also stored
 
-- reference snapshot of upstream `ezsh`
+- subtree-managed upstream copy of `ezsh`
 - snapshot of the current local WezTerm fork from this machine
 - audit notes from inspecting local config and remote hosts `orange` and `site`
 
@@ -29,7 +29,7 @@ These live under [`third_party`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov
 - [`jotyGill/ezsh`](https://github.com/jotyGill/ezsh) for the modular zsh layout idea
 - [`KevinSilvester/wezterm-config`](https://github.com/KevinSilvester/wezterm-config) for the modular WezTerm structure
 
-This repo keeps a smaller active config inspired by them, plus a few reference snapshots for audit and future extraction work.
+This repo keeps a smaller active config inspired by them, plus a few upstream/reference trees for audit and future extraction work.
 
 ## Quick start
 

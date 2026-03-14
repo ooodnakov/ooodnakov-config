@@ -4,9 +4,9 @@ This file records what was inspected and what was imported into this repo.
 
 ## Imported trees
 
-Clean upstream snapshots were copied into:
+Upstream reference trees:
 
-- `third_party/upstream/ezsh`
+- `third_party/upstream/ezsh` managed as a `git subtree`
 
 Your current local WezTerm checkout was also preserved as:
 
@@ -56,6 +56,7 @@ Interpretation:
 
 - ezsh was useful as a layout idea, but the tracked repo should not depend on its generated structure
 - the new repo keeps a modular zsh layout while managing plugins directly
+- the upstream ezsh tree is retained as a subtree so it can be refreshed from upstream without manual recopying
 
 ### Remote host: orange
 
@@ -75,6 +76,7 @@ Imported into active config:
 - `zsh-autocomplete`
 - `menuselect` Enter bindings
 - `PNPM_HOME` support
+- plugin set expanded toward the machine setups with `git-extras`, `history`, `tmux`, `screen`, `colorize`, and `debian`
 
 Left out on purpose:
 

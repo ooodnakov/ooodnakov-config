@@ -12,9 +12,15 @@ fi
 ZSH_THEME=""
 plugins=(
   git
+  git-extras
   sudo
   extract
   z
+  history
+  tmux
+  screen
+  colorize
+  debian
   docker
   python
   web-search
