@@ -6,6 +6,8 @@ $OhMyPoshDir = Join-Path $ConfigHome "ohmyposh"
 $PowerShellDir = Join-Path $HOME "Documents/PowerShell"
 $SshDir = Join-Path $HOME ".ssh"
 $InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
+$BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HOME ".local/state/ooodnakov-config/backups" }
+$Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
 function Test-Interactive {
     switch ($InteractiveMode) {
@@ -28,6 +30,41 @@ function Confirm-Install {
     return $reply -match '^(?i:y|yes)$'
 }
 
+function Install-Chocolatey {
+    if (Get-Command choco -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    if (Confirm-Install "Install Chocolatey?") {
+        Write-Output "Installing Chocolatey..."
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        # Suppress PSAvoidUsingInvokeExpression as it is the official installation method for Chocolatey
+        Invoke-RestMethod -Uri 'https://community.chocolatey.org/install.ps1' | Invoke-Expression
+    }
+}
+
+function Install-ChocoPackageIfMissing {
+    param(
+        [Parameter(Mandatory = $true)][string]$CommandName,
+        [Parameter(Mandatory = $true)][string]$ChocoId,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    if (Get-Command $CommandName -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+        Write-Output "choco is not available; skipping $Description"
+        return
+    }
+
+    if (Confirm-Install "Install $Description with Chocolatey?") {
+        choco install $ChocoId -y
+    }
+}
+
 function Install-WingetPackageIfMissing {
     param(
         [Parameter(Mandatory = $true)][string]$CommandName,
@@ -40,7 +77,7 @@ function Install-WingetPackageIfMissing {
     }
 
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Write-Host "winget is not available; skipping $Description"
+        Write-Output "winget is not available; skipping $Description"
         return
     }
 
@@ -49,7 +86,46 @@ function Install-WingetPackageIfMissing {
     }
 }
 
+function Backup-Target {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Target
+    )
+
+    if (Test-Path $Target -PathType Container) {
+        # Keep directories if they aren't symlinks and we aren't symlinking a directory?
+        # Actually New-Symlink removes existing things
+    }
+
+    $item = Get-Item -Path $Target -ErrorAction SilentlyContinue
+    if (-not $item) { return }
+
+    if ($item.LinkType -eq "SymbolicLink") {
+        if ($item.Target -eq $Source) { return }
+    }
+
+    $targetDir = Split-Path -Parent $Target
+    $targetName = Split-Path -Leaf $Target
+
+    # Calculate backup dir relative path or just flat backup root + target dir?
+    # In bash setup.sh: backup_dir="$BACKUP_ROOT$target_dir"
+    # But for Windows we should trim drive letter? Let's just use absolute path structure
+    $drive = (Get-Item $targetDir).PSDrive.Name
+    $pathWithoutDrive = $targetDir.Substring($drive.Length + 1)
+    if ($pathWithoutDrive.StartsWith("\")) { $pathWithoutDrive = $pathWithoutDrive.Substring(1) }
+    $backupDir = Join-Path $BackupRoot $pathWithoutDrive
+
+    if (-not (Test-Path $backupDir)) {
+        New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
+    }
+
+    $backupPath = Join-Path $backupDir "$targetName.$Timestamp"
+    Move-Item -Path $Target -Destination $backupPath -Force
+    Write-Output "backed up $Target -> $backupPath"
+}
+
 function New-Symlink {
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true)][string]$Source,
         [Parameter(Mandatory = $true)][string]$Target
@@ -60,15 +136,17 @@ function New-Symlink {
         New-Item -ItemType Directory -Force -Path $parent | Out-Null
     }
 
+    Backup-Target -Source $Source -Target $Target
+
     if (Test-Path $Target) {
         Remove-Item -Force $Target
     }
 
     New-Item -ItemType SymbolicLink -Path $Target -Target $Source | Out-Null
-    Write-Host "linked $Target"
+    Write-Output "linked $Target"
 }
 
-function Ensure-SshInclude {
+function Add-SshInclude {
     $configPath = Join-Path $SshDir "config"
     $includeLine = "Include ~/.config/ooodnakov/ssh/config"
 
@@ -90,13 +168,21 @@ Install-WingetPackageIfMissing -CommandName "wezterm" -WingetId "wez.wezterm" -D
 Install-WingetPackageIfMissing -CommandName "oh-my-posh" -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh"
 Install-WingetPackageIfMissing -CommandName "git" -WingetId "Git.Git" -Description "Git"
 
+Install-Chocolatey
+# Example of using Chocolatey for packages if needed
+# Install-ChocoPackageIfMissing -CommandName "eza" -ChocoId "eza" -Description "eza"
+# Optional dev tools
+Install-ChocoPackageIfMissing -CommandName "gsudo" -ChocoId "gsudo" -Description "gsudo (sudo for Windows)"
+Install-ChocoPackageIfMissing -CommandName "rg" -ChocoId "ripgrep" -Description "ripgrep"
+Install-ChocoPackageIfMissing -CommandName "fd" -ChocoId "fd" -Description "fd"
+
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1")
 
-Ensure-SshInclude
+Add-SshInclude
 
-Write-Host ""
-Write-Host "Bootstrap complete."
-Write-Host "If needed, create local overrides in $ConfigHome/ooodnakov/local."
+Write-Output ""
+Write-Output "Bootstrap complete."
+Write-Output "If needed, create local overrides in $ConfigHome/ooodnakov/local."
