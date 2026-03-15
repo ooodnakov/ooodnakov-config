@@ -12,6 +12,17 @@ alias e="exit"
 alias ip="ip --color=auto"
 alias myip="wget -qO- https://wtfismyip.com/text"
 
+# Git aliases
+alias gs="git status"
+alias gd="git diff"
+alias gc="git commit -v"
+alias gp="git push"
+alias gl="git pull"
+alias gco="git checkout"
+
+# Dotfiles repo shortcut
+alias cd-dotfiles="cd \${OOODNAKOV_CONFIG_HOME:-\$HOME/src/ooodnakov-config}"
+
 cheat() {
   if [ -n "$2" ]; then
     curl "https://cheat.sh/$1/$2+$3+$4+$5+$6+$7+$8+$9+${10}"

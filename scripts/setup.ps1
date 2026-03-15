@@ -30,6 +30,41 @@ function Confirm-Install {
     return $reply -match '^(?i:y|yes)$'
 }
 
+function Install-Chocolatey {
+    if (Get-Command choco -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    if (Confirm-Install "Install Chocolatey?") {
+        Write-Output "Installing Chocolatey..."
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        # Suppress PSAvoidUsingInvokeExpression as it is the official installation method for Chocolatey
+        Invoke-RestMethod -Uri 'https://community.chocolatey.org/install.ps1' | Invoke-Expression
+    }
+}
+
+function Install-ChocoPackageIfMissing {
+    param(
+        [Parameter(Mandatory = $true)][string]$CommandName,
+        [Parameter(Mandatory = $true)][string]$ChocoId,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    if (Get-Command $CommandName -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+        Write-Output "choco is not available; skipping $Description"
+        return
+    }
+
+    if (Confirm-Install "Install $Description with Chocolatey?") {
+        choco install $ChocoId -y
+    }
+}
+
 function Install-WingetPackageIfMissing {
     param(
         [Parameter(Mandatory = $true)][string]$CommandName,
@@ -132,6 +167,14 @@ function Add-SshInclude {
 Install-WingetPackageIfMissing -CommandName "wezterm" -WingetId "wez.wezterm" -Description "WezTerm"
 Install-WingetPackageIfMissing -CommandName "oh-my-posh" -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh"
 Install-WingetPackageIfMissing -CommandName "git" -WingetId "Git.Git" -Description "Git"
+
+Install-Chocolatey
+# Example of using Chocolatey for packages if needed
+# Install-ChocoPackageIfMissing -CommandName "eza" -ChocoId "eza" -Description "eza"
+# Optional dev tools
+Install-ChocoPackageIfMissing -CommandName "gsudo" -ChocoId "gsudo" -Description "gsudo (sudo for Windows)"
+Install-ChocoPackageIfMissing -CommandName "rg" -ChocoId "ripgrep" -Description "ripgrep"
+Install-ChocoPackageIfMissing -CommandName "fd" -ChocoId "fd" -Description "fd"
 
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
