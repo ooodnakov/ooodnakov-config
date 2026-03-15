@@ -6,6 +6,8 @@ $OhMyPoshDir = Join-Path $ConfigHome "ohmyposh"
 $PowerShellDir = Join-Path $HOME "Documents/PowerShell"
 $SshDir = Join-Path $HOME ".ssh"
 $InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
+$BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HOME ".local/state/ooodnakov-config/backups" }
+$Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
 function Test-Interactive {
     switch ($InteractiveMode) {
@@ -40,7 +42,7 @@ function Install-WingetPackageIfMissing {
     }
 
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Write-Host "winget is not available; skipping $Description"
+        Write-Output "winget is not available; skipping $Description"
         return
     }
 
@@ -49,7 +51,46 @@ function Install-WingetPackageIfMissing {
     }
 }
 
+function Backup-Target {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Target
+    )
+
+    if (Test-Path $Target -PathType Container) {
+        # Keep directories if they aren't symlinks and we aren't symlinking a directory?
+        # Actually New-Symlink removes existing things
+    }
+
+    $item = Get-Item -Path $Target -ErrorAction SilentlyContinue
+    if (-not $item) { return }
+
+    if ($item.LinkType -eq "SymbolicLink") {
+        if ($item.Target -eq $Source) { return }
+    }
+
+    $targetDir = Split-Path -Parent $Target
+    $targetName = Split-Path -Leaf $Target
+
+    # Calculate backup dir relative path or just flat backup root + target dir?
+    # In bash setup.sh: backup_dir="$BACKUP_ROOT$target_dir"
+    # But for Windows we should trim drive letter? Let's just use absolute path structure
+    $drive = (Get-Item $targetDir).PSDrive.Name
+    $pathWithoutDrive = $targetDir.Substring($drive.Length + 1)
+    if ($pathWithoutDrive.StartsWith("\")) { $pathWithoutDrive = $pathWithoutDrive.Substring(1) }
+    $backupDir = Join-Path $BackupRoot $pathWithoutDrive
+
+    if (-not (Test-Path $backupDir)) {
+        New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
+    }
+
+    $backupPath = Join-Path $backupDir "$targetName.$Timestamp"
+    Move-Item -Path $Target -Destination $backupPath -Force
+    Write-Output "backed up $Target -> $backupPath"
+}
+
 function New-Symlink {
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true)][string]$Source,
         [Parameter(Mandatory = $true)][string]$Target
@@ -60,15 +101,17 @@ function New-Symlink {
         New-Item -ItemType Directory -Force -Path $parent | Out-Null
     }
 
+    Backup-Target -Source $Source -Target $Target
+
     if (Test-Path $Target) {
         Remove-Item -Force $Target
     }
 
     New-Item -ItemType SymbolicLink -Path $Target -Target $Source | Out-Null
-    Write-Host "linked $Target"
+    Write-Output "linked $Target"
 }
 
-function Ensure-SshInclude {
+function Add-SshInclude {
     $configPath = Join-Path $SshDir "config"
     $includeLine = "Include ~/.config/ooodnakov/ssh/config"
 
@@ -95,8 +138,8 @@ New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
 New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1")
 
-Ensure-SshInclude
+Add-SshInclude
 
-Write-Host ""
-Write-Host "Bootstrap complete."
-Write-Host "If needed, create local overrides in $ConfigHome/ooodnakov/local."
+Write-Output ""
+Write-Output "Bootstrap complete."
+Write-Output "If needed, create local overrides in $ConfigHome/ooodnakov/local."
