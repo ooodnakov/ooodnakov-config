@@ -28,6 +28,7 @@ plugins=(
   zsh-autosuggestions
   zsh-syntax-highlighting
   zsh-autocomplete
+  brew
 )
 
 for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
@@ -49,3 +50,5 @@ if [ -f "$OOODNAKOV_CONFIG_HOME/p10k.zsh" ]; then
 fi
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+[[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
