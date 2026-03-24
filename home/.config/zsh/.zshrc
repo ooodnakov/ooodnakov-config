@@ -52,6 +52,10 @@ if [ -f "$OOODNAKOV_CONFIG_HOME/p10k.zsh" ]; then
   source "$OOODNAKOV_CONFIG_HOME/p10k.zsh"
 fi
 
+if [ -f "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" ]; then
+  source "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh"
+fi
+
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 [[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
