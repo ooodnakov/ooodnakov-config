@@ -26,6 +26,7 @@ plugins=(
   web-search
   history-substring-search
   fzf-tab
+  zsh-direnv
   zsh-autosuggestions
   zsh-syntax-highlighting
   zsh-autocomplete

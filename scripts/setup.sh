@@ -31,6 +31,8 @@ ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
 ZSH_AUTOCOMPLETE_REF="2be4e7f0b435138b0237d4f068b2a882fb06edc4"
 FZF_TAB_REPO="https://github.com/Aloxaf/fzf-tab.git"
 FZF_TAB_REF="0983009f8666f11e91a2ee1f88cfdb748d14f656"
+ZSH_DIRENV_REPO="https://github.com/ptavares/zsh-direnv.git"
+ZSH_DIRENV_REF="da53dfcd57af83de8d052b74661c7d06c4dff723"
 AUTO_UV_ENV_REPO="https://github.com/ashwch/auto-uv-env.git"
 AUTO_UV_ENV_REF="76589a0fe4a3eaba9817b7195b9fc05ef4139289"
 NVM_REPO="https://github.com/nvm-sh/nvm.git"
@@ -432,6 +434,7 @@ sync_repo "$ZSH_HIGHLIGHTING_REPO" "$ZSH_HIGHLIGHTING_REF" "$STATE_HOME/oh-my-zs
 sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" || TOOL_SUMMARY+=("zsh-history-substring-search: failed")
 sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" || TOOL_SUMMARY+=("zsh-autocomplete: failed")
 sync_repo "$FZF_TAB_REPO" "$FZF_TAB_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" || TOOL_SUMMARY+=("fzf-tab: failed")
+sync_repo "$ZSH_DIRENV_REPO" "$ZSH_DIRENV_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-direnv" || TOOL_SUMMARY+=("zsh-direnv: failed")
 sync_repo "$AUTO_UV_ENV_REPO" "$AUTO_UV_ENV_REF" "$STATE_HOME/auto-uv-env" || TOOL_SUMMARY+=("auto-uv-env: failed")
 install_managed_tools
 
