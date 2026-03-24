@@ -74,6 +74,7 @@ Portable ideas extracted:
 Imported into active config:
 
 - `zsh-autocomplete`
+- `fzf-tab`
 - `menuselect` Enter bindings
 - `PNPM_HOME` support
 - plugin set expanded toward the machine setups with `git-extras`, `history`, `tmux`, `screen`, `colorize`, and `debian`

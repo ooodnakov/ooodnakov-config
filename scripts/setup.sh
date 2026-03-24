@@ -29,6 +29,8 @@ ZSH_HISTORY_REPO="https://github.com/zsh-users/zsh-history-substring-search.git"
 ZSH_HISTORY_REF="14c8d2e0ffaee98f2df9850b19944f32546fdea5"
 ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
 ZSH_AUTOCOMPLETE_REF="2be4e7f0b435138b0237d4f068b2a882fb06edc4"
+FZF_TAB_REPO="https://github.com/Aloxaf/fzf-tab.git"
+FZF_TAB_REF="0983009f8666f11e91a2ee1f88cfdb748d14f656"
 NVM_REPO="https://github.com/nvm-sh/nvm.git"
 NVM_REF="6b307d0c75041ce5f25829b225470540f2711882"
 K_REPO="https://github.com/supercrabtree/k.git"
@@ -427,6 +429,7 @@ sync_repo "$ZSH_AUTOSUGGESTIONS_REPO" "$ZSH_AUTOSUGGESTIONS_REF" "$STATE_HOME/oh
 sync_repo "$ZSH_HIGHLIGHTING_REPO" "$ZSH_HIGHLIGHTING_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" || TOOL_SUMMARY+=("zsh-syntax-highlighting: failed")
 sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" || TOOL_SUMMARY+=("zsh-history-substring-search: failed")
 sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" || TOOL_SUMMARY+=("zsh-autocomplete: failed")
+sync_repo "$FZF_TAB_REPO" "$FZF_TAB_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" || TOOL_SUMMARY+=("fzf-tab: failed")
 install_managed_tools
 
 link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc" || true

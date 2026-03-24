@@ -25,6 +25,7 @@ plugins=(
   python
   web-search
   history-substring-search
+  fzf-tab
   zsh-autosuggestions
   zsh-syntax-highlighting
   zsh-autocomplete

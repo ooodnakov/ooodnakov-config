@@ -32,6 +32,8 @@ Ignored files:
 - `zsh-autosuggestions`
 - `zsh-syntax-highlighting`
 - `zsh-history-substring-search`
+- `zsh-autocomplete`
+- `fzf-tab`
 
 This keeps the repo small while still making bootstrap deterministic.
 
