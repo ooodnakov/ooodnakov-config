@@ -19,7 +19,7 @@ local config = Config:init()
    :append(require('config.domains'))
    :append(require('config.fonts'))
    :append(require('config.general'))
-   :append(require('config.launch')).options
+   :append(require('config.launch'))
 
 local local_override_path = wezterm.home_dir .. '/.config/ooodnakov/local/wezterm.lua'
 local handle = io.open(local_override_path, 'r')
