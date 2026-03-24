@@ -38,6 +38,8 @@ done
 
 source "$ZSH/oh-my-zsh.sh"
 
+alias k='k -h'
+
 zmodload zsh/complist 2>/dev/null
 bindkey -M menuselect '^M' .accept-line
 bindkey -M menuselect '\r' .accept-line
