@@ -89,7 +89,7 @@ Set-Location $HOME\src\ooodnakov-config
 .\scripts\setup.ps1
 ```
 
-On Windows, the PowerShell setup can also prompt to install missing core tools with `winget`, including WezTerm and `oh-my-posh`.
+On Windows, the PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 
 ## Removal
 

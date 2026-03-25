@@ -33,7 +33,8 @@ latest_backup_for() {
     return 1
   fi
 
-  find "$backup_dir" -maxdepth 1 -name "${target_name}.*" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-
+  # shellcheck disable=SC2012
+  ls -1dt "$backup_dir/${target_name}."* 2>/dev/null | head -n 1
 }
 
 restore_backup() {

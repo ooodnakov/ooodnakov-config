@@ -110,9 +110,10 @@ function Backup-Target {
     # Calculate backup dir relative path or just flat backup root + target dir?
     # In bash setup.sh: backup_dir="$BACKUP_ROOT$target_dir"
     # But for Windows we should trim drive letter? Let's just use absolute path structure
-    $drive = (Get-Item $targetDir).PSDrive.Name
-    $pathWithoutDrive = $targetDir.Substring($drive.Length + 1)
-    if ($pathWithoutDrive.StartsWith("\")) { $pathWithoutDrive = $pathWithoutDrive.Substring(1) }
+    $pathWithoutDrive = Split-Path -Path $targetDir -NoQualifier
+    if ($pathWithoutDrive.StartsWith("\") -or $pathWithoutDrive.StartsWith("/")) {
+        $pathWithoutDrive = $pathWithoutDrive.Substring(1)
+    }
     $backupDir = Join-Path $BackupRoot $pathWithoutDrive
 
     if (-not (Test-Path $backupDir)) {
@@ -125,25 +126,27 @@ function Backup-Target {
 }
 
 function New-Symlink {
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess=$true)]
     param(
         [Parameter(Mandatory = $true)][string]$Source,
         [Parameter(Mandatory = $true)][string]$Target
     )
 
-    $parent = Split-Path -Parent $Target
-    if (-not (Test-Path $parent)) {
-        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    if ($PSCmdlet.ShouldProcess($Target, "Create symlink to $Source")) {
+        $parent = Split-Path -Parent $Target
+        if (-not (Test-Path $parent)) {
+            New-Item -ItemType Directory -Force -Path $parent | Out-Null
+        }
+
+        Backup-Target -Source $Source -Target $Target
+
+        if (Test-Path $Target) {
+            Remove-Item -Force $Target
+        }
+
+        New-Item -ItemType SymbolicLink -Path $Target -Target $Source | Out-Null
+        Write-Output "linked $Target"
     }
-
-    Backup-Target -Source $Source -Target $Target
-
-    if (Test-Path $Target) {
-        Remove-Item -Force $Target
-    }
-
-    New-Item -ItemType SymbolicLink -Path $Target -Target $Source | Out-Null
-    Write-Output "linked $Target"
 }
 
 function Add-SshInclude {
