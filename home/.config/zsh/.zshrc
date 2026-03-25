@@ -1,9 +1,15 @@
 export TERM="xterm-256color"
 export OOODNAKOV_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/ooodnakov"
 export OOODNAKOV_SHARE_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config"
+export OOODNAKOV_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}/ooodnakov-config"
+export OOODNAKOV_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}/ooodnakov-config"
 export ZSH="$OOODNAKOV_SHARE_HOME/oh-my-zsh"
 export ZSH_CUSTOM="$ZSH/custom"
 export POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
+export HISTFILE="$OOODNAKOV_STATE_HOME/zsh/history"
+export ZSH_COMPDUMP="$OOODNAKOV_CACHE_HOME/zsh/.zcompdump-${HOST%%.*}-${ZSH_VERSION}"
+
+mkdir -p "${HISTFILE:h}" "${ZSH_COMPDUMP:h}"
 
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
@@ -30,8 +36,18 @@ plugins=(
   zsh-autosuggestions
   zsh-syntax-highlighting
   zsh-autocomplete
-  brew
 )
+
+for brew_path in "${commands[brew]}" /opt/homebrew/bin/brew /usr/local/bin/brew "$HOME/.linuxbrew/bin/brew" /home/linuxbrew/.linuxbrew/bin/brew; do
+  if [[ -x "$brew_path" ]]; then
+    brew_prefix="${brew_path:A:h:h}"
+    if [[ -d "$brew_prefix" && -O "$brew_prefix" ]]; then
+      plugins+=(brew)
+    fi
+    break
+  fi
+done
+unset brew_path brew_prefix
 
 for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
   source "$file"

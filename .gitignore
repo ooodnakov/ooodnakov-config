@@ -9,6 +9,7 @@ home/.config/ooodnakov/local/*.ps1
 home/.config/ooodnakov/local/*.lua
 home/.config/ooodnakov/local/*.ssh
 home/.config/zsh/.zsh_history
+home/.config/zsh/.zcompdump*
 
 .zcompdump*
 

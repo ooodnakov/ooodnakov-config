@@ -22,6 +22,7 @@ Ignored files:
 - SSH private keys
 - host-specific shell paths
 - machine-only WezTerm domains
+- runtime shell artifacts such as history and completion dumps
 
 ## Dependency policy
 
@@ -38,6 +39,11 @@ Ignored files:
 - `auto-uv-env`
 
 This keeps the repo small while still making bootstrap deterministic.
+
+Shell runtime state is kept outside the tracked config tree:
+
+- zsh history: `~/.local/state/ooodnakov-config/zsh/history`
+- zsh completion dump: `~/.cache/ooodnakov-config/zsh/.zcompdump-<host>-<zsh-version>`
 
 ## SSH policy
 

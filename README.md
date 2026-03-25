@@ -144,6 +144,8 @@ Tracked shared environment currently covers:
 - `~/.cargo/bin`
 - optional `~/.local/bin/env` sourcing when present
 
+Runtime shell artifacts are intentionally not tracked. Zsh history is written under `~/.local/state/ooodnakov-config/zsh/` and the completion dump under `~/.cache/ooodnakov-config/zsh/`.
+
 ## Local-only files
 
 Create these on each machine as needed:
