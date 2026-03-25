@@ -73,7 +73,7 @@ run_with_spinner() {
   local label="$1"
   shift
   local logfile pid spinner_index=0
-  local -a frames=('-' '\' '|' '/')
+  local -a frames=('-' "\\" '|' '/')
 
   logfile="$(mktemp)"
   (
@@ -315,10 +315,12 @@ ensure_ssh_include() {
   touch "$ssh_config"
 
   if ! grep -Fqx "$include_line" "$ssh_config"; then
-    printf "%s\n\n" "$include_line" | cat - "$ssh_config" > "$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config" || {
+    if printf "%s\n\n" "$include_line" | cat - "$ssh_config" > "$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
+      :
+    else
       record_failure "Updating SSH include config"
       return 1
-    }
+    fi
   fi
 }
 
@@ -452,7 +454,7 @@ install_fonts
 
 if is_interactive && [ -f "$HOME_DIR/.zshrc" ]; then
   # This only updates the current setup process; it cannot mutate the parent shell session.
-  # shellcheck disable=SC1090
+  # shellcheck disable=SC1090,SC1091
   . "$HOME_DIR/.zshrc" || true
 fi
 

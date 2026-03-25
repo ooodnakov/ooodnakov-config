@@ -4,7 +4,6 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOME_DIR="${HOME}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
-DATA_HOME="${XDG_DATA_HOME:-$HOME_DIR/.local/share}"
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
 RESTORE_MODE="${1:-restore}"
 
@@ -34,6 +33,7 @@ latest_backup_for() {
     return 1
   fi
 
+  # shellcheck disable=SC2012
   ls -1dt "$backup_dir/${target_name}."* 2>/dev/null | head -n 1
 }
 
