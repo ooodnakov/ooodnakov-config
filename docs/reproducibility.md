@@ -39,6 +39,7 @@ Ignored files:
 - `auto-uv-env`
 
 This keeps the repo small while still making bootstrap deterministic.
+The Unix setup also normalizes permissions for the installed `oh-my-zsh` tree on every run, keeping directories at `755` and regular files at `644` so `compaudit` accepts the completion paths.
 
 Shell runtime state is kept outside the tracked config tree:
 

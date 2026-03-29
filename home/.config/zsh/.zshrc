@@ -11,6 +11,17 @@ export ZSH_COMPDUMP="$OOODNAKOV_CACHE_HOME/zsh/.zcompdump-${HOST%%.*}-${ZSH_VERS
 
 mkdir -p "${HISTFILE:h}" "${ZSH_COMPDUMP:h}"
 
+# Remove stale compdump files that use an older oh-my-zsh header format.
+# Newer compinit expects the first line to start with "#files:" and fails
+# with a math parsing error when it encounters old metadata-first dumps.
+if [[ -f "$ZSH_COMPDUMP" ]]; then
+  IFS= read -r zsh_compdump_header < "$ZSH_COMPDUMP"
+  if [[ "$zsh_compdump_header" != '#files:'* ]]; then
+    rm -f "$ZSH_COMPDUMP" "$ZSH_COMPDUMP.zwc"
+  fi
+  unset zsh_compdump_header
+fi
+
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi

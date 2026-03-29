@@ -306,6 +306,27 @@ sync_repo() {
   run_with_spinner "Pinning $(basename "$target")" git -c advice.detachedHead=false -C "$target" checkout "$ref" || return 1
 }
 
+normalize_tree_permissions() {
+  local target="$1"
+
+  [ -e "$target" ] || return 0
+
+  find "$target" -type d -exec chmod u=rwx,go=rx {} + || return 1
+  find "$target" -type f -exec chmod u=rw,go=r {} + || return 1
+}
+
+ensure_oh_my_zsh_permissions() {
+  local omz_root="$STATE_HOME/oh-my-zsh"
+
+  if normalize_tree_permissions "$omz_root"; then
+    TOOL_SUMMARY+=("oh-my-zsh permissions: normalized")
+  else
+    TOOL_SUMMARY+=("oh-my-zsh permissions: failed")
+    record_failure "Normalizing oh-my-zsh permissions"
+    return 1
+  fi
+}
+
 ensure_ssh_include() {
   local ssh_dir="$HOME_DIR/.ssh"
   local ssh_config="$ssh_dir/config"
@@ -438,6 +459,7 @@ sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zs
 sync_repo "$FZF_TAB_REPO" "$FZF_TAB_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" || TOOL_SUMMARY+=("fzf-tab: failed")
 sync_repo "$ZSH_DIRENV_REPO" "$ZSH_DIRENV_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-direnv" || TOOL_SUMMARY+=("zsh-direnv: failed")
 sync_repo "$AUTO_UV_ENV_REPO" "$AUTO_UV_ENV_REF" "$STATE_HOME/auto-uv-env" || TOOL_SUMMARY+=("auto-uv-env: failed")
+ensure_oh_my_zsh_permissions || true
 install_managed_tools
 
 link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc" || true

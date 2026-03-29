@@ -49,6 +49,7 @@ If managed target files already exist, they are moved into timestamped backups u
 When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `fzf`, `eza`, `dua-cli`, `node`, `npm`, `python3`, `uv`, `cargo`, `autoconf`, and `fontconfig`. Prompts read from `/dev/tty`, so they work correctly even with `curl | bash`.
 For `eza`, setup only auto-installs on package-manager paths that match upstream guidance directly; Debian/Ubuntu and some Fedora setups are left as manual installs instead of guessing.
 The Unix setup also installs pinned copies of `fzf-tab`, `zsh-direnv`, `auto-uv-env`, `nvm`, `k`, `marker`, and `todo.txt-cli`.
+It also normalizes the installed `oh-my-zsh` tree permissions on every run so `compaudit` and `compinit` do not abort on group-writable plugin directories.
 
 ### Linux or macOS
 
@@ -68,6 +69,7 @@ cd ~/src/ooodnakov-config
 
 This also preserves replaced files by moving them into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
 In interactive terminals it also offers to install common optional dependencies via the detected package manager.
+It also reapplies safe `oh-my-zsh` directory and file modes on every run.
 At the end of setup it also sources `~/.zshrc` inside the installer process, but you may still want to open a fresh shell session for a fully clean environment.
 
 You can also rerun the bootstrap:
