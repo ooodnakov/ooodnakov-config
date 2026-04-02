@@ -66,6 +66,11 @@ done
 
 source "$ZSH/oh-my-zsh.sh"
 
+# Enable uv/uvx completions when uv is installed.
+if (( $+commands[uv] )); then
+  eval "$(uv generate-shell-completion zsh)"
+fi
+
 alias k='k -h'
 
 zmodload zsh/complist 2>/dev/null
