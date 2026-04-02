@@ -387,6 +387,52 @@ install_managed_tools() {
   fi
 }
 
+install_auto_uv_env() {
+  local source_dir="$STATE_HOME/src/auto-uv-env"
+  local legacy_dir="$STATE_HOME/auto-uv-env"
+  local share_dir="$STATE_HOME/auto-uv-env"
+  local bin_dir="$STATE_HOME/bin"
+
+  if [ -d "$legacy_dir/.git" ] && [ ! -e "$source_dir" ]; then
+    mkdir -p "$(dirname "$source_dir")"
+    if mv "$legacy_dir" "$source_dir"; then
+      TOOL_SUMMARY+=("auto-uv-env: migrated legacy checkout to $source_dir")
+    else
+      TOOL_SUMMARY+=("auto-uv-env: failed to migrate legacy checkout")
+      record_failure "Migrating auto-uv-env checkout"
+      return 1
+    fi
+  fi
+
+  sync_repo "$AUTO_UV_ENV_REPO" "$AUTO_UV_ENV_REF" "$source_dir" || {
+    TOOL_SUMMARY+=("auto-uv-env: failed")
+    return 1
+  }
+
+  if [ ! -f "$source_dir/auto-uv-env" ] || [ ! -d "$source_dir/share/auto-uv-env" ]; then
+    TOOL_SUMMARY+=("auto-uv-env: install payload missing from source checkout")
+    record_failure "Installing auto-uv-env payload"
+    return 1
+  fi
+
+  mkdir -p "$bin_dir"
+  mkdir -p "$share_dir"
+  if ! find "$source_dir/share/auto-uv-env" -maxdepth 1 -type f -exec install -m 0644 {} "$share_dir/" \;; then
+    TOOL_SUMMARY+=("auto-uv-env: failed to install share files")
+    record_failure "Installing auto-uv-env share files"
+    return 1
+  fi
+
+  ln -sfn "$source_dir/auto-uv-env" "$bin_dir/auto-uv-env" || {
+    TOOL_SUMMARY+=("auto-uv-env: failed to link executable")
+    record_failure "Linking auto-uv-env executable"
+    return 1
+  }
+
+  chmod u=rwx,go=rx "$source_dir/auto-uv-env" || true
+  TOOL_SUMMARY+=("auto-uv-env: installed to $share_dir and linked into $bin_dir")
+}
+
 print_summary() {
   local item
 
@@ -458,7 +504,7 @@ sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/p
 sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" || TOOL_SUMMARY+=("zsh-autocomplete: failed")
 sync_repo "$FZF_TAB_REPO" "$FZF_TAB_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" || TOOL_SUMMARY+=("fzf-tab: failed")
 sync_repo "$ZSH_DIRENV_REPO" "$ZSH_DIRENV_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-direnv" || TOOL_SUMMARY+=("zsh-direnv: failed")
-sync_repo "$AUTO_UV_ENV_REPO" "$AUTO_UV_ENV_REF" "$STATE_HOME/auto-uv-env" || TOOL_SUMMARY+=("auto-uv-env: failed")
+install_auto_uv_env
 ensure_oh_my_zsh_permissions || true
 install_managed_tools
 

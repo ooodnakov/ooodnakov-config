@@ -22,3 +22,11 @@ $env:PNPM_HOME = $pnpmHome
 if (Test-Path $pnpmHome) {
     $env:PATH = "$pnpmHome$([IO.Path]::PathSeparator)$env:PATH"
 }
+
+if (Get-Command uv -ErrorAction SilentlyContinue) {
+    (& uv generate-shell-completion powershell) | Out-String | Invoke-Expression
+}
+
+if (Get-Command direnv -ErrorAction SilentlyContinue) {
+    (& direnv hook pwsh) | Out-String | Invoke-Expression
+}

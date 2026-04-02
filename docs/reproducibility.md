@@ -39,6 +39,7 @@ Ignored files:
 - `auto-uv-env`
 
 This keeps the repo small while still making bootstrap deterministic.
+`auto-uv-env` is installed in a user-local layout that mirrors its upstream bin/share model without touching global system directories: a pinned source checkout lives under `~/.local/share/ooodnakov-config/src/auto-uv-env`, the executable is linked into `~/.local/share/ooodnakov-config/bin/auto-uv-env`, and the shell integration files are installed into `~/.local/share/ooodnakov-config/auto-uv-env`.
 The Unix setup also normalizes permissions for the installed `oh-my-zsh` tree on every run, keeping directories at `755` and regular files at `644` so `compaudit` accepts the completion paths.
 
 Shell runtime state is kept outside the tracked config tree:

@@ -71,6 +71,11 @@ if (( $+commands[uv] )); then
   eval "$(uv generate-shell-completion zsh)"
 fi
 
+# Enable direnv completions when direnv is installed
+if (( $+commands[direnv] )); then
+  eval "$(direnv hook zsh)"
+fi
+
 alias k='k -h'
 
 zmodload zsh/complist 2>/dev/null
