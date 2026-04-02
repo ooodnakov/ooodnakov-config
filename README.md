@@ -10,7 +10,7 @@ The repo keeps only opinionated config and bootstrap logic. Secrets, tokens, key
 
 ## What is managed
 
-- `zsh` with `oh-my-zsh`, pinned plugin/theme checkouts, pinned `zsh-direnv`, and pinned `auto-uv-env`
+- `zsh` with `oh-my-zsh`, pinned plugin/theme checkouts, built-in `direnv` plugin support, and pinned `auto-uv-env`
 - pinned Zsh completion stack including `fzf-tab`
 - managed shell helpers: `nvm`, `k`, `marker`, `todo.txt-cli`
 - optional CLI tools prompted during setup: `fzf`, `eza`, `dua-cli`
@@ -48,7 +48,7 @@ If the repo is already present there, it is updated in place first.
 If managed target files already exist, they are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
 When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `fzf`, `eza`, `dua-cli`, `node`, `npm`, `python3`, `uv`, `cargo`, `autoconf`, and `fontconfig`. Prompts read from `/dev/tty`, so they work correctly even with `curl | bash`.
 For `eza`, setup only auto-installs on package-manager paths that match upstream guidance directly; Debian/Ubuntu and some Fedora setups are left as manual installs instead of guessing.
-The Unix setup also installs pinned copies of `fzf-tab`, `zsh-direnv`, `auto-uv-env`, `nvm`, `k`, `marker`, and `todo.txt-cli`.
+The Unix setup also installs pinned copies of `fzf-tab`, `auto-uv-env`, `nvm`, `k`, `marker`, and `todo.txt-cli`.
 For `auto-uv-env`, setup keeps a pinned source checkout under the repo-managed XDG data tree, links the executable into `~/.local/share/ooodnakov-config/bin`, and installs the shell integration files into `~/.local/share/ooodnakov-config/auto-uv-env`.
 It also normalizes the installed `oh-my-zsh` tree permissions on every run so `compaudit` and `compinit` do not abort on group-writable plugin directories.
 

@@ -43,7 +43,6 @@ plugins=(
   web-search
   history-substring-search
   fzf-tab
-  zsh-direnv
   zsh-autosuggestions
   zsh-syntax-highlighting
   zsh-autocomplete
@@ -65,15 +64,29 @@ for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
 done
 
 source "$ZSH/oh-my-zsh.sh"
+# direnv supress stdout during startup in path with .envrc
+if (( $+commands[direnv] )); then
+  autoload -Uz add-zsh-hook
+  typeset -gi OOODNAKOV_DIRENV_QUIET_STARTUP=1
+
+  function _ooodnakov_direnv_hook() {
+    trap -- '' SIGINT
+    if (( OOODNAKOV_DIRENV_QUIET_STARTUP )); then
+      eval "$(direnv export zsh 2>/dev/null)"
+      OOODNAKOV_DIRENV_QUIET_STARTUP=0
+    else
+      eval "$(direnv export zsh)"
+    fi
+    trap - SIGINT
+  }
+
+  add-zsh-hook precmd _ooodnakov_direnv_hook
+  add-zsh-hook chpwd _ooodnakov_direnv_hook
+fi
 
 # Enable uv/uvx completions when uv is installed.
 if (( $+commands[uv] )); then
   eval "$(uv generate-shell-completion zsh)"
-fi
-
-# Enable direnv completions when direnv is installed
-if (( $+commands[direnv] )); then
-  eval "$(direnv hook zsh)"
 fi
 
 alias k='k -h'
