@@ -61,11 +61,24 @@ chmod +x ./scripts/setup.sh
 ./scripts/setup.sh
 ```
 
+Unified CLI (recommended):
+
+```bash
+chmod +x ./scripts/ooodnakov.sh
+./scripts/ooodnakov.sh install
+```
+
 To update an existing machine from the repo and reapply the managed config:
 
 ```bash
 cd ~/src/ooodnakov-config
 ./scripts/setup.sh update
+```
+
+or:
+
+```bash
+./scripts/ooodnakov.sh update
 ```
 
 This also preserves replaced files by moving them into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
@@ -85,12 +98,32 @@ For unattended runs, disable prompts:
 OOODNAKOV_INTERACTIVE=never ./scripts/setup.sh update
 ```
 
+Preview setup actions without changing the system:
+
+```bash
+./scripts/ooodnakov.sh dry-run
+```
+
+Run post-install checks:
+
+```bash
+./scripts/ooodnakov.sh doctor
+```
+
 ### Windows PowerShell
 
 ```powershell
 git clone git@github.com:ooodnakov/ooodnakov-config.git $HOME\src\ooodnakov-config
 Set-Location $HOME\src\ooodnakov-config
 .\scripts\setup.ps1
+```
+
+Unified PowerShell CLI (recommended):
+
+```powershell
+.\scripts\ooodnakov.ps1 install
+.\scripts\ooodnakov.ps1 dry-run
+.\scripts\ooodnakov.ps1 doctor
 ```
 
 On Windows, the PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
@@ -105,10 +138,22 @@ chmod +x ./scripts/delete.sh
 ./scripts/delete.sh
 ```
 
+or via unified CLI:
+
+```bash
+./scripts/ooodnakov.sh delete
+```
+
 To remove only the managed links without restoring backups:
 
 ```bash
 ./scripts/delete.sh remove
+```
+
+or:
+
+```bash
+./scripts/ooodnakov.sh remove
 ```
 
 ## Fonts

@@ -8,6 +8,7 @@ DATA_HOME="${XDG_DATA_HOME:-$HOME_DIR/.local/share}"
 STATE_HOME="$DATA_HOME/ooodnakov-config"
 FONT_TARGET_DIR="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
 COMMAND="${1:-install}"
+DRY_RUN=0
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
@@ -51,6 +52,28 @@ is_interactive() {
   esac
 }
 
+usage() {
+  cat <<'EOF'
+Usage: ./scripts/setup.sh [install|update|doctor] [--dry-run]
+
+Commands:
+  install   apply managed config and dependencies
+  update    git pull this repo, then run install flow
+  doctor    validate managed links and required tools
+
+Options:
+  --dry-run print actions without mutating filesystem
+EOF
+}
+
+run_cmd() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] %s\n' "$*"
+    return 0
+  fi
+  "$@"
+}
+
 prompt_yes_no() {
   local prompt="$1"
   local reply
@@ -70,6 +93,10 @@ prompt_yes_no() {
 run_with_spinner() {
   local label="$1"
   shift
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf "[dry-run] %s: %s\n" "$label" "$*"
+    return 0
+  fi
   local logfile pid spinner_index=0
   local -a frames=('-' "\\" '|' '/')
 
@@ -249,12 +276,12 @@ maybe_install_eza() {
 link_file() {
   local source="$1"
   local target="$2"
-  mkdir -p "$(dirname "$target")"
+  run_cmd mkdir -p "$(dirname "$target")"
   backup_target "$source" "$target" || {
     record_failure "Backing up $target"
     return 1
   }
-  ln -sfn "$source" "$target" || {
+  run_cmd ln -sfn "$source" "$target" || {
     record_failure "Linking $target"
     return 1
   }
@@ -281,12 +308,12 @@ backup_target() {
   target_dir="$(dirname "$target")"
   target_name="$(basename "$target")"
   backup_dir="$BACKUP_ROOT$target_dir"
-  mkdir -p "$backup_dir"
+  run_cmd mkdir -p "$backup_dir"
 
   if [ -d "$target" ] && [ ! -L "$target" ]; then
-    mv "$target" "$backup_dir/${target_name}.${TIMESTAMP}"
+    run_cmd mv "$target" "$backup_dir/${target_name}.${TIMESTAMP}"
   else
-    mv "$target" "$backup_dir/${target_name}.${TIMESTAMP}"
+    run_cmd mv "$target" "$backup_dir/${target_name}.${TIMESTAMP}"
   fi
   echo "backed up $target -> $backup_dir/${target_name}.${TIMESTAMP}"
 }
@@ -330,11 +357,18 @@ ensure_ssh_include() {
   local ssh_config="$ssh_dir/config"
   local include_line="Include ~/.config/ooodnakov/ssh/config"
 
-  mkdir -p "$ssh_dir"
-  touch "$ssh_config"
+  run_cmd mkdir -p "$ssh_dir"
+  run_cmd touch "$ssh_config"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] ensure SSH include in %s\n' "$ssh_config"
+    return 0
+  fi
 
   if ! grep -Fqx "$include_line" "$ssh_config"; then
-    if printf "%s\n\n" "$include_line" | cat - "$ssh_config" > "$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+      printf '[dry-run] prepend SSH include in %s\n' "$ssh_config"
+    elif printf "%s\n\n" "$include_line" | cat - "$ssh_config" > "$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
       :
     else
       record_failure "Updating SSH include config"
@@ -347,8 +381,8 @@ install_fonts() {
   local source_dir="$REPO_ROOT/fonts/meslo"
 
   if [ -d "$source_dir" ]; then
-    mkdir -p "$FONT_TARGET_DIR"
-    cp "$source_dir"/*.ttf "$FONT_TARGET_DIR"/ || record_failure "Copying bundled fonts"
+    run_cmd mkdir -p "$FONT_TARGET_DIR"
+    run_cmd cp "$source_dir"/*.ttf "$FONT_TARGET_DIR"/ || record_failure "Copying bundled fonts"
     if command -v fc-cache >/dev/null 2>&1; then
       run_with_spinner "Refreshing font cache" fc-cache -f "$FONT_TARGET_DIR" >/dev/null 2>&1 || true
     fi
@@ -363,8 +397,8 @@ install_managed_tools() {
   sync_repo "$MARKER_REPO" "$MARKER_REF" "$STATE_HOME/marker" && TOOL_SUMMARY+=("marker: synced") || TOOL_SUMMARY+=("marker: failed")
   sync_repo "$TODO_REPO" "$TODO_REF" "$STATE_HOME/todo" && TOOL_SUMMARY+=("todo.txt-cli: synced") || TOOL_SUMMARY+=("todo.txt-cli: failed")
 
-  mkdir -p "$bin_dir"
-  ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh" && TOOL_SUMMARY+=("todo.sh: linked into $bin_dir") || TOOL_SUMMARY+=("todo.sh: link failed")
+  run_cmd mkdir -p "$bin_dir"
+  run_cmd ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh" && TOOL_SUMMARY+=("todo.sh: linked into $bin_dir") || TOOL_SUMMARY+=("todo.sh: link failed")
 
   if command -v python3 >/dev/null 2>&1 && [ -f "$STATE_HOME/marker/install.py" ]; then
     if python3 "$STATE_HOME/marker/install.py" >/dev/null 2>&1; then
@@ -392,8 +426,8 @@ install_auto_uv_env() {
   local bin_dir="$STATE_HOME/bin"
 
   if [ -d "$legacy_dir/.git" ] && [ ! -e "$source_dir" ]; then
-    mkdir -p "$(dirname "$source_dir")"
-    if mv "$legacy_dir" "$source_dir"; then
+    run_cmd mkdir -p "$(dirname "$source_dir")"
+    if run_cmd mv "$legacy_dir" "$source_dir"; then
       TOOL_SUMMARY+=("auto-uv-env: migrated legacy checkout to $source_dir")
     else
       TOOL_SUMMARY+=("auto-uv-env: failed to migrate legacy checkout")
@@ -407,27 +441,34 @@ install_auto_uv_env() {
     return 1
   }
 
+  if [ "$DRY_RUN" -eq 1 ]; then
+    TOOL_SUMMARY+=("auto-uv-env: dry-run preview")
+    return 0
+  fi
+
   if [ ! -f "$source_dir/auto-uv-env" ] || [ ! -d "$source_dir/share/auto-uv-env" ]; then
     TOOL_SUMMARY+=("auto-uv-env: install payload missing from source checkout")
     record_failure "Installing auto-uv-env payload"
     return 1
   fi
 
-  mkdir -p "$bin_dir"
-  mkdir -p "$share_dir"
-  if ! find "$source_dir/share/auto-uv-env" -maxdepth 1 -type f -exec install -m 0644 {} "$share_dir/" \;; then
+  run_cmd mkdir -p "$bin_dir"
+  run_cmd mkdir -p "$share_dir"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] install auto-uv-env share files into %s\n' "$share_dir"
+  elif ! find "$source_dir/share/auto-uv-env" -maxdepth 1 -type f -exec install -m 0644 {} "$share_dir/" \;; then
     TOOL_SUMMARY+=("auto-uv-env: failed to install share files")
     record_failure "Installing auto-uv-env share files"
     return 1
   fi
 
-  ln -sfn "$source_dir/auto-uv-env" "$bin_dir/auto-uv-env" || {
+  run_cmd ln -sfn "$source_dir/auto-uv-env" "$bin_dir/auto-uv-env" || {
     TOOL_SUMMARY+=("auto-uv-env: failed to link executable")
     record_failure "Linking auto-uv-env executable"
     return 1
   }
 
-  chmod u=rwx,go=rx "$source_dir/auto-uv-env" || true
+  run_cmd chmod u=rwx,go=rx "$source_dir/auto-uv-env" || true
   TOOL_SUMMARY+=("auto-uv-env: installed to $share_dir and linked into $bin_dir")
 }
 
@@ -454,7 +495,53 @@ print_summary() {
 }
 
 update_repo() {
-  git -C "$REPO_ROOT" pull --ff-only
+  run_cmd git -C "$REPO_ROOT" pull --ff-only
+}
+
+doctor_check_link() {
+  local source="$1"
+  local target="$2"
+  if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+    echo "[ok] $target -> $source"
+  else
+    echo "[missing] $target (expected symlink to $source)"
+    FAILURES+=("doctor link $target")
+  fi
+}
+
+doctor_check_command() {
+  local name="$1"
+  if command -v "$name" >/dev/null 2>&1; then
+    echo "[ok] command: $name"
+  else
+    echo "[missing] command: $name"
+    FAILURES+=("doctor command $name")
+  fi
+}
+
+run_doctor() {
+  echo "Running doctor checks..."
+  doctor_check_link "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
+  doctor_check_link "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"
+  doctor_check_link "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm"
+  doctor_check_link "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov"
+  doctor_check_link "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json"
+  doctor_check_link "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1"
+  doctor_check_command git
+  doctor_check_command zsh
+  doctor_check_command wezterm
+  if [ -d "$FONT_TARGET_DIR" ]; then
+    echo "[ok] fonts dir: $FONT_TARGET_DIR"
+  else
+    echo "[missing] fonts dir: $FONT_TARGET_DIR"
+    FAILURES+=("doctor fonts")
+  fi
+
+  if [ "${#FAILURES[@]}" -gt 0 ]; then
+    echo "Doctor found ${#FAILURES[@]} issue(s)."
+    return 1
+  fi
+  echo "Doctor checks passed."
 }
 
 install_optional_dependencies() {
@@ -478,19 +565,24 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
 }
 
+shift || true
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --dry-run) DRY_RUN=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "unknown option: $1" >&2; usage >&2; exit 1 ;;
+  esac
+  shift
+done
+
 case "$COMMAND" in
-  install)
-    ;;
-  update)
-    update_repo
-    ;;
-  *)
-    echo "Usage: $0 [install|update]" >&2
-    exit 1
-    ;;
+  install) ;;
+  update) update_repo ;;
+  doctor) run_doctor; exit $? ;;
+  *) usage >&2; exit 1 ;;
 esac
 
-mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
+run_cmd mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
 
 install_optional_dependencies
 
@@ -510,7 +602,7 @@ link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh" || true
 link_file "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm" || true
 link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
 
-mkdir -p "$CONFIG_HOME/ohmyposh" "$CONFIG_HOME/powershell"
+run_cmd mkdir -p "$CONFIG_HOME/ohmyposh" "$CONFIG_HOME/powershell"
 link_file "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json" || true
 link_file "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1" || true
 
