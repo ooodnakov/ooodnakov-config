@@ -1,0 +1,84 @@
+#compdef direnv
+
+local curcontext="$curcontext" state line
+typeset -A opt_args
+
+local -a commands
+commands=(
+  'allow:Grant permission to load a .envrc or .env file'
+  'permit:Alias for allow'
+  'grant:Alias for allow'
+  'block:Revoke permission for a .envrc or .env file'
+  'deny:Alias for block'
+  'disallow:Alias for block'
+  'revoke:Alias for block'
+  'edit:Open the current or specified .envrc or .env in $EDITOR'
+  'exec:Run a command after loading the env from a directory'
+  'export:Print environment exports for a shell'
+  'fetchurl:Fetch a URL into direnv'\''s CAS'
+  'help:Show help'
+  'hook:Print shell hook code'
+  'log:Log a message'
+  'prune:Remove old allowed files'
+  'reload:Trigger an environment reload'
+  'status:Print status information'
+  'stdlib:Print the stdlib available in .envrc'
+  'version:Print or check the direnv version'
+)
+
+local -a shell_names
+shell_names=(zsh systemd elvish gzenv tcsh pwsh bash fish gha json murex vim)
+
+_arguments -C \
+  '1:command:->command' \
+  '*::arg:->args' && return 0
+
+case "$state" in
+  command)
+    _describe -t commands 'direnv command' commands
+    ;;
+  args)
+    case "$words[2]" in
+      allow|permit|grant|block|deny|disallow|revoke|edit)
+        _path_files -g '(.envrc|.env)'
+        ;;
+      exec)
+        if (( CURRENT == 3 )); then
+          _path_files -/
+        else
+          _normal
+        fi
+        ;;
+      export|hook)
+        _values 'shell' $shell_names
+        ;;
+      fetchurl)
+        if (( CURRENT == 3 )); then
+          _urls
+        else
+          _message 'integrity hash'
+        fi
+        ;;
+      help)
+        _alternative \
+          'commands:direnv command:_describe -t commands "direnv command" commands' \
+          'flags:show private flag:(true false)'
+        ;;
+      log)
+        if (( CURRENT == 3 )); then
+          _values 'log level' --status --error
+        else
+          _message 'message'
+        fi
+        ;;
+      status)
+        _values 'status option' --json
+        ;;
+      version)
+        _message 'version constraint'
+        ;;
+      *)
+        ;;
+    esac
+    ;;
+esac

@@ -9,6 +9,8 @@ export POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
 export HISTFILE="$OOODNAKOV_STATE_HOME/zsh/history"
 export ZSH_COMPDUMP="$OOODNAKOV_CACHE_HOME/zsh/.zcompdump-${HOST%%.*}-${ZSH_VERSION}"
 
+fpath=("$OOODNAKOV_CONFIG_HOME/zsh/completions" $fpath)
+
 mkdir -p "${HISTFILE:h}" "${ZSH_COMPDUMP:h}"
 
 # Remove stale compdump files that use an older oh-my-zsh header format.
