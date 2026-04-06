@@ -1,3 +1,9 @@
+param(
+    [ValidateSet("install", "update", "doctor")]
+    [string]$Command = "install",
+    [switch]$DryRun
+)
+
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -36,6 +42,7 @@ function Install-Chocolatey {
     }
 
     if (Confirm-Install "Install Chocolatey?") {
+        if ($DryRun) { Write-Output "[dry-run] Install Chocolatey"; return }
         Write-Output "Installing Chocolatey..."
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
@@ -61,6 +68,7 @@ function Install-ChocoPackageIfMissing {
     }
 
     if (Confirm-Install "Install $Description with Chocolatey?") {
+        if ($DryRun) { Write-Output "[dry-run] choco install $ChocoId -y"; return }
         choco install $ChocoId -y
     }
 }
@@ -82,6 +90,7 @@ function Install-WingetPackageIfMissing {
     }
 
     if (Confirm-Install "Install $Description with winget?") {
+        if ($DryRun) { Write-Output "[dry-run] winget install --exact --id $WingetId"; return }
         winget install --exact --id $WingetId --accept-package-agreements --accept-source-agreements
     }
 }
@@ -121,6 +130,10 @@ function Backup-Target {
     }
 
     $backupPath = Join-Path $backupDir "$targetName.$Timestamp"
+    if ($DryRun) {
+        Write-Output "[dry-run] backup $Target -> $backupPath"
+        return
+    }
     Move-Item -Path $Target -Destination $backupPath -Force
     Write-Output "backed up $Target -> $backupPath"
 }
@@ -144,6 +157,10 @@ function New-Symlink {
             Remove-Item -Force $Target
         }
 
+        if ($DryRun) {
+            Write-Output "[dry-run] link $Target -> $Source"
+            return
+        }
         New-Item -ItemType SymbolicLink -Path $Target -Target $Source | Out-Null
         Write-Output "linked $Target"
     }
@@ -163,29 +180,72 @@ function Add-SshInclude {
 
     $existing = Get-Content -Path $configPath -ErrorAction SilentlyContinue
     if ($existing -notcontains $includeLine) {
+        if ($DryRun) {
+            Write-Output "[dry-run] prepend Include to $configPath"
+            return
+        }
         @($includeLine, "") + $existing | Set-Content -Path $configPath
     }
 }
 
-Install-WingetPackageIfMissing -CommandName "wezterm" -WingetId "wez.wezterm" -Description "WezTerm"
-Install-WingetPackageIfMissing -CommandName "oh-my-posh" -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh"
-Install-WingetPackageIfMissing -CommandName "git" -WingetId "Git.Git" -Description "Git"
+function Test-Doctor {
+    $failures = 0
+    $checks = @(
+        @{ Source = (Join-Path $RepoRoot "home/.config/wezterm"); Target = (Join-Path $ConfigHome "wezterm") },
+        @{ Source = (Join-Path $RepoRoot "home/.config/ooodnakov"); Target = (Join-Path $ConfigHome "ooodnakov") },
+        @{ Source = (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json"); Target = (Join-Path $OhMyPoshDir "ooodnakov.omp.json") },
+        @{ Source = (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1"); Target = (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1") }
+    )
+    foreach ($check in $checks) {
+        $item = Get-Item -Path $check.Target -ErrorAction SilentlyContinue
+        if ($item -and $item.LinkType -eq "SymbolicLink" -and $item.Target -eq $check.Source) {
+            Write-Output "[ok] $($check.Target)"
+        } else {
+            Write-Output "[missing] $($check.Target)"
+            $failures++
+        }
+    }
+    foreach ($cmd in @("git", "wezterm")) {
+        if (Get-Command $cmd -ErrorAction SilentlyContinue) {
+            Write-Output "[ok] command: $cmd"
+        } else {
+            Write-Output "[missing] command: $cmd"
+            $failures++
+        }
+    }
+    if ($failures -gt 0) { throw "Doctor found $failures issue(s)." }
+}
 
-Install-Chocolatey
-# Example of using Chocolatey for packages if needed
-# Install-ChocoPackageIfMissing -CommandName "eza" -ChocoId "eza" -Description "eza"
-# Optional dev tools
-Install-ChocoPackageIfMissing -CommandName "gsudo" -ChocoId "gsudo" -Description "gsudo (sudo for Windows)"
-Install-ChocoPackageIfMissing -CommandName "rg" -ChocoId "ripgrep" -Description "ripgrep"
-Install-ChocoPackageIfMissing -CommandName "fd" -ChocoId "fd" -Description "fd"
+function Invoke-Install {
+    Install-WingetPackageIfMissing -CommandName "wezterm" -WingetId "wez.wezterm" -Description "WezTerm"
+    Install-WingetPackageIfMissing -CommandName "oh-my-posh" -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh"
+    Install-WingetPackageIfMissing -CommandName "git" -WingetId "Git.Git" -Description "Git"
 
-New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
-New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
-New-Symlink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
-New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1")
+    Install-Chocolatey
+    Install-ChocoPackageIfMissing -CommandName "gsudo" -ChocoId "gsudo" -Description "gsudo (sudo for Windows)"
+    Install-ChocoPackageIfMissing -CommandName "rg" -ChocoId "ripgrep" -Description "ripgrep"
+    Install-ChocoPackageIfMissing -CommandName "fd" -ChocoId "fd" -Description "fd"
 
-Add-SshInclude
+    New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+    New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
+    New-Symlink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
+    New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1")
 
-Write-Output ""
-Write-Output "Bootstrap complete."
-Write-Output "If needed, create local overrides in $ConfigHome/ooodnakov/local."
+    Add-SshInclude
+    Write-Output ""
+    Write-Output "Bootstrap complete."
+    Write-Output "If needed, create local overrides in $ConfigHome/ooodnakov/local."
+}
+
+switch ($Command) {
+    "install" { Invoke-Install }
+    "update" {
+        if ($DryRun) {
+            Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
+        } else {
+            git -C $RepoRoot pull --ff-only
+        }
+        Invoke-Install
+    }
+    "doctor" { Test-Doctor }
+}

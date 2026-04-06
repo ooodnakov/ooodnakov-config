@@ -81,3 +81,15 @@ The bootstrap scripts intentionally do not install every package manager package
 
 Fonts are also manual for now. The tracked defaults assume a Nerd Font is installed, with `MesloLGS NF` preferred.
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.
+
+## Unified CLI and validation
+
+The primary entrypoints are:
+
+- `./scripts/ooodnakov.sh` on Unix
+- `.\scripts\ooodnakov.ps1` on Windows
+
+Phase-1 setup ergonomics are implemented with:
+
+- `dry-run` command to preview setup actions without mutation
+- `doctor` command to validate managed links and key tool presence after install
