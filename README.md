@@ -46,7 +46,7 @@ curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/boo
 This clones the repo into `~/src/ooodnakov-config` by default and runs the normal Unix setup.
 If the repo is already present there, it is updated in place first.
 If managed target files already exist, they are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
-When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `fzf`, `eza`, `dua-cli`, `node`, `npm`, `python3`, `uv`, `cargo`, `autoconf`, and `fontconfig`. Prompts read from `/dev/tty`, so they work correctly even with `curl | bash`.
+When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `fzf`, `eza`, `dua-cli`, `node`, `npm`, `k`, `python3`, `uv`, `cargo`, `autoconf`, and `fontconfig`. Prompts read from `/dev/tty`, so they work correctly even with `curl | bash`.
 For `eza`, setup only auto-installs on package-manager paths that match upstream guidance directly; Debian/Ubuntu and some Fedora setups are left as manual installs instead of guessing.
 The Unix setup also installs pinned copies of `fzf-tab`, `auto-uv-env`, `nvm`, `k`, `marker`, and `todo.txt-cli`.
 For `auto-uv-env`, setup keeps a pinned source checkout under the repo-managed XDG data tree, links the executable into `~/.local/share/ooodnakov-config/bin`, and installs the shell integration files into `~/.local/share/ooodnakov-config/auto-uv-env`.

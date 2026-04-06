@@ -474,7 +474,7 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
   maybe_install_dependency "$manager" uv uv "Python package manager"
   maybe_install_dependency "$manager" cargo cargo "Rust package manager"
-  maybe_note_dependency k "manual install if you want the standalone k command"
+  maybe_install_dependency "$manager" k k "standalone k directory-jump command"
   maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
 }
 
