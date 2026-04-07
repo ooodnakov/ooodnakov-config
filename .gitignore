@@ -10,6 +10,7 @@ home/.config/ooodnakov/local/*.lua
 home/.config/ooodnakov/local/*.ssh
 home/.config/nvim/lazy-lock.json
 home/.config/nvim/.neoconf.json
+home/.config/nvim/lazyvim.json
 home/.config/zsh/.zsh_history
 home/.config/zsh/.zcompdump*
 

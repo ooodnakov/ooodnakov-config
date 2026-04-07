@@ -2,7 +2,7 @@
 
 Generated from `scripts/setup.sh` pinned dependency refs.
 
-Generated at (UTC): `2026-04-06T22:15:18+00:00`
+Generated at (UTC): `2026-04-07T08:56:07+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
