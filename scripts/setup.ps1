@@ -289,6 +289,46 @@ function Add-SshInclude {
     }
 }
 
+function Ensure-UserPathContains {
+    param(
+        [Parameter(Mandatory = $true)][string]$PathEntry
+    )
+
+    if (-not (Test-Path $PathEntry)) {
+        if ($DryRun) {
+            Write-Output "[dry-run] mkdir $PathEntry"
+        } else {
+            New-Item -ItemType Directory -Force -Path $PathEntry | Out-Null
+        }
+    }
+
+    $currentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $pathParts = @($currentUserPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
+    if ($pathParts -contains $PathEntry) {
+        if ($env:PATH -notlike "*$PathEntry*") {
+            $env:PATH = "$PathEntry$([IO.Path]::PathSeparator)$env:PATH"
+        }
+        return
+    }
+
+    $updatedUserPath = if ([string]::IsNullOrWhiteSpace($currentUserPath)) {
+        $PathEntry
+    } else {
+        "$PathEntry$([IO.Path]::PathSeparator)$currentUserPath"
+    }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] set user PATH to include $PathEntry"
+    } else {
+        [Environment]::SetEnvironmentVariable("Path", $updatedUserPath, "User")
+        Write-Output "updated user PATH with $PathEntry"
+    }
+
+    if ($env:PATH -notlike "*$PathEntry*") {
+        $env:PATH = "$PathEntry$([IO.Path]::PathSeparator)$env:PATH"
+    }
+}
+
 function Test-Doctor {
     $failures = 0
     $checks = @(
@@ -323,6 +363,14 @@ function Test-Doctor {
         Write-Output "[missing] command: oooconf"
         $failures++
     }
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
+    if ($userPathParts -contains $LocalBinDir) {
+        Write-Output "[ok] user PATH contains $LocalBinDir"
+    } else {
+        Write-Output "[missing] user PATH entry: $LocalBinDir"
+        $failures++
+    }
     if ($failures -gt 0) { throw "Doctor found $failures issue(s)." }
 }
 
@@ -346,6 +394,7 @@ function Invoke-Install {
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1")
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
+    Ensure-UserPathContains -PathEntry $LocalBinDir
 
     Add-SshInclude
     Write-Output ""
