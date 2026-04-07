@@ -93,7 +93,8 @@ The primary entrypoints are:
 
 - repo-local `./home/.config/ooodnakov/bin/oooconf` before first install on Unix
 - `oooconf` after Unix setup links it into `~/.local/bin/oooconf`
-- `.\scripts\ooodnakov.ps1` on Windows
+- `.\scripts\ooodnakov.ps1` before Windows setup
+- `oooconf` after Windows setup links `oooconf.ps1` and `oooconf.cmd` into `~/.local/bin`
 
 Phase-1 setup ergonomics are implemented with:
 

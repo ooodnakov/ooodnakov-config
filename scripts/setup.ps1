@@ -11,6 +11,7 @@ $ConfigHome = Join-Path $HOME ".config"
 $OhMyPoshDir = Join-Path $ConfigHome "ohmyposh"
 $PowerShellDir = Join-Path $HOME "Documents/PowerShell"
 $SshDir = Join-Path $HOME ".ssh"
+$LocalBinDir = Join-Path $HOME ".local/bin"
 $InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HOME ".local/state/ooodnakov-config/backups" }
 $LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-Path $HOME ".local/state/ooodnakov-config/logs" }
@@ -295,7 +296,9 @@ function Test-Doctor {
         @{ Source = (Join-Path $RepoRoot "home/.config/nvim"); Target = (Join-Path $ConfigHome "nvim") },
         @{ Source = (Join-Path $RepoRoot "home/.config/ooodnakov"); Target = (Join-Path $ConfigHome "ooodnakov") },
         @{ Source = (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json"); Target = (Join-Path $OhMyPoshDir "ooodnakov.omp.json") },
-        @{ Source = (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1"); Target = (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1") }
+        @{ Source = (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1"); Target = (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1") },
+        @{ Source = (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1"); Target = (Join-Path $LocalBinDir "oooconf.ps1") },
+        @{ Source = (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd"); Target = (Join-Path $LocalBinDir "oooconf.cmd") }
     )
     foreach ($check in $checks) {
         $item = Get-Item -Path $check.Target -ErrorAction SilentlyContinue
@@ -313,6 +316,12 @@ function Test-Doctor {
             Write-Output "[missing] command: $cmd"
             $failures++
         }
+    }
+    if (Get-Command oooconf -ErrorAction SilentlyContinue) {
+        Write-Output "[ok] command: oooconf"
+    } else {
+        Write-Output "[missing] command: oooconf"
+        $failures++
     }
     if ($failures -gt 0) { throw "Doctor found $failures issue(s)." }
 }
@@ -335,6 +344,8 @@ function Invoke-Install {
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1")
+    New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
+    New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
 
     Add-SshInclude
     Write-Output ""

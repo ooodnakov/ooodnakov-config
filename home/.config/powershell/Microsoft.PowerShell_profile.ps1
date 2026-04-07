@@ -2,6 +2,14 @@ $ConfigRoot = Join-Path $HOME ".config/ooodnakov"
 $PromptConfig = Join-Path $HOME ".config/ohmyposh/ooodnakov.omp.json"
 $SharedEnv = Join-Path $ConfigRoot "env/common.ps1"
 $LocalEnv = Join-Path $ConfigRoot "local/env.ps1"
+$LocalBin = Join-Path $HOME ".local/bin"
+
+if (Test-Path $LocalBin) {
+    $pathParts = @($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ })
+    if ($pathParts -notcontains $LocalBin) {
+        $env:PATH = "$LocalBin$([IO.Path]::PathSeparator)$env:PATH"
+    }
+}
 
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     oh-my-posh init pwsh --config $PromptConfig | Invoke-Expression

@@ -145,8 +145,9 @@ Unified PowerShell CLI (recommended):
 
 ```powershell
 .\scripts\ooodnakov.ps1 install
-.\scripts\ooodnakov.ps1 dry-run
-.\scripts\ooodnakov.ps1 doctor
+oooconf install
+oooconf dry-run
+oooconf doctor
 ```
 
 Dependency lock and pin update helpers are also exposed in PowerShell:
@@ -159,7 +160,7 @@ Dependency lock and pin update helpers are also exposed in PowerShell:
 
 Both commands require `python3` to be available on `PATH`.
 
-On Windows, the PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 ## CI/CD
