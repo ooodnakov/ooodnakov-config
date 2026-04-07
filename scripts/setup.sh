@@ -189,6 +189,16 @@ install_packages() {
   esac
 }
 
+apt_package_available() {
+  local package_name="$1"
+
+  if ! command -v apt-cache >/dev/null 2>&1; then
+    return 1
+  fi
+
+  apt-cache show "$package_name" >/dev/null 2>&1
+}
+
 maybe_install_dependency() {
   local manager="$1"
   local command_name="$2"
@@ -204,6 +214,14 @@ maybe_install_dependency() {
     echo "missing optional dependency: $command_name ($description)" >&2
     DEPENDENCY_SUMMARY+=("$command_name: missing (no supported package manager)")
     return 1
+  fi
+
+  if [ "$manager" = "apt" ] && ! apt_package_available "$package_name"; then
+    if is_interactive; then
+      echo "APT package not available: $package_name ($description); skipping automatic install." > /dev/tty
+    fi
+    DEPENDENCY_SUMMARY+=("$command_name: missing (apt package unavailable)")
+    return 0
   fi
 
   if prompt_yes_no "Install $package_name for $description?"; then
@@ -271,6 +289,71 @@ maybe_install_eza() {
       DEPENDENCY_SUMMARY+=("eza: missing (manual install)")
       ;;
   esac
+}
+
+maybe_install_uv() {
+  if command -v uv >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("uv: present")
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install uv for Python package manager (official installer)?"; then
+    echo "skipping uv" >&2
+    DEPENDENCY_SUMMARY+=("uv: skipped")
+    return 0
+  fi
+
+  if command -v curl >/dev/null 2>&1; then
+    run_with_spinner "Installing uv via official installer" sh -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+  elif command -v wget >/dev/null 2>&1; then
+    run_with_spinner "Installing uv via official installer" sh -c 'wget -qO- https://astral.sh/uv/install.sh | sh'
+  else
+    if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "uv installer needs curl or wget. Install curl and retry?"; then
+      install_packages "$PACKAGE_MANAGER" curl
+      run_with_spinner "Installing uv via official installer" sh -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+    else
+      DEPENDENCY_SUMMARY+=("uv: missing (requires curl or wget)")
+      return 0
+    fi
+  fi
+
+  if command -v uv >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/uv" ]; then
+    DEPENDENCY_SUMMARY+=("uv: installed")
+  else
+    DEPENDENCY_SUMMARY+=("uv: install attempted")
+  fi
+}
+
+maybe_install_dua_cli() {
+  local manager="$1"
+  local repo_url="https://github.com/byron/dua-cli.git"
+
+  if command -v dua >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("dua: present")
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install dua-cli for disk usage analysis from byron/dua-cli via cargo?"; then
+    echo "skipping dua-cli" >&2
+    DEPENDENCY_SUMMARY+=("dua: skipped")
+    return 0
+  fi
+
+  if ! command -v cargo >/dev/null 2>&1; then
+    maybe_install_dependency "$manager" cargo cargo "Rust package manager required for dua-cli"
+  fi
+
+  if ! command -v cargo >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("dua: missing (cargo unavailable)")
+    return 0
+  fi
+
+  run_with_spinner "Installing dua-cli from GitHub via cargo" cargo install --locked --git "$repo_url" dua-cli
+  if command -v dua >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/dua" ]; then
+    DEPENDENCY_SUMMARY+=("dua: installed")
+  else
+    DEPENDENCY_SUMMARY+=("dua: install attempted")
+  fi
 }
 
 link_file() {
@@ -557,13 +640,13 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" zsh zsh "default shell support"
   maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
   maybe_install_eza "$manager"
-  maybe_install_dependency "$manager" dua dua-cli "disk usage analysis"
+  maybe_install_uv
   maybe_install_dependency "$manager" node nodejs "Node.js runtime"
   maybe_install_dependency "$manager" npm npm "Node package manager"
   maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
   maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
-  maybe_install_dependency "$manager" uv uv "Python package manager"
   maybe_install_dependency "$manager" cargo cargo "Rust package manager"
+  maybe_install_dua_cli "$manager"
   maybe_install_dependency "$manager" nvim neovim "Neovim runtime for LazyVim"
   maybe_note_dependency k "manual install if you want the standalone k command"
   maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"

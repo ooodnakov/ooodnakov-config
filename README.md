@@ -50,6 +50,8 @@ If the repo is already present there, it is updated in place first.
 If managed target files already exist, they are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
 When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `fzf`, `eza`, `dua-cli`, `node`, `npm`, `python3`, `uv`, `cargo`, `autoconf`, `fontconfig`, and `neovim` (`nvim`). Prompts read from `/dev/tty`, so they work correctly even with `curl | bash`.
 For `eza`, setup only auto-installs on package-manager paths that match upstream guidance directly; Debian/Ubuntu and some Fedora setups are left as manual installs instead of guessing.
+For `uv`, setup uses Astral's official installer (`https://astral.sh/uv/install.sh`) instead of distro package names.
+For `dua-cli`, setup installs from `byron/dua-cli` via `cargo install --git` instead of relying on distro package names.
 The Unix setup also installs pinned copies of `fzf-tab`, `auto-uv-env`, `nvm`, `k`, `marker`, and `todo.txt-cli`.
 For `auto-uv-env`, setup keeps a pinned source checkout under the repo-managed XDG data tree, links the executable into `~/.local/share/ooodnakov-config/bin`, and installs the shell integration files into `~/.local/share/ooodnakov-config/auto-uv-env`.
 It also normalizes the installed `oh-my-zsh` tree permissions on every run so `compaudit` and `compinit` do not abort on group-writable plugin directories.
