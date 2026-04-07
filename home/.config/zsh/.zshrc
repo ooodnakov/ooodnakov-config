@@ -32,7 +32,6 @@ ZSH_THEME=""
 plugins=(
   git
   git-extras
-  k
   sudo
   extract
   z
@@ -66,6 +65,11 @@ for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
 done
 
 source "$ZSH/oh-my-zsh.sh"
+
+if [ -f "$ZSH_CUSTOM/plugins/k/k.sh" ]; then
+  source "$ZSH_CUSTOM/plugins/k/k.sh"
+fi
+
 # direnv supress stdout during startup in path with .envrc
 if (( $+commands[direnv] )); then
   autoload -Uz add-zsh-hook
