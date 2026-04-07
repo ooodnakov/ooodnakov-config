@@ -42,6 +42,8 @@ MARKER_REPO="https://github.com/jotyGill/marker.git"
 MARKER_REF="c123085891228e51cfa58d555708bad67ed98f02"
 TODO_REPO="https://github.com/todotxt/todo.txt-cli.git"
 TODO_REF="b20f9b45e210129ef020d3ba212d86b9ba9cf70d"
+NEOVIM_MIN_VERSION="0.11.0"
+NEOVIM_LINUX_VERSION="0.11.5"
 
 is_interactive() {
   case "$INTERACTIVE" in
@@ -235,6 +237,162 @@ maybe_install_dependency() {
     echo "skipping $package_name" >&2
     DEPENDENCY_SUMMARY+=("$command_name: skipped")
   fi
+}
+
+normalize_semver() {
+  local version="${1#v}"
+  version="${version%%-*}"
+  printf '%s\n' "$version"
+}
+
+version_gte() {
+  local left right
+  local -a left_parts right_parts
+  local i left_value right_value
+
+  left="$(normalize_semver "$1")"
+  right="$(normalize_semver "$2")"
+  IFS=. read -r -a left_parts <<< "$left"
+  IFS=. read -r -a right_parts <<< "$right"
+
+  for i in 0 1 2 3; do
+    left_value="${left_parts[$i]:-0}"
+    right_value="${right_parts[$i]:-0}"
+    if (( left_value > right_value )); then
+      return 0
+    fi
+    if (( left_value < right_value )); then
+      return 1
+    fi
+  done
+
+  return 0
+}
+
+get_nvim_version() {
+  local nvim_cmd
+  nvim_cmd="$(resolve_nvim_command)" || return 1
+  "$nvim_cmd" --version 2>/dev/null | awk 'NR == 1 { sub(/^NVIM v/, "", $0); print $0; exit }'
+}
+
+resolve_nvim_command() {
+  if [ -x "$STATE_HOME/bin/nvim" ]; then
+    printf '%s\n' "$STATE_HOME/bin/nvim"
+    return 0
+  fi
+
+  if command -v nvim >/dev/null 2>&1; then
+    command -v nvim
+    return 0
+  fi
+
+  return 1
+}
+
+have_supported_nvim() {
+  local version
+  version="$(get_nvim_version 2>/dev/null)" || return 1
+  [ -n "$version" ] && version_gte "$version" "$NEOVIM_MIN_VERSION"
+}
+
+download_to_file() {
+  local url="$1"
+  local output="$2"
+
+  if command -v curl >/dev/null 2>&1; then
+    run_with_spinner "Downloading $(basename "$output")" curl -fL --retry 3 -o "$output" "$url"
+  elif command -v wget >/dev/null 2>&1; then
+    run_with_spinner "Downloading $(basename "$output")" wget -qO "$output" "$url"
+  else
+    echo "Neither curl nor wget is available for downloading $url" >&2
+    return 1
+  fi
+}
+
+install_pinned_neovim_linux() {
+  local asset_name extracted_dir release_url
+  local tools_root install_root bin_dir archive_path
+
+  case "$(uname -m)" in
+    x86_64|amd64)
+      asset_name="nvim-linux-x86_64.tar.gz"
+      extracted_dir="nvim-linux-x86_64"
+      ;;
+    aarch64|arm64)
+      asset_name="nvim-linux-arm64.tar.gz"
+      extracted_dir="nvim-linux-arm64"
+      ;;
+    *)
+      echo "Unsupported Linux architecture for pinned Neovim install: $(uname -m)" >&2
+      return 1
+      ;;
+  esac
+
+  release_url="https://github.com/neovim/neovim/releases/download/v${NEOVIM_LINUX_VERSION}/${asset_name}"
+  tools_root="$STATE_HOME/tools/neovim"
+  install_root="$tools_root/v${NEOVIM_LINUX_VERSION}"
+  bin_dir="$STATE_HOME/bin"
+  archive_path="${TMPDIR:-/tmp}/${asset_name}"
+
+  run_cmd mkdir -p "$install_root" "$bin_dir" || return 1
+
+  if [ ! -x "$install_root/$extracted_dir/bin/nvim" ]; then
+    download_to_file "$release_url" "$archive_path" || return 1
+    run_with_spinner "Extracting pinned Neovim v${NEOVIM_LINUX_VERSION}" tar -xzf "$archive_path" -C "$install_root" || return 1
+  fi
+
+  run_cmd ln -sfn "$install_root/$extracted_dir/bin/nvim" "$bin_dir/nvim" || return 1
+}
+
+maybe_install_neovim() {
+  local manager="$1"
+  local version_before version_after attempted_package_install=0
+
+  if have_supported_nvim; then
+    DEPENDENCY_SUMMARY+=("nvim: present ($(get_nvim_version))")
+    return 0
+  fi
+
+  version_before="$(get_nvim_version 2>/dev/null || true)"
+  if [ -n "$version_before" ] && is_interactive; then
+    echo "Detected Neovim $version_before, but LazyVim requires >= $NEOVIM_MIN_VERSION." > /dev/tty
+  fi
+
+  if [ "$manager" != "none" ]; then
+    if [ "$manager" = "apt" ] && ! apt_package_available "neovim"; then
+      if is_interactive; then
+        echo "APT package not available: neovim (Neovim runtime for LazyVim); skipping automatic package install." > /dev/tty
+      fi
+    elif prompt_yes_no "Install neovim package for LazyVim?"; then
+      attempted_package_install=1
+      install_packages "$manager" neovim
+      if have_supported_nvim; then
+        DEPENDENCY_SUMMARY+=("nvim: installed ($(get_nvim_version))")
+        return 0
+      fi
+    else
+      echo "skipping neovim package" >&2
+    fi
+  fi
+
+  if [ "$(uname -s)" = "Linux" ]; then
+    if [ "$attempted_package_install" -eq 1 ] || prompt_yes_no "Install pinned Neovim v${NEOVIM_LINUX_VERSION} from the official release?"; then
+      if install_pinned_neovim_linux && have_supported_nvim; then
+        DEPENDENCY_SUMMARY+=("nvim: installed official v$(get_nvim_version)")
+        return 0
+      fi
+      DEPENDENCY_SUMMARY+=("nvim: official install attempted")
+      return 1
+    fi
+  fi
+
+  version_after="$(get_nvim_version 2>/dev/null || true)"
+  if [ -n "$version_after" ]; then
+    DEPENDENCY_SUMMARY+=("nvim: present but too old ($version_after < $NEOVIM_MIN_VERSION)")
+  else
+    DEPENDENCY_SUMMARY+=("nvim: missing")
+  fi
+  return 1
 }
 
 maybe_note_dependency() {
@@ -602,6 +760,24 @@ doctor_check_command() {
   fi
 }
 
+doctor_check_nvim() {
+  local version
+  if ! command -v nvim >/dev/null 2>&1; then
+    echo "[missing] command: nvim"
+    FAILURES+=("doctor command nvim")
+    return 1
+  fi
+
+  version="$(get_nvim_version 2>/dev/null || true)"
+  if [ -n "$version" ] && version_gte "$version" "$NEOVIM_MIN_VERSION"; then
+    echo "[ok] command: nvim ($version)"
+  else
+    echo "[missing] command: nvim >= $NEOVIM_MIN_VERSION (found ${version:-unknown})"
+    FAILURES+=("doctor command nvim version")
+    return 1
+  fi
+}
+
 run_doctor() {
   echo "Running doctor checks..."
   doctor_check_link "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
@@ -614,7 +790,7 @@ run_doctor() {
   doctor_check_command git
   doctor_check_command zsh
   doctor_check_command wezterm
-  doctor_check_command nvim
+  doctor_check_nvim
   doctor_check_command oooconf
   if [ -d "$FONT_TARGET_DIR" ]; then
     echo "[ok] fonts dir: $FONT_TARGET_DIR"
@@ -647,7 +823,7 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
   maybe_install_dependency "$manager" cargo cargo "Rust package manager"
   maybe_install_dua_cli "$manager"
-  maybe_install_dependency "$manager" nvim neovim "Neovim runtime for LazyVim"
+  maybe_install_neovim "$manager"
   maybe_note_dependency k "manual install if you want the standalone k command"
   maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
 }
