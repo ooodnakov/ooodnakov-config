@@ -112,3 +112,6 @@ fi
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 [[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
+
+# To customize prompt, run `p10k configure` or edit ~/.config/ooodnakov/p10k.zsh.
+[[ ! -f ~/.config/ooodnakov/p10k.zsh ]] || source ~/.config/ooodnakov/p10k.zsh
