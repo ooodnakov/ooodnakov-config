@@ -192,6 +192,7 @@ function Test-Doctor {
     $failures = 0
     $checks = @(
         @{ Source = (Join-Path $RepoRoot "home/.config/wezterm"); Target = (Join-Path $ConfigHome "wezterm") },
+        @{ Source = (Join-Path $RepoRoot "home/.config/nvim"); Target = (Join-Path $ConfigHome "nvim") },
         @{ Source = (Join-Path $RepoRoot "home/.config/ooodnakov"); Target = (Join-Path $ConfigHome "ooodnakov") },
         @{ Source = (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json"); Target = (Join-Path $OhMyPoshDir "ooodnakov.omp.json") },
         @{ Source = (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1"); Target = (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1") }
@@ -205,7 +206,7 @@ function Test-Doctor {
             $failures++
         }
     }
-    foreach ($cmd in @("git", "wezterm")) {
+    foreach ($cmd in @("git", "wezterm", "nvim")) {
         if (Get-Command $cmd -ErrorAction SilentlyContinue) {
             Write-Output "[ok] command: $cmd"
         } else {
@@ -218,6 +219,7 @@ function Test-Doctor {
 
 function Invoke-Install {
     Install-WingetPackageIfMissing -CommandName "wezterm" -WingetId "wez.wezterm" -Description "WezTerm"
+    Install-WingetPackageIfMissing -CommandName "nvim" -WingetId "Neovim.Neovim" -Description "Neovim"
     Install-WingetPackageIfMissing -CommandName "oh-my-posh" -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh"
     Install-WingetPackageIfMissing -CommandName "git" -WingetId "Git.Git" -Description "Git"
 
@@ -227,6 +229,7 @@ function Invoke-Install {
     Install-ChocoPackageIfMissing -CommandName "fd" -ChocoId "fd" -Description "fd"
 
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+    New-Symlink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $PowerShellDir "Microsoft.PowerShell_profile.ps1")

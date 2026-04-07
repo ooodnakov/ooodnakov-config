@@ -10,6 +10,7 @@ Tracked files:
 
 - base shell config
 - base WezTerm config
+- base LazyVim/Neovim config
 - PowerShell profile
 - prompt config
 - shared environment files
@@ -76,6 +77,7 @@ The bootstrap scripts intentionally do not install every package manager package
 - `git`
 - `zsh` on Linux/macOS
 - `pwsh` on Windows if you want PowerShell Core
+- `nvim` (Neovim) for LazyVim
 - `wezterm`
 - `oh-my-posh`
 
