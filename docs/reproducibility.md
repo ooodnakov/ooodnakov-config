@@ -85,6 +85,7 @@ Fonts are also manual for now. The tracked defaults assume a Nerd Font is instal
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.
 
 For Neovim, the Unix setup validates `nvim >= 0.11.0` for LazyVim. On Linux, if the distro package manager only provides an older version, setup installs the pinned official Neovim release tarball into the repo-managed XDG data tree and links `nvim` from there.
+For `pnpm`, the tracked shell environment reserves `PNPM_HOME`, and setup installs a pinned version through `corepack` when available or through `npm` into that path otherwise.
 
 ## Unified CLI and validation
 

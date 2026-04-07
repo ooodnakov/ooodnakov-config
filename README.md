@@ -48,10 +48,11 @@ curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/boo
 This clones the repo into `~/src/ooodnakov-config` by default and runs the normal Unix setup.
 If the repo is already present there, it is updated in place first.
 If managed target files already exist, they are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
-When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `direnv`, `fzf`, `eza`, `dua-cli`, `node`, `npm`, `python3`, `uv`, `cargo`, `autoconf`, `fontconfig`, and `neovim` (`nvim`). Prompts read from `/dev/tty`, so they work correctly even with `curl | bash`.
+When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `direnv`, `fzf`, `eza`, `dua-cli`, `node`, `npm`, `pnpm`, `python3`, `uv`, `cargo`, `autoconf`, `fontconfig`, and `neovim` (`nvim`). Prompts read from `/dev/tty`, so they work correctly even with `curl | bash`.
 For Neovim, the Unix setup requires `nvim >= 0.11.0` for LazyVim. If the detected Linux package-manager install is older than that, setup falls back to the official pinned Neovim release tarball and links it from the repo-managed XDG data tree.
 For `eza`, setup only auto-installs on package-manager paths that match upstream guidance directly; Debian/Ubuntu and some Fedora setups are left as manual installs instead of guessing.
 For `uv`, setup uses Astral's official installer (`https://astral.sh/uv/install.sh`) instead of distro package names.
+For `pnpm`, setup enables a pinned version via `corepack` when available and falls back to `npm install --global` into `PNPM_HOME` otherwise.
 For `dua-cli`, setup installs from `byron/dua-cli` via `cargo install --git` instead of relying on distro package names.
 The Unix setup also installs pinned copies of `fzf-tab`, `auto-uv-env`, `nvm`, `k`, `marker`, and `todo.txt-cli`.
 For `auto-uv-env`, setup keeps a pinned source checkout under the repo-managed XDG data tree, links the executable into `~/.local/share/ooodnakov-config/bin`, and installs the shell integration files into `~/.local/share/ooodnakov-config/auto-uv-env`.
@@ -164,7 +165,7 @@ Dependency lock and pin update helpers are also exposed in PowerShell:
 
 Both commands require `python3` to be available on `PATH`.
 
-On Windows, the PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+On Windows, the PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 
 ## CI/CD
 

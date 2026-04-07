@@ -44,6 +44,7 @@ TODO_REPO="https://github.com/todotxt/todo.txt-cli.git"
 TODO_REF="b20f9b45e210129ef020d3ba212d86b9ba9cf70d"
 NEOVIM_MIN_VERSION="0.11.0"
 NEOVIM_LINUX_VERSION="0.11.5"
+PNPM_VERSION="10.18.3"
 
 is_interactive() {
   case "$INTERACTIVE" in
@@ -514,6 +515,50 @@ maybe_install_dua_cli() {
   fi
 }
 
+maybe_install_pnpm() {
+  local pnpm_home="${PNPM_HOME:-$HOME_DIR/.local/share/pnpm}"
+
+  if command -v pnpm >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("pnpm: present")
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install pnpm package manager?"; then
+    echo "skipping pnpm" >&2
+    DEPENDENCY_SUMMARY+=("pnpm: skipped")
+    return 0
+  fi
+
+  export PNPM_HOME="$pnpm_home"
+  export PATH="$PNPM_HOME:$PATH"
+  run_cmd mkdir -p "$PNPM_HOME"
+
+  if command -v corepack >/dev/null 2>&1; then
+    run_with_spinner "Enabling pnpm@$PNPM_VERSION via corepack" \
+      corepack enable --install-directory "$PNPM_HOME" pnpm
+    run_with_spinner "Preparing pnpm@$PNPM_VERSION via corepack" \
+      corepack prepare "pnpm@$PNPM_VERSION" --activate
+  elif command -v npm >/dev/null 2>&1; then
+    run_with_spinner "Installing pnpm@$PNPM_VERSION via npm" \
+      npm install --global "pnpm@$PNPM_VERSION" --prefix "$PNPM_HOME"
+    if [ -x "$PNPM_HOME/bin/pnpm" ]; then
+      run_cmd ln -sfn "$PNPM_HOME/bin/pnpm" "$PNPM_HOME/pnpm"
+    fi
+    if [ -x "$PNPM_HOME/bin/pnpx" ]; then
+      run_cmd ln -sfn "$PNPM_HOME/bin/pnpx" "$PNPM_HOME/pnpx"
+    fi
+  else
+    DEPENDENCY_SUMMARY+=("pnpm: missing (requires corepack or npm)")
+    return 0
+  fi
+
+  if command -v pnpm >/dev/null 2>&1 || [ -x "$PNPM_HOME/pnpm" ] || [ -x "$PNPM_HOME/bin/pnpm" ]; then
+    DEPENDENCY_SUMMARY+=("pnpm: installed")
+  else
+    DEPENDENCY_SUMMARY+=("pnpm: install attempted")
+  fi
+}
+
 link_file() {
   local source="$1"
   local target="$2"
@@ -820,6 +865,7 @@ install_optional_dependencies() {
   maybe_install_uv
   maybe_install_dependency "$manager" node nodejs "Node.js runtime"
   maybe_install_dependency "$manager" npm npm "Node package manager"
+  maybe_install_pnpm
   maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
   maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
   maybe_install_dependency "$manager" cargo cargo "Rust package manager"

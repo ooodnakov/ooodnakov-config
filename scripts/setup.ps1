@@ -14,6 +14,7 @@ $SshDir = Join-Path $HOME ".ssh"
 $InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HOME ".local/state/ooodnakov-config/backups" }
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$PnpmVersion = "10.18.3"
 
 function Test-Interactive {
     switch ($InteractiveMode) {
@@ -93,6 +94,53 @@ function Install-WingetPackageIfMissing {
         if ($DryRun) { Write-Output "[dry-run] winget install --exact --id $WingetId"; return }
         winget install --exact --id $WingetId --accept-package-agreements --accept-source-agreements
     }
+}
+
+function Install-PnpmIfMissing {
+    if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    if (-not (Confirm-Install "Install pnpm package manager?")) {
+        Write-Output "skipping pnpm"
+        return
+    }
+
+    $pnpmHome = if ($env:PNPM_HOME) { $env:PNPM_HOME } else { Join-Path $HOME ".local/share/pnpm" }
+    if (-not (Test-Path $pnpmHome)) {
+        if ($DryRun) {
+            Write-Output "[dry-run] mkdir $pnpmHome"
+        } else {
+            New-Item -ItemType Directory -Force -Path $pnpmHome | Out-Null
+        }
+    }
+
+    $env:PNPM_HOME = $pnpmHome
+    if ($env:PATH -notlike "*$pnpmHome*") {
+        $env:PATH = "$pnpmHome$([IO.Path]::PathSeparator)$env:PATH"
+    }
+
+    if (Get-Command corepack -ErrorAction SilentlyContinue) {
+        if ($DryRun) {
+            Write-Output "[dry-run] corepack enable --install-directory $pnpmHome pnpm"
+            Write-Output "[dry-run] corepack prepare pnpm@$PnpmVersion --activate"
+            return
+        }
+        & corepack enable --install-directory $pnpmHome pnpm
+        & corepack prepare "pnpm@$PnpmVersion" --activate
+        return
+    }
+
+    if (Get-Command npm -ErrorAction SilentlyContinue) {
+        if ($DryRun) {
+            Write-Output "[dry-run] npm install --global pnpm@$PnpmVersion --prefix $pnpmHome"
+            return
+        }
+        & npm install --global "pnpm@$PnpmVersion" --prefix $pnpmHome
+        return
+    }
+
+    Write-Output "pnpm install skipped because neither corepack nor npm is available"
 }
 
 function Backup-Target {
@@ -222,11 +270,13 @@ function Invoke-Install {
     Install-WingetPackageIfMissing -CommandName "nvim" -WingetId "Neovim.Neovim" -Description "Neovim"
     Install-WingetPackageIfMissing -CommandName "oh-my-posh" -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh"
     Install-WingetPackageIfMissing -CommandName "git" -WingetId "Git.Git" -Description "Git"
+    Install-WingetPackageIfMissing -CommandName "node" -WingetId "OpenJS.NodeJS.LTS" -Description "Node.js LTS"
 
     Install-Chocolatey
     Install-ChocoPackageIfMissing -CommandName "gsudo" -ChocoId "gsudo" -Description "gsudo (sudo for Windows)"
     Install-ChocoPackageIfMissing -CommandName "rg" -ChocoId "ripgrep" -Description "ripgrep"
     Install-ChocoPackageIfMissing -CommandName "fd" -ChocoId "fd" -Description "fd"
+    Install-PnpmIfMissing
 
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
     New-Symlink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
