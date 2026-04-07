@@ -113,3 +113,22 @@ Left out on purpose:
 ## Security note
 
 Remote shell files contained secrets. Those were inspected for migration risk but were intentionally not copied into this repo.
+
+## Automated Pin Checks
+
+Last checked (UTC): `2026-04-06T22:15:18+00:00`
+
+| Dependency | Status | Current ref | Latest HEAD |
+| --- | --- | --- | --- |
+| `auto_uv_env` | `up-to-date` | `76589a0fe4a3eaba9817b7195b9fc05ef4139289` | `76589a0fe4a3eaba9817b7195b9fc05ef4139289` |
+| `fzf_tab` | `up-to-date` | `0983009f8666f11e91a2ee1f88cfdb748d14f656` | `0983009f8666f11e91a2ee1f88cfdb748d14f656` |
+| `k` | `up-to-date` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` |
+| `marker` | `up-to-date` | `c123085891228e51cfa58d555708bad67ed98f02` | `c123085891228e51cfa58d555708bad67ed98f02` |
+| `nvm` | `update-available` | `6b307d0c75041ce5f25829b225470540f2711882` | `d200a215594bdda07e130117c9d392fff29cba84` |
+| `oh_my_zsh` | `update-available` | `8df5c1b18b1393dc5046c729094f897bd3636a9b` | `887a864aba396c0e6dcf7c0254f455676f830daa` |
+| `p10k` | `up-to-date` | `604f19a9eaa18e76db2e60b8d446d5f879065f90` | `604f19a9eaa18e76db2e60b8d446d5f879065f90` |
+| `todo` | `up-to-date` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` |
+| `zsh_autocomplete` | `update-available` | `2be4e7f0b435138b0237d4f068b2a882fb06edc4` | `20f6c34f20270084b21211428afb6d2534aae8e9` |
+| `zsh_autosuggestions` | `up-to-date` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` |
+| `zsh_highlighting` | `up-to-date` | `1d85c692615a25fe2293bdd44b34c217d5d2bf04` | `1d85c692615a25fe2293bdd44b34c217d5d2bf04` |
+| `zsh_history` | `up-to-date` | `14c8d2e0ffaee98f2df9850b19944f32546fdea5` | `14c8d2e0ffaee98f2df9850b19944f32546fdea5` |

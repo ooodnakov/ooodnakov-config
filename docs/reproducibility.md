@@ -93,3 +93,16 @@ Phase-1 setup ergonomics are implemented with:
 
 - `dry-run` command to preview setup actions without mutation
 - `doctor` command to validate managed links and key tool presence after install
+
+Phase-2 dependency audit ergonomics are implemented with:
+
+- `./scripts/ooodnakov.sh lock` (or `.\scripts\ooodnakov.ps1 lock`) to regenerate lock artifacts from pinned refs
+- `./scripts/ooodnakov.sh update-pins` to compare pinned refs with remote HEAD and append an audit summary
+- `./scripts/ooodnakov.sh update-pins --apply` to update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
+- `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic
+
+
+## Phase-3 ergonomics
+
+- `oooconf` command is linked to `~/.local/bin/oooconf` by Unix setup so the unified CLI can be invoked from any directory.
+- WezTerm startup supports `OOODNAKOV_WEZTERM_WORKSPACE` and `OOODNAKOV_WEZTERM_CWD` for project-scoped startup defaults without editing tracked config.
