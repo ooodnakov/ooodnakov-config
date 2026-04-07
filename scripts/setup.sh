@@ -530,6 +530,7 @@ run_doctor() {
   doctor_check_command git
   doctor_check_command zsh
   doctor_check_command wezterm
+  doctor_check_command oooconf
   if [ -d "$FONT_TARGET_DIR" ]; then
     echo "[ok] fonts dir: $FONT_TARGET_DIR"
   else
@@ -601,6 +602,8 @@ link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc" || true
 link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh" || true
 link_file "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm" || true
 link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
+run_cmd mkdir -p "$HOME_DIR/.local/bin"
+link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
 
 run_cmd mkdir -p "$CONFIG_HOME/ohmyposh" "$CONFIG_HOME/powershell"
 link_file "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json" || true

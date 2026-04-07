@@ -14,6 +14,7 @@ The repo keeps only opinionated config and bootstrap logic. Secrets, tokens, key
 - pinned Zsh completion stack including `fzf-tab`
 - managed shell helpers: `nvm`, `k`, `marker`, `todo.txt-cli`
 - optional CLI tools prompted during setup: `fzf`, `eza`, `dua-cli`
+- dependency lock artifacts (`deps.lock.json`, `docs/dependency-lock.md`) generated from pinned setup refs
 - `wezterm`
 - PowerShell profile
 - `oh-my-posh`
@@ -68,6 +69,8 @@ chmod +x ./scripts/ooodnakov.sh
 ./scripts/ooodnakov.sh install
 ```
 
+Setup now also links a convenience command into `~/.local/bin/oooconf`, so you can run `oooconf install`, `oooconf doctor`, etc. directly from your terminal.
+
 To update an existing machine from the repo and reapply the managed config:
 
 ```bash
@@ -110,6 +113,26 @@ Run post-install checks:
 ./scripts/ooodnakov.sh doctor
 ```
 
+Run dependency lock generation and pin audit helpers:
+
+```bash
+./scripts/ooodnakov.sh lock
+./scripts/ooodnakov.sh update-pins
+# optional: apply latest HEAD refs into scripts/setup.sh
+./scripts/ooodnakov.sh update-pins --apply
+```
+
+Workspace ergonomics (Phase 3):
+
+- set `OOODNAKOV_WEZTERM_WORKSPACE` to choose startup workspace name
+- set `OOODNAKOV_WEZTERM_CWD` to choose startup working directory
+
+Example:
+
+```bash
+OOODNAKOV_WEZTERM_WORKSPACE=project-x OOODNAKOV_WEZTERM_CWD=$HOME/src/project-x wezterm
+```
+
 ### Windows PowerShell
 
 ```powershell
@@ -125,6 +148,16 @@ Unified PowerShell CLI (recommended):
 .\scripts\ooodnakov.ps1 dry-run
 .\scripts\ooodnakov.ps1 doctor
 ```
+
+Dependency lock and pin update helpers are also exposed in PowerShell:
+
+```powershell
+.\scripts\ooodnakov.ps1 lock
+.\scripts\ooodnakov.ps1 update-pins
+.\scripts\ooodnakov.ps1 update-pins -Apply
+```
+
+Both commands require `python3` to be available on `PATH`.
 
 On Windows, the PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 
