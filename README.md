@@ -74,6 +74,7 @@ chmod +x ./scripts/ooodnakov.sh
 ```
 
 Setup now also links a convenience command into `~/.local/bin/oooconf`, so you can run `oooconf install`, `oooconf doctor`, etc. directly from your terminal.
+Use `oooconf --help` for global flags, `oooconf help <command>` for command-specific help, and `oooconf --print-repo-root` to confirm which checkout the command is targeting.
 
 To update an existing machine from the repo and reapply the managed config:
 

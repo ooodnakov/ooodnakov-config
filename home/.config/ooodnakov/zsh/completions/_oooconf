@@ -1,0 +1,68 @@
+#compdef oooconf
+
+local curcontext="$curcontext" state line
+typeset -A opt_args
+
+local -a commands global_opts setup_opts update_pins_opts
+commands=(
+  'bootstrap:clone or update the repo, then run install'
+  'install:apply managed config'
+  'update:update the repo, then re-run install'
+  'doctor:validate managed links and tools'
+  'dry-run:preview install without changes'
+  'delete:remove managed links and restore backups'
+  'remove:remove managed links only'
+  'lock:regenerate dependency lock artifacts'
+  'update-pins:check or update pinned refs'
+  'help:show help'
+  'version:show version information'
+)
+
+global_opts=(
+  '(-C --repo-root)'{-C,--repo-root}'[run against a specific repo checkout]:repo root:_files -/'
+  '--print-repo-root[print the resolved repo root]'
+  '(-h --help)'{-h,--help}'[show help]'
+  '(-n --dry-run)'{-n,--dry-run}'[add --dry-run to install or update]'
+  '(-V --version)'{-V,--version}'[show version information]'
+)
+
+setup_opts=(
+  '--dry-run[preview actions without changing the filesystem]'
+  '(-h --help)'{-h,--help}'[show setup help]'
+)
+
+update_pins_opts=(
+  '--apply[write updated pinned refs before regenerating lock artifacts]'
+)
+
+_arguments -C \
+  $global_opts \
+  '1:command:->command' \
+  '*::arg:->args' && return 0
+
+case "$state" in
+  command)
+    _describe -t commands 'oooconf command' commands
+    ;;
+  args)
+    case "$words[2]" in
+      help)
+        _describe -t commands 'oooconf command' commands
+        ;;
+      install|update)
+        _arguments $setup_opts
+        ;;
+      dry-run|doctor|delete|remove|lock|version)
+        _message 'no additional arguments'
+        ;;
+      update-pins)
+        _arguments $update_pins_opts
+        ;;
+      bootstrap)
+        _message 'environment variables configure bootstrap behavior'
+        ;;
+      *)
+        ;;
+    esac
+    ;;
+esac
