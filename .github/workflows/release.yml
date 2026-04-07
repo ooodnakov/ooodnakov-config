@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build source archives
+        run: |
+          mkdir -p dist
+          VERSION="${GITHUB_REF_NAME:-snapshot}"
+          git archive --format=tar.gz --output="dist/ooodnakov-config-${VERSION}.tar.gz" HEAD
+          git archive --format=zip --output="dist/ooodnakov-config-${VERSION}.zip" HEAD
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+          generate_release_notes: true

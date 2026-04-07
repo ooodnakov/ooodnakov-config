@@ -164,6 +164,14 @@ Both commands require `python3` to be available on `PATH`.
 
 On Windows, the PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 
+## CI/CD
+
+- CI runs on pull requests and pushes to `main` with:
+  - Bash syntax checks and `shellcheck` for Unix scripts
+  - reproducibility validation for `deps.lock.json` and `docs/dependency-lock.md`
+  - PowerShell parser validation for `scripts/setup.ps1` and `scripts/ooodnakov.ps1`
+- CD release automation runs on tags matching `v*` and publishes `.tar.gz` and `.zip` source archives to a GitHub Release.
+
 ## Removal
 
 To remove the managed Unix symlinks and restore the latest backups when available:

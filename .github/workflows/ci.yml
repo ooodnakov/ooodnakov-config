@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  unix-validation:
+    name: Unix validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Shell syntax checks
+        run: |
+          bash -n scripts/setup.sh
+          bash -n scripts/ooodnakov.sh
+          bash -n scripts/delete.sh
+          bash -n scripts/update-pins.sh
+          bash -n bootstrap.sh
+
+      - name: Shellcheck
+        run: |
+          shellcheck scripts/setup.sh scripts/ooodnakov.sh scripts/delete.sh scripts/update-pins.sh bootstrap.sh
+
+      - name: Validate lock artifacts are reproducible
+        run: |
+          python3 scripts/generate-dependency-lock.py
+          git diff --exit-code deps.lock.json docs/dependency-lock.md
+
+  powershell-validation:
+    name: PowerShell validation
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $scripts = @(
+            "scripts/setup.ps1",
+            "scripts/ooodnakov.ps1"
+          )
+          foreach ($script in $scripts) {
+            $null = $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $script),
+              [ref]$null,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error $_.Message }
+              throw "PowerShell parse failed: $script"
+            }
+            Write-Host "[ok] Parsed $script"
+          }
