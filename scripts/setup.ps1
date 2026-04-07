@@ -13,8 +13,12 @@ $PowerShellDir = Join-Path $HOME "Documents/PowerShell"
 $SshDir = Join-Path $HOME ".ssh"
 $InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HOME ".local/state/ooodnakov-config/backups" }
+$LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-Path $HOME ".local/state/ooodnakov-config/logs" }
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $PnpmVersion = "10.18.3"
+$script:LogFile = $null
+$script:LatestLogFile = $null
+$script:TranscriptStarted = $false
 
 function Test-Interactive {
     switch ($InteractiveMode) {
@@ -35,6 +39,54 @@ function Confirm-Install {
 
     $reply = Read-Host "$Prompt [y/N]"
     return $reply -match '^(?i:y|yes)$'
+}
+
+function Start-SetupLogging {
+    $resolvedLogRoot = $LogRoot
+
+    try {
+        if (-not (Test-Path $resolvedLogRoot)) {
+            New-Item -ItemType Directory -Force -Path $resolvedLogRoot | Out-Null
+        }
+    } catch {
+        $resolvedLogRoot = Join-Path ([System.IO.Path]::GetTempPath()) "ooodnakov-config-logs"
+        try {
+            if (-not (Test-Path $resolvedLogRoot)) {
+                New-Item -ItemType Directory -Force -Path $resolvedLogRoot | Out-Null
+            }
+        } catch {
+            Write-Warning "Failed to create log directory under $LogRoot or $resolvedLogRoot"
+            $script:LogFile = $null
+            $script:LatestLogFile = $null
+            return
+        }
+    }
+
+    $script:LatestLogFile = Join-Path $resolvedLogRoot "setup-latest.log"
+    $script:LogFile = Join-Path $resolvedLogRoot "setup-$Command-$Timestamp.log"
+
+    try {
+        Start-Transcript -Path $script:LogFile -Force | Out-Null
+        $script:TranscriptStarted = $true
+    } catch {
+        $script:TranscriptStarted = $false
+        "Failed to start transcript logging at $script:LogFile: $($_.Exception.Message)" | Out-File -FilePath $script:LogFile -Encoding utf8 -Append
+    }
+
+    Write-Output "Logging to $script:LogFile"
+}
+
+function Stop-SetupLogging {
+    if ($script:TranscriptStarted) {
+        try {
+            Stop-Transcript | Out-Null
+        } catch {
+        }
+    }
+
+    if ($script:LogFile -and (Test-Path $script:LogFile)) {
+        Copy-Item -Path $script:LogFile -Destination $script:LatestLogFile -Force
+    }
 }
 
 function Install-Chocolatey {
@@ -290,15 +342,23 @@ function Invoke-Install {
     Write-Output "If needed, create local overrides in $ConfigHome/ooodnakov/local."
 }
 
-switch ($Command) {
-    "install" { Invoke-Install }
-    "update" {
-        if ($DryRun) {
-            Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
-        } else {
-            git -C $RepoRoot pull --ff-only
+Start-SetupLogging
+try {
+    switch ($Command) {
+        "install" { Invoke-Install }
+        "update" {
+            if ($DryRun) {
+                Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
+            } else {
+                git -C $RepoRoot pull --ff-only
+            }
+            Invoke-Install
         }
-        Invoke-Install
+        "doctor" { Test-Doctor }
     }
-    "doctor" { Test-Doctor }
+} finally {
+    if ($script:LogFile) {
+        Write-Output "Log file: $script:LogFile"
+    }
+    Stop-SetupLogging
 }

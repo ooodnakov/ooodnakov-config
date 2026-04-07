@@ -63,31 +63,25 @@ It also normalizes the installed `oh-my-zsh` tree permissions on every run so `c
 ```bash
 git clone git@github.com:ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
 cd ~/src/ooodnakov-config
-chmod +x ./scripts/setup.sh
-./scripts/setup.sh
+./home/.config/ooodnakov/bin/oooconf install
 ```
 
-Unified CLI (recommended):
+Repo-local `oooconf` is the intended entrypoint before the install links `oooconf` into `~/.local/bin`.
+After the first install, use the global command directly:
 
 ```bash
-chmod +x ./scripts/ooodnakov.sh
-./scripts/ooodnakov.sh install
+oooconf install
 ```
 
-Setup now also links a convenience command into `~/.local/bin/oooconf`, so you can run `oooconf install`, `oooconf doctor`, etc. directly from your terminal.
+Setup links `oooconf` into `~/.local/bin/oooconf`, so you can run `oooconf install`, `oooconf doctor`, etc. directly from your terminal.
 Use `oooconf --help` for global flags, `oooconf help <command>` for command-specific help, and `oooconf --print-repo-root` to confirm which checkout the command is targeting.
+Each `oooconf install`, `oooconf update`, or `oooconf doctor` run also writes a debug log under `~/.local/state/ooodnakov-config/logs/`, with `setup-latest.log` pointing to the latest run.
 
 To update an existing machine from the repo and reapply the managed config:
 
 ```bash
 cd ~/src/ooodnakov-config
-./scripts/setup.sh update
-```
-
-or:
-
-```bash
-./scripts/ooodnakov.sh update
+oooconf update
 ```
 
 This also preserves replaced files by moving them into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
@@ -104,28 +98,28 @@ curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/boo
 For unattended runs, disable prompts:
 
 ```bash
-OOODNAKOV_INTERACTIVE=never ./scripts/setup.sh update
+OOODNAKOV_INTERACTIVE=never oooconf update
 ```
 
 Preview setup actions without changing the system:
 
 ```bash
-./scripts/ooodnakov.sh dry-run
+oooconf dry-run
 ```
 
 Run post-install checks:
 
 ```bash
-./scripts/ooodnakov.sh doctor
+oooconf doctor
 ```
 
 Run dependency lock generation and pin audit helpers:
 
 ```bash
-./scripts/ooodnakov.sh lock
-./scripts/ooodnakov.sh update-pins
+oooconf lock
+oooconf update-pins
 # optional: apply latest HEAD refs into scripts/setup.sh
-./scripts/ooodnakov.sh update-pins --apply
+oooconf update-pins --apply
 ```
 
 Workspace ergonomics (Phase 3):
@@ -166,6 +160,7 @@ Dependency lock and pin update helpers are also exposed in PowerShell:
 Both commands require `python3` to be available on `PATH`.
 
 On Windows, the PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 ## CI/CD
 
@@ -180,27 +175,13 @@ On Windows, the PowerShell setup can also prompt to install missing core tools w
 To remove the managed Unix symlinks and restore the latest backups when available:
 
 ```bash
-cd ~/src/ooodnakov-config
-chmod +x ./scripts/delete.sh
-./scripts/delete.sh
-```
-
-or via unified CLI:
-
-```bash
-./scripts/ooodnakov.sh delete
+oooconf delete
 ```
 
 To remove only the managed links without restoring backups:
 
 ```bash
-./scripts/delete.sh remove
-```
-
-or:
-
-```bash
-./scripts/ooodnakov.sh remove
+oooconf remove
 ```
 
 ## Fonts
@@ -209,7 +190,7 @@ The repo now includes the Meslo Nerd Font files used by the tracked prompt and W
 
 - [`fonts/meslo`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/fonts/meslo)
 
-On Linux, `./scripts/setup.sh` installs these into `~/.local/share/fonts/ooodnakov` and refreshes the font cache when `fc-cache` is available.
+On Linux, `oooconf install` installs these into `~/.local/share/fonts/ooodnakov` and refreshes the font cache when `fc-cache` is available.
 
 On Windows and macOS, the files are bundled here for manual installation if needed.
 

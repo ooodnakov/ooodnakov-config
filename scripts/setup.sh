@@ -10,6 +10,7 @@ FONT_TARGET_DIR="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
 COMMAND="${1:-install}"
 DRY_RUN=0
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
+LOG_ROOT="${OOODNAKOV_LOG_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/logs}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 DEPENDENCY_SUMMARY=()
@@ -17,6 +18,8 @@ TOOL_SUMMARY=()
 FAILURES=()
 PACKAGE_MANAGER=""
 APT_UPDATED=0
+LOG_FILE=""
+LOG_LATEST=""
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
@@ -67,6 +70,32 @@ Commands:
 Options:
   --dry-run print actions without mutating filesystem
 EOF
+}
+
+initialize_logging() {
+  local active_log_root="$LOG_ROOT"
+
+  if ! mkdir -p "$active_log_root" 2>/dev/null; then
+    active_log_root="${TMPDIR:-/tmp}/ooodnakov-config-logs"
+    mkdir -p "$active_log_root" || {
+      LOG_FILE=""
+      LOG_LATEST=""
+      echo "warning: failed to create log directory under $LOG_ROOT or $active_log_root" >&2
+      return 0
+    }
+  fi
+
+  LOG_FILE="$active_log_root/setup-${COMMAND}-${TIMESTAMP}.log"
+  LOG_LATEST="$active_log_root/setup-latest.log"
+
+  if command -v tee >/dev/null 2>&1; then
+    exec > >(tee -a "$LOG_FILE") 2>&1
+  else
+    exec >>"$LOG_FILE" 2>&1
+  fi
+
+  ln -sfn "$LOG_FILE" "$LOG_LATEST" 2>/dev/null || cp -f "$LOG_FILE" "$LOG_LATEST"
+  echo "Logging to $LOG_FILE"
 }
 
 run_cmd() {
@@ -892,6 +921,7 @@ case "$COMMAND" in
   *) usage >&2; exit 1 ;;
 esac
 
+initialize_logging
 run_cmd mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
 
 install_optional_dependencies
@@ -933,3 +963,6 @@ print_summary
 echo
 echo "Bootstrap complete."
 echo "If needed, create local overrides in $CONFIG_HOME/ooodnakov/local."
+if [ -n "$LOG_FILE" ]; then
+  echo "Log file: $LOG_FILE"
+fi

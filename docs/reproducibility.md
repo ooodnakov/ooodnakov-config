@@ -91,7 +91,8 @@ For `pnpm`, the tracked shell environment reserves `PNPM_HOME`, and setup instal
 
 The primary entrypoints are:
 
-- `./scripts/ooodnakov.sh` on Unix
+- repo-local `./home/.config/ooodnakov/bin/oooconf` before first install on Unix
+- `oooconf` after Unix setup links it into `~/.local/bin/oooconf`
 - `.\scripts\ooodnakov.ps1` on Windows
 
 Phase-1 setup ergonomics are implemented with:
@@ -101,13 +102,14 @@ Phase-1 setup ergonomics are implemented with:
 
 Phase-2 dependency audit ergonomics are implemented with:
 
-- `./scripts/ooodnakov.sh lock` (or `.\scripts\ooodnakov.ps1 lock`) to regenerate lock artifacts from pinned refs
-- `./scripts/ooodnakov.sh update-pins` to compare pinned refs with remote HEAD and append an audit summary
-- `./scripts/ooodnakov.sh update-pins --apply` to update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
+- `oooconf lock` (or `.\scripts\ooodnakov.ps1 lock`) to regenerate lock artifacts from pinned refs
+- `oooconf update-pins` to compare pinned refs with remote HEAD and append an audit summary
+- `oooconf update-pins --apply` to update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
 - `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic
 
 
 ## Phase-3 ergonomics
 
 - `oooconf` command is linked to `~/.local/bin/oooconf` by Unix setup so the unified CLI can be invoked from any directory.
+- Unix and PowerShell setup runs write per-run logs under `~/.local/state/ooodnakov-config/logs/`, with `setup-latest.log` copied or linked to the latest run for debugging.
 - WezTerm startup supports `OOODNAKOV_WEZTERM_WORKSPACE` and `OOODNAKOV_WEZTERM_CWD` for project-scoped startup defaults without editing tracked config.
