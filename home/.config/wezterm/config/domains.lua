@@ -20,13 +20,6 @@ if platform.is_win then
          default_cwd = '/home/user',
          default_prog = { 'zsh', '-l' },
       },
-      {
-         name = 'wsl:ubuntu-bash',
-         distribution = 'Ubuntu',
-         username = 'user',
-         default_cwd = '/home/user',
-         default_prog = { 'bash', '-l' },
-      },
    }
 end
 

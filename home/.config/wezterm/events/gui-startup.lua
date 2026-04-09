@@ -3,12 +3,13 @@ local mux = wezterm.mux
 local launch = require('config.launch')
 
 local M = {}
+local get_env = wezterm.getenv or os.getenv
 
 M.setup = function()
    wezterm.on('gui-startup', function(cmd)
       local spawn = cmd or {}
-      local workspace = wezterm.getenv('OOODNAKOV_WEZTERM_WORKSPACE') or 'default'
-      local startup_cwd = wezterm.getenv('OOODNAKOV_WEZTERM_CWD')
+      local workspace = get_env('OOODNAKOV_WEZTERM_WORKSPACE') or 'default'
+      local startup_cwd = get_env('OOODNAKOV_WEZTERM_CWD')
 
       if spawn.workspace == nil then
          spawn.workspace = workspace
