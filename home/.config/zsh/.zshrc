@@ -5,13 +5,18 @@ export OOODNAKOV_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}/ooodnakov-con
 export OOODNAKOV_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}/ooodnakov-config"
 export ZSH="$OOODNAKOV_SHARE_HOME/oh-my-zsh"
 export ZSH_CUSTOM="$ZSH/custom"
+export ZSH_CACHE_DIR="$OOODNAKOV_CACHE_HOME/oh-my-zsh"
 export POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
 export HISTFILE="$OOODNAKOV_STATE_HOME/zsh/history"
 export ZSH_COMPDUMP="$OOODNAKOV_CACHE_HOME/zsh/.zcompdump-${HOST%%.*}-${ZSH_VERSION}"
+export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=30
+export ZSH_AUTOSUGGEST_USE_ASYNC=1
 
 fpath=("$OOODNAKOV_CONFIG_HOME/zsh/completions" $fpath)
 
-mkdir -p "${HISTFILE:h}" "${ZSH_COMPDUMP:h}"
+mkdir -p "${HISTFILE:h}" "${ZSH_COMPDUMP:h}" "$ZSH_CACHE_DIR"
+
+zstyle ':omz:update' mode disabled
 
 # Remove stale compdump files that use an older oh-my-zsh header format.
 # Newer compinit expects the first line to start with "#files:" and fails
