@@ -75,17 +75,27 @@ Use local override files for anything that changes by host:
 
 The bootstrap scripts intentionally do not install every package manager package for you. They assume the machine already has:
 
-- `git`
-- `zsh` on Linux/macOS
-- `pwsh` on Windows if you want PowerShell Core
-- `wezterm`
-- `oh-my-posh`
+- Linux/macOS: `git`, `zsh`
+- Windows: `git`, `pwsh` if you want PowerShell Core
+- all platforms: `wezterm`, `oh-my-posh`
 
 Fonts are also manual for now. The tracked defaults assume a Nerd Font is installed, with `MesloLGS NF` preferred.
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.
 
 For Neovim, the Unix setup validates `nvim >= 0.11.0` for LazyVim. On Linux, if the distro package manager only provides an older version, setup installs the pinned official Neovim release tarball into the repo-managed XDG data tree and links `nvim` from there.
 For `pnpm`, the tracked shell environment reserves `PNPM_HOME`, and setup installs a pinned version through `corepack` when available or through `npm` into that path otherwise.
+
+## Bootstrap trust model
+
+The fastest Unix bootstrap path is still `curl ... | bash`, but that is a trust tradeoff, not the recommended review path.
+
+For a new machine or any time you want to inspect changes first, prefer:
+
+1. clone the repo
+2. review `bootstrap.sh`, `scripts/setup.sh`, and the tracked config under `home/`
+3. run the repo-local `oooconf` entrypoint directly
+
+That keeps the initial setup auditable while preserving the same install behavior.
 
 ## Unified CLI and validation
 

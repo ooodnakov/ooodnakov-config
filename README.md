@@ -41,21 +41,15 @@ Reference-only material lives under `third_party/` and `docs/imports/`. It is st
 
 ## Quick Start
 
-### Bootstrap on Unix-like systems
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh | bash
-```
-
-This clones the repo into `~/src/ooodnakov-config` by default, updates it in place if it already exists, and runs the normal Unix install flow.
-
-### Manual install on Linux or macOS
+### Preferred install path on Linux or macOS
 
 ```bash
 git clone git@github.com:ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
 cd ~/src/ooodnakov-config
 ./home/.config/ooodnakov/bin/oooconf install
 ```
+
+This is the recommended path because it lets you inspect the tracked config and setup scripts before they make changes on the machine.
 
 Before first install, the repo-local `oooconf` script is the intended entrypoint. After install, setup links `oooconf` into `~/.local/bin`, so you can run:
 
@@ -64,6 +58,20 @@ oooconf install
 oooconf update
 oooconf dry-run
 oooconf doctor
+```
+
+### Bootstrap shortcut on Unix-like systems
+
+```bash
+curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh
+less /tmp/ooodnakov-bootstrap.sh
+bash /tmp/ooodnakov-bootstrap.sh
+```
+
+If you already trust the repo and want the one-liner, this also works:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh | bash
 ```
 
 ### Windows PowerShell
@@ -109,6 +117,16 @@ For unattended runs:
 ```bash
 OOODNAKOV_INTERACTIVE=never oooconf update
 ```
+
+## Prerequisites
+
+The setup scripts intentionally do not try to provision a full workstation from bare metal. Core tools should already exist before first install:
+
+- Linux/macOS: `git`, `zsh`
+- Windows: `git`, `pwsh` if PowerShell Core is desired
+- all platforms: `wezterm`, `oh-my-posh`
+
+See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 
 ## Install Behavior
 
@@ -157,7 +175,7 @@ On Windows, setup can prompt to install common tools with `winget` and `choco`, 
 
 ## Fonts
 
-Bundled Meslo Nerd Font files live in [`fonts/meslo`](/mnt/c/Users/coolk/src/ooodnakov-config/fonts/meslo).
+Bundled Meslo Nerd Font files live in [`fonts/meslo`](fonts/meslo).
 
 On Linux, `oooconf install` installs them into `~/.local/share/fonts/ooodnakov` and refreshes the font cache when `fc-cache` is available.
 
@@ -180,7 +198,7 @@ Additional local-only files you may create per machine:
 
 - `~/.config/ooodnakov/local/wezterm.lua`
 
-Examples live in [`home/.config/ooodnakov/local`](/mnt/c/Users/coolk/src/ooodnakov-config/home/.config/ooodnakov/local).
+Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local).
 
 Runtime shell state is intentionally untracked:
 
@@ -219,6 +237,7 @@ Upstream inspirations:
 
 Reference docs:
 
-- reproducibility notes: [`docs/reproducibility.md`](/mnt/c/Users/coolk/src/ooodnakov-config/docs/reproducibility.md)
-- import and comparison notes: [`docs/imports/upstream-audit.md`](/mnt/c/Users/coolk/src/ooodnakov-config/docs/imports/upstream-audit.md)
-- third-party tree notes: [`third_party/README.md`](/mnt/c/Users/coolk/src/ooodnakov-config/third_party/README.md)
+- architecture notes: [`docs/architecture.md`](docs/architecture.md)
+- reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
+- import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)
+- third-party tree notes: [`third_party/README.md`](third_party/README.md)
