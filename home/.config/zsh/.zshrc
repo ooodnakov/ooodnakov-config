@@ -40,7 +40,6 @@ plugins=(
   forgit
   sudo
   extract
-  z
   history
   screen
   colorize
@@ -76,6 +75,10 @@ source "$ZSH/oh-my-zsh.sh"
 
 if [ -f "$ZSH_CUSTOM/plugins/k/k.sh" ]; then
   source "$ZSH_CUSTOM/plugins/k/k.sh"
+fi
+
+if (( $+commands[zoxide] )); then
+  eval "$(zoxide init zsh --cmd z)"
 fi
 
 # direnv supress stdout during startup in path with .envrc

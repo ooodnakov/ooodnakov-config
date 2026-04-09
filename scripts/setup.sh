@@ -894,6 +894,7 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" zsh zsh "default shell support"
   maybe_install_dependency "$manager" direnv direnv "direnv shell integration"
   maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
+  maybe_install_dependency "$manager" zoxide zoxide "smart directory jumping with z/zi"
   maybe_install_eza "$manager"
   maybe_install_uv
   maybe_install_dependency "$manager" node nodejs "Node.js runtime"

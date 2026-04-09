@@ -167,6 +167,7 @@ Unix setup installs pinned copies of:
 
 Additional setup behavior:
 
+- `zoxide` is installed via the system package manager when available and initialized as `z`/`zi` in `zsh`
 - `uv` uses Astral's official installer
 - `pnpm` uses a pinned version via `corepack`, or falls back to `npm install --global`
 - `dua-cli` installs from `byron/dua-cli` via `cargo`
