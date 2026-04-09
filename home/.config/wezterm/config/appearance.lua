@@ -59,6 +59,9 @@ return {
    --    saturation = 0.9,
    --    brightness = 0.65,
    -- },
+   window_decorations = "INTEGRATED_BUTTONS|RESIZE",
+   window_background_opacity = 0.8,
+   win32_system_backdrop = 'Acrylic',  
    inactive_pane_hsb = {
       saturation = 1,
       brightness = 1,
