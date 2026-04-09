@@ -1,64 +1,55 @@
 # ooodnakov-config
 
-Reproducible personal dotfiles for:
+Reproducible personal dotfiles for Linux, Windows, and future macOS machines.
 
-- Linux
-- Windows
-- macOS
+This repo tracks the opinionated base config and bootstrap logic only. Secrets, tokens, private keys, and host-specific overrides stay outside git in local files.
 
-The repo keeps only opinionated config and bootstrap logic. Secrets, tokens, keys, and machine-specific overrides stay outside git in local override files.
+## What This Repo Manages
 
-## What is managed
+Active tracked config lives under `home/` and includes:
 
-- `zsh` with `oh-my-zsh`, pinned plugin/theme checkouts, optional `direnv`, and pinned `auto-uv-env`
-- pinned Zsh completion stack including `fzf-tab`
-- managed shell helpers: `nvm`, `k`, `marker`, `todo.txt-cli`
-- `LazyVim` starter config (managed in `~/.config/nvim`)
-- optional CLI tools prompted during setup: `direnv`, `fzf`, `eza`, `dua-cli`
-- dependency lock artifacts (`deps.lock.json`, `docs/dependency-lock.md`) generated from pinned setup refs
-- `wezterm`
+- `zsh` and modular zsh config
+- pinned shell dependencies and helpers
+- WezTerm config
 - PowerShell profile
-- `oh-my-posh`
+- `oh-my-posh` config
+- shared portable environment files
 - shared SSH host include config
+- LazyVim starter config under `~/.config/nvim`
 
-## What is also stored
+Bootstrap and maintenance entrypoints live under `scripts/`:
 
-- subtree-managed upstream copy of `ezsh`
-- snapshot of the current local WezTerm fork from this machine
-- bundled `MesloLGS NF` font files used by the shell and WezTerm defaults
-- audit notes from inspecting local config and remote hosts `orange` and `site`
+- `scripts/setup.sh`
+- `scripts/setup.ps1`
+- `scripts/ooodnakov.sh`
+- `scripts/ooodnakov.ps1`
 
-These live under [`third_party`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/third_party) and [`docs/imports`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/docs/imports). They are not installed by the setup scripts.
+Generated lock artifacts:
 
-## Upstream references
+- `deps.lock.json`
+- `docs/dependency-lock.md`
 
-- [`jotyGill/ezsh`](https://github.com/jotyGill/ezsh) for the modular zsh layout idea
-- [`KevinSilvester/wezterm-config`](https://github.com/KevinSilvester/wezterm-config) for the modular WezTerm structure
+Reference-only material lives under `third_party/` and `docs/imports/`. It is stored for auditability and extraction work, not as active config.
 
-This repo keeps a smaller active config inspired by them, plus a few upstream/reference trees for audit and future extraction work.
+## Repo Layout
 
-## Quick start
+- `home/`: managed config that gets linked into the user profile
+- `scripts/`: install, update, doctor, delete, and pin-management commands
+- `docs/`: reproducibility notes and import audits
+- `third_party/`: upstream and local reference trees
+- `fonts/meslo/`: bundled Meslo Nerd Font files used by the prompt and terminal defaults
 
-### One-line bootstrap
+## Quick Start
+
+### Bootstrap on Unix-like systems
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh | bash
 ```
 
-This clones the repo into `~/src/ooodnakov-config` by default and runs the normal Unix setup.
-If the repo is already present there, it is updated in place first.
-If managed target files already exist, they are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
-When run in a real terminal, bootstrap/setup also prompt for missing dependencies based on the `ezsh` workflow, including `git`, `zsh`, `wget`, `direnv`, `fzf`, `eza`, `dua-cli`, `node`, `npm`, `pnpm`, `python3`, `uv`, `cargo`, `autoconf`, `fontconfig`, and `neovim` (`nvim`). Prompts read from `/dev/tty`, so they work correctly even with `curl | bash`.
-For Neovim, the Unix setup requires `nvim >= 0.11.0` for LazyVim. If the detected Linux package-manager install is older than that, setup falls back to the official pinned Neovim release tarball and links it from the repo-managed XDG data tree.
-For `eza`, setup only auto-installs on package-manager paths that match upstream guidance directly; Debian/Ubuntu and some Fedora setups are left as manual installs instead of guessing.
-For `uv`, setup uses Astral's official installer (`https://astral.sh/uv/install.sh`) instead of distro package names.
-For `pnpm`, setup enables a pinned version via `corepack` when available and falls back to `npm install --global` into `PNPM_HOME` otherwise.
-For `dua-cli`, setup installs from `byron/dua-cli` via `cargo install --git` instead of relying on distro package names.
-The Unix setup also installs pinned copies of `fzf-tab`, `auto-uv-env`, `nvm`, `k`, `marker`, and `todo.txt-cli`.
-For `auto-uv-env`, setup keeps a pinned source checkout under the repo-managed XDG data tree, links the executable into `~/.local/share/ooodnakov-config/bin`, and installs the shell integration files into `~/.local/share/ooodnakov-config/auto-uv-env`.
-It also normalizes the installed `oh-my-zsh` tree permissions on every run so `compaudit` and `compinit` do not abort on group-writable plugin directories.
+This clones the repo into `~/src/ooodnakov-config` by default, updates it in place if it already exists, and runs the normal Unix install flow.
 
-### Linux or macOS
+### Manual install on Linux or macOS
 
 ```bash
 git clone git@github.com:ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
@@ -66,71 +57,13 @@ cd ~/src/ooodnakov-config
 ./home/.config/ooodnakov/bin/oooconf install
 ```
 
-Repo-local `oooconf` is the intended entrypoint before the install links `oooconf` into `~/.local/bin`.
-After the first install, use the global command directly:
+Before first install, the repo-local `oooconf` script is the intended entrypoint. After install, setup links `oooconf` into `~/.local/bin`, so you can run:
 
 ```bash
 oooconf install
-```
-
-Setup links `oooconf` into `~/.local/bin/oooconf`, so you can run `oooconf install`, `oooconf doctor`, etc. directly from your terminal.
-Use `oooconf --help` for global flags, `oooconf help <command>` for command-specific help, and `oooconf --print-repo-root` to confirm which checkout the command is targeting.
-Each `oooconf install`, `oooconf update`, or `oooconf doctor` run also writes a debug log under `~/.local/state/ooodnakov-config/logs/`, with `setup-latest.log` pointing to the latest run.
-
-To update an existing machine from the repo and reapply the managed config:
-
-```bash
-cd ~/src/ooodnakov-config
 oooconf update
-```
-
-This also preserves replaced files by moving them into timestamped backups under `~/.local/state/ooodnakov-config/backups/`.
-In interactive terminals it also offers to install common optional dependencies via the detected package manager.
-It also reapplies safe `oh-my-zsh` directory and file modes on every run.
-At the end of setup it also sources `~/.zshrc` inside the installer process, but you may still want to open a fresh shell session for a fully clean environment.
-
-You can also rerun the bootstrap:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh | bash
-```
-
-For unattended runs, disable prompts:
-
-```bash
-OOODNAKOV_INTERACTIVE=never oooconf update
-```
-
-Preview setup actions without changing the system:
-
-```bash
 oooconf dry-run
-```
-
-Run post-install checks:
-
-```bash
 oooconf doctor
-```
-
-Run dependency lock generation and pin audit helpers:
-
-```bash
-oooconf lock
-oooconf update-pins
-# optional: apply latest HEAD refs into scripts/setup.sh
-oooconf update-pins --apply
-```
-
-Workspace ergonomics (Phase 3):
-
-- set `OOODNAKOV_WEZTERM_WORKSPACE` to choose startup workspace name
-- set `OOODNAKOV_WEZTERM_CWD` to choose startup working directory
-
-Example:
-
-```bash
-OOODNAKOV_WEZTERM_WORKSPACE=project-x OOODNAKOV_WEZTERM_CWD=$HOME/src/project-x wezterm
 ```
 
 ### Windows PowerShell
@@ -138,113 +71,154 @@ OOODNAKOV_WEZTERM_WORKSPACE=project-x OOODNAKOV_WEZTERM_CWD=$HOME/src/project-x 
 ```powershell
 git clone git@github.com:ooodnakov/ooodnakov-config.git $HOME\src\ooodnakov-config
 Set-Location $HOME\src\ooodnakov-config
-.\scripts\setup.ps1
+.\scripts\ooodnakov.ps1 install
 ```
 
-Unified PowerShell CLI (recommended):
+After setup, `oooconf` is linked into `$HOME\.local\bin`, and the managed PowerShell profile prepends that directory to `PATH`, so the same commands work in new sessions:
 
 ```powershell
-.\scripts\ooodnakov.ps1 install
 oooconf install
+oooconf update
 oooconf dry-run
 oooconf doctor
 ```
 
-Dependency lock and pin update helpers are also exposed in PowerShell:
+## CLI Entry Points
 
-```powershell
-.\scripts\ooodnakov.ps1 lock
-.\scripts\ooodnakov.ps1 update-pins
-.\scripts\ooodnakov.ps1 update-pins -Apply
-```
+Primary commands:
 
-Both commands require `python3` to be available on `PATH`.
+- `oooconf install`: apply managed config and optional dependency installs
+- `oooconf update`: fast-forward pull the repo, then rerun install
+- `oooconf dry-run`: preview setup actions without changing the system
+- `oooconf doctor`: validate managed links and key tools
+- `oooconf delete`: remove managed links and restore latest backups when available
+- `oooconf remove`: remove managed links without restoring backups
+- `oooconf lock`: regenerate dependency lock artifacts
+- `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
+- `oooconf update-pins --apply`: update pinned refs in setup scripts, then regenerate lock artifacts
 
-On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, and `fd`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
-Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
+Useful flags:
 
-## CI/CD
+- `oooconf --help`
+- `oooconf help <command>`
+- `oooconf --print-repo-root`
+- `oooconf --version`
 
-- CI runs on pull requests and pushes to `main` with:
-  - Bash syntax checks and `shellcheck` for Unix scripts
-  - reproducibility validation for `deps.lock.json` and `docs/dependency-lock.md`
-  - PowerShell parser validation for `scripts/setup.ps1` and `scripts/ooodnakov.ps1`
-- CD release automation runs on tags matching `v*` and publishes `.tar.gz` and `.zip` source archives to a GitHub Release.
-
-## Removal
-
-To remove the managed Unix symlinks and restore the latest backups when available:
+For unattended runs:
 
 ```bash
-oooconf delete
+OOODNAKOV_INTERACTIVE=never oooconf update
 ```
 
-To remove only the managed links without restoring backups:
+## Install Behavior
 
-```bash
-oooconf remove
-```
+Setup symlinks tracked config into standard locations and preserves replaced files by moving them into timestamped backups:
+
+- Unix: `~/.local/state/ooodnakov-config/backups/`
+- Windows: `$HOME\.local\state\ooodnakov-config\backups\`
+
+Each install, update, or doctor run also writes logs under:
+
+- Unix: `~/.local/state/ooodnakov-config/logs/`
+- Windows: `$HOME\.local\state\ooodnakov-config\logs\`
+
+`setup-latest.log` points to the latest run.
+
+In interactive terminals, setup can also prompt to install common optional dependencies.
+
+## Pinned Dependencies
+
+The repo aims for deterministic setup by pinning third-party shell dependencies and related tooling.
+
+Unix setup installs pinned copies of:
+
+- `oh-my-zsh`
+- `powerlevel10k`
+- `zsh-autosuggestions`
+- `zsh-syntax-highlighting`
+- `zsh-history-substring-search`
+- `zsh-autocomplete`
+- `fzf-tab`
+- `auto-uv-env`
+- `nvm`
+- `k`
+- `marker`
+- `todo.txt-cli`
+
+Additional setup behavior:
+
+- `uv` uses Astral's official installer
+- `pnpm` uses a pinned version via `corepack`, or falls back to `npm install --global`
+- `dua-cli` installs from `byron/dua-cli` via `cargo`
+- Linux setup requires `nvim >= 0.11.0` for LazyVim and falls back to a pinned official Neovim tarball if the distro package is too old
+- setup normalizes `oh-my-zsh` permissions on every run so `compaudit` and `compinit` do not reject the install
+
+On Windows, setup can prompt to install common tools with `winget` and `choco`, including WezTerm, Node.js LTS, `oh-my-posh`, `ripgrep`, and `fd`. It also offers to install Chocolatey if needed.
 
 ## Fonts
 
-The repo now includes the Meslo Nerd Font files used by the tracked prompt and WezTerm config:
+Bundled Meslo Nerd Font files live in [`fonts/meslo`](/mnt/c/Users/coolk/src/ooodnakov-config/fonts/meslo).
 
-- [`fonts/meslo`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/fonts/meslo)
+On Linux, `oooconf install` installs them into `~/.local/share/fonts/ooodnakov` and refreshes the font cache when `fc-cache` is available.
 
-On Linux, `oooconf install` installs these into `~/.local/share/fonts/ooodnakov` and refreshes the font cache when `fc-cache` is available.
+On Windows and macOS, the font files are bundled for manual installation if needed.
 
-On Windows and macOS, the files are bundled here for manual installation if needed.
+## Environment and Local Overrides
 
-## Environment layout
-
-Portable environment variables live in tracked files:
+Portable tracked environment belongs in:
 
 - `~/.config/ooodnakov/env/common.sh`
 - `~/.config/ooodnakov/env/common.ps1`
 
-These are loaded automatically by zsh and PowerShell and are meant for values you want to copy across machines.
-
-Machine-only or secret values live in ignored files:
+Machine-specific or secret values belong in ignored files:
 
 - `~/.config/ooodnakov/local/env.zsh`
 - `~/.config/ooodnakov/local/env.ps1`
 - `~/.ssh/config.local`
 
-The shell and PowerShell profiles load both automatically.
+Additional local-only files you may create per machine:
 
-Tracked shared environment currently covers:
-
-- editor and pager defaults
-- `NVM_DIR`
-- `PNPM_HOME`
-- `~/.local/bin`
-- `~/.cargo/bin`
-- optional `~/.local/bin/env` sourcing when present
-
-Runtime shell artifacts are intentionally not tracked. Zsh history is written under `~/.local/state/ooodnakov-config/zsh/` and the completion dump under `~/.cache/ooodnakov-config/zsh/`.
-
-## Local-only files
-
-Create these on each machine as needed:
-
-- `~/.config/ooodnakov/local/env.zsh`
-- `~/.config/ooodnakov/local/env.ps1`
 - `~/.config/ooodnakov/local/wezterm.lua`
-- `~/.ssh/config.local`
 
-Examples are tracked in [`home/.config/ooodnakov/local`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/home/.config/ooodnakov/local).
+Examples live in [`home/.config/ooodnakov/local`](/mnt/c/Users/coolk/src/ooodnakov-config/home/.config/ooodnakov/local).
 
-## Reproducibility rules
+Runtime shell state is intentionally untracked:
 
-- Third-party shell dependencies are installed at pinned commits by the setup script.
-- Tracked config is symlinked into standard OS locations.
-- Shared environment is tracked and loaded automatically.
-- Local secrets are sourced from ignored files only.
-- Machine-specific shell paths and hostnames belong in local override files, not tracked config.
+- zsh history: `~/.local/state/ooodnakov-config/zsh/`
+- zsh completion dump: `~/.cache/ooodnakov-config/zsh/`
 
-More detail: [`docs/reproducibility.md`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/docs/reproducibility.md)
+## WezTerm Workspace Ergonomics
 
-## Audit notes
+Set these environment variables to control WezTerm startup defaults without editing tracked config:
 
-- import and comparison notes: [`docs/imports/upstream-audit.md`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/docs/imports/upstream-audit.md)
-- third-party reference trees: [`third_party/README.md`](/mnt/d/stufffromC/user/Documents/Gits/ooodnakov-config/third_party/README.md)
+- `OOODNAKOV_WEZTERM_WORKSPACE`
+- `OOODNAKOV_WEZTERM_CWD`
+
+Example:
+
+```bash
+OOODNAKOV_WEZTERM_WORKSPACE=project-x OOODNAKOV_WEZTERM_CWD=$HOME/src/project-x wezterm
+```
+
+## CI/CD
+
+- CI runs on pushes to `main` and pull requests
+- Unix scripts are checked with Bash syntax validation and `shellcheck`
+- lock artifacts are validated for reproducibility
+- `scripts/setup.ps1` and `scripts/ooodnakov.ps1` are parser-validated
+- tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases
+
+## Upstream and Audit References
+
+The active config is intentionally smaller than the reference material stored alongside it.
+
+Upstream inspirations:
+
+- [`jotyGill/ezsh`](https://github.com/jotyGill/ezsh)
+- [`KevinSilvester/wezterm-config`](https://github.com/KevinSilvester/wezterm-config)
+
+Reference docs:
+
+- reproducibility notes: [`docs/reproducibility.md`](/mnt/c/Users/coolk/src/ooodnakov-config/docs/reproducibility.md)
+- import and comparison notes: [`docs/imports/upstream-audit.md`](/mnt/c/Users/coolk/src/ooodnakov-config/docs/imports/upstream-audit.md)
+- third-party tree notes: [`third_party/README.md`](/mnt/c/Users/coolk/src/ooodnakov-config/third_party/README.md)
