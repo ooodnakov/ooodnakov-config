@@ -105,6 +105,9 @@ Primary commands:
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
 - `oooconf update-pins --apply`: update pinned refs in setup scripts, then regenerate lock artifacts
 
+On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync. The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
+
 Useful flags:
 
 - `oooconf --help`
@@ -197,8 +200,26 @@ Machine-specific or secret values belong in ignored files:
 - `~/.config/ooodnakov/local/env.ps1`
 - `~/.ssh/config.local`
 
+Tracked shared environment currently covers:
+
+- editor and pager defaults
+- `OOODNAKOV_CONFIG_HOME`
+- `OOODNAKOV_SHARE_HOME`
+- `OOODNAKOV_STATE_HOME`
+- `OOODNAKOV_CACHE_HOME`
+- `NVM_DIR`
+- `PNPM_HOME`
+- `~/.local/bin`
+- `~/.local/share/ooodnakov-config/bin`
+- `~/.cargo/bin`
+- optional `~/.local/bin/env` sourcing when present
+
+Runtime shell artifacts are intentionally not tracked. Zsh history is written under `~/.local/state/ooodnakov-config/zsh/` and the completion dump under `~/.cache/ooodnakov-config/zsh/`.
+
 Additional local-only files you may create per machine:
 
+- `~/.config/ooodnakov/local/env.zsh`
+- `~/.config/ooodnakov/local/env.ps1`
 - `~/.config/ooodnakov/local/wezterm.lua`
 
 Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local).

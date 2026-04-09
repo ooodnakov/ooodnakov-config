@@ -109,6 +109,8 @@ The primary entrypoints are:
 - `.\scripts\ooodnakov.ps1` before Windows setup
 - `oooconf` after Windows setup links `oooconf.ps1` and `oooconf.cmd` into `~/.local/bin`
 
+On Windows, setup also links the tracked PowerShell profile into both `~/.config/powershell/Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path so the managed XDG-style file and the loaded profile stay aligned.
+
 Phase-1 setup ergonomics are implemented with:
 
 - `dry-run` command to preview setup actions without mutation
@@ -126,4 +128,5 @@ Phase-2 dependency audit ergonomics are implemented with:
 
 - `oooconf` command is linked to `~/.local/bin/oooconf` by Unix setup so the unified CLI can be invoked from any directory.
 - Unix and PowerShell setup runs write per-run logs under `~/.local/state/ooodnakov-config/logs/`, with `setup-latest.log` copied or linked to the latest run for debugging.
+- PowerShell shared environment exports `OOODNAKOV_CONFIG_HOME`, `OOODNAKOV_SHARE_HOME`, `OOODNAKOV_STATE_HOME`, and `OOODNAKOV_CACHE_HOME`, and prepends both `~/.local/bin` and `~/.local/share/ooodnakov-config/bin` when present.
 - WezTerm startup supports `OOODNAKOV_WEZTERM_WORKSPACE` and `OOODNAKOV_WEZTERM_CWD` for project-scoped startup defaults without editing tracked config.
