@@ -37,18 +37,21 @@ ZSH_THEME=""
 plugins=(
   git
   git-extras
+  forgit
   sudo
   extract
   z
   history
   screen
   colorize
+  colored-man-pages
   debian
   docker
   python
   web-search
   history-substring-search
   fzf-tab
+  you-should-use
   zsh-autosuggestions
   zsh-syntax-highlighting
   zsh-autocomplete

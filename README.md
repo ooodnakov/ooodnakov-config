@@ -157,6 +157,8 @@ Unix setup installs pinned copies of:
 - `zsh-history-substring-search`
 - `zsh-autocomplete`
 - `fzf-tab`
+- `forgit`
+- `zsh-you-should-use`
 - `auto-uv-env`
 - `nvm`
 - `k`

@@ -36,6 +36,8 @@ Ignored files:
 - `zsh-history-substring-search`
 - `zsh-autocomplete`
 - `fzf-tab`
+- `forgit`
+- `zsh-you-should-use`
 - `auto-uv-env`
 
 This keeps the repo small while still making bootstrap deterministic.

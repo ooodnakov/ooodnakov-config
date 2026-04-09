@@ -35,6 +35,10 @@ ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
 ZSH_AUTOCOMPLETE_REF="2be4e7f0b435138b0237d4f068b2a882fb06edc4"
 FZF_TAB_REPO="https://github.com/Aloxaf/fzf-tab.git"
 FZF_TAB_REF="0983009f8666f11e91a2ee1f88cfdb748d14f656"
+FORGIT_REPO="https://github.com/wfxr/forgit.git"
+FORGIT_REF="7663f3a809bdd19837eb67e4ce607a8162518dee"
+YOU_SHOULD_USE_REPO="https://github.com/MichaelAquilina/zsh-you-should-use.git"
+YOU_SHOULD_USE_REF="ff371d6a11b653e1fa8dda4e61c896c78de26bfa"
 AUTO_UV_ENV_REPO="https://github.com/ashwch/auto-uv-env.git"
 AUTO_UV_ENV_REF="76589a0fe4a3eaba9817b7195b9fc05ef4139289"
 NVM_REPO="https://github.com/nvm-sh/nvm.git"
@@ -933,6 +937,8 @@ sync_repo "$ZSH_HIGHLIGHTING_REPO" "$ZSH_HIGHLIGHTING_REF" "$STATE_HOME/oh-my-zs
 sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" || TOOL_SUMMARY+=("zsh-history-substring-search: failed")
 sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" || TOOL_SUMMARY+=("zsh-autocomplete: failed")
 sync_repo "$FZF_TAB_REPO" "$FZF_TAB_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" || TOOL_SUMMARY+=("fzf-tab: failed")
+sync_repo "$FORGIT_REPO" "$FORGIT_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/forgit" || TOOL_SUMMARY+=("forgit: failed")
+sync_repo "$YOU_SHOULD_USE_REPO" "$YOU_SHOULD_USE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" || TOOL_SUMMARY+=("you-should-use: failed")
 install_auto_uv_env
 ensure_oh_my_zsh_permissions || true
 install_managed_tools
