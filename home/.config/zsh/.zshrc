@@ -14,7 +14,10 @@ export ZSH_AUTOSUGGEST_USE_ASYNC=1
 
 fpath=("$OOODNAKOV_CONFIG_HOME/zsh/completions" $fpath)
 
-mkdir -p "${HISTFILE:h}" "${ZSH_COMPDUMP:h}" "$ZSH_CACHE_DIR"
+# Create runtime directories with explicit permissions so compaudit accepts
+# the Oh My Zsh completion cache regardless of the caller's umask.
+install -d -m 700 "${HISTFILE:h}"
+install -d -m 755 "$OOODNAKOV_CACHE_HOME" "${ZSH_COMPDUMP:h}" "$ZSH_CACHE_DIR" "$ZSH_CACHE_DIR/completions"
 
 zstyle ':omz:update' mode disabled
 
