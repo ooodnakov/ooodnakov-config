@@ -172,7 +172,7 @@ Unix setup installs pinned copies of:
 Additional setup behavior:
 
 - `zoxide` is installed via the system package manager when available and initialized as `z`/`zi` in `zsh`
-- `q` is installed via the system package manager when available
+- `q` is installed via the upstream natesales APT repo on Debian/Ubuntu, or via the system package manager when available elsewhere
 - `uv` uses Astral's official installer
 - `bw` uses Bitwarden's official native CLI release archive
 - `pnpm` uses a pinned version via `corepack`, or falls back to `npm install --global`

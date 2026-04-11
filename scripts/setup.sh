@@ -493,6 +493,81 @@ maybe_install_eza() {
   esac
 }
 
+q_apt_repo_configured() {
+  [ -f /etc/apt/keyrings/natesales.gpg ] || return 1
+  [ -f /etc/apt/sources.list.d/natesales.list ] || return 1
+  grep -Fq "deb [signed-by=/etc/apt/keyrings/natesales.gpg] https://repo.natesales.net/apt * *" \
+    /etc/apt/sources.list.d/natesales.list 2>/dev/null
+}
+
+setup_q_apt_repo() {
+  if q_apt_repo_configured; then
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    if prompt_yes_no "q Debian/Ubuntu install needs curl. Install curl first?"; then
+      install_packages apt curl
+    else
+      DEPENDENCY_SUMMARY+=("q: missing (requires curl for Debian/Ubuntu repo setup)")
+      return 1
+    fi
+  fi
+
+  if ! command -v gpg >/dev/null 2>&1; then
+    if prompt_yes_no "q Debian/Ubuntu install needs gpg. Install gpg first?"; then
+      install_packages apt gpg
+    else
+      DEPENDENCY_SUMMARY+=("q: missing (requires gpg for Debian/Ubuntu repo setup)")
+      return 1
+    fi
+  fi
+
+  run_with_spinner "Creating natesales APT keyring directory for q" sudo mkdir -p /etc/apt/keyrings || return 1
+  run_with_spinner "Installing natesales APT signing key for q" \
+    sh -c 'curl -fsSL https://repo.natesales.net/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/natesales.gpg' || return 1
+  run_with_spinner "Adding natesales APT source for q" \
+    sh -c 'echo "deb [signed-by=/etc/apt/keyrings/natesales.gpg] https://repo.natesales.net/apt * *" | sudo tee /etc/apt/sources.list.d/natesales.list >/dev/null' || return 1
+  APT_UPDATED=0
+  return 0
+}
+
+maybe_install_q() {
+  local manager="$1"
+
+  if command -v q >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("q: present")
+    return 0
+  fi
+
+  case "$manager" in
+    apt)
+      if ! prompt_yes_no "Install q text-as-data CLI via the natesales Debian/Ubuntu APT repo?"; then
+        DEPENDENCY_SUMMARY+=("q: skipped")
+        return 0
+      fi
+
+      if ! setup_q_apt_repo; then
+        DEPENDENCY_SUMMARY+=("q: install attempted")
+        return 0
+      fi
+
+      install_packages apt q
+      if command -v q >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("q: installed")
+      else
+        DEPENDENCY_SUMMARY+=("q: install attempted")
+      fi
+      ;;
+    none)
+      DEPENDENCY_SUMMARY+=("q: missing (no supported package manager)")
+      ;;
+    *)
+      maybe_install_dependency "$manager" q q "q text-as-data CLI"
+      ;;
+  esac
+}
+
 maybe_install_uv() {
   if command -v uv >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("uv: present")
@@ -987,7 +1062,7 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" direnv direnv "direnv shell integration"
   maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
   maybe_install_dependency "$manager" zoxide zoxide "smart directory jumping with z/zi"
-  maybe_install_dependency "$manager" q q "q text-as-data CLI"
+  maybe_install_q "$manager"
   maybe_install_eza "$manager"
   maybe_install_uv
   maybe_install_bw
