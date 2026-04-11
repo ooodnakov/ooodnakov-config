@@ -3,11 +3,12 @@
 local curcontext="$curcontext" state line
 typeset -A opt_args
 
-local -a commands global_opts setup_opts update_pins_opts secrets_common_opts
+local -a commands global_opts setup_opts deps_args update_pins_opts secrets_common_opts
 local command_name secrets_command
 commands=(
   'bootstrap:clone or update the repo, then run install'
   'install:apply managed config'
+  'deps:install optional dependencies only'
   'update:update the repo, then re-run install'
   'doctor:validate managed links and tools'
   'dry-run:preview install without changes'
@@ -35,6 +36,13 @@ setup_opts=(
   '(-h --help)'{-h,--help}'[show setup help]'
 )
 
+deps_args=(
+  '--dry-run[preview dependency installation without changing the filesystem]'
+  '--yes-optional[auto-accept optional dependency installs]'
+  '(-h --help)'{-h,--help}'[show deps help]'
+  '*:dependency key:((wget\:"download helpers and ezsh parity" zsh\:"default shell support" direnv\:"direnv shell integration" fzf\:"fzf shell integration" bat\:"cat alternative with syntax highlighting" delta\:"Git diff pager with syntax highlighting" glow\:"terminal Markdown reader" gum\:"interactive terminal UI toolkit" zoxide\:"smart directory jumping" q\:"q text-as-data CLI" eza\:"modern ls aliases" uv\:"Python package manager" bw\:"Bitwarden CLI" node\:"Node.js runtime" npm\:"Node package manager" pnpm\:"pnpm package manager" autoconf\:"build optional ezsh native components" fc-cache\:"refresh installed font caches" cargo\:"Rust package manager" dua\:"disk usage analysis via dua-cli" nvim\:"Neovim for LazyVim" k\:"standalone k command" python3\:"Python runtime and helper scripts"))'
+)
+
 update_pins_opts=(
   '--apply[write updated pinned refs before regenerating lock artifacts]'
 )
@@ -57,7 +65,7 @@ case "$state" in
     command_name=
     for (( i = 1; i <= CURRENT; i++ )); do
       case "$words[i]" in
-        bootstrap|install|update|doctor|dry-run|delete|remove|lock|update-pins|secrets|help|version)
+        bootstrap|install|deps|update|doctor|dry-run|delete|remove|lock|update-pins|secrets|help|version)
           command_name="$words[i]"
           break
           ;;
@@ -70,6 +78,9 @@ case "$state" in
         ;;
       install|update)
         _arguments $setup_opts
+        ;;
+      deps)
+        _arguments $deps_args
         ;;
       dry-run|doctor|delete|remove|lock|version)
         _message 'no additional arguments'
