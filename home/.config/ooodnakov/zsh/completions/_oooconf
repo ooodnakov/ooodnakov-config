@@ -15,6 +15,7 @@ commands=(
   'remove:remove managed links only'
   'lock:regenerate dependency lock artifacts'
   'update-pins:check or update pinned refs'
+  'agents:detect/sync/doctor AGENTS.md policy blocks'
   'secrets:sync or validate local secret env files'
   'help:show help'
   'version:show version information'
@@ -57,7 +58,7 @@ case "$state" in
     command_name=
     for (( i = 1; i <= CURRENT; i++ )); do
       case "$words[i]" in
-        bootstrap|install|update|doctor|dry-run|delete|remove|lock|update-pins|secrets|help|version)
+        bootstrap|install|update|doctor|dry-run|delete|remove|lock|update-pins|agents|secrets|help|version)
           command_name="$words[i]"
           break
           ;;
@@ -76,6 +77,37 @@ case "$state" in
         ;;
       update-pins)
         _arguments $update_pins_opts
+        ;;
+      agents)
+        local agents_subcommand
+        agents_subcommand=
+        for (( i = 1; i <= CURRENT; i++ )); do
+          case "$words[i]" in
+            detect|sync|doctor)
+              agents_subcommand="$words[i]"
+              break
+              ;;
+          esac
+        done
+
+        if [[ -z "$agents_subcommand" ]]; then
+          _describe -t agents-subcommands 'oooconf agents command' \
+            'detect:detect configured agent CLIs on PATH' \
+            'sync:append or update shared AGENTS.md block' \
+            'doctor:verify AGENTS.md shared block is current'
+        else
+          case "$agents_subcommand" in
+            detect)
+              _arguments '--json[emit machine-readable JSON output]'
+              ;;
+            sync)
+              _arguments '--check[validate only without writing files]'
+              ;;
+            doctor)
+              _arguments '--strict-config-paths[fail if agent default config paths are missing]'
+              ;;
+          esac
+        fi
         ;;
       secrets)
         secrets_command=

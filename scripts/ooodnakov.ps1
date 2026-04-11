@@ -14,6 +14,7 @@ $SetupScript = Join-Path $PSScriptRoot "setup.ps1"
 $GenerateLockScript = Join-Path $PSScriptRoot "generate-dependency-lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update-pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render-secrets.py"
+$AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
 
 function Get-Version {
     if (Get-Command git -ErrorAction SilentlyContinue) {
@@ -57,6 +58,7 @@ Commands:
   dry-run               run setup install --dry-run
   lock                  regenerate dependency lock artifacts
   update-pins           check/update pinned refs and refresh lock artifacts
+  agents                detect/sync/doctor AGENTS.md common policy blocks
   secrets               sync or validate local secret env files
   help [command]        show general or command-specific help
   version               show CLI version information
@@ -120,6 +122,19 @@ Regenerate dependency lock artifacts from pinned refs in scripts/setup.sh.
 Usage: oooconf update-pins [--apply]
 
 Compare pinned git refs to upstream HEAD and refresh lock artifacts.
+"@
+        }
+        "agents" {
+            @"
+Usage: oooconf agents <detect|sync|doctor> [options]
+
+Manage shared AGENTS.md instructions and validate configured agent tooling.
+
+Subcommands:
+  detect [--json]       detect configured agent CLIs on PATH
+  sync [--check]        append/update shared AGENTS.md managed block
+  doctor [--strict-config-paths]
+                        verify AGENTS.md managed block and default agent config paths
 "@
         }
         "secrets" {
@@ -313,6 +328,13 @@ switch ($command) {
     "secrets" {
         Require-Python3
         & python3 $RenderSecretsScript --repo-root $RepoRoot @remaining
+    }
+    "agents" {
+        if ($dryRunRequested) {
+            throw "--dry-run is not supported for agents"
+        }
+        Require-Python3
+        & python3 $AgentsToolScript --repo-root $RepoRoot @remaining
     }
     default {
         throw "Unknown command: $command"

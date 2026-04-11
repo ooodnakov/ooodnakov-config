@@ -9,6 +9,7 @@ BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
 GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
+AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
 
 print_version() {
   if command -v git >/dev/null 2>&1 && [ -d "$REPO_ROOT/.git" ]; then
@@ -41,6 +42,7 @@ Commands:
   remove                remove managed links only
   lock                  regenerate dependency lock artifacts
   update-pins           check/update pinned refs and refresh lock artifacts
+  agents                detect/sync/doctor AGENTS.md common policy blocks
   secrets               sync or validate local secret env files
   help [command]        show general or command-specific help
   version               show CLI version information
@@ -131,6 +133,19 @@ Usage: oooconf update-pins [--apply]
 Compare pinned git refs to upstream HEAD and refresh lock artifacts.
 EOF
       ;;
+    agents)
+      cat <<'EOF'
+Usage: oooconf agents <detect|sync|doctor> [options]
+
+Manage shared AGENTS.md instructions and validate configured agent tooling.
+
+Subcommands:
+  detect [--json]       detect configured agent CLIs on PATH
+  sync [--check]        append/update shared AGENTS.md managed block
+  doctor [--strict-config-paths]
+                        verify AGENTS.md managed block and default agent config paths
+EOF
+      ;;
     secrets)
       cat <<'EOF'
 Usage: oooconf secrets <sync|doctor> [options]
@@ -188,6 +203,7 @@ while [ "$#" -gt 0 ]; do
       GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
       UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
       RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
+      AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
       shift 2
       ;;
     --print-repo-root)
@@ -344,6 +360,17 @@ case "$command" in
     fi
     require_repo_script "$UPDATE_PINS"
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" "$@"
+    ;;
+  agents)
+    if [ "$dry_run_requested" -eq 1 ]; then
+      echo "--dry-run is not supported for agents" >&2
+      exit 1
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "python3 is required for agents command." >&2
+      exit 1
+    fi
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$AGENTS_TOOL" --repo-root "$REPO_ROOT" "$@"
     ;;
   secrets)
     if ! command -v python3 >/dev/null 2>&1; then

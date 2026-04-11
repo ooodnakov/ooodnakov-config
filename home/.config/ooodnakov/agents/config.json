@@ -1,0 +1,41 @@
+{
+  "agent_files": [
+    "AGENTS.md"
+  ],
+  "common_text_file": "home/.config/ooodnakov/agents/common-text.md",
+  "common_data_file": "home/.config/ooodnakov/agents/common-data.json",
+  "agent_clis": [
+    { "name": "OpenAI Codex CLI", "command": "codex" },
+    { "name": "Claude Code", "command": "claude" },
+    { "name": "Gemini CLI", "command": "gemini" },
+    { "name": "Aider", "command": "aider" },
+    { "name": "Qwen Code", "command": "qwen" },
+    { "name": "Cursor Agent", "command": "cursor-agent" }
+  ],
+  "agent_configs": [
+    {
+      "name": "OpenAI Codex CLI",
+      "format": "toml",
+      "default_paths": ["~/.codex/config.toml"],
+      "docs_url": "https://github.com/openai/codex"
+    },
+    {
+      "name": "Claude Code",
+      "format": "json",
+      "default_paths": ["~/.claude/settings.json"],
+      "docs_url": "https://docs.anthropic.com/en/docs/claude-code"
+    },
+    {
+      "name": "Gemini CLI",
+      "format": "json",
+      "default_paths": ["~/.gemini/settings.json"],
+      "docs_url": "https://github.com/google-gemini/gemini-cli"
+    },
+    {
+      "name": "Aider",
+      "format": "yaml",
+      "default_paths": ["~/.aider.conf.yml", "~/.config/aider/aider.conf.yml"],
+      "docs_url": "https://aider.chat/docs/config/aider_conf.html"
+    }
+  ]
+}

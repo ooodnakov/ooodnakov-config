@@ -107,6 +107,9 @@ Primary commands:
 - `oooconf lock`: regenerate dependency lock artifacts
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
 - `oooconf update-pins --apply`: update pinned refs in setup scripts, then regenerate lock artifacts
+- `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
+- `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
+- `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync. The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, and `gum`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
@@ -131,6 +134,22 @@ Interactive dependency picks:
 oooconf deps
 oooconf deps bat delta glow
 ```
+
+Agent policy management:
+
+```bash
+oooconf agents detect
+oooconf agents sync
+oooconf agents doctor
+```
+
+The shared AGENTS policy snippets are configured in:
+
+- `home/.config/ooodnakov/agents/config.json`
+- `home/.config/ooodnakov/agents/common-text.md`
+- `home/.config/ooodnakov/agents/common-data.json` (structured MCP + skills data)
+
+`oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
 
 ## Prerequisites
 
