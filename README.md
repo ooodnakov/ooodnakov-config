@@ -105,7 +105,7 @@ Primary commands:
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
 - `oooconf update-pins --apply`: update pinned refs in setup scripts, then regenerate lock artifacts
 
-On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync. The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync. The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, and `oh-my-posh`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `q`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 Useful flags:
@@ -172,6 +172,7 @@ Unix setup installs pinned copies of:
 Additional setup behavior:
 
 - `zoxide` is installed via the system package manager when available and initialized as `z`/`zi` in `zsh`
+- `q` is installed via the system package manager when available
 - `uv` uses Astral's official installer
 - `bw` uses Bitwarden's official native CLI release archive
 - `pnpm` uses a pinned version via `corepack`, or falls back to `npm install --global`
@@ -179,7 +180,7 @@ Additional setup behavior:
 - Linux setup requires `nvim >= 0.11.0` for LazyVim and falls back to a pinned official Neovim tarball if the distro package is too old
 - setup normalizes `oh-my-zsh` permissions on every run so `compaudit` and `compinit` do not reject the install
 
-On Windows, setup can prompt to install common tools with `winget` and `choco`, including WezTerm, Node.js LTS, `oh-my-posh`, `ripgrep`, and `fd`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
+On Windows, setup can prompt to install common tools with `winget` and `choco`, including WezTerm, Node.js LTS, `oh-my-posh`, `ripgrep`, `fd`, and `q`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
 
 ## Fonts
 

@@ -608,6 +608,7 @@ function Install-OptionalDependencies {
     Install-PackageIfMissing -CommandNames @("fd") -ChocoId "fd" -Description "fd" -SummaryName "fd" | Out-Null
     Install-PackageIfMissing -CommandNames @("direnv") -ChocoId "direnv" -Description "direnv" -SummaryName "direnv" | Out-Null
     Install-PackageIfMissing -CommandNames @("fzf") -ChocoId "fzf" -Description "fzf" -SummaryName "fzf" | Out-Null
+    Install-PackageIfMissing -CommandNames @("q") -ChocoId "q" -Description "q" -SummaryName "q" | Out-Null
     Install-PackageIfMissing -CommandNames @("eza") -ChocoId "eza" -Description "eza" -SummaryName "eza" | Out-Null
     Install-PackageIfMissing -CommandNames @("uv") -ChocoId "uv" -Description "uv" -SummaryName "uv" | Out-Null
     Install-PackageIfMissing -CommandNames @("python3", "python") -ChocoId "python" -Description "Python 3" -SummaryName "python3" | Out-Null
