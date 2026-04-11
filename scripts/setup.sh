@@ -13,6 +13,7 @@ BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/ba
 LOG_ROOT="${OOODNAKOV_LOG_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/logs}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
+INSTALL_OPTIONAL="${OOODNAKOV_INSTALL_OPTIONAL:-prompt}"
 DEPENDENCY_SUMMARY=()
 TOOL_SUMMARY=()
 FAILURES=()
@@ -52,6 +53,7 @@ TODO_REF="b20f9b45e210129ef020d3ba212d86b9ba9cf70d"
 NEOVIM_MIN_VERSION="0.11.0"
 NEOVIM_LINUX_VERSION="0.11.5"
 PNPM_VERSION="10.18.3"
+BW_VERSION="1.22.1"
 
 is_interactive() {
   case "$INTERACTIVE" in
@@ -73,6 +75,7 @@ Commands:
 
 Options:
   --dry-run print actions without mutating filesystem
+  --yes-optional auto-accept optional dependency installs
 EOF
 }
 
@@ -113,6 +116,13 @@ run_cmd() {
 prompt_yes_no() {
   local prompt="$1"
   local reply
+
+  case "$INSTALL_OPTIONAL" in
+    always) return 0 ;;
+    never) return 1 ;;
+    prompt) ;;
+    *) ;;
+  esac
 
   if ! is_interactive; then
     return 1
@@ -516,6 +526,88 @@ maybe_install_uv() {
   fi
 }
 
+extract_zip_archive() {
+  local archive_path="$1"
+  local destination_dir="$2"
+
+  if command -v unzip >/dev/null 2>&1; then
+    run_with_spinner "Extracting $(basename "$archive_path")" unzip -oq "$archive_path" -d "$destination_dir"
+  elif command -v bsdtar >/dev/null 2>&1; then
+    run_with_spinner "Extracting $(basename "$archive_path")" bsdtar -xf "$archive_path" -C "$destination_dir"
+  else
+    echo "Neither unzip nor bsdtar is available for extracting $archive_path" >&2
+    return 1
+  fi
+}
+
+maybe_install_bw() {
+  local archive_path release_url install_root bin_dir extracted_binary target_binary
+
+  if command -v bw >/dev/null 2>&1 || [ -x "$STATE_HOME/bin/bw" ]; then
+    DEPENDENCY_SUMMARY+=("bw: present")
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install Bitwarden CLI from the official native executable archive?"; then
+    echo "skipping bw" >&2
+    DEPENDENCY_SUMMARY+=("bw: skipped")
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "Bitwarden CLI installer needs curl or wget. Install curl and retry?"; then
+      install_packages "$PACKAGE_MANAGER" curl
+    else
+      DEPENDENCY_SUMMARY+=("bw: missing (requires curl or wget)")
+      return 0
+    fi
+  fi
+
+  if ! command -v unzip >/dev/null 2>&1 && ! command -v bsdtar >/dev/null 2>&1; then
+    if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "Bitwarden CLI archive extraction needs unzip or bsdtar. Install unzip and retry?"; then
+      install_packages "$PACKAGE_MANAGER" unzip
+    else
+      DEPENDENCY_SUMMARY+=("bw: missing (requires unzip or bsdtar)")
+      return 0
+    fi
+  fi
+
+  release_url="https://github.com/bitwarden/cli/releases/download/v${BW_VERSION}/bw-linux-${BW_VERSION}.zip"
+  archive_path="${TMPDIR:-/tmp}/bw-linux-${BW_VERSION}.zip"
+  install_root="$STATE_HOME/tools/bitwarden-cli/v${BW_VERSION}"
+  bin_dir="$STATE_HOME/bin"
+  extracted_binary="$install_root/bw"
+  target_binary="$bin_dir/bw"
+
+  run_cmd mkdir -p "$install_root" "$bin_dir" || {
+    DEPENDENCY_SUMMARY+=("bw: install attempted")
+    return 1
+  }
+
+  if [ ! -x "$extracted_binary" ]; then
+    download_to_file "$release_url" "$archive_path" || {
+      DEPENDENCY_SUMMARY+=("bw: install attempted")
+      return 1
+    }
+    extract_zip_archive "$archive_path" "$install_root" || {
+      DEPENDENCY_SUMMARY+=("bw: install attempted")
+      return 1
+    }
+    run_cmd chmod u=rwx,go=rx "$extracted_binary" || true
+  fi
+
+  run_cmd ln -sfn "$extracted_binary" "$target_binary" || {
+    DEPENDENCY_SUMMARY+=("bw: install attempted")
+    return 1
+  }
+
+  if command -v bw >/dev/null 2>&1 || [ -x "$target_binary" ]; then
+    DEPENDENCY_SUMMARY+=("bw: installed official v$BW_VERSION")
+  else
+    DEPENDENCY_SUMMARY+=("bw: install attempted")
+  fi
+}
+
 maybe_install_dua_cli() {
   local manager="$1"
   local repo_url="https://github.com/byron/dua-cli.git"
@@ -897,6 +989,7 @@ install_optional_dependencies() {
   maybe_install_dependency "$manager" zoxide zoxide "smart directory jumping with z/zi"
   maybe_install_eza "$manager"
   maybe_install_uv
+  maybe_install_bw
   maybe_install_dependency "$manager" node nodejs "Node.js runtime"
   maybe_install_dependency "$manager" npm npm "Node package manager"
   maybe_install_pnpm
@@ -913,6 +1006,7 @@ shift || true
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
+    --yes-optional) INSTALL_OPTIONAL=always ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac

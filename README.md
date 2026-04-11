@@ -119,6 +119,7 @@ For unattended runs:
 
 ```bash
 OOODNAKOV_INTERACTIVE=never oooconf update
+oooconf update --yes-optional
 ```
 
 ## Prerequisites
@@ -172,12 +173,13 @@ Additional setup behavior:
 
 - `zoxide` is installed via the system package manager when available and initialized as `z`/`zi` in `zsh`
 - `uv` uses Astral's official installer
+- `bw` uses Bitwarden's official native CLI release archive
 - `pnpm` uses a pinned version via `corepack`, or falls back to `npm install --global`
 - `dua-cli` installs from `byron/dua-cli` via `cargo`
 - Linux setup requires `nvim >= 0.11.0` for LazyVim and falls back to a pinned official Neovim tarball if the distro package is too old
 - setup normalizes `oh-my-zsh` permissions on every run so `compaudit` and `compinit` do not reject the install
 
-On Windows, setup can prompt to install common tools with `winget` and `choco`, including WezTerm, Node.js LTS, `oh-my-posh`, `ripgrep`, and `fd`. It also offers to install Chocolatey if needed.
+On Windows, setup can prompt to install common tools with `winget` and `choco`, including WezTerm, Node.js LTS, `oh-my-posh`, `ripgrep`, and `fd`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
 
 ## Fonts
 
@@ -199,6 +201,10 @@ Machine-specific or secret values belong in ignored files:
 - `~/.config/ooodnakov/local/env.zsh`
 - `~/.config/ooodnakov/local/env.ps1`
 - `~/.ssh/config.local`
+
+Tracked secret references belong in:
+
+- `~/.config/ooodnakov/secrets/env.template`
 
 Tracked shared environment currently covers:
 
@@ -228,6 +234,39 @@ Runtime shell state is intentionally untracked:
 
 - zsh history: `~/.local/state/ooodnakov-config/zsh/`
 - zsh completion dump: `~/.cache/ooodnakov-config/zsh/`
+
+To sync shared secrets across machines, keep Bitwarden references in the tracked template and render local plaintext files on each machine:
+
+- `oooconf secrets login`
+- `eval "$(oooconf secrets unlock --shell zsh)"`
+- `oooconf secrets sync`
+- `oooconf secrets sync --dry-run`
+- `oooconf secrets doctor`
+
+The generated files stay local and ignored:
+
+- `~/.config/ooodnakov/local/env.zsh`
+- `~/.config/ooodnakov/local/env.ps1`
+
+The tracked template supports plain shared values and `bw://item/<item-id>/...` references. The current backend is `Bitwarden CLI` via `bw`, intended for a self-hosted Vaultwarden server such as `https://vaultwarden.ooodnakov.ru`.
+
+Typical Unix flow:
+
+```bash
+oooconf install
+oooconf secrets login
+eval "$(oooconf secrets unlock --shell zsh)"
+oooconf secrets sync
+```
+
+Typical PowerShell flow:
+
+```powershell
+oooconf install
+oooconf secrets login
+oooconf secrets unlock --shell pwsh | Invoke-Expression
+oooconf secrets sync
+```
 
 ## WezTerm Workspace Ergonomics
 

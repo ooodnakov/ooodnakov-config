@@ -3,7 +3,8 @@
 local curcontext="$curcontext" state line
 typeset -A opt_args
 
-local -a commands global_opts setup_opts update_pins_opts
+local -a commands global_opts setup_opts update_pins_opts secrets_common_opts
+local command_name secrets_command
 commands=(
   'bootstrap:clone or update the repo, then run install'
   'install:apply managed config'
@@ -14,6 +15,7 @@ commands=(
   'remove:remove managed links only'
   'lock:regenerate dependency lock artifacts'
   'update-pins:check or update pinned refs'
+  'secrets:sync or validate local secret env files'
   'help:show help'
   'version:show version information'
 )
@@ -23,16 +25,23 @@ global_opts=(
   '--print-repo-root[print the resolved repo root]'
   '(-h --help)'{-h,--help}'[show help]'
   '(-n --dry-run)'{-n,--dry-run}'[add --dry-run to install or update]'
+  '--yes-optional[auto-accept optional dependency installs]'
   '(-V --version)'{-V,--version}'[show version information]'
 )
 
 setup_opts=(
   '--dry-run[preview actions without changing the filesystem]'
+  '--yes-optional[auto-accept optional dependency installs]'
   '(-h --help)'{-h,--help}'[show setup help]'
 )
 
 update_pins_opts=(
   '--apply[write updated pinned refs before regenerating lock artifacts]'
+)
+
+secrets_common_opts=(
+  '--backend[secret backend to use]:backend:(bw)'
+  '--template[override the tracked template path]:template:_files'
 )
 
 _arguments -C \
@@ -45,7 +54,17 @@ case "$state" in
     _describe -t commands 'oooconf command' commands
     ;;
   args)
-    case "$words[2]" in
+    command_name=
+    for (( i = 1; i <= CURRENT; i++ )); do
+      case "$words[i]" in
+        bootstrap|install|update|doctor|dry-run|delete|remove|lock|update-pins|secrets|help|version)
+          command_name="$words[i]"
+          break
+          ;;
+      esac
+    done
+
+    case "$command_name" in
       help)
         _describe -t commands 'oooconf command' commands
         ;;
@@ -57,6 +76,52 @@ case "$state" in
         ;;
       update-pins)
         _arguments $update_pins_opts
+        ;;
+      secrets)
+        secrets_command=
+        for (( i = 1; i <= CURRENT; i++ )); do
+          case "$words[i]" in
+            login|unlock|sync|doctor)
+              secrets_command="$words[i]"
+              break
+              ;;
+          esac
+        done
+
+        if [[ -z "$secrets_command" ]]; then
+          _describe -t secrets-subcommands 'oooconf secrets command' \
+            'login:configure Bitwarden server and start login' \
+            'unlock:print shell code for BW_SESSION after unlocking Bitwarden' \
+            'sync:render local secret env files' \
+            'doctor:validate local secret env files and backend tooling'
+        else
+          case "$secrets_command" in
+            sync)
+              _arguments \
+                $secrets_common_opts \
+                '--dry-run[preview the sync without writing files]' \
+                '--force[rewrite generated files even when unchanged]'
+              ;;
+            doctor)
+              _arguments $secrets_common_opts
+              ;;
+            login)
+              _arguments '--server[Bitwarden or Vaultwarden server URL]:server: '
+              ;;
+            unlock)
+              _arguments \
+                '--shell[shell syntax to emit]:shell:(sh zsh bash pwsh)' \
+                '--raw[print only the unlocked session token]'
+              ;;
+            *)
+              _describe -t secrets-subcommands 'oooconf secrets command' \
+                'login:configure Bitwarden server and start login' \
+                'unlock:print shell code for BW_SESSION after unlocking Bitwarden' \
+                'sync:render local secret env files' \
+                'doctor:validate local secret env files and backend tooling'
+              ;;
+          esac
+        fi
         ;;
       bootstrap)
         _message 'environment variables configure bootstrap behavior'

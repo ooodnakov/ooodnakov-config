@@ -13,6 +13,7 @@ $RepoRoot = if ($env:OOODNAKOV_REPO_ROOT) {
 $SetupScript = Join-Path $PSScriptRoot "setup.ps1"
 $GenerateLockScript = Join-Path $PSScriptRoot "generate-dependency-lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update-pins.py"
+$RenderSecretsScript = Join-Path $PSScriptRoot "render-secrets.py"
 
 function Get-Version {
     if (Get-Command git -ErrorAction SilentlyContinue) {
@@ -44,6 +45,7 @@ Global options:
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
+      --yes-optional    auto-accept optional dependency installs
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
 
@@ -54,6 +56,7 @@ Commands:
   dry-run               run setup install --dry-run
   lock                  regenerate dependency lock artifacts
   update-pins           check/update pinned refs and refresh lock artifacts
+  secrets               sync or validate local secret env files
   help [command]        show general or command-specific help
   version               show CLI version information
 
@@ -70,14 +73,14 @@ function Show-CommandUsage {
     switch ($CommandName) {
         "install" {
             @"
-Usage: oooconf install [--dry-run]
+Usage: oooconf install [--dry-run] [--yes-optional]
 
 Apply managed config and optional dependency installation.
 "@
         }
         "update" {
             @"
-Usage: oooconf update [--dry-run]
+Usage: oooconf update [--dry-run] [--yes-optional]
 
 Pull the repo with --ff-only, then re-run the install flow.
 "@
@@ -110,6 +113,23 @@ Usage: oooconf update-pins [--apply]
 Compare pinned git refs to upstream HEAD and refresh lock artifacts.
 "@
         }
+        "secrets" {
+            @"
+Usage: oooconf secrets <sync|doctor> [options]
+
+Render or validate local secret env files from the tracked template.
+Examples:
+  oooconf secrets login
+  oooconf secrets unlock --shell pwsh | Invoke-Expression
+  oooconf secrets sync
+  oooconf secrets sync --dry-run
+  oooconf secrets doctor
+
+Environment overrides:
+  OOODNAKOV_SECRETS_BACKEND
+  OOODNAKOV_BW_SERVER
+"@
+        }
         "version" {
             @"
 Usage: oooconf version
@@ -132,6 +152,7 @@ function Require-Python3 {
 }
 
 $dryRunRequested = $false
+$yesOptionalRequested = $false
 $command = $null
 $remaining = [System.Collections.Generic.List[string]]::new()
 
@@ -188,6 +209,9 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         "--dry-run" {
             $dryRunRequested = $true
         }
+        "--yes-optional" {
+            $yesOptionalRequested = $true
+        }
         "help" {
             if ($i + 1 -lt $Arguments.Count) {
                 Show-CommandUsage $Arguments[$i + 1]
@@ -225,6 +249,9 @@ if (-not $command) {
 }
 
 $env:OOODNAKOV_REPO_ROOT = $RepoRoot
+if ($yesOptionalRequested) {
+    $env:OOODNAKOV_INSTALL_OPTIONAL = "always"
+}
 
 switch ($command) {
     "install" {
@@ -266,6 +293,10 @@ switch ($command) {
         }
         Require-Python3
         & python3 $UpdatePinsScript @remaining
+    }
+    "secrets" {
+        Require-Python3
+        & python3 $RenderSecretsScript --repo-root $RepoRoot @remaining
     }
     default {
         throw "Unknown command: $command"

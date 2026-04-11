@@ -8,6 +8,7 @@ DELETE="$REPO_ROOT/scripts/delete.sh"
 BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
 GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
+RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
 
 print_version() {
   if command -v git >/dev/null 2>&1 && [ -d "$REPO_ROOT/.git" ]; then
@@ -25,6 +26,7 @@ Global options:
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
+      --yes-optional    auto-accept optional dependency installs
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
 
@@ -38,6 +40,7 @@ Commands:
   remove                remove managed links only
   lock                  regenerate dependency lock artifacts
   update-pins           check/update pinned refs and refresh lock artifacts
+  secrets               sync or validate local secret env files
   help [command]        show general or command-specific help
   version               show CLI version information
 
@@ -65,14 +68,14 @@ EOF
       ;;
     install)
       cat <<'EOF'
-Usage: oooconf install [--dry-run]
+Usage: oooconf install [--dry-run] [--yes-optional]
 
 Apply managed config and optional dependency installation.
 EOF
       ;;
     update)
       cat <<'EOF'
-Usage: oooconf update [--dry-run]
+Usage: oooconf update [--dry-run] [--yes-optional]
 
 Pull the repo with --ff-only, then re-run the install flow.
 EOF
@@ -119,6 +122,23 @@ Usage: oooconf update-pins [--apply]
 Compare pinned git refs to upstream HEAD and refresh lock artifacts.
 EOF
       ;;
+    secrets)
+      cat <<'EOF'
+Usage: oooconf secrets <sync|doctor> [options]
+
+Render or validate local secret env files from the tracked template.
+Examples:
+  oooconf secrets login
+  eval "$(oooconf secrets unlock --shell zsh)"
+  oooconf secrets sync
+  oooconf secrets sync --dry-run
+  oooconf secrets doctor
+
+Environment overrides:
+  OOODNAKOV_SECRETS_BACKEND
+  OOODNAKOV_BW_SERVER
+EOF
+      ;;
     version)
       cat <<'EOF'
 Usage: oooconf version
@@ -145,6 +165,7 @@ require_repo_script() {
 }
 
 dry_run_requested=0
+yes_optional_requested=0
 command=""
 
 while [ "$#" -gt 0 ]; do
@@ -157,6 +178,7 @@ while [ "$#" -gt 0 ]; do
       BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
       GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
       UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
+      RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
       shift 2
       ;;
     --print-repo-root)
@@ -178,6 +200,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     -n|--dry-run)
       dry_run_requested=1
+      shift
+      ;;
+    --yes-optional)
+      yes_optional_requested=1
       shift
       ;;
     help)
@@ -223,14 +249,26 @@ case "$command" in
   install)
     require_repo_script "$SETUP"
     if [ "$dry_run_requested" -eq 1 ]; then
+      if [ "$yes_optional_requested" -eq 1 ]; then
+        exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" install --dry-run "$@"
+      fi
       exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" install --dry-run "$@"
+    fi
+    if [ "$yes_optional_requested" -eq 1 ]; then
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" install "$@"
     fi
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" install "$@"
     ;;
   update)
     require_repo_script "$SETUP"
     if [ "$dry_run_requested" -eq 1 ]; then
+      if [ "$yes_optional_requested" -eq 1 ]; then
+        exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" update --dry-run "$@"
+      fi
       exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" update --dry-run "$@"
+    fi
+    if [ "$yes_optional_requested" -eq 1 ]; then
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" update "$@"
     fi
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" update "$@"
     ;;
@@ -284,6 +322,13 @@ case "$command" in
     fi
     require_repo_script "$UPDATE_PINS"
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" "$@"
+    ;;
+  secrets)
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "python3 is required for secrets sync." >&2
+      exit 1
+    fi
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"
     ;;
   *)
     echo "Unknown command: $command" >&2

@@ -20,10 +20,12 @@ $PowerShellProfileTarget = Join-Path $PowerShellConfigDir "Microsoft.PowerShell_
 $ActivePowerShellProfile = $PROFILE.CurrentUserCurrentHost
 $SshDir = Join-Path $HomeDir ".ssh"
 $InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
+$InstallOptionalMode = if ($env:OOODNAKOV_INSTALL_OPTIONAL) { $env:OOODNAKOV_INSTALL_OPTIONAL } else { "prompt" }
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/backups" }
 $LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/logs" }
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $PnpmVersion = "10.18.3"
+$BwVersion = "1.22.1"
 
 $script:DependencySummary = [System.Collections.Generic.List[string]]::new()
 $script:ToolSummary = [System.Collections.Generic.List[string]]::new()
@@ -45,6 +47,12 @@ function Confirm-Install {
         [Parameter(Mandatory = $true)]
         [string]$Prompt
     )
+
+    switch ($InstallOptionalMode) {
+        "always" { return $true }
+        "never" { return $false }
+        default { }
+    }
 
     if (-not (Test-Interactive)) {
         return $false
@@ -528,6 +536,63 @@ function Install-PnpmIfMissing {
     return $false
 }
 
+function Install-BitwardenCliIfMissing {
+    if (Get-Command bw -ErrorAction SilentlyContinue) {
+        Add-DependencySummary "bw: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install Bitwarden CLI from the official native executable archive?")) {
+        Add-DependencySummary "bw: skipped"
+        return $false
+    }
+
+    $installRoot = Join-Path $ShareHome "tools/bitwarden-cli/v$BwVersion"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "bw-windows-$BwVersion.zip"
+    $releaseUrl = "https://github.com/bitwarden/cli/releases/download/v$BwVersion/bw-windows-$BwVersion.zip"
+    $sourceBinary = Join-Path $installRoot "bw.exe"
+    $targetBinary = Join-Path $LocalBinDir "bw.exe"
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Download $releaseUrl"
+        Write-Output "[dry-run] Expand-Archive $archivePath -> $installRoot"
+        Write-Output "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Add-DependencySummary "bw: install preview via official archive"
+        return $false
+    }
+
+    try {
+        if (-not (Ensure-Directory -Path $installRoot)) {
+            Add-DependencySummary "bw: install attempted"
+            return $false
+        }
+
+        if (-not (Test-Path $sourceBinary)) {
+            Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
+            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
+        }
+
+        Copy-Item -Path $sourceBinary -Destination $targetBinary -Force
+    } catch {
+        Write-Output $_
+        Add-DependencySummary "bw: install attempted"
+        return $false
+    }
+
+    if (Get-Command bw -ErrorAction SilentlyContinue -CommandType Application) {
+        Add-DependencySummary "bw: installed official v$BwVersion"
+        return $true
+    }
+
+    if (Test-Path $targetBinary) {
+        Add-DependencySummary "bw: installed official v$BwVersion"
+        return $true
+    }
+
+    Add-DependencySummary "bw: install attempted"
+    return $false
+}
+
 function Install-OptionalDependencies {
     Write-Output "Dependency check:"
 
@@ -546,6 +611,7 @@ function Install-OptionalDependencies {
     Install-PackageIfMissing -CommandNames @("eza") -ChocoId "eza" -Description "eza" -SummaryName "eza" | Out-Null
     Install-PackageIfMissing -CommandNames @("uv") -ChocoId "uv" -Description "uv" -SummaryName "uv" | Out-Null
     Install-PackageIfMissing -CommandNames @("python3", "python") -ChocoId "python" -Description "Python 3" -SummaryName "python3" | Out-Null
+    Install-BitwardenCliIfMissing | Out-Null
     Install-PnpmIfMissing | Out-Null
 }
 
