@@ -44,7 +44,7 @@ This keeps the repo small while still making bootstrap deterministic.
 `auto-uv-env` is installed in a user-local layout that mirrors its upstream bin/share model without touching global system directories: a pinned source checkout lives under `~/.local/share/ooodnakov-config/src/auto-uv-env`, the executable is linked into `~/.local/share/ooodnakov-config/bin/auto-uv-env`, and the shell integration files are installed into `~/.local/share/ooodnakov-config/auto-uv-env`.
 `zoxide` is treated as an optional system package rather than a pinned repo checkout; when present, the tracked `zsh` config initializes it as `z` and `zi` so it replaces the older `z` plugin without changing the interactive command.
 The Unix setup also normalizes permissions for the installed `oh-my-zsh` tree on every run, keeping directories at `755` and regular files at `644` so `compaudit` accepts the completion paths.
-For optional tooling, `bat` is installed via the system package manager when available as a `cat` alternative with syntax highlighting, `delta` is installed via the system package manager when available as a Git diff pager with syntax highlighting, `glow` is installed via the system package manager when available as a terminal Markdown reader, `q` is installed via the upstream natesales APT repo on Debian/Ubuntu and via the system package manager when available elsewhere, `uv` is installed via Astral's official installer, `bw` is installed from Bitwarden's pinned official native CLI archive, and `dua-cli` is installed from `https://github.com/byron/dua-cli` via `cargo`, avoiding distro-specific package naming drift.
+For optional tooling, `bat` is installed via the system package manager when available as a `cat` alternative with syntax highlighting, `delta` is installed via the system package manager when available as a Git diff pager with syntax highlighting, `glow` is installed via the system package manager when available as a terminal Markdown reader, `gum` is installed from Charm's official package sources when needed for the interactive dependency picker, `q` is installed via the upstream natesales APT repo on Debian/Ubuntu and via the system package manager when available elsewhere, `uv` is installed via Astral's official installer, `bw` is installed from Bitwarden's pinned official native CLI archive, and `dua-cli` is installed from `https://github.com/byron/dua-cli` via `cargo`, avoiding distro-specific package naming drift.
 
 Shell runtime state is kept outside the tracked config tree:
 
@@ -115,6 +115,7 @@ Phase-1 setup ergonomics are implemented with:
 
 - `dry-run` command to preview setup actions without mutation
 - `doctor` command to validate managed links and key tool presence after install
+- `deps` command to install optional dependencies separately from the full config-linking flow
 
 Phase-2 dependency audit ergonomics are implemented with:
 
@@ -127,6 +128,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 ## Phase-3 ergonomics
 
 - `oooconf` command is linked to `~/.local/bin/oooconf` by Unix setup so the unified CLI can be invoked from any directory.
+- `oooconf deps` uses `gum choose --no-limit` when available to provide a terminal multi-select picker for optional dependencies, and it can bootstrap `gum` first when interactive package installation is allowed.
 - Unix and PowerShell setup runs write per-run logs under `~/.local/state/ooodnakov-config/logs/`, with `setup-latest.log` copied or linked to the latest run for debugging.
 - PowerShell shared environment exports `OOODNAKOV_CONFIG_HOME`, `OOODNAKOV_SHARE_HOME`, `OOODNAKOV_STATE_HOME`, and `OOODNAKOV_CACHE_HOME`, and prepends both `~/.local/bin` and `~/.local/share/ooodnakov-config/bin` when present.
 - WezTerm startup supports `OOODNAKOV_WEZTERM_WORKSPACE` and `OOODNAKOV_WEZTERM_CWD` for project-scoped startup defaults without editing tracked config.

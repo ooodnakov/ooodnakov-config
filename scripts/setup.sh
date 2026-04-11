@@ -66,12 +66,13 @@ is_interactive() {
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/setup.sh [install|update|doctor] [--dry-run]
+Usage: ./scripts/setup.sh [install|update|doctor|deps] [--dry-run] [dependency-key...]
 
 Commands:
   install   apply managed config and dependencies
   update    git pull this repo, then run install flow
   doctor    validate managed links and required tools
+  deps      install optional dependencies only
 
 Options:
   --dry-run print actions without mutating filesystem
@@ -134,6 +135,275 @@ prompt_yes_no() {
     y|Y|yes|YES) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+optional_dependency_catalog() {
+  cat <<'EOF'
+wget|wget|downloading auxiliary assets and parity with ezsh tooling
+zsh|zsh|default shell support
+direnv|direnv|direnv shell integration
+fzf|fzf|fzf shell integration
+bat|bat|cat alternative with syntax highlighting
+delta|delta|Git diff pager with syntax highlighting
+glow|glow|terminal Markdown reader
+gum|gum|interactive terminal UI toolkit for selectors and prompts
+zoxide|zoxide|smart directory jumping with z/zi
+q|q|q text-as-data CLI
+eza|eza|modern ls aliases
+uv|uv|Python package manager via official installer
+bw|bw|Bitwarden CLI via official native archive
+node|node|Node.js runtime
+npm|npm|Node package manager
+pnpm|pnpm|pnpm package manager
+autoconf|autoconf|building optional ezsh native components
+fc-cache|fc-cache|refreshing installed font caches
+cargo|cargo|Rust package manager
+dua|dua|disk usage analysis via dua-cli
+nvim|nvim|Neovim runtime for LazyVim
+k|k|standalone k command
+python3|python3|Python runtime and helper scripts
+EOF
+}
+
+optional_dependency_exists() {
+  local expected_key="$1"
+  local key label description
+
+  while IFS='|' read -r key label description; do
+    [ "$key" = "$expected_key" ] && return 0
+  done < <(optional_dependency_catalog)
+
+  return 1
+}
+
+optional_dependency_label() {
+  local expected_key="$1"
+  local key label description
+
+  while IFS='|' read -r key label description; do
+    if [ "$key" = "$expected_key" ]; then
+      printf '%s - %s\n' "$label" "$description"
+      return 0
+    fi
+  done < <(optional_dependency_catalog)
+
+  return 1
+}
+
+selected_optional_key_csv="${OOODNAKOV_SELECTED_OPTIONAL_KEYS:-}"
+
+optional_dependency_selected() {
+  local key="$1"
+
+  if [ -z "$selected_optional_key_csv" ]; then
+    return 0
+  fi
+
+  case ",$selected_optional_key_csv," in
+    *,"$key",*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+optional_dependency_present() {
+  local key="$1"
+
+  case "$key" in
+    wget|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|node|npm|pnpm|autoconf|fc-cache|cargo|k|python3)
+      command -v "$key" >/dev/null 2>&1
+      ;;
+    uv)
+      command -v uv >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/uv" ]
+      ;;
+    bw)
+      command -v bw >/dev/null 2>&1 || [ -x "$STATE_HOME/bin/bw" ]
+      ;;
+    dua)
+      command -v dua >/dev/null 2>&1
+      ;;
+    nvim)
+      have_supported_nvim
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+gum_apt_repo_configured() {
+  [ -f /etc/apt/keyrings/charm.gpg ] || return 1
+  [ -f /etc/apt/sources.list.d/charm.list ] || return 1
+  grep -Fq "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" \
+    /etc/apt/sources.list.d/charm.list 2>/dev/null
+}
+
+setup_gum_apt_repo() {
+  if gum_apt_repo_configured; then
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    if prompt_yes_no "gum Debian/Ubuntu install needs curl. Install curl first?"; then
+      install_packages apt curl
+    else
+      DEPENDENCY_SUMMARY+=("gum: missing (requires curl for Debian/Ubuntu repo setup)")
+      return 1
+    fi
+  fi
+
+  if ! command -v gpg >/dev/null 2>&1; then
+    if prompt_yes_no "gum Debian/Ubuntu install needs gpg. Install gpg first?"; then
+      install_packages apt gpg
+    else
+      DEPENDENCY_SUMMARY+=("gum: missing (requires gpg for Debian/Ubuntu repo setup)")
+      return 1
+    fi
+  fi
+
+  run_with_spinner "Creating Charm APT keyring directory for gum" sudo mkdir -p /etc/apt/keyrings || return 1
+  run_with_spinner "Installing Charm APT signing key for gum" \
+    sh -c 'curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg' || return 1
+  run_with_spinner "Adding Charm APT source for gum" \
+    sh -c 'echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list >/dev/null' || return 1
+  APT_UPDATED=0
+  return 0
+}
+
+gum_rpm_repo_configured() {
+  [ -f /etc/yum.repos.d/charm.repo ]
+}
+
+setup_gum_rpm_repo() {
+  if gum_rpm_repo_configured; then
+    return 0
+  fi
+
+  run_with_spinner "Installing Charm RPM repo for gum" \
+    sh -c "cat <<'EOF' | sudo tee /etc/yum.repos.d/charm.repo >/dev/null
+[charm]
+name=Charm
+baseurl=https://repo.charm.sh/yum/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.charm.sh/yum/gpg.key
+EOF" || return 1
+  run_with_spinner "Importing Charm RPM signing key for gum" sudo rpm --import https://repo.charm.sh/yum/gpg.key || return 1
+  return 0
+}
+
+install_gum_package() {
+  local manager="$1"
+
+  case "$manager" in
+    brew|pacman)
+      install_packages "$manager" gum
+      ;;
+    apt)
+      setup_gum_apt_repo || return 1
+      install_packages apt gum
+      ;;
+    dnf|zypper)
+      setup_gum_rpm_repo || return 1
+      install_packages "$manager" gum
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+maybe_install_gum() {
+  local manager="$1"
+
+  if command -v gum >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("gum: present")
+    return 0
+  fi
+
+  if [ "$manager" = "none" ]; then
+    DEPENDENCY_SUMMARY+=("gum: missing (no supported package manager)")
+    return 1
+  fi
+
+  if ! prompt_yes_no "Install gum for interactive terminal selectors and prompts?"; then
+    DEPENDENCY_SUMMARY+=("gum: skipped")
+    return 0
+  fi
+
+  if install_gum_package "$manager" && command -v gum >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("gum: installed")
+    return 0
+  fi
+
+  DEPENDENCY_SUMMARY+=("gum: install attempted")
+  return 1
+}
+
+ensure_gum_for_optional_selector() {
+  local manager
+
+  if command -v gum >/dev/null 2>&1; then
+    return 0
+  fi
+
+  manager="$(detect_package_manager)"
+  if [ "$manager" = "none" ] || ! is_interactive; then
+    return 1
+  fi
+
+  printf "gum is required for the multi-select dependency picker.\n" > /dev/tty
+  if ! prompt_yes_no "Install gum now and continue with the picker?"; then
+    return 1
+  fi
+
+  local previous_mode="$INSTALL_OPTIONAL"
+  INSTALL_OPTIONAL=always
+  maybe_install_gum "$manager" >/dev/null 2>&1 || true
+  INSTALL_OPTIONAL="$previous_mode"
+  command -v gum >/dev/null 2>&1
+}
+
+choose_optional_dependencies_with_gum() {
+  local key label description selection selected_key
+  local -a options selected_keys
+
+  ensure_gum_for_optional_selector || return 1
+
+  while IFS='|' read -r key label description; do
+    if optional_dependency_present "$key"; then
+      continue
+    fi
+    options+=("$key"$'\t'"$label"$'\t'"$description")
+  done < <(optional_dependency_catalog)
+
+  if [ "${#options[@]}" -eq 0 ]; then
+    echo "All optional dependencies are already present."
+    return 2
+  fi
+
+  selection="$(
+    printf '%s\n' "${options[@]}" |
+      gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, space to toggle, enter to continue."
+  )" || return 1
+
+  while IFS=$'\t' read -r selected_key _; do
+    [ -n "$selected_key" ] && selected_keys+=("$selected_key")
+  done <<< "$selection"
+
+  if [ "${#selected_keys[@]}" -eq 0 ]; then
+    return 1
+  fi
+
+  local IFS=,
+  printf '%s\n' "${selected_keys[*]}"
+}
+
+install_optional_dependency_if_selected() {
+  local key="$1"
+  shift
+
+  optional_dependency_selected "$key" || return 0
+  "$@"
 }
 
 run_with_spinner() {
@@ -1057,49 +1327,95 @@ install_optional_dependencies() {
   PACKAGE_MANAGER="$manager"
 
   echo "Dependency check:"
-  maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
-  maybe_install_dependency "$manager" zsh zsh "default shell support"
-  maybe_install_dependency "$manager" direnv direnv "direnv shell integration"
-  maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
-  maybe_install_dependency "$manager" bat bat "cat alternative with syntax highlighting"
-  maybe_install_dependency "$manager" delta git-delta "Git diff pager with syntax highlighting"
-  maybe_install_dependency "$manager" glow glow "terminal Markdown reader"
-  maybe_install_dependency "$manager" zoxide zoxide "smart directory jumping with z/zi"
-  maybe_install_q "$manager"
-  maybe_install_eza "$manager"
-  maybe_install_uv
-  maybe_install_bw
-  maybe_install_dependency "$manager" node nodejs "Node.js runtime"
-  maybe_install_dependency "$manager" npm npm "Node package manager"
-  maybe_install_pnpm
-  maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
-  maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
-  maybe_install_dependency "$manager" cargo cargo "Rust package manager"
-  maybe_install_dua_cli "$manager"
-  maybe_install_neovim "$manager"
-  maybe_note_dependency k "manual install if you want the standalone k command"
-  maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
+  install_optional_dependency_if_selected wget maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
+  install_optional_dependency_if_selected zsh maybe_install_dependency "$manager" zsh zsh "default shell support"
+  install_optional_dependency_if_selected direnv maybe_install_dependency "$manager" direnv direnv "direnv shell integration"
+  install_optional_dependency_if_selected fzf maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
+  install_optional_dependency_if_selected bat maybe_install_dependency "$manager" bat bat "cat alternative with syntax highlighting"
+  install_optional_dependency_if_selected delta maybe_install_dependency "$manager" delta git-delta "Git diff pager with syntax highlighting"
+  install_optional_dependency_if_selected glow maybe_install_dependency "$manager" glow glow "terminal Markdown reader"
+  install_optional_dependency_if_selected gum maybe_install_gum "$manager"
+  install_optional_dependency_if_selected zoxide maybe_install_dependency "$manager" zoxide zoxide "smart directory jumping with z/zi"
+  install_optional_dependency_if_selected q maybe_install_q "$manager"
+  install_optional_dependency_if_selected eza maybe_install_eza "$manager"
+  install_optional_dependency_if_selected uv maybe_install_uv
+  install_optional_dependency_if_selected bw maybe_install_bw
+  install_optional_dependency_if_selected node maybe_install_dependency "$manager" node nodejs "Node.js runtime"
+  install_optional_dependency_if_selected npm maybe_install_dependency "$manager" npm npm "Node package manager"
+  install_optional_dependency_if_selected pnpm maybe_install_pnpm
+  install_optional_dependency_if_selected autoconf maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
+  install_optional_dependency_if_selected fc-cache maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
+  install_optional_dependency_if_selected cargo maybe_install_dependency "$manager" cargo cargo "Rust package manager"
+  install_optional_dependency_if_selected dua maybe_install_dua_cli "$manager"
+  install_optional_dependency_if_selected nvim maybe_install_neovim "$manager"
+  install_optional_dependency_if_selected k maybe_note_dependency k "manual install if you want the standalone k command"
+  install_optional_dependency_if_selected python3 maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
 }
 
 shift || true
+cli_selected_optional_keys=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --yes-optional) INSTALL_OPTIONAL=always ;;
     -h|--help) usage; exit 0 ;;
-    *) echo "unknown option: $1" >&2; usage >&2; exit 1 ;;
+    --*)
+      echo "unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      if ! optional_dependency_exists "$1"; then
+        echo "unknown dependency key: $1" >&2
+        usage >&2
+        exit 1
+      fi
+      cli_selected_optional_keys+=("$1")
+      ;;
   esac
   shift
 done
+
+if [ "${#cli_selected_optional_keys[@]}" -gt 0 ]; then
+  selected_optional_key_csv="$(IFS=,; printf '%s' "${cli_selected_optional_keys[*]}")"
+fi
 
 case "$COMMAND" in
   install) ;;
   update) update_repo ;;
   doctor) run_doctor; exit $? ;;
+  deps)
+    if [ -z "$selected_optional_key_csv" ] && is_interactive; then
+      if selected_optional_key_csv="$(choose_optional_dependencies_with_gum)"; then
+        :
+      else
+        case $? in
+          2) exit 0 ;;
+          *) echo "No optional dependencies selected." >&2; exit 1 ;;
+        esac
+      fi
+    elif [ -z "$selected_optional_key_csv" ] && ! is_interactive; then
+      echo "oooconf deps needs explicit dependency keys in non-interactive mode." >&2
+      exit 1
+    fi
+    INSTALL_OPTIONAL=always
+    ;;
   *) usage >&2; exit 1 ;;
 esac
 
 initialize_logging
+if [ "$COMMAND" = "deps" ]; then
+  run_cmd mkdir -p "$DATA_HOME" "$STATE_HOME" "$HOME_DIR/.local/bin"
+  install_optional_dependencies
+  print_summary
+  echo
+  echo "Optional dependency install complete."
+  if [ -n "$LOG_FILE" ]; then
+    echo "Log file: $LOG_FILE"
+  fi
+  exit 0
+fi
+
 run_cmd mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
 
 install_optional_dependencies

@@ -33,6 +33,7 @@ Global options:
 Commands:
   bootstrap             clone/update repo then run install
   install               run setup install
+  deps                  install optional dependencies only
   update                run setup update
   doctor                run setup doctor
   dry-run               run setup install --dry-run
@@ -71,6 +72,14 @@ EOF
 Usage: oooconf install [--dry-run] [--yes-optional]
 
 Apply managed config and optional dependency installation.
+EOF
+      ;;
+    deps)
+      cat <<'EOF'
+Usage: oooconf deps [--dry-run] [dependency-key...]
+
+Install optional dependencies only. Without dependency keys, an interactive
+gum-based multi-select picker is used when available.
 EOF
       ;;
     update)
@@ -258,6 +267,19 @@ case "$command" in
       exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" install "$@"
     fi
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" install "$@"
+    ;;
+  deps)
+    require_repo_script "$SETUP"
+    if [ "$dry_run_requested" -eq 1 ]; then
+      if [ "$yes_optional_requested" -eq 1 ]; then
+        exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" deps --dry-run "$@"
+      fi
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" deps --dry-run "$@"
+    fi
+    if [ "$yes_optional_requested" -eq 1 ]; then
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" deps "$@"
+    fi
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" deps "$@"
     ;;
   update)
     require_repo_script "$SETUP"

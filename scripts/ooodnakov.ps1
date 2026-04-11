@@ -51,6 +51,7 @@ Global options:
 
 Commands:
   install               run setup install
+  deps                  install optional dependencies only
   update                run setup update
   doctor                run setup doctor
   dry-run               run setup install --dry-run
@@ -76,6 +77,14 @@ function Show-CommandUsage {
 Usage: oooconf install [--dry-run] [--yes-optional]
 
 Apply managed config and optional dependency installation.
+"@
+        }
+        "deps" {
+            @"
+Usage: oooconf deps [--dry-run] [dependency-key...]
+
+Install optional dependencies only. Without dependency keys, an interactive
+gum-based multi-select picker is used when available.
 "@
         }
         "update" {
@@ -259,6 +268,13 @@ switch ($command) {
             & $SetupScript install -DryRun @remaining
         } else {
             & $SetupScript install @remaining
+        }
+    }
+    "deps" {
+        if ($dryRunRequested) {
+            & $SetupScript deps -DryRun @remaining
+        } else {
+            & $SetupScript deps @remaining
         }
     }
     "update" {
