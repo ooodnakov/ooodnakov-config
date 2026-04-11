@@ -11,6 +11,7 @@ export HISTFILE="$OOODNAKOV_STATE_HOME/zsh/history"
 export ZSH_COMPDUMP="$OOODNAKOV_CACHE_HOME/zsh/.zcompdump-${HOST%%.*}-${ZSH_VERSION}"
 export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=30
 export ZSH_AUTOSUGGEST_USE_ASYNC=1
+export FORGIT_NO_ALIASES=1
 
 fpath=("$OOODNAKOV_CONFIG_HOME/zsh/completions" $fpath)
 
@@ -78,6 +79,52 @@ source "$ZSH/oh-my-zsh.sh"
 
 if [ -f "$ZSH_CUSTOM/plugins/k/k.sh" ]; then
   source "$ZSH_CUSTOM/plugins/k/k.sh"
+fi
+
+if (( $+functions[forgit::log] )); then
+  forgit() {
+    local subcommand="${1:-log}"
+    if (( $# > 0 )); then
+      shift
+    fi
+
+    case "$subcommand" in
+      log) forgit::log "$@" ;;
+      diff) forgit::diff "$@" ;;
+      add) forgit::add "$@" ;;
+      show) forgit::show "$@" ;;
+      ignore) forgit::ignore "$@" ;;
+      blame) forgit::blame "$@" ;;
+      checkout_branch) forgit::checkout::branch "$@" ;;
+      checkout_commit) forgit::checkout::commit "$@" ;;
+      checkout_tag) forgit::checkout::tag "$@" ;;
+      stash_show) forgit::stash::show "$@" ;;
+      stash_push) forgit::stash::push "$@" ;;
+      clean) forgit::clean "$@" ;;
+      rebase) forgit::rebase "$@" ;;
+      worktree) forgit::worktree "$@" ;;
+      *)
+        printf '%s\n' \
+          "usage: forgit [log|diff|add|show|ignore|blame|checkout_branch|checkout_commit|checkout_tag|stash_show|stash_push|clean|rebase|worktree] [args...]" >&2
+        return 2
+        ;;
+    esac
+  }
+
+  forgit_log() { forgit::log "$@"; }
+  forgit_diff() { forgit::diff "$@"; }
+  forgit_add() { forgit::add "$@"; }
+  forgit_show() { forgit::show "$@"; }
+  forgit_ignore() { forgit::ignore "$@"; }
+  forgit_blame() { forgit::blame "$@"; }
+  forgit_checkout_branch() { forgit::checkout::branch "$@"; }
+  forgit_checkout_commit() { forgit::checkout::commit "$@"; }
+  forgit_checkout_tag() { forgit::checkout::tag "$@"; }
+  forgit_stash_show() { forgit::stash::show "$@"; }
+  forgit_stash_push() { forgit::stash::push "$@"; }
+  forgit_clean() { forgit::clean "$@"; }
+  forgit_rebase() { forgit::rebase "$@"; }
+  forgit_worktree() { forgit::worktree "$@"; }
 fi
 
 if (( $+commands[zoxide] )); then
