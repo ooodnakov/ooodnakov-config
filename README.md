@@ -107,7 +107,10 @@ Primary commands:
 - `oooconf bootstrap`: clone/update repo then run install (Unix only)
 - `oooconf lock`: regenerate dependency lock artifacts
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
-- `oooconf update-pins --apply`: update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
+- `oooconf update-pins --apply`: update pinned refs in setup scripts, then regenerate lock artifacts
+- `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
+- `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
+- `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content
 
 The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts will run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`). If `uv` is missing, they fall back to the system `python3`.
 
@@ -160,6 +163,22 @@ oooconf deps
 # explicit keys (no prompt)
 oooconf deps bat delta glow
 ```
+
+Agent policy management:
+
+```bash
+oooconf agents detect
+oooconf agents sync
+oooconf agents doctor
+```
+
+The shared AGENTS policy snippets are configured in:
+
+- `home/.config/ooodnakov/agents/config.json`
+- `home/.config/ooodnakov/agents/common-text.md`
+- `home/.config/ooodnakov/agents/common-data.json` (structured MCP + skills data)
+
+`oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
 
 ## Prerequisites
 

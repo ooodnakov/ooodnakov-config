@@ -1,6 +1,6 @@
 #compdef oooconf
 
-local -a oooconf_commands global_opts setup_opts deps_keys update_pins_opts secrets_subcommands shell_subcommands shell_forgit_alias_modes shell_typo_modes
+local -a oooconf_commands global_opts setup_opts deps_keys update_pins_opts agents_subcommands agents_opts secrets_subcommands shell_subcommands shell_forgit_alias_modes shell_typo_modes
 local command_name secrets_command shell_command
 local i
 
@@ -18,6 +18,7 @@ oooconf_commands=(
   'remove:remove managed links only'
   'lock:regenerate dependency lock artifacts'
   'update-pins:check or update pinned refs'
+  'agents:detect/sync/doctor AGENTS.md policy blocks'
   'shell:manage local shell preferences'
   'secrets:sync or validate local secret env files'
   'help:show help'
@@ -74,6 +75,17 @@ update_pins_opts=(
   '--apply:write updated pinned refs before regenerating lock artifacts'
 )
 
+agents_subcommands=(
+  'detect:detect configured agent CLIs on PATH'
+  'sync:append or update shared AGENTS.md block'
+  'doctor:verify AGENTS.md shared block is current'
+)
+
+agents_opts=(
+  '--repo-root:repo root containing oooconf agent config:_files -/'
+  '--config:override agent config JSON path:_files'
+)
+
 secrets_subcommands=(
   'login:configure Bitwarden server and start login'
   'unlock:unlock Bitwarden and print or persist BW_SESSION'
@@ -115,7 +127,7 @@ for (( i = 2; i < CURRENT; i++ )); do
       ;;
     -*)
       ;;
-    bootstrap|install|deps|update|upgrade|doctor|check|dry-run|preview|delete|remove|lock|update-pins|shell|secrets|help|version)
+    bootstrap|install|deps|update|upgrade|doctor|check|dry-run|preview|delete|remove|lock|update-pins|agents|shell|secrets|help|version)
       command_name="$words[i]"
       break
       ;;
@@ -160,15 +172,48 @@ case "$command_name" in
     _describe -t options 'oooconf option' update_pins_opts
     return 0
     ;;
+  agents)
+    local agents_command
+    agents_command=
+    for (( i = 3; i < CURRENT; i++ )); do
+      case "$words[i]" in
+        detect|sync|doctor)
+          agents_command="$words[i]"
+          break
+          ;;
+      esac
+    done
+
+    if [[ -z "$agents_command" ]]; then
+      _describe -t agents-subcommands 'oooconf agents command' agents_subcommands && return 0
+      _message 'unknown oooconf agents subcommand; press Enter to run CLI typo suggestions'
+      return 0
+    fi
+
+    case "$agents_command" in
+      detect)
+        _describe -t options 'oooconf agents detect option' \
+          $agents_opts \
+          '--json:emit machine-readable JSON output'
+        ;;
+      sync)
+        _describe -t options 'oooconf agents sync option' \
+          $agents_opts \
+          '--check:validate only; do not write files'
+        ;;
+      doctor)
+        _describe -t options 'oooconf agents doctor option' \
+          $agents_opts \
+          '--strict-config-paths:fail if no default config path exists for a target'
+        ;;
+    esac
+    return 0
+    ;;
   shell)
     shell_command=
     for (( i = 3; i < CURRENT; i++ )); do
       case "$words[i]" in
-        forgit-aliases)
-          shell_command="$words[i]"
-          break
-          ;;
-        typo-handling)
+        forgit-aliases|typo-handling)
           shell_command="$words[i]"
           break
           ;;

@@ -141,3 +141,24 @@ After changing CLI help output or completions:
 - After finishing a requested task, the agent MUST organize, stage, and commit the changes to the current branch.
 - Propose a clear and concise commit message following the existing style (e.g., `feat(scope): ...`, `fix(scope): ...`).
 - Only push to the remote repository if specifically asked by the user or if it is the natural conclusion of the task (e.g., "organize, commit and push").
+
+<!-- oooconf:agents-common:start -->
+## oooconf shared agent policy
+
+- Keep responses concise and action-oriented.
+- Favor reproducible commands and explicit file paths.
+- Prefer tracked shared config over machine-specific local overrides.
+- Never include secrets, private keys, or access tokens in tracked files.
+
+## Common MCP servers
+
+- `filesystem`: local repository and home config trees
+- `git`: commit history, diff summaries, and branch status
+- `shell`: deterministic local inspection commands (rg, fd, git, python3)
+
+## Common Skills
+
+- Dotfiles portability review (Linux + Windows + macOS safety)
+- Shell bootstrap audit (idempotency and dry-run behavior)
+- Secrets hygiene review (template references vs local plaintext files)
+<!-- oooconf:agents-common:end -->

@@ -1,0 +1,4 @@
+- Keep responses concise and action-oriented.
+- Favor reproducible commands and explicit file paths.
+- Prefer tracked shared config over machine-specific local overrides.
+- Never include secrets, private keys, or access tokens in tracked files.
