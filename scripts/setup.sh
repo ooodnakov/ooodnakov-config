@@ -383,7 +383,7 @@ choose_optional_dependencies_with_gum() {
 
   selection="$(
     printf '%s\n' "${options[@]}" |
-      gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, space to toggle, enter to continue."
+      gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue."
   )" || return 1
 
   while IFS=$'\t' read -r selected_key _; do

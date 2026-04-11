@@ -198,7 +198,7 @@ function Select-OptionalDependenciesWithGum {
         return @("__all_present__")
     }
 
-    $selection = $options | & gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, space to toggle, enter to continue."
+    $selection = $options | & gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue."
     if (-not $selection) {
         return @()
     }
