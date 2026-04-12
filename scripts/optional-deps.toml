@@ -79,8 +79,8 @@ linux.package = "git-delta"
 macos.manager = "brew"
 macos.package = "git-delta"
 windows.manager = "choco"
-windows.choco_id = "git-delta"
-windows.package = "git-delta"
+windows.choco_id = "delta"
+windows.package = "delta"
 
 [[deps]]
 key = "glow"
