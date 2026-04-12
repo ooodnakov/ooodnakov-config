@@ -125,7 +125,7 @@ linux.package = "q"
 macos.manager = "brew"
 macos.package = "q"
 windows.manager = "choco"
-windows.package = "q"
+windows.package = "q-dns"
 
 [[deps]]
 key = "eza"
