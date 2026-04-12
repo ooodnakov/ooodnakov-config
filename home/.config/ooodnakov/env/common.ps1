@@ -48,3 +48,9 @@ $markerInit = Join-Path $env:OOODNAKOV_SHARE_HOME "marker/marker.ps1"
 if (Test-Path $markerInit) {
     . $markerInit
 }
+
+# Load oooconf completions
+$OooconfCompletions = Join-Path $env:OOODNAKOV_CONFIG_HOME "completions/oooconf-completions.ps1"
+if (Test-Path $OooconfCompletions) {
+    . $OooconfCompletions
+}

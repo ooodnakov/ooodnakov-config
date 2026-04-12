@@ -102,19 +102,41 @@ Primary commands:
 - `oooconf update`: fast-forward pull the repo, then rerun install
 - `oooconf dry-run`: preview setup actions without changing the system
 - `oooconf doctor`: validate managed links and key tools
-- `oooconf delete`: remove managed links and restore latest backups when available
-- `oooconf remove`: remove managed links without restoring backups
+- `oooconf delete`: remove managed links and restore latest backups when available (Unix only)
+- `oooconf remove`: remove managed links without restoring backups (Unix only)
+- `oooconf bootstrap`: clone/update repo then run install (Unix only)
 - `oooconf lock`: regenerate dependency lock artifacts
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
-- `oooconf update-pins --apply`: update pinned refs in setup scripts, then regenerate lock artifacts
+- `oooconf update-pins --apply`: update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
 
-On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync. The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, and `gum`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+Secrets commands:
+
+- `oooconf secrets login`: configure Bitwarden/Vaultwarden server and start login
+- `oooconf secrets unlock --shell zsh`: print shell code to export `BW_SESSION`
+- `oooconf secrets sync`: render local secret env files from the tracked template
+- `oooconf secrets sync --dry-run`: preview rendered files without writing
+- `oooconf secrets list`: list secrets from the template (add `--resolved` to resolve `bw://` refs)
+- `oooconf secrets status`: check sync state and vault status
+- `oooconf secrets doctor`: validate prerequisites and rendered files
+- `oooconf secrets logout`: lock vault and revoke the Bitwarden session
+
+On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
+The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, and `gum`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
-Useful flags:
+Shell completion:
 
-- `oooconf --help`
-- `oooconf help <command>`
+- **PowerShell**: argument completion is automatically loaded by the managed profile
+  - Complete commands: `oooconf <Tab>`
+  - Complete options: `oooconf install --<Tab>`
+  - Complete secrets subcommands: `oooconf secrets <Tab>`
+  - Complete shell values: `oooconf secrets unlock --shell <Tab>`
+- **Zsh**: completion is provided via fzf-tab integration
+
+Help system:
+
+- `oooconf --help` — shows grouped command categories with common workflow examples
+- `oooconf help <command>` — shows command-specific help with examples and environment overrides
 - `oooconf --print-repo-root`
 - `oooconf --version`
 
@@ -128,7 +150,11 @@ oooconf update --yes-optional
 Interactive dependency picks:
 
 ```bash
+# interactive multi-select picker (requires gum)
 oooconf deps
+# without gum: text prompt lists available keys, type to select
+oooconf deps
+# explicit keys (no prompt)
 oooconf deps bat delta glow
 ```
 
@@ -283,6 +309,19 @@ oooconf secrets unlock --shell pwsh | Invoke-Expression
 oooconf secrets sync
 ```
 
+For non-interactive or automated setups, you can skip the login/unlock step entirely by setting these environment variables before running `oooconf secrets sync`:
+
+```bash
+export BW_CLIENTID="user.xxx"
+export BW_CLIENTSECRET="xxx"
+export BW_PASSWORD="your-vault-password"
+oooconf secrets sync
+```
+
+The sync will auto-unlock the vault and render local env files without any manual interaction.
+
+**LOCAL OVERRIDES**: rendered files (`~/.config/ooodnakov/local/env.zsh`, `env.ps1`) contain a `# --- LOCAL OVERRIDES START/END ---` block. Lines inside this section survive every `oooconf secrets sync`, making it safe to add machine-specific env vars that are not tracked in the template. Anything outside the markers is overwritten on each sync.
+
 ## WezTerm Workspace Ergonomics
 
 Set these environment variables to control WezTerm startup defaults without editing tracked config:
@@ -317,5 +356,7 @@ Reference docs:
 
 - architecture notes: [`docs/architecture.md`](docs/architecture.md)
 - reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
+- dependency decisions: [`docs/dependency-decisions.md`](docs/dependency-decisions.md)
+- troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)
 - import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)
 - third-party tree notes: [`third_party/README.md`](third_party/README.md)

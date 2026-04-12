@@ -8,29 +8,31 @@ This file tracks deliberate follow-up work for the repo. It is ordered by impact
 - [x] Document the repo architecture, symlink model, and local override boundaries
 - [x] Make the README prefer the auditable clone-and-run path over leading with `curl | bash`
 - [x] Clarify core prerequisites and the bootstrap trust model in the docs
+- [x] Add shell completion for `oooconf` (PowerShell completions added)
+- [x] Implement `zsh -n` syntax validation for tracked zsh scripts in CI
+- [x] Implement PowerShell parser validation for `.ps1` files in CI
 
 ## Next
 
 - [ ] Expand CI to exercise install and doctor flows on Linux, Windows, and macOS
-- [ ] Add stronger validation for managed config:
-  - `zsh -n` for tracked zsh entrypoints
-  - PowerShell analysis beyond parser-only validation
-  - Neovim and WezTerm config smoke checks where practical
-- [ ] Add a small troubleshooting guide covering bootstrap failures, missing tools, stale links, and local override conflicts
+- [ ] Add Neovim and WezTerm config smoke checks where practical
+- [x] Add a small troubleshooting guide covering bootstrap failures, missing tools, stale links, and local override conflicts
 - [ ] Add pre-commit hooks for shell checks and lockfile reproducibility
 
 ## Reproducibility
 
 - [ ] Document bare-machine prerequisites by platform in one concise table
-- [ ] Tighten bootstrap safety further with a documented verify-first flow and clearer trust language
-- [ ] Decide which dependencies are intentionally manual versus candidates for automated install
-- [ ] Confirm the lock/update-pins flow is described consistently across README, reproducibility docs, and release notes
+- [ ] Formalize bootstrap verify-first flow with explicit step-by-step instructions
+- [x] Add a decision matrix for dependencies: intentionally manual vs automated install
+- [x] Verify lock/update-pins flow is described consistently across README and reproducibility docs
 
 ## Cross-Platform
 
-- [ ] Audit feature parity between Unix `oooconf` and PowerShell `oooconf`
+- [ ] Audit feature parity between Unix `oooconf` and PowerShell `oooconf`:
+  - Unix supports `bootstrap`, `delete`, `remove` — PowerShell does not
+  - Document or close the gap
 - [ ] Validate Windows path handling and symlink behavior on a fresh machine setup
-- [ ] Add at least one macOS validation path before claiming active support there
+- [ ] Add at least one macOS validation path before claiming active support there (currently deferred — no macOS-specific code exists)
 
 ## Maintainability
 
@@ -41,6 +43,5 @@ This file tracks deliberate follow-up work for the repo. It is ordered by impact
 
 ## Nice to Have
 
-- [ ] Improve `oooconf --help` output with clearer command summaries and examples
-- [ ] Consider shell completion for `oooconf`
+- [ ] Improve `oooconf --help` output with clearer command summaries and examples (currently functional but lacks examples beyond secrets)
 - [ ] Add release notes guidance for `v*` tags and archive consumers

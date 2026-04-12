@@ -32,6 +32,15 @@ Bootstrap behavior lives in:
 - `scripts/setup.sh`
 - `scripts/setup.ps1`
 
+The unified CLI entrypoint lives in:
+
+- `scripts/ooodnakov.sh` (Unix)
+- `scripts/ooodnakov.ps1` (PowerShell)
+
+Shell completions live in:
+
+- `home/.config/ooodnakov/completions/oooconf-completions.ps1` (PowerShell, auto-loaded)
+
 Reference-only material lives in:
 
 - `third_party/upstream/ezsh`
@@ -55,6 +64,10 @@ Do not treat `third_party/` as active config unless the user explicitly asks to 
 - Machine-specific or secret environment belongs in:
   - `~/.config/ooodnakov/local/env.zsh`
   - `~/.config/ooodnakov/local/env.ps1`
+- Shell completions belong in:
+  - `home/.config/ooodnakov/completions/` (auto-loaded by managed profiles)
+- These local files contain a `# --- LOCAL OVERRIDES START/END ---` section that survives `oooconf secrets sync`. User-added lines inside the markers are preserved across renders; everything outside is overwritten.
+- `oooconf secrets sync` can auto-unlock the vault if `BW_CLIENTID`, `BW_CLIENTSECRET`, and `BW_PASSWORD` are exported, avoiding interactive prompts.
 - If importing behavior from real machines, keep only portable parts in tracked config.
 
 ## WezTerm policy
@@ -87,6 +100,8 @@ When structure or setup behavior changes, update the relevant docs:
 - `README.md`
 - `docs/reproducibility.md`
 - `docs/imports/upstream-audit.md`
+- `docs/troubleshooting.md`
+- `docs/dependency-decisions.md`
 - `third_party/README.md`
 
 ## Validation
@@ -98,3 +113,10 @@ bash -n scripts/setup.sh
 ```
 
 If PowerShell setup changes and `pwsh` is available, validate those scripts too.
+
+After changing CLI help output or completions:
+
+- Verify `oooconf --help` renders cleanly on both Unix and PowerShell
+- Verify `oooconf help <command>` shows examples for each command
+- Test PowerShell completions load without errors
+- Confirm completions work for commands, options, and secrets subcommands

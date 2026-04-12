@@ -1,7 +1,7 @@
 param(
-    [ValidateSet("install", "update", "doctor", "deps")]
-    [string]$Command = "install",
+    [string]$Command = "",
     [switch]$DryRun,
+    [switch]$Help,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$DependencyKeys = @()
 )
@@ -35,6 +35,43 @@ $script:Failures = [System.Collections.Generic.List[string]]::new()
 $script:LogFile = $null
 $script:LatestLogFile = $null
 $script:TranscriptStarted = $false
+
+function Show-SetupHelp {
+    @"
+Usage: setup.ps1 [install|update|doctor|deps] [--dry-run] [dependency-key...]
+
+Commands:
+  install   apply managed config and dependencies
+  update    git pull this repo, then run install flow
+  doctor    validate managed links and required tools
+  deps      install optional dependencies only
+
+Options:
+  --dry-run       print actions without mutating filesystem
+  --yes-optional  auto-accept optional dependency installs
+  -h, --help      show this help
+
+Environment variables:
+  OOODNAKOV_INTERACTIVE    always, never, auto (default: auto)
+  OOODNAKOV_INSTALL_OPTIONAL always, prompt (default: prompt)
+"@
+}
+
+if ($Help -or $Command -eq "help" -or $Command -eq "-h" -or $Command -eq "--help") {
+    Show-SetupHelp
+    exit 0
+}
+
+if (-not $Command) {
+    $Command = "install"
+}
+
+$validCommands = @("install", "update", "doctor", "deps")
+if ($validCommands -notcontains $Command) {
+    Write-Error "Unknown command: $Command"
+    Show-SetupHelp
+    exit 1
+}
 
 function Test-Interactive {
     switch ($InteractiveMode) {
@@ -181,9 +218,44 @@ function Ensure-GumForDependencySelector {
     return [bool](Get-Command gum -ErrorAction SilentlyContinue)
 }
 
+function Select-OptionalDependenciesWithoutGum {
+    $allPresent = $true
+    $available = @(Get-OptionalDependencySpecs | Where-Object { -not (Test-OptionalDependencyPresent -Key $_.Key) })
+
+    if ($available.Count -eq 0) {
+        Write-Information "All optional dependencies are already present." -InformationAction Continue
+        return @("__all_present__")
+    }
+
+    Write-Information "Available optional dependencies:" -InformationAction Continue
+    foreach ($spec in $available) {
+        Write-Information ("  {0,-12} {1}" -f $spec.Key, $spec.DisplayName) -InformationAction Continue
+    }
+    Write-Information "" -InformationAction Continue
+
+    $input_str = Read-Host "Enter space/comma-separated keys to install (or empty to skip)"
+    $wanted = @($input_str -split '[ ,]+' | Where-Object { $_ })
+
+    if ($wanted.Count -eq 0) {
+        Write-Information "No optional dependencies selected." -InformationAction Continue
+        return @()
+    }
+
+    $validKeys = @($available | ForEach-Object { $_.Key })
+    foreach ($key in $wanted) {
+        if ($validKeys -notcontains $key) {
+            Write-Error "Unknown dependency key: $key"
+            return @()
+        }
+    }
+
+    Write-Information "Selected: $($wanted -join ', ')" -InformationAction Continue
+    return $wanted
+}
+
 function Select-OptionalDependenciesWithGum {
     if (-not (Ensure-GumForDependencySelector)) {
-        return @()
+        return $null
     }
 
     $options = foreach ($spec in Get-OptionalDependencySpecs) {
@@ -740,11 +812,11 @@ function Install-BitwardenCliIfMissing {
 function Install-OptionalDependencies {
     Write-Output "Dependency check:"
 
-    Invoke-SelectedOptionalDependency -Key "git" -Action { Install-PackageIfMissing -CommandNames @("git") -WingetId "Git.Git" -Description "Git" -SummaryName "git" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "wezterm" -Action { Install-PackageIfMissing -CommandNames @("wezterm") -WingetId "wez.wezterm" -Description "WezTerm" -SummaryName "wezterm" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "nvim" -Action { Install-PackageIfMissing -CommandNames @("nvim") -WingetId "Neovim.Neovim" -Description "Neovim" -SummaryName "nvim" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "oh-my-posh" -Action { Install-PackageIfMissing -CommandNames @("oh-my-posh") -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh" -SummaryName "oh-my-posh" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "node" -Action { Install-PackageIfMissing -CommandNames @("node") -WingetId "OpenJS.NodeJS.LTS" -Description "Node.js LTS" -SummaryName "node" | Out-Null } | Out-Null
+    Invoke-SelectedOptionalDependency -Key "git" -Action { Install-PackageIfMissing -CommandNames @("git") -WingetId "Git.Git" -Description "Git" -SummaryName "git" }
+    Invoke-SelectedOptionalDependency -Key "wezterm" -Action { Install-PackageIfMissing -CommandNames @("wezterm") -WingetId "wez.wezterm" -Description "WezTerm" -SummaryName "wezterm" }
+    Invoke-SelectedOptionalDependency -Key "nvim" -Action { Install-PackageIfMissing -CommandNames @("nvim") -WingetId "Neovim.Neovim" -Description "Neovim" -SummaryName "nvim" }
+    Invoke-SelectedOptionalDependency -Key "oh-my-posh" -Action { Install-PackageIfMissing -CommandNames @("oh-my-posh") -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh" -SummaryName "oh-my-posh" }
+    Invoke-SelectedOptionalDependency -Key "node" -Action { Install-PackageIfMissing -CommandNames @("node") -WingetId "OpenJS.NodeJS.LTS" -Description "Node.js LTS" -SummaryName "node" }
 
     $needsChocolatey = Test-OptionalDependencySelected -Key "choco"
     if (-not $needsChocolatey) {
@@ -756,24 +828,24 @@ function Install-OptionalDependencies {
         }
     }
     if ($needsChocolatey) {
-        Install-Chocolatey | Out-Null
+        Install-Chocolatey
     }
 
-    Invoke-SelectedOptionalDependency -Key "gsudo" -Action { Install-PackageIfMissing -CommandNames @("gsudo") -ChocoId "gsudo" -Description "gsudo" -SummaryName "gsudo" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "rg" -Action { Install-PackageIfMissing -CommandNames @("rg") -ChocoId "ripgrep" -Description "ripgrep" -SummaryName "rg" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "fd" -Action { Install-PackageIfMissing -CommandNames @("fd") -ChocoId "fd" -Description "fd" -SummaryName "fd" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "direnv" -Action { Install-PackageIfMissing -CommandNames @("direnv") -ChocoId "direnv" -Description "direnv" -SummaryName "direnv" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "fzf" -Action { Install-PackageIfMissing -CommandNames @("fzf") -ChocoId "fzf" -Description "fzf" -SummaryName "fzf" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "bat" -Action { Install-PackageIfMissing -CommandNames @("bat") -ChocoId "bat" -Description "bat" -SummaryName "bat" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "delta" -Action { Install-PackageIfMissing -CommandNames @("delta") -ChocoId "git-delta" -Description "delta" -SummaryName "delta" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "glow" -Action { Install-PackageIfMissing -CommandNames @("glow") -ChocoId "glow" -Description "glow" -SummaryName "glow" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "gum" -Action { Install-PackageIfMissing -CommandNames @("gum") -WingetId "charmbracelet.gum" -Description "gum" -SummaryName "gum" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "q" -Action { Install-PackageIfMissing -CommandNames @("q") -ChocoId "q" -Description "q" -SummaryName "q" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "eza" -Action { Install-PackageIfMissing -CommandNames @("eza") -ChocoId "eza" -Description "eza" -SummaryName "eza" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "uv" -Action { Install-PackageIfMissing -CommandNames @("uv") -ChocoId "uv" -Description "uv" -SummaryName "uv" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "python3" -Action { Install-PackageIfMissing -CommandNames @("python3", "python") -ChocoId "python" -Description "Python 3" -SummaryName "python3" | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "bw" -Action { Install-BitwardenCliIfMissing | Out-Null } | Out-Null
-    Invoke-SelectedOptionalDependency -Key "pnpm" -Action { Install-PnpmIfMissing | Out-Null } | Out-Null
+    Invoke-SelectedOptionalDependency -Key "gsudo" -Action { Install-PackageIfMissing -CommandNames @("gsudo") -ChocoId "gsudo" -Description "gsudo" -SummaryName "gsudo" }
+    Invoke-SelectedOptionalDependency -Key "rg" -Action { Install-PackageIfMissing -CommandNames @("rg") -ChocoId "ripgrep" -Description "ripgrep" -SummaryName "rg" }
+    Invoke-SelectedOptionalDependency -Key "fd" -Action { Install-PackageIfMissing -CommandNames @("fd") -ChocoId "fd" -Description "fd" -SummaryName "fd" }
+    Invoke-SelectedOptionalDependency -Key "direnv" -Action { Install-PackageIfMissing -CommandNames @("direnv") -ChocoId "direnv" -Description "direnv" -SummaryName "direnv" }
+    Invoke-SelectedOptionalDependency -Key "fzf" -Action { Install-PackageIfMissing -CommandNames @("fzf") -ChocoId "fzf" -Description "fzf" -SummaryName "fzf" }
+    Invoke-SelectedOptionalDependency -Key "bat" -Action { Install-PackageIfMissing -CommandNames @("bat") -ChocoId "bat" -Description "bat" -SummaryName "bat" }
+    Invoke-SelectedOptionalDependency -Key "delta" -Action { Install-PackageIfMissing -CommandNames @("delta") -ChocoId "git-delta" -Description "delta" -SummaryName "delta" }
+    Invoke-SelectedOptionalDependency -Key "glow" -Action { Install-PackageIfMissing -CommandNames @("glow") -ChocoId "glow" -Description "glow" -SummaryName "glow" }
+    Invoke-SelectedOptionalDependency -Key "gum" -Action { Install-PackageIfMissing -CommandNames @("gum") -WingetId "charmbracelet.gum" -Description "gum" -SummaryName "gum" }
+    Invoke-SelectedOptionalDependency -Key "q" -Action { Install-PackageIfMissing -CommandNames @("q") -ChocoId "q" -Description "q" -SummaryName "q" }
+    Invoke-SelectedOptionalDependency -Key "eza" -Action { Install-PackageIfMissing -CommandNames @("eza") -ChocoId "eza" -Description "eza" -SummaryName "eza" }
+    Invoke-SelectedOptionalDependency -Key "uv" -Action { Install-PackageIfMissing -CommandNames @("uv") -ChocoId "uv" -Description "uv" -SummaryName "uv" }
+    Invoke-SelectedOptionalDependency -Key "python3" -Action { Install-PackageIfMissing -CommandNames @("python3", "python") -ChocoId "python" -Description "Python 3" -SummaryName "python3" }
+    Invoke-SelectedOptionalDependency -Key "bw" -Action { Install-BitwardenCliIfMissing }
+    Invoke-SelectedOptionalDependency -Key "pnpm" -Action { Install-PnpmIfMissing }
 }
 
 function Write-Summary {
@@ -928,6 +1000,10 @@ try {
         }
 
         $selected = @(Select-OptionalDependenciesWithGum)
+        # $null means gum not available, fall back to text prompt
+        if ($selected.Count -eq 1 -and $selected[0] -eq $null) {
+            $selected = @(Select-OptionalDependenciesWithoutGum)
+        }
         if ($selected.Count -eq 1 -and $selected[0] -eq "__all_present__") {
             $allPresent = $true
         }

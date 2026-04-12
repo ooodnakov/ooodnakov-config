@@ -363,6 +363,56 @@ ensure_gum_for_optional_selector() {
   command -v gum >/dev/null 2>&1
 }
 
+choose_optional_dependencies_without_gum() {
+  local key label description selection selected_keys_csv
+  local -a all_keys all_labels
+
+  while IFS='|' read -r key label description; do
+    if optional_dependency_present "$key"; then
+      continue
+    fi
+    all_keys+=("$key")
+    all_labels+=("$label")
+  done < <(optional_dependency_catalog)
+
+  if [ "${#all_keys[@]}" -eq 0 ]; then
+    echo "All optional dependencies are already present." >&2
+    return 2
+  fi
+
+  echo "Available optional dependencies:" >&2
+  local i
+  for (( i = 0; i < ${#all_keys[@]}; i++ )); do
+    printf "  %-10s %s\n" "${all_keys[$i]}" "${all_labels[$i]}" >&2
+  done
+  echo >&2
+  printf "Enter space/comma-separated keys to install (or empty to skip): " >&2
+  if ! read -r selection < /dev/tty; then
+    return 1
+  fi
+
+  selection="$(echo "$selection" | tr ',' ' ')"
+  local wanted_keys
+  read -ra wanted_keys <<< "$selection"
+
+  if [ "${#wanted_keys[@]}" -eq 0 ]; then
+    echo "No optional dependencies selected." >&2
+    return 2
+  fi
+
+  # Validate keys
+  local wanted
+  for wanted in "${wanted_keys[@]}"; do
+    if ! optional_dependency_exists "$wanted"; then
+      echo "Unknown dependency key: $wanted" >&2
+      return 1
+    fi
+  done
+
+  selected_keys_csv="$(IFS=,; printf '%s' "${wanted_keys[*]}")"
+  printf '%s\n' "$selected_keys_csv"
+}
+
 choose_optional_dependencies_with_gum() {
   local key label description selection selected_key
   local -a options selected_keys
@@ -377,7 +427,7 @@ choose_optional_dependencies_with_gum() {
   done < <(optional_dependency_catalog)
 
   if [ "${#options[@]}" -eq 0 ]; then
-    echo "All optional dependencies are already present."
+    echo "All optional dependencies are already present." >&2
     return 2
   fi
 
@@ -1389,8 +1439,21 @@ case "$COMMAND" in
       if selected_optional_key_csv="$(choose_optional_dependencies_with_gum)"; then
         :
       else
-        case $? in
+        _deps_gum_rc=$?
+        case $_deps_gum_rc in
           2) exit 0 ;;
+          1)
+            # gum not available, fall back to text prompt
+            if selected_optional_key_csv="$(choose_optional_dependencies_without_gum)"; then
+              :
+            else
+              _deps_fallback_rc=$?
+              case $_deps_fallback_rc in
+                2) exit 0 ;;
+                *) echo "No optional dependencies selected." >&2; exit 1 ;;
+              esac
+            fi
+            ;;
           *) echo "No optional dependencies selected." >&2; exit 1 ;;
         esac
       fi
