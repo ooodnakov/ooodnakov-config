@@ -210,7 +210,7 @@ Examples:
         }
         "secrets" {
             @"
-Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout> [options]
+Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> [options]
 
 Render or validate local secret env files from the tracked template.
 Examples:
@@ -223,6 +223,9 @@ Examples:
   oooconf secrets status
   oooconf secrets doctor
   oooconf secrets logout
+  oooconf secrets add GITHUB_TOKEN bw://item/abc123/password
+  oooconf secrets add SOME_URL https://example.com
+  oooconf secrets remove GITHUB_TOKEN
 
 Environment overrides:
   OOODNAKOV_SECRETS_BACKEND

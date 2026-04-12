@@ -101,30 +101,35 @@ function Confirm-Install {
     return $reply -match '^(?i:y|yes)$'
 }
 
+$script:OptionalDependencySpecsCache = $null
+
 function Get-OptionalDependencySpecs {
-    return @(
-        [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git"; WindowsOnly = $true }
-        [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm"; WindowsOnly = $true }
-        [pscustomobject]@{ Key = "nvim"; DisplayName = "nvim"; Description = "Neovim"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "oh-my-posh"; WindowsOnly = $true }
-        [pscustomobject]@{ Key = "node"; DisplayName = "node"; Description = "Node.js LTS"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey"; WindowsOnly = $true }
-        [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo"; WindowsOnly = $true }
-        [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep"; WindowsOnly = $true }
-        [pscustomobject]@{ Key = "fd"; DisplayName = "fd"; Description = "fd"; WindowsOnly = $true }
-        [pscustomobject]@{ Key = "direnv"; DisplayName = "direnv"; Description = "direnv"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "fzf"; DisplayName = "fzf"; Description = "fzf"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "bat"; DisplayName = "bat"; Description = "bat"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "delta"; DisplayName = "delta"; Description = "delta"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "glow"; DisplayName = "glow"; Description = "glow"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "gum"; DisplayName = "gum"; Description = "gum"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "q"; DisplayName = "q"; Description = "q"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "eza"; DisplayName = "eza"; Description = "eza"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "uv"; DisplayName = "uv"; Description = "uv"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "python3"; DisplayName = "python3"; Description = "Python 3"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "bw"; DisplayName = "bw"; Description = "Bitwarden CLI"; WindowsOnly = $false }
-        [pscustomobject]@{ Key = "pnpm"; DisplayName = "pnpm"; Description = "pnpm"; WindowsOnly = $false }
-    )
+    if ($script:OptionalDependencySpecsCache) {
+        return $script:OptionalDependencySpecsCache
+    }
+
+    $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
+    $json = & python3 $pythonScript json 2>$null
+    if (-not $json) {
+        # Fallback: empty array if Python unavailable
+        return @()
+    }
+
+    $raw = $json | ConvertFrom-Json
+    $specs = @($raw | ForEach-Object {
+        [pscustomobject]@{
+            Key         = $_.key
+            DisplayName = $_.display
+            Description = $_.description
+            WindowsOnly = ($null -eq $_.linux -and $null -eq $_.macos -and $null -ne $_.windows)
+            Linux       = if ($_.linux) { $_.linux } else { $null }
+            Macos       = if ($_.macos) { $_.macos } else { $null }
+            Windows     = if ($_.windows) { $_.windows } else { $null }
+        }
+    })
+
+    $script:OptionalDependencySpecsCache = $specs
+    return $specs
 }
 
 $script:SelectedOptionalKeys = @()

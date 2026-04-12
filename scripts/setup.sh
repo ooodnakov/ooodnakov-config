@@ -138,31 +138,7 @@ prompt_yes_no() {
 }
 
 optional_dependency_catalog() {
-  cat <<'EOF'
-wget|wget|downloading auxiliary assets and parity with ezsh tooling
-zsh|zsh|default shell support
-direnv|direnv|direnv shell integration
-fzf|fzf|fzf shell integration
-bat|bat|cat alternative with syntax highlighting
-delta|delta|Git diff pager with syntax highlighting
-glow|glow|terminal Markdown reader
-gum|gum|interactive terminal UI toolkit for selectors and prompts
-zoxide|zoxide|smart directory jumping with z/zi
-q|q|q text-as-data CLI
-eza|eza|modern ls aliases
-uv|uv|Python package manager via official installer
-bw|bw|Bitwarden CLI via official native archive
-node|node|Node.js runtime
-npm|npm|Node package manager
-pnpm|pnpm|pnpm package manager
-autoconf|autoconf|building optional ezsh native components
-fc-cache|fc-cache|refreshing installed font caches
-cargo|cargo|Rust package manager
-dua|dua|disk usage analysis via dua-cli
-nvim|nvim|Neovim runtime for LazyVim
-k|k|standalone k command
-python3|python3|Python runtime and helper scripts
-EOF
+  python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog
 }
 
 optional_dependency_exists() {

@@ -92,7 +92,7 @@ case "$state" in
         secrets_command=
         for (( i = 1; i <= CURRENT; i++ )); do
           case "$words[i]" in
-            login|unlock|sync|doctor|list|status|logout)
+            login|unlock|sync|doctor|list|status|logout|add|remove)
               secrets_command="$words[i]"
               break
               ;;
@@ -107,7 +107,9 @@ case "$state" in
             'doctor:validate local secret env files and backend tooling' \
             'list:list secrets from the tracked template' \
             'status:show sync status of local secret env files' \
-            'logout:lock vault and revoke Bitwarden session'
+            'logout:lock vault and revoke Bitwarden session' \
+            'add:add a secret entry to the tracked template' \
+            'remove:remove a secret entry from the tracked template'
         else
           case "$secrets_command" in
             sync)
@@ -129,6 +131,17 @@ case "$state" in
               _arguments \
                 '--template[override the tracked template path]:template:_files'
               ;;
+            add)
+              _arguments \
+                '--template[override the tracked template path]:template:_files' \
+                '1:key: ' \
+                '2:value: '
+              ;;
+            remove)
+              _arguments \
+                '--template[override the tracked template path]:template:_files' \
+                '1:key: '
+              ;;
             login)
               _arguments '--server[Bitwarden or Vaultwarden server URL]:server: '
               ;;
@@ -148,7 +161,9 @@ case "$state" in
                 'doctor:validate local secret env files and backend tooling' \
                 'list:list secrets from the tracked template' \
                 'status:show sync status of local secret env files' \
-                'logout:lock vault and revoke Bitwarden session'
+                'logout:lock vault and revoke Bitwarden session' \
+                'add:add a secret entry to the tracked template' \
+                'remove:remove a secret entry from the tracked template'
               ;;
           esac
         fi

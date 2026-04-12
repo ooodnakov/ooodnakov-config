@@ -102,6 +102,7 @@ When structure or setup behavior changes, update the relevant docs:
 - `docs/imports/upstream-audit.md`
 - `docs/troubleshooting.md`
 - `docs/dependency-decisions.md`
+- `docs/architecture.md`
 - `third_party/README.md`
 
 ## Validation

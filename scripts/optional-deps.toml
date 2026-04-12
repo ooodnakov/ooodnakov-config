@@ -1,0 +1,270 @@
+# Optional dependency catalog.
+# This file is the single source of truth for optional deps.
+# Both Unix and PowerShell setup scripts read from it.
+#
+# Fields:
+#   key          - unique identifier used in `oooconf deps <key>`
+#   display      - human-readable name shown in picker/list
+#   description  - short explanation of purpose
+#
+# Platform install (one or more):
+#   linux.manager   - apt, brew, curl, cargo, custom
+#   macos.manager   - brew, curl, cargo, custom
+#   windows.manager - choco, winget, curl, custom
+#   package         - package name for apt/brew/choco/winget
+#   command         - shell command for curl/custom managers
+#   winget_id       - winget package ID (when different from package)
+#   choco_id        - choco package ID (when different from package)
+#
+# To add a new optional dep, append a [[deps]] block.
+# To remove one, delete its block and run `oooconf lock`.
+
+[[deps]]
+key = "wget"
+display = "wget"
+description = "downloading auxiliary assets and parity with ezsh tooling"
+linux.manager = "apt"
+linux.package = "wget"
+macos.manager = "brew"
+macos.package = "wget"
+
+[[deps]]
+key = "zsh"
+display = "zsh"
+description = "default shell support"
+linux.manager = "apt"
+linux.package = "zsh"
+macos.manager = "brew"
+macos.package = "zsh"
+
+[[deps]]
+key = "direnv"
+display = "direnv"
+description = "direnv shell integration"
+linux.manager = "apt"
+linux.package = "direnv"
+macos.manager = "brew"
+macos.package = "direnv"
+windows.manager = "choco"
+windows.package = "direnv"
+
+[[deps]]
+key = "fzf"
+display = "fzf"
+description = "fzf shell integration"
+linux.manager = "apt"
+linux.package = "fzf"
+macos.manager = "brew"
+macos.package = "fzf"
+windows.manager = "choco"
+windows.package = "fzf"
+
+[[deps]]
+key = "bat"
+display = "bat"
+description = "cat alternative with syntax highlighting"
+linux.manager = "apt"
+linux.package = "bat"
+macos.manager = "brew"
+macos.package = "bat"
+windows.manager = "choco"
+windows.package = "bat"
+
+[[deps]]
+key = "delta"
+display = "delta"
+description = "Git diff pager with syntax highlighting"
+linux.manager = "apt"
+linux.package = "git-delta"
+macos.manager = "brew"
+macos.package = "git-delta"
+windows.manager = "choco"
+windows.choco_id = "git-delta"
+windows.package = "git-delta"
+
+[[deps]]
+key = "glow"
+display = "glow"
+description = "terminal Markdown reader"
+linux.manager = "apt"
+linux.package = "glow"
+macos.manager = "brew"
+macos.package = "glow"
+windows.manager = "choco"
+windows.package = "glow"
+
+[[deps]]
+key = "gum"
+display = "gum"
+description = "interactive terminal UI toolkit for selectors and prompts"
+linux.manager = "apt"
+linux.package = "gum"
+macos.manager = "brew"
+macos.package = "gum"
+windows.manager = "winget"
+windows.winget_id = "charmbracelet.gum"
+windows.package = "gum"
+
+[[deps]]
+key = "zoxide"
+display = "zoxide"
+description = "smart directory jumping with z/zi"
+linux.manager = "apt"
+linux.package = "zoxide"
+macos.manager = "brew"
+macos.package = "zoxide"
+windows.manager = "choco"
+windows.package = "zoxide"
+
+[[deps]]
+key = "q"
+display = "q"
+description = "q text-as-data CLI"
+linux.manager = "apt"
+linux.package = "q"
+macos.manager = "brew"
+macos.package = "q"
+windows.manager = "choco"
+windows.package = "q"
+
+[[deps]]
+key = "eza"
+display = "eza"
+description = "modern ls aliases"
+linux.manager = "apt"
+linux.package = "eza"
+macos.manager = "brew"
+macos.package = "eza"
+windows.manager = "choco"
+windows.package = "eza"
+
+[[deps]]
+key = "uv"
+display = "uv"
+description = "Python package manager via official installer"
+linux.manager = "curl"
+linux.command = "curl -LsSf https://astral.sh/uv/install.sh | sh"
+macos.manager = "brew"
+macos.package = "uv"
+windows.manager = "choco"
+windows.package = "uv"
+
+[[deps]]
+key = "bw"
+display = "bw"
+description = "Bitwarden CLI via official native archive"
+linux.manager = "custom"
+linux.command = "installed via official archive in setup.sh"
+macos.manager = "brew"
+macos.package = "bitwarden-cli"
+windows.manager = "custom"
+windows.command = "installed via official zip in setup.ps1"
+
+[[deps]]
+key = "node"
+display = "node"
+description = "Node.js runtime"
+linux.manager = "apt"
+linux.package = "nodejs"
+macos.manager = "brew"
+macos.package = "node"
+windows.manager = "winget"
+windows.winget_id = "OpenJS.NodeJS.LTS"
+windows.package = "node"
+
+[[deps]]
+key = "npm"
+display = "npm"
+description = "Node package manager"
+linux.manager = "apt"
+linux.package = "npm"
+macos.manager = "brew"
+macos.package = "npm"
+windows.manager = "winget"
+windows.winget_id = "OpenJS.NodeJS.LTS"
+windows.package = "npm"
+
+[[deps]]
+key = "pnpm"
+display = "pnpm"
+description = "pnpm package manager"
+linux.manager = "custom"
+linux.command = "installed via corepack or npm fallback"
+macos.manager = "custom"
+macos.command = "installed via corepack or npm fallback"
+windows.manager = "custom"
+windows.command = "installed via corepack or npm fallback"
+
+[[deps]]
+key = "autoconf"
+display = "autoconf"
+description = "building optional ezsh native components"
+linux.manager = "apt"
+linux.package = "autoconf"
+macos.manager = "brew"
+macos.package = "autoconf"
+
+[[deps]]
+key = "fc-cache"
+display = "fc-cache"
+description = "refreshing installed font caches"
+linux.manager = "apt"
+linux.package = "fontconfig"
+macos.manager = "custom"
+macos.command = "not needed on macOS (manual install)"
+
+[[deps]]
+key = "cargo"
+display = "cargo"
+description = "Rust package manager"
+linux.manager = "apt"
+linux.package = "cargo"
+macos.manager = "brew"
+macos.package = "cargo"
+windows.manager = "custom"
+windows.command = "install via rustup"
+
+[[deps]]
+key = "dua"
+display = "dua"
+description = "disk usage analysis via dua-cli"
+linux.manager = "cargo"
+linux.package = "dua-cli"
+macos.manager = "brew"
+macos.package = "dua-cli"
+windows.manager = "cargo"
+windows.package = "dua-cli"
+
+[[deps]]
+key = "nvim"
+display = "nvim"
+description = "Neovim runtime for LazyVim"
+linux.manager = "apt"
+linux.package = "neovim"
+macos.manager = "brew"
+macos.package = "neovim"
+windows.manager = "winget"
+windows.winget_id = "Neovim.Neovim"
+windows.package = "nvim"
+
+[[deps]]
+key = "k"
+display = "k"
+description = "standalone k command"
+linux.manager = "custom"
+linux.command = "cloned from supercrabtree/k in setup.sh"
+macos.manager = "custom"
+macos.command = "cloned from supercrabtree/k"
+windows.manager = "custom"
+windows.command = "not available on Windows"
+
+[[deps]]
+key = "python3"
+display = "python3"
+description = "Python runtime and helper scripts"
+linux.manager = "apt"
+linux.package = "python3"
+macos.manager = "brew"
+macos.package = "python"
+windows.manager = "choco"
+windows.package = "python"

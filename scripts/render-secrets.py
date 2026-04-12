@@ -130,6 +130,21 @@ def parse_args() -> argparse.Namespace:
 
     logout = subparsers.add_parser("logout", help="Lock vault and revoke Bitwarden session.")
 
+    add_parser = subparsers.add_parser("add", help="Add a secret entry to the tracked template.")
+    add_parser.add_argument("key", help="Environment variable name (e.g. GITHUB_TOKEN).")
+    add_parser.add_argument("value", help="Plain value or bw://item/<id>/selector reference.")
+    add_parser.add_argument(
+        "--template",
+        help="Override the tracked template path.",
+    )
+
+    remove_parser = subparsers.add_parser("remove", help="Remove a secret entry from the tracked template.")
+    remove_parser.add_argument("key", help="Environment variable name to remove.")
+    remove_parser.add_argument(
+        "--template",
+        help="Override the tracked template path.",
+    )
+
     return parser.parse_args()
 
 
@@ -649,6 +664,69 @@ def logout_command() -> int:
     return logout_result.returncode
 
 
+def add_command(args: argparse.Namespace, repo_root: Path) -> int:
+    import re
+    if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', args.key):
+        print(f"Invalid key name: {args.key}. Use UPPER_SNAKE_CASE letters.", file=sys.stderr)
+        return 1
+
+    template_path = resolve_template_path(repo_root, args.template)
+    if not template_path.is_file():
+        print(f"Template not found: {template_path}", file=sys.stderr)
+        return 1
+
+    lines = template_path.read_text(encoding="utf-8").splitlines()
+    # Check for duplicate
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("#") or not stripped:
+            continue
+        if "=" in stripped and stripped.split("=", 1)[0].strip() == args.key:
+            print(f"Key already exists in template: {args.key}", file=sys.stderr)
+            return 1
+
+    # Insert after header comments, before first non-comment entry (or at end)
+    insert_at = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("#") or not stripped:
+            insert_at = i + 1
+        else:
+            break
+
+    lines.insert(insert_at, f"{args.key}={args.value}")
+    template_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Added {args.key}={args.value}")
+    print(f"Template: {template_path}")
+    return 0
+
+
+def remove_command(args: argparse.Namespace, repo_root: Path) -> int:
+    template_path = resolve_template_path(repo_root, args.template)
+    if not template_path.is_file():
+        print(f"Template not found: {template_path}", file=sys.stderr)
+        return 1
+
+    lines = template_path.read_text(encoding="utf-8").splitlines()
+    found = False
+    new_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if "=" in stripped and stripped.split("=", 1)[0].strip() == args.key:
+            found = True
+            continue
+        new_lines.append(line)
+
+    if not found:
+        print(f"Key not found in template: {args.key}", file=sys.stderr)
+        return 1
+
+    template_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    print(f"Removed {args.key}")
+    print(f"Template: {template_path}")
+    return 0
+
+
 def main() -> int:
     args = parse_args()
     repo_root = resolve_repo_root(args.repo_root)
@@ -668,6 +746,10 @@ def main() -> int:
             return status_command(args, repo_root)
         if args.command == "logout":
             return logout_command()
+        if args.command == "add":
+            return add_command(args, repo_root)
+        if args.command == "remove":
+            return remove_command(args, repo_root)
         raise ValueError(f"unsupported command: {args.command}")
     except (RuntimeError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
