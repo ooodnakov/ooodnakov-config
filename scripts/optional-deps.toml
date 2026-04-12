@@ -29,6 +29,59 @@ macos.manager = "brew"
 macos.package = "wget"
 
 [[deps]]
+key = "git"
+display = "git"
+description = "Git version control (Windows)"
+windows.manager = "winget"
+windows.winget_id = "Git.Git"
+windows.package = "git"
+
+[[deps]]
+key = "wezterm"
+display = "wezterm"
+description = "WezTerm terminal (Windows)"
+windows.manager = "winget"
+windows.winget_id = "wez.wezterm"
+windows.package = "wezterm"
+
+[[deps]]
+key = "oh-my-posh"
+display = "oh-my-posh"
+description = "Oh My Posh prompt (Windows)"
+windows.manager = "winget"
+windows.winget_id = "JanDeDobbeleer.OhMyPosh"
+windows.package = "oh-my-posh"
+
+[[deps]]
+key = "choco"
+display = "choco"
+description = "Chocolatey package manager (Windows)"
+windows.manager = "custom"
+windows.command = "installed via setup.ps1 if needed"
+
+[[deps]]
+key = "gsudo"
+display = "gsudo"
+description = "gsudo elevation helper (Windows)"
+windows.manager = "choco"
+windows.package = "gsudo"
+
+[[deps]]
+key = "rg"
+display = "rg"
+description = "ripgrep search tool (Windows)"
+windows.manager = "choco"
+windows.choco_id = "ripgrep"
+windows.package = "ripgrep"
+
+[[deps]]
+key = "fd"
+display = "fd"
+description = "fd find alternative (Windows)"
+windows.manager = "choco"
+windows.package = "fd"
+
+[[deps]]
 key = "zsh"
 display = "zsh"
 description = "default shell support"
