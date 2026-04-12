@@ -124,7 +124,7 @@ Compare pinned git refs to upstream HEAD and refresh lock artifacts.
         }
         "secrets" {
             @"
-Usage: oooconf secrets <sync|doctor> [options]
+Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout> [options]
 
 Render or validate local secret env files from the tracked template.
 Examples:
@@ -132,7 +132,11 @@ Examples:
   oooconf secrets unlock --shell pwsh | Invoke-Expression
   oooconf secrets sync
   oooconf secrets sync --dry-run
+  oooconf secrets list
+  oooconf secrets list --resolved
+  oooconf secrets status
   oooconf secrets doctor
+  oooconf secrets logout
 
 Environment overrides:
   OOODNAKOV_SECRETS_BACKEND

@@ -1,6 +1,6 @@
 .DS_Store
 Thumbs.db
-
+.nvimlog
 .local/
 tmp/
 
@@ -17,3 +17,10 @@ home/.config/zsh/.zcompdump*
 .zcompdump*
 
 .history
+
+#ai
+.codex
+.qwen
+
+
+*/__pycache__/*

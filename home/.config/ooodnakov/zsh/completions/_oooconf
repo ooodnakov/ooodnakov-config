@@ -92,7 +92,7 @@ case "$state" in
         secrets_command=
         for (( i = 1; i <= CURRENT; i++ )); do
           case "$words[i]" in
-            login|unlock|sync|doctor)
+            login|unlock|sync|doctor|list|status|logout)
               secrets_command="$words[i]"
               break
               ;;
@@ -104,7 +104,10 @@ case "$state" in
             'login:configure Bitwarden server and start login' \
             'unlock:print shell code for BW_SESSION after unlocking Bitwarden' \
             'sync:render local secret env files' \
-            'doctor:validate local secret env files and backend tooling'
+            'doctor:validate local secret env files and backend tooling' \
+            'list:list secrets from the tracked template' \
+            'status:show sync status of local secret env files' \
+            'logout:lock vault and revoke Bitwarden session'
         else
           case "$secrets_command" in
             sync)
@@ -116,6 +119,16 @@ case "$state" in
             doctor)
               _arguments $secrets_common_opts
               ;;
+            list)
+              _arguments \
+                '--template[override the tracked template path]:template:_files' \
+                '--resolved[resolve bw:// references (requires unlocked BW_SESSION)]' \
+                '--backend[secret backend to use]:backend:(bw)'
+              ;;
+            status)
+              _arguments \
+                '--template[override the tracked template path]:template:_files'
+              ;;
             login)
               _arguments '--server[Bitwarden or Vaultwarden server URL]:server: '
               ;;
@@ -124,12 +137,18 @@ case "$state" in
                 '--shell[shell syntax to emit]:shell:(sh zsh bash pwsh)' \
                 '--raw[print only the unlocked session token]'
               ;;
+            logout)
+              _message 'no additional arguments'
+              ;;
             *)
               _describe -t secrets-subcommands 'oooconf secrets command' \
                 'login:configure Bitwarden server and start login' \
                 'unlock:print shell code for BW_SESSION after unlocking Bitwarden' \
                 'sync:render local secret env files' \
-                'doctor:validate local secret env files and backend tooling'
+                'doctor:validate local secret env files and backend tooling' \
+                'list:list secrets from the tracked template' \
+                'status:show sync status of local secret env files' \
+                'logout:lock vault and revoke Bitwarden session'
               ;;
           esac
         fi

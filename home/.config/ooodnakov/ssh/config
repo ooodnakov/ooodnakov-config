@@ -6,7 +6,7 @@ Host sitealex
     HostName 45.12.138.163
     User alex
 
-Host orange
+Host orangehome
     HostName 192.168.1.201
     User rem
 
