@@ -226,6 +226,7 @@ fi
 
 if (( $+commands[rustup] )); then
   source <(rustup completions zsh)
+  source <(rustup completions zsh cargo)
 fi
 
 if (( $+commands[pnpm] )); then
