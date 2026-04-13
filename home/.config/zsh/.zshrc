@@ -222,6 +222,7 @@ fi
 # Enable completions for optional tools when installed.
 if (( $+commands[uv] )); then
   eval "$(uv generate-shell-completion zsh)"
+  compdef _uv uvx
 fi
 
 if (( $+commands[pnpm] )); then
