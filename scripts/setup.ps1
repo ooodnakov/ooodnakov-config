@@ -209,7 +209,7 @@ function Get-OptionalDependencySpecs {
         $all_specs = @(
             [pscustomobject]@{ Key = "wget"; DisplayName = "wget"; Description = "download helper"; Linux = @{ manager = "apt"; package = "wget" }; Macos = @{ manager = "brew"; package = "wget" }; Windows = @{ manager = "winget"; winget_id = "GNU.Wget" } }
             [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git version control"; Linux = @{ manager = "apt"; package = "git" }; Macos = @{ manager = "brew"; package = "git" }; Windows = @{ manager = "winget"; winget_id = "Git.Git" } }
-            [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = @{ manager = "custom" }; Macos = @{ manager = "brew"; package = "wezterm" }; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
+            [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = @{ manager = "apt" }; Macos = @{ manager = "brew"; package = "wezterm" }; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
             [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "jandedobbeleer/oh-my-posh/oh-my-posh" }; Windows = @{ manager = "winget"; winget_id = "JanDeDobbeleer.OhMyPosh" } }
             [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo elevation helper"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "gsudo" } }
