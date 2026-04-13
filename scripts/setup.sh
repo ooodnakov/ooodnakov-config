@@ -325,8 +325,11 @@ optional_dependency_present() {
   local key="$1"
 
   case "$key" in
-    wget|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|node|npm|pnpm|autoconf|fc-cache|cargo|k|python3)
+    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|oh-my-posh|wezterm|node|npm|pnpm|autoconf|fc-cache|cargo|k|python3)
       command -v "$key" >/dev/null 2>&1
+      ;;
+    fd)
+      command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1
       ;;
     uv)
       command -v uv >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/uv" ]
@@ -1586,6 +1589,7 @@ install_optional_dependencies() {
 
   echo "Dependency check:"
   install_optional_dependency_if_selected wget maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
+  install_optional_dependency_if_selected git maybe_install_dependency "$manager" git git "Git version control"
   install_optional_dependency_if_selected zsh maybe_install_dependency "$manager" zsh zsh "default shell support"
   install_optional_dependency_if_selected direnv maybe_install_dependency "$manager" direnv direnv "direnv shell integration"
   install_optional_dependency_if_selected fzf maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
@@ -1593,9 +1597,13 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected delta maybe_install_dependency "$manager" delta git-delta "Git diff pager with syntax highlighting"
   install_optional_dependency_if_selected glow maybe_install_dependency "$manager" glow glow "terminal Markdown reader"
   install_optional_dependency_if_selected gum maybe_install_gum "$manager"
+  install_optional_dependency_if_selected rg maybe_install_dependency "$manager" rg ripgrep "ripgrep search tool"
+  install_optional_dependency_if_selected fd maybe_install_dependency "$manager" fd fd-find "fd find alternative"
   install_optional_dependency_if_selected zoxide maybe_install_dependency "$manager" zoxide zoxide "smart directory jumping with z/zi"
   install_optional_dependency_if_selected q maybe_install_q "$manager"
   install_optional_dependency_if_selected eza maybe_install_eza "$manager"
+  install_optional_dependency_if_selected oh-my-posh maybe_note_dependency oh-my-posh "Oh My Posh prompt (manual install recommended for Linux/macOS)"
+  install_optional_dependency_if_selected wezterm maybe_note_dependency wezterm "WezTerm terminal (manual install recommended for Linux)"
   install_optional_dependency_if_selected uv maybe_install_uv
   install_optional_dependency_if_selected bw maybe_install_bw
   install_optional_dependency_if_selected node maybe_install_dependency "$manager" node nodejs "Node.js runtime"

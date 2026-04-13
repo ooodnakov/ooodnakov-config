@@ -318,8 +318,10 @@ function Test-OptionalDependencyPresent {
     )
 
     switch ($Key) {
+        "wget" { return [bool](Get-Command wget -ErrorAction SilentlyContinue) }
         "git" { return [bool](Get-Command git -ErrorAction SilentlyContinue) }
         "wezterm" { return [bool](Get-Command wezterm -ErrorAction SilentlyContinue) }
+        "zsh" { return [bool](Get-Command zsh -ErrorAction SilentlyContinue) }
         "nvim" { return [bool](Get-Command nvim -ErrorAction SilentlyContinue) }
         "oh-my-posh" { return [bool](Get-Command oh-my-posh -ErrorAction SilentlyContinue) }
         "node" { return [bool](Get-Command node -ErrorAction SilentlyContinue) }
@@ -333,12 +335,18 @@ function Test-OptionalDependencyPresent {
         "delta" { return [bool](Get-Command delta -ErrorAction SilentlyContinue) }
         "glow" { return [bool](Get-Command glow -ErrorAction SilentlyContinue) }
         "gum" { return [bool](Get-Command gum -ErrorAction SilentlyContinue) }
+        "zoxide" { return [bool](Get-Command zoxide -ErrorAction SilentlyContinue) }
         "q" { return [bool](Get-Command q -ErrorAction SilentlyContinue) }
         "eza" { return [bool](Get-Command eza -ErrorAction SilentlyContinue) }
         "uv" { return [bool](Get-Command uv -ErrorAction SilentlyContinue) }
         "python3" { return [bool](Get-Command python -ErrorAction SilentlyContinue) -or [bool](Get-Command python3 -ErrorAction SilentlyContinue) }
         "bw" { return [bool](Get-Command bw -ErrorAction SilentlyContinue) }
         "pnpm" { return [bool](Get-Command pnpm -ErrorAction SilentlyContinue) }
+        "autoconf" { return [bool](Get-Command autoconf -ErrorAction SilentlyContinue) }
+        "fc-cache" { return [bool](Get-Command fc-cache -ErrorAction SilentlyContinue) }
+        "cargo" { return [bool](Get-Command cargo -ErrorAction SilentlyContinue) }
+        "dua" { return [bool](Get-Command dua -ErrorAction SilentlyContinue) }
+        "k" { return [bool](Get-Command k -ErrorAction SilentlyContinue) }
         default { return $false }
     }
 }
@@ -1018,15 +1026,17 @@ function Install-CargoIfMissing {
 function Install-OptionalDependencies {
     Write-Output "Dependency check:"
 
+    $null = Invoke-SelectedOptionalDependency -Key "wget" -Action { Install-PackageIfMissing -CommandNames @("wget") -WingetId "GNU.Wget" -Description "wget" -SummaryName "wget" }
     $null = Invoke-SelectedOptionalDependency -Key "git" -Action { Install-PackageIfMissing -CommandNames @("git") -WingetId "Git.Git" -Description "Git" -SummaryName "git" }
     $null = Invoke-SelectedOptionalDependency -Key "wezterm" -Action { Install-PackageIfMissing -CommandNames @("wezterm") -WingetId "wez.wezterm" -Description "WezTerm" -SummaryName "wezterm" }
+    $null = Invoke-SelectedOptionalDependency -Key "zsh" -Action { Write-Warning "zsh is not natively supported on Windows; use WSL or a custom build." }
     $null = Invoke-SelectedOptionalDependency -Key "nvim" -Action { Install-PackageIfMissing -CommandNames @("nvim") -WingetId "Neovim.Neovim" -Description "Neovim" -SummaryName "nvim" }
     $null = Invoke-SelectedOptionalDependency -Key "oh-my-posh" -Action { Install-PackageIfMissing -CommandNames @("oh-my-posh") -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh" -SummaryName "oh-my-posh" }
     $null = Invoke-SelectedOptionalDependency -Key "node" -Action { Install-PackageIfMissing -CommandNames @("node") -WingetId "OpenJS.NodeJS.LTS" -Description "Node.js LTS" -SummaryName "node" }
 
     $needsChocolatey = Test-OptionalDependencySelected -Key "choco"
     if (-not $needsChocolatey) {
-        foreach ($key in @("gsudo", "rg", "fd", "direnv", "fzf", "bat", "delta", "glow", "q", "eza", "uv", "python3")) {
+        foreach ($key in @("gsudo", "rg", "fd", "direnv", "fzf", "bat", "delta", "glow", "q", "eza", "uv", "python3", "autoconf")) {
             if (Test-OptionalDependencySelected -Key $key) {
                 $needsChocolatey = $true
                 break
@@ -1046,6 +1056,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "delta" -Action { Install-PackageIfMissing -CommandNames @("delta") -ChocoId "git-delta" -Description "delta" -SummaryName "delta" }
     $null = Invoke-SelectedOptionalDependency -Key "glow" -Action { Install-PackageIfMissing -CommandNames @("glow") -ChocoId "glow" -Description "glow" -SummaryName "glow" }
     $null = Invoke-SelectedOptionalDependency -Key "gum" -Action { Install-PackageIfMissing -CommandNames @("gum") -WingetId "charmbracelet.gum" -Description "gum" -SummaryName "gum" }
+    $null = Invoke-SelectedOptionalDependency -Key "zoxide" -Action { Install-PackageIfMissing -CommandNames @("zoxide") -ChocoId "zoxide" -Description "zoxide" -SummaryName "zoxide" }
     $null = Invoke-SelectedOptionalDependency -Key "q" -Action { Install-PackageIfMissing -CommandNames @("q") -ChocoId "q" -Description "q" -SummaryName "q" }
     $null = Invoke-SelectedOptionalDependency -Key "eza" -Action { Install-PackageIfMissing -CommandNames @("eza") -ChocoId "eza" -Description "eza" -SummaryName "eza" }
     $null = Invoke-SelectedOptionalDependency -Key "uv" -Action { Install-PackageIfMissing -CommandNames @("uv") -ChocoId "uv" -Description "uv" -SummaryName "uv" }
@@ -1053,6 +1064,10 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "bw" -Action { Install-BitwardenCliIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "pnpm" -Action { Install-PnpmIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "cargo" -Action { Install-CargoIfMissing }
+    $null = Invoke-SelectedOptionalDependency -Key "autoconf" -Action { Install-PackageIfMissing -CommandNames @("autoconf") -ChocoId "autoconf" -Description "autoconf" -SummaryName "autoconf" }
+    $null = Invoke-SelectedOptionalDependency -Key "fc-cache" -Action { Write-Warning "fc-cache is not applicable on Windows." }
+    $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Write-Warning "dua installation via cargo not yet implemented in setup.ps1" }
+    $null = Invoke-SelectedOptionalDependency -Key "k" -Action { Write-Warning "k is not available on Windows." }
 }
 
 function Write-Summary {
