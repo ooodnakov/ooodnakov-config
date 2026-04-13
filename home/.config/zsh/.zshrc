@@ -222,7 +222,17 @@ fi
 # Enable completions for optional tools when installed.
 if (( $+commands[uv] )); then
   eval "$(uv generate-shell-completion zsh)"
-  compdef '_uv tool run' uvx
+  # uvx is equivalent to 'uv tool run'. We wrap _uv to simulate this.
+  _uvx() {
+    # Set the subcommand to 'run' and adjust words/CURRENT so _uv handles it
+    # as the 'run' subcommand.
+    local -a uv_words
+    uv_words=(uv tool run "${words[@]:1}")
+    local CURRENT=$((CURRENT + 2))
+    words=("$uv_words[@]")
+    _uv
+  }
+  compdef _uvx uvx
 fi
 
 if (( $+commands[pnpm] )); then
