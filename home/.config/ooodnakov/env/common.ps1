@@ -54,3 +54,9 @@ $OooconfCompletions = Join-Path $env:OOODNAKOV_CONFIG_HOME "completions/oooconf-
 if (Test-Path $OooconfCompletions) {
     . $OooconfCompletions
 }
+
+# Load pnpm completions
+$PnpmCompletions = Join-Path $env:OOODNAKOV_CONFIG_HOME "completions/pnpm-completions.ps1"
+if (Test-Path $PnpmCompletions) {
+    . $PnpmCompletions
+}
