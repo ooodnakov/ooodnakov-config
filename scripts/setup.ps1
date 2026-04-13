@@ -207,14 +207,14 @@ function Get-OptionalDependencySpecs {
     if (-not $json) {
         # Fallback: hardcoded specs when Python is unavailable
         $all_specs = @(
-            [pscustomobject]@{ Key = "wget"; DisplayName = "wget"; Description = "download helper"; Linux = @{ manager = "apt"; package = "wget" }; Macos = @{ manager = "brew"; package = "wget" }; Windows = $null }
-            [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git version control"; Linux = $null; Macos = $null; Windows = @{ manager = "winget"; winget_id = "Git.Git" } }
-            [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = $null; Macos = $null; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
-            [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt"; Linux = $null; Macos = $null; Windows = @{ manager = "winget"; winget_id = "JanDeDobbeleer.OhMyPosh" } }
+            [pscustomobject]@{ Key = "wget"; DisplayName = "wget"; Description = "download helper"; Linux = @{ manager = "apt"; package = "wget" }; Macos = @{ manager = "brew"; package = "wget" }; Windows = @{ manager = "winget"; winget_id = "GNU.Wget" } }
+            [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git version control"; Linux = @{ manager = "apt"; package = "git" }; Macos = @{ manager = "brew"; package = "git" }; Windows = @{ manager = "winget"; winget_id = "Git.Git" } }
+            [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = @{ manager = "custom" }; Macos = @{ manager = "brew"; package = "wezterm" }; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
+            [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "jandedobbeleer/oh-my-posh/oh-my-posh" }; Windows = @{ manager = "winget"; winget_id = "JanDeDobbeleer.OhMyPosh" } }
             [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo elevation helper"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "gsudo" } }
-            [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep search tool"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "ripgrep" } }
-            [pscustomobject]@{ Key = "fd"; DisplayName = "fd"; Description = "fd find alternative"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "fd" } }
+            [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep search tool"; Linux = @{ manager = "apt"; package = "ripgrep" }; Macos = @{ manager = "brew"; package = "ripgrep" }; Windows = @{ manager = "choco"; package = "ripgrep" } }
+            [pscustomobject]@{ Key = "fd"; DisplayName = "fd"; Description = "fd find alternative"; Linux = @{ manager = "apt"; package = "fd-find" }; Macos = @{ manager = "brew"; package = "fd" }; Windows = @{ manager = "choco"; package = "fd" } }
             [pscustomobject]@{ Key = "zsh"; DisplayName = "zsh"; Description = "default shell support"; Linux = @{ manager = "apt"; package = "zsh" }; Macos = @{ manager = "brew"; package = "zsh" }; Windows = $null }
             [pscustomobject]@{ Key = "direnv"; DisplayName = "direnv"; Description = "direnv shell integration"; Linux = @{ manager = "apt"; package = "direnv" }; Macos = @{ manager = "brew"; package = "direnv" }; Windows = @{ manager = "choco"; package = "direnv" } }
             [pscustomobject]@{ Key = "fzf"; DisplayName = "fzf"; Description = "fzf shell integration"; Linux = @{ manager = "apt"; package = "fzf" }; Macos = @{ manager = "brew"; package = "fzf" }; Windows = @{ manager = "choco"; package = "fzf" } }
@@ -230,9 +230,9 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "node"; DisplayName = "node"; Description = "Node.js LTS"; Linux = @{ manager = "apt"; package = "nodejs" }; Macos = @{ manager = "brew"; package = "node" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
             [pscustomobject]@{ Key = "npm"; DisplayName = "npm"; Description = "Node package manager"; Linux = @{ manager = "apt"; package = "npm" }; Macos = @{ manager = "brew"; package = "npm" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
             [pscustomobject]@{ Key = "pnpm"; DisplayName = "pnpm"; Description = "pnpm package manager"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "autoconf"; DisplayName = "autoconf"; Description = "build ezsh native components"; Linux = @{ manager = "apt"; package = "autoconf" }; Macos = @{ manager = "brew"; package = "autoconf" }; Windows = $null }
-            [pscustomobject]@{ Key = "fc-cache"; DisplayName = "fc-cache"; Description = "refresh font caches"; Linux = @{ manager = "apt"; package = "fontconfig" }; Macos = @{ manager = "custom" }; Windows = $null }
-            [pscustomobject]@{ Key = "cargo"; DisplayName = "cargo"; Description = "Rust package manager"; Linux = @{ manager = "apt"; package = "cargo" }; Macos = @{ manager = "brew"; package = "cargo" }; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "autoconf"; DisplayName = "autoconf"; Description = "build ezsh native components"; Linux = @{ manager = "apt"; package = "autoconf" }; Macos = @{ manager = "brew"; package = "autoconf" }; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "fc-cache"; DisplayName = "fc-cache"; Description = "refresh font caches"; Linux = @{ manager = "apt"; package = "fontconfig" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "cargo"; DisplayName = "cargo"; Description = "Rust package manager"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "dua"; DisplayName = "dua"; Description = "disk usage analysis"; Linux = @{ manager = "cargo"; package = "dua-cli" }; Macos = @{ manager = "brew"; package = "dua-cli" }; Windows = @{ manager = "cargo"; package = "dua-cli" } }
             [pscustomobject]@{ Key = "nvim"; DisplayName = "nvim"; Description = "Neovim"; Linux = @{ manager = "apt"; package = "neovim" }; Macos = @{ manager = "brew"; package = "neovim" }; Windows = @{ manager = "winget"; winget_id = "Neovim.Neovim" } }
             [pscustomobject]@{ Key = "k"; DisplayName = "k"; Description = "standalone k command"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
@@ -270,7 +270,7 @@ function Get-OptionalDependencySpecs {
 }
 
 function Get-AllOptionalDependencySpecs {
-    """Return all specs including platform-inapplicable ones (for validation)."""
+    # Return all specs including platform-inapplicable ones (for validation).
     if ($script:OptionalDependencySpecsCache) {
         # Rebuild from JSON without platform filtering
         $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
@@ -1193,14 +1193,21 @@ try {
     $allPresent = $false
 
     if ($DependencyKeys.Count -gt 0) {
-        $validKeys = @((Get-OptionalDependencySpecs).Key)
+        # Validate against ALL specs (including platform-inapplicable ones)
+        $allKeys = @((Get-AllOptionalDependencySpecs).Key)
         foreach ($key in $DependencyKeys) {
-            if ($validKeys -notcontains $key) {
-                $suggestion = Get-ClosestSuggestion -InputText $key -Candidates $validKeys
+            if ($allKeys -notcontains $key) {
+                $suggestion = Get-ClosestSuggestion -InputText $key -Candidates $allKeys
                 if ($suggestion) {
                     throw "Unknown dependency key: $key`nDid you mean: $suggestion"
                 }
                 throw "Unknown dependency key: $key"
+            }
+            # Warn if the dep is not applicable to the current platform
+            $spec = Get-AllOptionalDependencySpecs | Where-Object { $_.Key -eq $key }
+            if (-not (Test-OptionalDependencyApplicable -Spec $spec)) {
+                $platform = Detect-Platform
+                Write-Information "Note: $key is not applicable on $platform; skipping." -InformationAction Continue
             }
         }
         $script:SelectedOptionalKeys = @($DependencyKeys)
@@ -1218,8 +1225,10 @@ try {
         if ($selected.Count -eq 1 -and $selected[0] -eq "__all_present__") {
             $allPresent = $true
         }
+        # User cancelled (Esc in gum picker, or empty input in text prompt) — exit cleanly
         if (-not $allPresent -and $selected.Count -eq 0) {
-            throw "No optional dependencies selected."
+            Write-Output "No optional dependencies selected."
+            return
         }
         if (-not $allPresent) {
             $script:SelectedOptionalKeys = $selected

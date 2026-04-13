@@ -504,7 +504,8 @@ choose_optional_dependencies_without_gum() {
   echo >&2
   printf "Enter space/comma-separated keys to install (or empty to skip): " >&2
   if ! read -r selection < /dev/tty; then
-    return 1
+    # User cancelled (Ctrl+C) — treat as "user declined"
+    return 3
   fi
 
   selection="$(echo "$selection" | tr ',' ' ')"
@@ -512,8 +513,8 @@ choose_optional_dependencies_without_gum() {
   read -ra wanted_keys <<< "$selection"
 
   if [ "${#wanted_keys[@]}" -eq 0 ]; then
-    echo "No optional dependencies selected." >&2
-    return 2
+    # User entered nothing — treat as "user declined"
+    return 3
   fi
 
   # Validate keys
@@ -548,10 +549,23 @@ choose_optional_dependencies_with_gum() {
     return 2
   fi
 
-  selection="$(
-    printf '%s\n' "${options[@]}" |
-      gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue."
-  )" || return 1
+  # Build gum args as positional arguments (not piped stdin) so gum can use /dev/tty for interaction.
+  local -a gum_args=()
+  gum_args+=(--no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue.")
+  local opt
+  for opt in "${options[@]}"; do
+    gum_args+=("$opt")
+  done
+
+  selection="$(gum choose "${gum_args[@]}" < /dev/tty 2>/dev/tty)" || {
+    # Reset terminal state after gum exits (prevents hang on subsequent invocations)
+    stty sane < /dev/tty 2>/dev/null || true
+    # gum returned non-zero: 1 = user cancelled (Esc), 130 = interrupted
+    # Treat as "user declined" with no selections.
+    return 3
+  }
+  # Reset terminal state after gum exits
+  stty sane < /dev/tty 2>/dev/null || true
 
   if [ -n "$selection" ]; then
     while IFS=$'\t' read -r selected_key _; do
@@ -560,7 +574,8 @@ choose_optional_dependencies_with_gum() {
   fi
 
   if [ "${#selected_keys[@]}" -eq 0 ]; then
-    return 1
+    # User submitted the picker but selected nothing — treat as "user declined"
+    return 3
   fi
 
   local IFS=,
@@ -1618,9 +1633,8 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       if ! optional_dependency_applicable "$1" 2>/dev/null; then
-        local _platform
-        _platform="$(detect_platform)"
-        echo "Note: $1 is not applicable on $_platform; skipping." >&2
+        _deps_platform="$(detect_platform)"
+        echo "Note: $1 is not applicable on $_deps_platform; skipping." >&2
       fi
       cli_selected_optional_keys+=("$1")
       ;;
@@ -1647,6 +1661,10 @@ case "$COMMAND" in
             echo "All optional dependencies are already present."
             exit 0
             ;;
+          3)
+            # User cancelled the gum picker (Esc) — nothing to install.
+            exit 0
+            ;;
           1)
             # gum not available, fall back to text prompt
             if selected_optional_key_csv="$(choose_optional_dependencies_without_gum)"; then
@@ -1656,6 +1674,10 @@ case "$COMMAND" in
               case $_deps_fallback_rc in
                 2)
                   echo "All optional dependencies are already present."
+                  exit 0
+                  ;;
+                3)
+                  # User cancelled the text prompt — nothing to install.
                   exit 0
                   ;;
                 *) echo "No optional dependencies selected." >&2; exit 1 ;;
