@@ -52,8 +52,20 @@ if (Get-Command bw -ErrorAction SilentlyContinue) {
     (& bw completion --shell powershell) | Out-String | Invoke-Expression
 }
 
+if (Get-Command glow -ErrorAction SilentlyContinue) {
+    (& glow completion powershell) | Out-String | Invoke-Expression
+}
+
+if (Get-Command fd -ErrorAction SilentlyContinue) {
+    (& fd --gen-completions powershell) | Out-String | Invoke-Expression
+}
+
 if (Get-Command direnv -ErrorAction SilentlyContinue) {
     (& direnv hook pwsh) | Out-String | Invoke-Expression
+}
+
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+    (& zoxide init pwsh) | Out-String | Invoke-Expression
 }
 
 $markerInit = Join-Path $env:OOODNAKOV_SHARE_HOME "marker/marker.ps1"

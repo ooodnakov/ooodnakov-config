@@ -950,6 +950,70 @@ maybe_install_eza() {
   esac
 }
 
+wezterm_apt_repo_configured() {
+  [ -f /usr/share/keyrings/wezterm-fury.gpg ] && [ -f /etc/apt/sources.list.d/wezterm.list ]
+}
+
+setup_wezterm_apt_repo() {
+  if wezterm_apt_repo_configured; then
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    if prompt_yes_no "WezTerm install needs curl. Install curl first?"; then
+      install_packages apt curl
+    else
+      return 1
+    fi
+  fi
+
+  run_with_spinner "Installing WezTerm APT signing key" \
+    sh -c 'curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg' || return 1
+  run_with_spinner "Adding WezTerm APT source" \
+    sh -c 'echo "deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *" | sudo tee /etc/apt/sources.list.d/wezterm.list >/dev/null' || return 1
+  APT_UPDATED=0
+  return 0
+}
+
+maybe_install_wezterm() {
+  local manager="$1"
+
+  if command -v wezterm >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("wezterm: present")
+    return 0
+  fi
+
+  case "$manager" in
+    apt)
+      if prompt_yes_no "Install WezTerm terminal via official APT repo?"; then
+        setup_wezterm_apt_repo && install_packages apt wezterm
+        if command -v wezterm >/dev/null 2>&1; then
+          DEPENDENCY_SUMMARY+=("wezterm: installed")
+        else
+          DEPENDENCY_SUMMARY+=("wezterm: install attempted")
+        fi
+      else
+        DEPENDENCY_SUMMARY+=("wezterm: skipped")
+      fi
+      ;;
+    brew)
+      if prompt_yes_no "Install WezTerm terminal via brew?"; then
+        install_packages brew wezterm
+        if command -v wezterm >/dev/null 2>&1; then
+          DEPENDENCY_SUMMARY+=("wezterm: installed")
+        else
+          DEPENDENCY_SUMMARY+=("wezterm: install attempted")
+        fi
+      else
+        DEPENDENCY_SUMMARY+=("wezterm: skipped")
+      fi
+      ;;
+    *)
+      maybe_note_dependency wezterm "WezTerm terminal (manual install recommended)"
+      ;;
+  esac
+}
+
 q_apt_repo_configured() {
   [ -f /etc/apt/keyrings/natesales.gpg ] || return 1
   [ -f /etc/apt/sources.list.d/natesales.list ] || return 1
@@ -1376,6 +1440,22 @@ generate_autogen_completions() {
   if command -v bw >/dev/null 2>&1; then
     run_with_spinner "Generating bw completions" sh -c "bw completion --shell zsh > '$target_dir/_bw'"
   fi
+
+  if command -v glow >/dev/null 2>&1; then
+    run_with_spinner "Generating glow completions" sh -c "glow completion zsh > '$target_dir/_glow'"
+  fi
+
+  if command -v wezterm >/dev/null 2>&1; then
+    run_with_spinner "Generating wezterm completions" sh -c "wezterm shell-completion --shell zsh > '$target_dir/_wezterm'"
+  fi
+
+  if command -v fd >/dev/null 2>&1; then
+    run_with_spinner "Generating fd completions" sh -c "fd --gen-completions zsh > '$target_dir/_fd'"
+  fi
+
+  if command -v bat >/dev/null 2>&1; then
+    run_with_spinner "Generating bat completions" sh -c "bat --completion zsh > '$target_dir/_bat'"
+  fi
 }
 
 install_managed_tools() {
@@ -1603,7 +1683,7 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected q maybe_install_q "$manager"
   install_optional_dependency_if_selected eza maybe_install_eza "$manager"
   install_optional_dependency_if_selected oh-my-posh maybe_note_dependency oh-my-posh "Oh My Posh prompt (manual install recommended for Linux/macOS)"
-  install_optional_dependency_if_selected wezterm maybe_note_dependency wezterm "WezTerm terminal (manual install recommended for Linux)"
+  install_optional_dependency_if_selected wezterm maybe_install_wezterm "$manager"
   install_optional_dependency_if_selected uv maybe_install_uv
   install_optional_dependency_if_selected bw maybe_install_bw
   install_optional_dependency_if_selected node maybe_install_dependency "$manager" node nodejs "Node.js runtime"
