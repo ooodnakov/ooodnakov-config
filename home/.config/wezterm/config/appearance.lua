@@ -1,6 +1,12 @@
 local gpu_adapters = require('utils.gpu-adapter')
 local backdrops = require('utils.backdrops')
 local colors = require('colors.custom')
+local platform = require('utils.platform')
+
+local initial_background = nil
+if platform.is_win then
+   initial_background = backdrops:initial_options(false)
+end
 
 return {
    max_fps = 120,
@@ -21,8 +27,7 @@ return {
    -- color scheme
    colors = colors,
 
-   -- background: pass in `true` if you want wezterm to start with focus mode on (no bg images)
-   background = backdrops:initial_options(false),
+   background = initial_background,
 
    -- scrollbar
    enable_scroll_bar = true,
@@ -52,6 +57,7 @@ return {
    window_close_confirmation = 'NeverPrompt',
    window_frame = {
       active_titlebar_bg = '#090909',
+      inactive_titlebar_bg = '#090909',
       -- font = fonts.font,
       -- font_size = fonts.font_size,
    },
@@ -61,6 +67,7 @@ return {
    -- },
    window_decorations = "INTEGRATED_BUTTONS|RESIZE",
    window_background_opacity = 0.8,
+   macos_window_background_blur = 30,
    win32_system_backdrop = 'Acrylic',  
    inactive_pane_hsb = {
       saturation = 1,

@@ -23,6 +23,11 @@ if (Test-Path $LocalEnv) {
     . $LocalEnv
 }
 
+if (Get-Module -ListAvailable -Name PSReadLine) {
+    Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
+    Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
+}
+
 Set-Alias ll Get-ChildItem
 
 function Test-Command {
