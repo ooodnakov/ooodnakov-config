@@ -21,6 +21,7 @@ PACKAGE_MANAGER=""
 APT_UPDATED=0
 LOG_FILE=""
 LOG_LATEST=""
+KNOWN_SETUP_COMMANDS=(install update doctor deps)
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
@@ -150,6 +151,97 @@ optional_dependency_exists() {
   done < <(optional_dependency_catalog)
 
   return 1
+}
+
+optional_dependency_keys() {
+  local key label description
+
+  while IFS='|' read -r key label description; do
+    printf '%s\n' "$key"
+  done < <(optional_dependency_catalog)
+}
+
+edit_distance() {
+  local left="$1"
+  local right="$2"
+
+  awk -v left="$left" -v right="$right" '
+    BEGIN {
+      left_len = length(left)
+      right_len = length(right)
+
+      for (i = 0; i <= left_len; i++) {
+        dist[i, 0] = i
+      }
+      for (j = 0; j <= right_len; j++) {
+        dist[0, j] = j
+      }
+
+      for (i = 1; i <= left_len; i++) {
+        left_char = substr(left, i, 1)
+        for (j = 1; j <= right_len; j++) {
+          right_char = substr(right, j, 1)
+          cost = (left_char == right_char) ? 0 : 1
+          deletion = dist[i - 1, j] + 1
+          insertion = dist[i, j - 1] + 1
+          substitution = dist[i - 1, j - 1] + cost
+
+          best = deletion
+          if (insertion < best) {
+            best = insertion
+          }
+          if (substitution < best) {
+            best = substitution
+          }
+          dist[i, j] = best
+        }
+      }
+
+      print dist[left_len, right_len]
+    }
+  '
+}
+
+suggest_from_candidates() {
+  local input="$1"
+  shift
+
+  local best_candidate=""
+  local best_distance=999
+  local candidate distance threshold
+
+  for candidate in "$@"; do
+    distance="$(edit_distance "$input" "$candidate")"
+    if [ "$distance" -lt "$best_distance" ]; then
+      best_distance="$distance"
+      best_candidate="$candidate"
+    fi
+  done
+
+  threshold=3
+  if [ "${#input}" -le 4 ] && [ "$threshold" -gt 2 ]; then
+    threshold=2
+  fi
+
+  if [ "$best_distance" -le "$threshold" ]; then
+    printf '%s\n' "$best_candidate"
+  fi
+}
+
+suggest_setup_command() {
+  suggest_from_candidates "$1" "${KNOWN_SETUP_COMMANDS[@]}"
+}
+
+suggest_dependency_key() {
+  local input="$1"
+  local keys=()
+  local key
+
+  while IFS= read -r key; do
+    [ -n "$key" ] && keys+=("$key")
+  done < <(optional_dependency_keys)
+
+  suggest_from_candidates "$input" "${keys[@]}"
 }
 
 optional_dependency_label() {
@@ -1122,16 +1214,42 @@ normalize_tree_permissions() {
   find "$target" -type f -exec chmod u=rw,go=r {} + || return 1
 }
 
+restore_git_executable_bits() {
+  local repo_root="$1"
+  local relative_path
+
+  [ -d "$repo_root/.git" ] || return 0
+
+  while IFS= read -r relative_path; do
+    [ -n "$relative_path" ] || continue
+    run_cmd chmod u=rwx,go=rx "$repo_root/$relative_path" || return 1
+  done < <(
+    git -C "$repo_root" ls-files --stage |
+      awk '$1 == "100755" { print $4 }'
+  )
+}
+
 ensure_oh_my_zsh_permissions() {
   local omz_root="$STATE_HOME/oh-my-zsh"
+  local git_dir
+  local repo_root
 
-  if normalize_tree_permissions "$omz_root"; then
-    TOOL_SUMMARY+=("oh-my-zsh permissions: normalized")
-  else
+  if ! normalize_tree_permissions "$omz_root"; then
     TOOL_SUMMARY+=("oh-my-zsh permissions: failed")
     record_failure "Normalizing oh-my-zsh permissions"
     return 1
   fi
+
+  while IFS= read -r git_dir; do
+    repo_root="${git_dir%/.git}"
+    restore_git_executable_bits "$repo_root" || {
+      TOOL_SUMMARY+=("oh-my-zsh permissions: failed")
+      record_failure "Restoring executable bits in $repo_root"
+      return 1
+    }
+  done < <(find "$omz_root" -type d -name .git -prune)
+
+  TOOL_SUMMARY+=("oh-my-zsh permissions: normalized")
 }
 
 ensure_ssh_include() {
@@ -1393,6 +1511,10 @@ while [ "$#" -gt 0 ]; do
     *)
       if ! optional_dependency_exists "$1"; then
         echo "unknown dependency key: $1" >&2
+        suggestion="$(suggest_dependency_key "$1")"
+        if [ -n "$suggestion" ]; then
+          echo "Did you mean: $suggestion" >&2
+        fi
         usage >&2
         exit 1
       fi
@@ -1439,7 +1561,15 @@ case "$COMMAND" in
     fi
     INSTALL_OPTIONAL=always
     ;;
-  *) usage >&2; exit 1 ;;
+  *)
+    echo "Unknown command: $COMMAND" >&2
+    suggestion="$(suggest_setup_command "$COMMAND")"
+    if [ -n "$suggestion" ]; then
+      echo "Did you mean: $suggestion" >&2
+    fi
+    usage >&2
+    exit 1
+    ;;
 esac
 
 initialize_logging

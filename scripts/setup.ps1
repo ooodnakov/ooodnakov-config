@@ -35,6 +35,66 @@ $script:Failures = [System.Collections.Generic.List[string]]::new()
 $script:LogFile = $null
 $script:LatestLogFile = $null
 $script:TranscriptStarted = $false
+$ValidSetupCommands = @("install", "update", "doctor", "deps")
+
+function Get-EditDistance {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Left,
+        [Parameter(Mandatory = $true)]
+        [string]$Right
+    )
+
+    $rows = $Left.Length + 1
+    $cols = $Right.Length + 1
+    $dist = New-Object 'int[,]' $rows, $cols
+
+    for ($i = 0; $i -lt $rows; $i++) {
+        $dist[$i, 0] = $i
+    }
+    for ($j = 0; $j -lt $cols; $j++) {
+        $dist[0, $j] = $j
+    }
+
+    for ($i = 1; $i -lt $rows; $i++) {
+        for ($j = 1; $j -lt $cols; $j++) {
+            $cost = if ($Left[$i - 1] -ceq $Right[$j - 1]) { 0 } else { 1 }
+            $deletion = $dist[$i - 1, $j] + 1
+            $insertion = $dist[$i, $j - 1] + 1
+            $substitution = $dist[$i - 1, $j - 1] + $cost
+            $dist[$i, $j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
+        }
+    }
+
+    return $dist[$rows - 1, $cols - 1]
+}
+
+function Get-ClosestSuggestion {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InputText,
+        [Parameter(Mandatory = $true)]
+        [string[]]$Candidates
+    )
+
+    $bestCandidate = $null
+    $bestDistance = [int]::MaxValue
+
+    foreach ($candidate in $Candidates) {
+        $distance = Get-EditDistance -Left $InputText -Right $candidate
+        if ($distance -lt $bestDistance) {
+            $bestDistance = $distance
+            $bestCandidate = $candidate
+        }
+    }
+
+    $threshold = if ($InputText.Length -le 4) { 2 } else { 3 }
+    if ($bestDistance -le $threshold) {
+        return $bestCandidate
+    }
+
+    return $null
+}
 
 function Show-SetupHelp {
     @"
@@ -66,9 +126,14 @@ if (-not $Command) {
     $Command = "install"
 }
 
-$validCommands = @("install", "update", "doctor", "deps")
+$validCommands = $ValidSetupCommands
 if ($validCommands -notcontains $Command) {
-    Write-Error "Unknown command: $Command"
+    $suggestion = Get-ClosestSuggestion -InputText $Command -Candidates $validCommands
+    if ($suggestion) {
+        Write-Error "Unknown command: $Command`nDid you mean: $suggestion"
+    } else {
+        Write-Error "Unknown command: $Command"
+    }
     Show-SetupHelp
     exit 1
 }
@@ -1028,6 +1093,10 @@ try {
         $validKeys = @((Get-OptionalDependencySpecs).Key)
         foreach ($key in $DependencyKeys) {
             if ($validKeys -notcontains $key) {
+                $suggestion = Get-ClosestSuggestion -InputText $key -Candidates $validKeys
+                if ($suggestion) {
+                    throw "Unknown dependency key: $key`nDid you mean: $suggestion"
+                }
                 throw "Unknown dependency key: $key"
             }
         }

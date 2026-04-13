@@ -24,3 +24,5 @@ home/.config/zsh/.zcompdump*
 
 
 */__pycache__/*
+
+**/bw-session

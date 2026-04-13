@@ -14,11 +14,19 @@ alias myip="wget -qO- https://wtfismyip.com/text"
 
 # Git aliases
 alias gs="git status"
-alias gd="git diff"
 alias gc="git commit -v"
 alias gp="git push"
 alias gl="git pull"
-alias gco="git checkout"
+
+case "${OOODNAKOV_FORGIT_ALIAS_MODE:-plain}" in
+  forgit)
+    ;;
+  *)
+    alias gd="git diff"
+    alias gco="git checkout"
+    alias glo="git log --oneline --graph --decorate --all"
+    ;;
+esac
 
 # Dotfiles repo shortcut
 alias cd-dotfiles="cd \${OOODNAKOV_CONFIG_HOME:-\$HOME/src/ooodnakov-config}"
@@ -38,4 +46,3 @@ ipgeo() {
     curl "http://api.db-ip.com/v2/free/$(myip)"
   fi
 }
-

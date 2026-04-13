@@ -1,178 +1,273 @@
 #compdef oooconf
 
-local curcontext="$curcontext" state line
-typeset -A opt_args
+local -a oooconf_commands global_opts setup_opts deps_keys update_pins_opts secrets_subcommands shell_subcommands shell_forgit_alias_modes shell_typo_modes
+local command_name secrets_command shell_command
+local i
 
-local -a commands global_opts setup_opts deps_args update_pins_opts secrets_common_opts
-local command_name secrets_command
-commands=(
+oooconf_commands=(
   'bootstrap:clone or update the repo, then run install'
   'install:apply managed config'
   'deps:install optional dependencies only'
   'update:update the repo, then re-run install'
+  'upgrade:alias for update'
   'doctor:validate managed links and tools'
+  'check:alias for doctor'
   'dry-run:preview install without changes'
+  'preview:alias for dry-run'
   'delete:remove managed links and restore backups'
   'remove:remove managed links only'
   'lock:regenerate dependency lock artifacts'
   'update-pins:check or update pinned refs'
+  'shell:manage local shell preferences'
   'secrets:sync or validate local secret env files'
   'help:show help'
   'version:show version information'
 )
 
 global_opts=(
-  '(-C --repo-root)'{-C,--repo-root}'[run against a specific repo checkout]:repo root:_files -/'
-  '--print-repo-root[print the resolved repo root]'
-  '(-h --help)'{-h,--help}'[show help]'
-  '(-n --dry-run)'{-n,--dry-run}'[add --dry-run to install or update]'
-  '--yes-optional[auto-accept optional dependency installs]'
-  '(-V --version)'{-V,--version}'[show version information]'
+  '-C:run against a specific repo checkout:_files -/'
+  '--repo-root:run against a specific repo checkout:_files -/'
+  '--print-repo-root:print the resolved repo root'
+  '-h:show help'
+  '--help:show help'
+  '-n:add --dry-run to install or update'
+  '--dry-run:add --dry-run to install or update'
+  '--yes-optional:auto-accept optional dependency installs'
+  '-V:show version information'
+  '--version:show version information'
 )
 
 setup_opts=(
-  '--dry-run[preview actions without changing the filesystem]'
-  '--yes-optional[auto-accept optional dependency installs]'
-  '(-h --help)'{-h,--help}'[show setup help]'
+  '--dry-run:preview actions without changing the filesystem'
+  '--yes-optional:auto-accept optional dependency installs'
+  '-h:show setup help'
+  '--help:show setup help'
 )
 
-deps_args=(
-  '--dry-run[preview dependency installation without changing the filesystem]'
-  '--yes-optional[auto-accept optional dependency installs]'
-  '(-h --help)'{-h,--help}'[show deps help]'
-  '*:dependency key:((wget\:"download helpers and ezsh parity" zsh\:"default shell support" direnv\:"direnv shell integration" fzf\:"fzf shell integration" bat\:"cat alternative with syntax highlighting" delta\:"Git diff pager with syntax highlighting" glow\:"terminal Markdown reader" gum\:"interactive terminal UI toolkit" zoxide\:"smart directory jumping" q\:"q text-as-data CLI" eza\:"modern ls aliases" uv\:"Python package manager" bw\:"Bitwarden CLI" node\:"Node.js runtime" npm\:"Node package manager" pnpm\:"pnpm package manager" autoconf\:"build optional ezsh native components" fc-cache\:"refresh installed font caches" cargo\:"Rust package manager" dua\:"disk usage analysis via dua-cli" nvim\:"Neovim for LazyVim" k\:"standalone k command" python3\:"Python runtime and helper scripts"))'
+deps_keys=(
+  'wget:download helpers and ezsh parity'
+  'zsh:default shell support'
+  'direnv:direnv shell integration'
+  'fzf:fzf shell integration'
+  'bat:cat alternative with syntax highlighting'
+  'delta:Git diff pager with syntax highlighting'
+  'glow:terminal Markdown reader'
+  'gum:interactive terminal UI toolkit'
+  'zoxide:smart directory jumping'
+  'q:q text-as-data CLI'
+  'eza:modern ls aliases'
+  'uv:Python package manager'
+  'bw:Bitwarden CLI'
+  'node:Node.js runtime'
+  'npm:Node package manager'
+  'pnpm:pnpm package manager'
+  'autoconf:build optional ezsh native components'
+  'fc-cache:refresh installed font caches'
+  'cargo:Rust package manager'
+  'dua:disk usage analysis via dua-cli'
+  'nvim:Neovim for LazyVim'
+  'k:standalone k command'
+  'python3:Python runtime and helper scripts'
 )
 
 update_pins_opts=(
-  '--apply[write updated pinned refs before regenerating lock artifacts]'
+  '--apply:write updated pinned refs before regenerating lock artifacts'
 )
 
-secrets_common_opts=(
-  '--backend[secret backend to use]:backend:(bw)'
-  '--template[override the tracked template path]:template:_files'
+secrets_subcommands=(
+  'login:configure Bitwarden server and start login'
+  'unlock:unlock Bitwarden and print or persist BW_SESSION'
+  'sync:render local secret env files'
+  'doctor:validate local secret env files and backend tooling'
+  'list:list secrets from the tracked template'
+  'ls:alias for list'
+  'status:show sync status of local secret env files'
+  'logout:lock vault and revoke Bitwarden session'
+  'add:add a secret entry to the tracked template'
+  'remove:remove a secret entry from the tracked template'
+  'rm:alias for remove'
+  'del:alias for remove'
 )
 
-_arguments -C \
-  $global_opts \
-  '1:command:->command' \
-  '*::arg:->args' && return 0
+shell_subcommands=(
+  'forgit-aliases:choose whether git aliases stay plain or switch to forgit'
+  'typo-handling:choose how oooconf reports mistyped commands'
+)
 
-case "$state" in
-  command)
-    _describe -t commands 'oooconf command' commands
+shell_forgit_alias_modes=(
+  'plain:keep plain git aliases like gd/gco and define glo as git log'
+  'forgit:enable upstream forgit aliases like glo/gd/gco'
+  'status:show the currently configured mode'
+)
+
+shell_typo_modes=(
+  'silent:exit 1 without printing anything for wrong commands'
+  'suggest:print only the closest suggestion when available'
+  'help:print the unknown command, suggestion, and full help'
+  'status:show the currently configured mode'
+)
+
+command_name=
+for (( i = 2; i < CURRENT; i++ )); do
+  case "$words[i]" in
+    -C|--repo-root)
+      (( i++ ))
+      ;;
+    -*)
+      ;;
+    bootstrap|install|deps|update|upgrade|doctor|check|dry-run|preview|delete|remove|lock|update-pins|shell|secrets|help|version)
+      command_name="$words[i]"
+      break
+      ;;
+  esac
+done
+
+if [[ -z "$command_name" ]]; then
+  _describe -t commands 'oooconf command' oooconf_commands && return 0
+  _describe -t options 'oooconf option' global_opts && return 0
+  _message 'unknown oooconf command; press Enter to run CLI typo suggestions'
+  return 0
+fi
+
+case "$command_name" in
+  upgrade)
+    command_name=update
     ;;
-  args)
-    command_name=
-    for (( i = 1; i <= CURRENT; i++ )); do
+  check)
+    command_name=doctor
+    ;;
+  preview)
+    command_name=dry-run
+    ;;
+esac
+
+case "$command_name" in
+  help)
+    _describe -t commands 'oooconf command' oooconf_commands && return 0
+    _message 'unknown oooconf help target; press Enter to run CLI typo suggestions'
+    return 0
+    ;;
+  install|update)
+    _describe -t options 'oooconf option' setup_opts
+    return 0
+    ;;
+  deps)
+    _describe -t options 'oooconf option' setup_opts
+    _describe -t dependencies 'dependency key' deps_keys
+    return 0
+    ;;
+  update-pins)
+    _describe -t options 'oooconf option' update_pins_opts
+    return 0
+    ;;
+  shell)
+    shell_command=
+    for (( i = 3; i < CURRENT; i++ )); do
       case "$words[i]" in
-        bootstrap|install|deps|update|doctor|dry-run|delete|remove|lock|update-pins|secrets|help|version)
-          command_name="$words[i]"
+        forgit-aliases)
+          shell_command="$words[i]"
+          break
+          ;;
+        typo-handling)
+          shell_command="$words[i]"
           break
           ;;
       esac
     done
 
-    case "$command_name" in
-      help)
-        _describe -t commands 'oooconf command' commands
-        ;;
-      install|update)
-        _arguments $setup_opts
-        ;;
-      deps)
-        _arguments $deps_args
-        ;;
-      dry-run|doctor|delete|remove|lock|version)
-        _message 'no additional arguments'
-        ;;
-      update-pins)
-        _arguments $update_pins_opts
-        ;;
-      secrets)
-        secrets_command=
-        for (( i = 1; i <= CURRENT; i++ )); do
-          case "$words[i]" in
-            login|unlock|sync|doctor|list|status|logout|add|remove)
-              secrets_command="$words[i]"
-              break
-              ;;
-          esac
-        done
+    if [[ -z "$shell_command" ]]; then
+      _describe -t shell-subcommands 'oooconf shell command' shell_subcommands && return 0
+      _message 'unknown oooconf shell subcommand; press Enter to run CLI typo suggestions'
+      return 0
+    fi
 
-        if [[ -z "$secrets_command" ]]; then
-          _describe -t secrets-subcommands 'oooconf secrets command' \
-            'login:configure Bitwarden server and start login' \
-            'unlock:print shell code for BW_SESSION after unlocking Bitwarden' \
-            'sync:render local secret env files' \
-            'doctor:validate local secret env files and backend tooling' \
-            'list:list secrets from the tracked template' \
-            'status:show sync status of local secret env files' \
-            'logout:lock vault and revoke Bitwarden session' \
-            'add:add a secret entry to the tracked template' \
-            'remove:remove a secret entry from the tracked template'
-        else
-          case "$secrets_command" in
-            sync)
-              _arguments \
-                $secrets_common_opts \
-                '--dry-run[preview the sync without writing files]' \
-                '--force[rewrite generated files even when unchanged]'
-              ;;
-            doctor)
-              _arguments $secrets_common_opts
-              ;;
-            list)
-              _arguments \
-                '--template[override the tracked template path]:template:_files' \
-                '--resolved[resolve bw:// references (requires unlocked BW_SESSION)]' \
-                '--backend[secret backend to use]:backend:(bw)'
-              ;;
-            status)
-              _arguments \
-                '--template[override the tracked template path]:template:_files'
-              ;;
-            add)
-              _arguments \
-                '--template[override the tracked template path]:template:_files' \
-                '1:key: ' \
-                '2:value: '
-              ;;
-            remove)
-              _arguments \
-                '--template[override the tracked template path]:template:_files' \
-                '1:key: '
-              ;;
-            login)
-              _arguments '--server[Bitwarden or Vaultwarden server URL]:server: '
-              ;;
-            unlock)
-              _arguments \
-                '--shell[shell syntax to emit]:shell:(sh zsh bash pwsh)' \
-                '--raw[print only the unlocked session token]'
-              ;;
-            logout)
-              _message 'no additional arguments'
-              ;;
-            *)
-              _describe -t secrets-subcommands 'oooconf secrets command' \
-                'login:configure Bitwarden server and start login' \
-                'unlock:print shell code for BW_SESSION after unlocking Bitwarden' \
-                'sync:render local secret env files' \
-                'doctor:validate local secret env files and backend tooling' \
-                'list:list secrets from the tracked template' \
-                'status:show sync status of local secret env files' \
-                'logout:lock vault and revoke Bitwarden session' \
-                'add:add a secret entry to the tracked template' \
-                'remove:remove a secret entry from the tracked template'
-              ;;
-          esac
-        fi
+    case "$shell_command" in
+      forgit-aliases)
+        _describe -t modes 'forgit alias mode' shell_forgit_alias_modes && return 0
+        _message 'unknown forgit mode; valid values are plain, forgit, status'
         ;;
-      bootstrap)
-        _message 'environment variables configure bootstrap behavior'
-        ;;
-      *)
+      typo-handling)
+        _describe -t modes 'typo handling mode' shell_typo_modes && return 0
+        _message 'unknown typo mode; valid values are silent, suggest, help, status'
         ;;
     esac
+    return 0
+    ;;
+  dry-run|doctor|delete|remove|lock|version|bootstrap)
+    return 0
+    ;;
+  secrets)
+    secrets_command=
+    for (( i = 3; i < CURRENT; i++ )); do
+      case "$words[i]" in
+        login|unlock|sync|doctor|list|ls|status|logout|add|remove|rm|del)
+          secrets_command="$words[i]"
+          break
+          ;;
+      esac
+    done
+
+    if [[ -z "$secrets_command" ]]; then
+      _describe -t secrets-subcommands 'oooconf secrets command' secrets_subcommands && return 0
+      _message 'unknown oooconf secrets subcommand; press Enter to run CLI typo suggestions'
+      return 0
+    fi
+
+    case "$secrets_command" in
+      ls)
+        secrets_command=list
+        ;;
+      rm|del)
+        secrets_command=remove
+        ;;
+    esac
+
+    case "$secrets_command" in
+      sync)
+        _describe -t options 'oooconf secrets sync option' \
+          '--backend:secret backend to use:(bw)' \
+          '--template:override the tracked template path:_files' \
+          '--dry-run:preview the sync without writing files' \
+          '--force:rewrite generated files even when unchanged'
+        ;;
+      doctor)
+        _describe -t options 'oooconf secrets doctor option' \
+          '--backend:secret backend to use:(bw)' \
+          '--template:override the tracked template path:_files'
+        ;;
+      list)
+        _describe -t options 'oooconf secrets list option' \
+          '--template:override the tracked template path:_files' \
+          '--resolved:resolve bw:// references (requires unlocked BW_SESSION)' \
+          '--backend:secret backend to use:(bw)'
+        ;;
+      status)
+        _describe -t options 'oooconf secrets status option' \
+          '--template:override the tracked template path:_files'
+        ;;
+      login)
+        _describe -t options 'oooconf secrets login option' \
+          '--server:Bitwarden or Vaultwarden server URL:'
+        ;;
+      unlock)
+        _describe -t options 'oooconf secrets unlock option' \
+          '--shell:shell syntax to emit:(sh zsh bash pwsh)' \
+          '--raw:print only the unlocked session token'
+        ;;
+      add)
+        _describe -t options 'oooconf secrets add option' \
+          '--template:override the tracked template path:_files'
+        ;;
+      remove)
+        _describe -t options 'oooconf secrets remove option' \
+          '--template:override the tracked template path:_files'
+        ;;
+      logout)
+        return 0
+        ;;
+    esac
+    return 0
     ;;
 esac
+
+return 0

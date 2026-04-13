@@ -6,12 +6,16 @@ $OooconfCommands = @(
     'install',
     'deps',
     'update',
+    'upgrade',
     'doctor',
+    'check',
     'dry-run',
+    'preview',
     'delete',
     'remove',
     'lock',
     'update-pins',
+    'shell',
     'secrets',
     'help',
     'version'
@@ -34,10 +38,25 @@ $OooconfSecretsSubcommands = @(
     'sync',
     'doctor',
     'list',
+    'ls',
     'status',
     'login',
     'unlock',
-    'logout'
+    'logout',
+    'add',
+    'remove',
+    'rm',
+    'del'
+)
+
+$OooconfShellSubcommands = @(
+    'forgit-aliases'
+)
+
+$OooconfForgitAliasModes = @(
+    'plain',
+    'forgit',
+    'status'
 )
 
 $ShellValues = @('zsh', 'pwsh', 'bash', 'fish')
@@ -96,15 +115,49 @@ function Get-OooconfCompleter {
         $options = @()
         if ($subcommand -eq 'unlock') {
             $options += '--shell'
+            $options += '--raw'
         }
         if ($subcommand -eq 'sync') {
             $options += '--dry-run'
+            $options += '--force'
+            $options += '--template'
+            $options += '--backend'
         }
-        if ($subcommand -eq 'list') {
+        if ($subcommand -in @('list', 'ls')) {
             $options += '--resolved'
+            $options += '--template'
+            $options += '--backend'
+        }
+        if ($subcommand -in @('doctor', 'status', 'add', 'remove', 'rm', 'del')) {
+            $options += '--template'
+        }
+        if ($subcommand -eq 'doctor') {
+            $options += '--backend'
+        }
+        if ($subcommand -eq 'login') {
+            $options += '--server'
         }
 
         return $options | Where-Object { $_ -like "$WordToComplete*" }
+    }
+
+    if ($command -eq 'shell') {
+        $subcommandIndex = -1
+        for ($i = $commandIndex + 1; $i -lt $Tokens.Length; $i++) {
+            if ($Tokens[$i] -in $OooconfShellSubcommands) {
+                $subcommandIndex = $i
+                break
+            }
+        }
+
+        if ($subcommandIndex -eq -1) {
+            return $OooconfShellSubcommands | Where-Object { $_ -like "$WordToComplete*" }
+        }
+
+        $subcommand = $Tokens[$subcommandIndex]
+        if ($subcommand -eq 'forgit-aliases') {
+            return $OooconfForgitAliasModes | Where-Object { $_ -like "$WordToComplete*" }
+        }
     }
 
     # update-pins options
@@ -113,8 +166,12 @@ function Get-OooconfCompleter {
     }
 
     # install, deps, update global options
-    if ($command -in @('install', 'deps', 'update')) {
+    if ($command -in @('install', 'deps', 'update', 'upgrade')) {
         return @('--dry-run', '--yes-optional') | Where-Object { $_ -like "$WordToComplete*" }
+    }
+
+    if ($command -in @('doctor', 'check', 'dry-run', 'preview', 'bootstrap', 'delete', 'remove', 'version')) {
+        return @()
     }
 
     return @()

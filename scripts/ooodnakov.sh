@@ -9,6 +9,415 @@ BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
 GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
+KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins secrets shell version check preview upgrade)
+KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling)
+KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
+KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
+LOCAL_OVERRIDES_START="# --- LOCAL OVERRIDES START ---"
+LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
+FORGIT_ALIAS_VAR="OOODNAKOV_FORGIT_ALIAS_MODE"
+TYPO_HANDLING_VAR="OOODNAKOV_TYPO_HANDLING_MODE"
+
+visible_error() {
+  if [ -t 1 ]; then
+    printf '%s\n' "$*"
+  else
+    printf '%s\n' "$*" >&2
+  fi
+}
+
+shell_config_home() {
+  printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/ooodnakov"
+}
+
+shell_local_env_zsh_path() {
+  printf '%s\n' "$(shell_config_home)/local/env.zsh"
+}
+
+shell_local_env_ps1_path() {
+  printf '%s\n' "$(shell_config_home)/local/env.ps1"
+}
+
+ensure_local_override_file() {
+  local target="$1"
+  local start_marker="$2"
+  local end_marker="$3"
+
+  mkdir -p "$(dirname "$target")"
+
+  if [ ! -f "$target" ]; then
+    cat >"$target" <<EOF
+$start_marker
+# Add machine-specific env vars here. This section is preserved across syncs.
+$end_marker
+EOF
+    return 0
+  fi
+
+  if ! grep -Fq "$start_marker" "$target"; then
+    cat >>"$target" <<EOF
+
+$start_marker
+# Add machine-specific env vars here. This section is preserved across syncs.
+$end_marker
+EOF
+  fi
+}
+
+upsert_override_line() {
+  local target="$1"
+  local variable_name="$2"
+  local replacement_line="$3"
+  local tmp_file
+
+  ensure_local_override_file "$target" "$LOCAL_OVERRIDES_START" "$LOCAL_OVERRIDES_END"
+
+  tmp_file="$(mktemp)"
+  awk \
+    -v start="$LOCAL_OVERRIDES_START" \
+    -v end="$LOCAL_OVERRIDES_END" \
+    -v variable_name="$variable_name" \
+    -v replacement_line="$replacement_line" '
+      BEGIN {
+        in_block = 0
+        inserted = 0
+      }
+      index($0, start) == 1 {
+        in_block = 1
+        print
+        next
+      }
+      index($0, end) == 1 {
+        if (in_block && !inserted) {
+          print replacement_line
+          inserted = 1
+        }
+        in_block = 0
+        print
+        next
+      }
+      in_block && $0 ~ ("(^export " variable_name "=)|(^\\$env:" variable_name " = )") {
+        if (!inserted) {
+          print replacement_line
+          inserted = 1
+        }
+        next
+      }
+      { print }
+      END {
+        if (!inserted) {
+          if (NR > 0) {
+            print ""
+          }
+          print start
+          print replacement_line
+          print end
+        }
+      }
+    ' "$target" >"$tmp_file"
+  mv "$tmp_file" "$target"
+}
+
+get_forgit_alias_mode() {
+  local env_zsh mode
+  env_zsh="$(shell_local_env_zsh_path)"
+
+  if [ -f "$env_zsh" ]; then
+    mode="$(sed -n "s/^export ${FORGIT_ALIAS_VAR}=\"\\([^\"]*\\)\"$/\\1/p" "$env_zsh" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+  fi
+
+  printf 'plain\n'
+}
+
+get_typo_handling_mode() {
+  local env_zsh mode
+
+  if [ -n "${OOODNAKOV_TYPO_HANDLING_MODE:-}" ]; then
+    printf '%s\n' "$OOODNAKOV_TYPO_HANDLING_MODE"
+    return 0
+  fi
+
+  env_zsh="$(shell_local_env_zsh_path)"
+
+  if [ -f "$env_zsh" ]; then
+    mode="$(sed -n "s/^export ${TYPO_HANDLING_VAR}=\"\\([^\"]*\\)\"$/\\1/p" "$env_zsh" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+  fi
+
+  printf 'help\n'
+}
+
+set_forgit_alias_mode() {
+  local mode="$1"
+  local env_zsh env_ps1
+
+  case "$mode" in
+    plain|forgit) ;;
+    *)
+      visible_error "Invalid forgit alias mode: $mode"
+      visible_error "Expected one of: plain, forgit"
+      return 1
+      ;;
+  esac
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  env_ps1="$(shell_local_env_ps1_path)"
+
+  upsert_override_line "$env_zsh" "$FORGIT_ALIAS_VAR" "export $FORGIT_ALIAS_VAR=\"$mode\""
+  upsert_override_line "$env_ps1" "$FORGIT_ALIAS_VAR" "\$env:$FORGIT_ALIAS_VAR = '$mode'"
+
+  printf 'forgit alias mode set to %s\n' "$mode"
+  printf 'zsh: %s\n' "$env_zsh"
+  printf 'pwsh: %s\n' "$env_ps1"
+  printf 'Open a new shell or run: exec zsh\n'
+}
+
+set_typo_handling_mode() {
+  local mode="$1"
+  local env_zsh env_ps1
+
+  case "$mode" in
+    silent|suggest|help) ;;
+    *)
+      visible_error "Invalid typo handling mode: $mode"
+      visible_error "Expected one of: silent, suggest, help"
+      return 1
+      ;;
+  esac
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  env_ps1="$(shell_local_env_ps1_path)"
+
+  upsert_override_line "$env_zsh" "$TYPO_HANDLING_VAR" "export $TYPO_HANDLING_VAR=\"$mode\""
+  upsert_override_line "$env_ps1" "$TYPO_HANDLING_VAR" "\$env:$TYPO_HANDLING_VAR = '$mode'"
+
+  printf 'typo handling mode set to %s\n' "$mode"
+  printf 'zsh: %s\n' "$env_zsh"
+  printf 'pwsh: %s\n' "$env_ps1"
+  printf 'Open a new shell or run: exec zsh\n'
+}
+
+print_help_for_scope() {
+  local scope="${1:-main}"
+
+  case "$scope" in
+    shell)
+      handle_shell_command help
+      ;;
+    *)
+      usage
+      ;;
+  esac
+}
+
+report_unknown_command() {
+  local subject="$1"
+  local suggestion="${2:-}"
+  local scope="${3:-main}"
+  local mode
+
+  mode="$(get_typo_handling_mode)"
+  case "$mode" in
+    silent)
+      ;;
+    suggest)
+      if [ -n "$suggestion" ]; then
+        visible_error "Did you mean: $suggestion"
+      else
+        visible_error "$subject"
+      fi
+      ;;
+    help|*)
+      visible_error "$subject"
+      if [ -n "$suggestion" ]; then
+        visible_error "Did you mean: $suggestion"
+      fi
+      print_help_for_scope "$scope"
+      ;;
+  esac
+}
+
+handle_shell_command() {
+  local subcommand="${1:-}"
+  local suggestion=""
+
+  case "$subcommand" in
+    ""|-h|--help|help)
+      cat <<'EOF'
+Usage:
+  oooconf shell forgit-aliases [plain|forgit|status]
+  oooconf shell typo-handling [silent|suggest|help|status]
+
+Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
+
+Forgit alias modes:
+  plain   keep plain git aliases like gd/gco and define glo as git log
+  forgit  enable upstream forgit aliases like glo/gd/gco
+  status  show the currently configured mode
+
+Typo handling modes:
+  silent   exit 1 without printing anything for wrong commands
+  suggest  print only the closest suggestion when available
+  help     print the unknown command, suggestion, and full help
+
+Examples:
+  oooconf shell forgit-aliases status
+  oooconf shell forgit-aliases plain
+  oooconf shell forgit-aliases forgit
+  oooconf shell typo-handling status
+  oooconf shell typo-handling suggest
+  oooconf shell typo-handling silent
+EOF
+      ;;
+    forgit-aliases)
+      case "${2:-status}" in
+        status)
+          printf '%s\n' "$(get_forgit_alias_mode)"
+          ;;
+        plain|forgit)
+          set_forgit_alias_mode "$2"
+          ;;
+        *)
+          suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_FORGIT_MODES[@]}")"
+          report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
+          return 1
+          ;;
+      esac
+      ;;
+    typo-handling)
+      case "${2:-status}" in
+        status)
+          printf '%s\n' "$(get_typo_handling_mode)"
+          ;;
+        silent|suggest|help)
+          set_typo_handling_mode "$2"
+          ;;
+        *)
+          suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_TYPO_MODES[@]}")"
+          report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
+          return 1
+          ;;
+      esac
+      ;;
+    *)
+      suggestion="$(suggest_from_list "$subcommand" "${KNOWN_SHELL_SUBCOMMANDS[@]}")"
+      report_unknown_command "Unknown shell subcommand: $subcommand" "$suggestion" shell
+      return 1
+      ;;
+  esac
+}
+
+resolve_command_alias() {
+  case "$1" in
+    check) printf 'doctor\n' ;;
+    preview) printf 'dry-run\n' ;;
+    upgrade) printf 'update\n' ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
+command_distance() {
+  local left="$1"
+  local right="$2"
+
+  awk -v left="$left" -v right="$right" '
+    BEGIN {
+      left_len = length(left)
+      right_len = length(right)
+
+      for (i = 0; i <= left_len; i++) {
+        dist[i, 0] = i
+      }
+      for (j = 0; j <= right_len; j++) {
+        dist[0, j] = j
+      }
+
+      for (i = 1; i <= left_len; i++) {
+        left_char = substr(left, i, 1)
+        for (j = 1; j <= right_len; j++) {
+          right_char = substr(right, j, 1)
+          cost = (left_char == right_char) ? 0 : 1
+
+          deletion = dist[i - 1, j] + 1
+          insertion = dist[i, j - 1] + 1
+          substitution = dist[i - 1, j - 1] + cost
+
+          best = deletion
+          if (insertion < best) {
+            best = insertion
+          }
+          if (substitution < best) {
+            best = substitution
+          }
+          dist[i, j] = best
+        }
+      }
+
+      print dist[left_len, right_len]
+    }
+  '
+}
+
+suggest_command() {
+  local input="$1"
+  local best_command=""
+  local best_distance=999
+  local candidate distance threshold
+
+  for candidate in "${KNOWN_COMMANDS[@]}"; do
+    distance="$(command_distance "$input" "$candidate")"
+    if [ "$distance" -lt "$best_distance" ]; then
+      best_distance="$distance"
+      best_command="$candidate"
+    fi
+  done
+
+  threshold=3
+  if [ "${#input}" -le 4 ] && [ "$threshold" -gt 2 ]; then
+    threshold=2
+  fi
+
+  if [ "$best_distance" -le "$threshold" ]; then
+    printf '%s\n' "$best_command"
+  fi
+
+  return 0
+}
+
+suggest_from_list() {
+  local input="$1"
+  shift
+  local candidates=("$@")
+  local best_match=""
+  local best_distance=999
+  local candidate distance threshold
+
+  for candidate in "${candidates[@]}"; do
+    distance="$(command_distance "$input" "$candidate")"
+    if [ "$distance" -lt "$best_distance" ]; then
+      best_distance="$distance"
+      best_match="$candidate"
+    fi
+  done
+
+  threshold=3
+  if [ "${#input}" -le 4 ] && [ "$threshold" -gt 2 ]; then
+    threshold=2
+  fi
+
+  if [ "$best_distance" -le "$threshold" ]; then
+    printf '%s\n' "$best_match"
+  fi
+
+  return 0
+}
 
 print_version() {
   if command -v git >/dev/null 2>&1 && [ -d "$REPO_ROOT/.git" ]; then
@@ -50,8 +459,16 @@ Commands:
     lock                  regenerate dependency lock artifacts from pinned refs
     update-pins           compare/update pinned refs and refresh lock artifacts
 
+  Shell:
+    shell                 manage local shell preferences such as forgit aliases
+
   Secrets:
     secrets               sync or validate local secret env files
+
+Aliases:
+  check -> doctor
+  preview -> dry-run
+  upgrade -> update
 
 Getting help:
   oooconf --help                     show this message
@@ -82,6 +499,7 @@ EOF
 
 command_usage() {
   local command="$1"
+  command="$(resolve_command_alias "$command")"
 
   case "$command" in
     bootstrap)
@@ -238,10 +656,14 @@ Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> 
 
 Render or validate local secret env files from the tracked template.
 Examples:
+  oooconf secrets                      # show current sync/session status
   oooconf secrets login
+  oooconf secrets unlock               # prompt for password and save session
+  oooconf secrets unlock 'your-password'
   eval "$(oooconf secrets unlock --shell zsh)"
   oooconf secrets sync
   oooconf secrets sync --dry-run
+  oooconf secrets ls                   # alias for list
   oooconf secrets list
   oooconf secrets list --resolved
   oooconf secrets status
@@ -249,12 +671,16 @@ Examples:
   oooconf secrets logout
   oooconf secrets add GITHUB_TOKEN bw://item/abc123/password
   oooconf secrets add SOME_URL https://example.com
+  oooconf secrets rm GITHUB_TOKEN      # alias for remove
   oooconf secrets remove GITHUB_TOKEN
 
 Environment overrides:
   OOODNAKOV_SECRETS_BACKEND
   OOODNAKOV_BW_SERVER
 EOF
+      ;;
+    shell)
+      handle_shell_command help
       ;;
     version)
       cat <<'EOF'
@@ -270,7 +696,8 @@ EOF
       usage
       ;;
     *)
-      echo "Unknown command: $command" >&2
+      suggestion="$(suggest_command "$command")"
+      report_unknown_command "Unknown command: $command" "$suggestion"
       return 1
       ;;
   esac
@@ -327,7 +754,7 @@ while [ "$#" -gt 0 ]; do
       shift
       ;;
     help)
-      command_usage "${2:-}"
+      command_usage "$(resolve_command_alias "${2:-}")"
       exit 0
       ;;
     version)
@@ -336,12 +763,12 @@ while [ "$#" -gt 0 ]; do
       exit 0
       ;;
     -*)
-      echo "Unknown option: $1" >&2
+      visible_error "Unknown option: $1"
       usage >&2
       exit 1
       ;;
     *)
-      command="$1"
+      command="$(resolve_command_alias "$1")"
       shift
       break
       ;;
@@ -463,9 +890,12 @@ case "$command" in
     fi
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"
     ;;
+  shell)
+    handle_shell_command "$@"
+    ;;
   *)
-    echo "Unknown command: $command" >&2
-    usage >&2
+    suggestion="$(suggest_command "$command")"
+    report_unknown_command "Unknown command: $command" "$suggestion"
     exit 1
     ;;
 esac

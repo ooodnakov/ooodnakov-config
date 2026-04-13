@@ -44,4 +44,10 @@ This file tracks deliberate follow-up work for the repo. It is ordered by impact
 ## Nice to Have
 
 - [ ] Improve `oooconf --help` output with clearer command summaries and examples (currently functional but lacks examples beyond secrets)
+- [ ] Expand `oooconf shell` into a small interactive-shell control surface:
+  - add `doctor`
+  - add `completion-cache clear`
+  - add `editor [nvim|vim|hx|code|status]`
+  - add `prompt [default|minimal|off|status]`
+  - add toggles for `direnv`, `zoxide`, `fzf-tab`, `zsh-autosuggestions`, and `zsh-autocomplete`
 - [ ] Add release notes guidance for `v*` tags and archive consumers

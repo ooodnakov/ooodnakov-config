@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import difflib
+import getpass
 import json
 import os
 import shlex
@@ -14,7 +16,15 @@ from pathlib import Path
 DEFAULT_TEMPLATE_RELATIVE_PATH = Path("home/.config/ooodnakov/secrets/env.template")
 DEFAULT_CONFIG_RELATIVE_PATH = Path(".config/ooodnakov")
 DEFAULT_LOCAL_RELATIVE_PATH = Path(".config/ooodnakov/local")
+DEFAULT_BW_SESSION_RELATIVE_PATH = DEFAULT_LOCAL_RELATIVE_PATH / "bw-session"
 DEFAULT_BW_SERVER = os.environ.get("OOODNAKOV_BW_SERVER", "https://vaultwarden.ooodnakov.ru")
+BWH_CLI_TIMEOUT_SECONDS = 20
+SECRETS_SUBCOMMANDS = ("sync", "doctor", "login", "unlock", "list", "status", "logout", "add", "remove")
+SECRETS_SUBCOMMAND_ALIASES = {
+    "ls": "list",
+    "rm": "remove",
+    "del": "remove",
+}
 
 
 def shutil_which(name: str) -> str | None:
@@ -49,7 +59,7 @@ def parse_args() -> argparse.Namespace:
         help="Repo root that contains the tracked secrets template.",
     )
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     sync = subparsers.add_parser("sync", help="Render local secret env files.")
     sync.add_argument(
@@ -92,7 +102,12 @@ def parse_args() -> argparse.Namespace:
         help="Bitwarden or Vaultwarden server URL.",
     )
 
-    unlock = subparsers.add_parser("unlock", help="Unlock Bitwarden and print shell code for BW_SESSION.")
+    unlock = subparsers.add_parser("unlock", help="Unlock Bitwarden and print or persist BW_SESSION.")
+    unlock.add_argument(
+        "password",
+        nargs="?",
+        help="Optional Bitwarden password. When provided, save the unlocked session locally for later syncs.",
+    )
     unlock.add_argument(
         "--shell",
         choices=("sh", "zsh", "bash", "pwsh"),
@@ -145,7 +160,46 @@ def parse_args() -> argparse.Namespace:
         help="Override the tracked template path.",
     )
 
-    return parser.parse_args()
+    argv = sys.argv[1:]
+    normalized_argv, requested_command = normalize_subcommand_argv(argv)
+    if requested_command and requested_command not in SECRETS_SUBCOMMANDS and requested_command not in SECRETS_SUBCOMMAND_ALIASES:
+        suggestion = suggest_subcommand(requested_command)
+        if suggestion:
+            parser.error(f"unknown command: {requested_command}\nDid you mean: {suggestion}")
+        parser.error(f"unknown command: {requested_command}")
+
+    args = parser.parse_args(normalized_argv)
+    if args.command is None:
+        args.command = "status"
+        args.template = None
+    if args.command == "unlock":
+        args.explicit_shell = "--shell" in argv
+        args.explicit_raw = "--raw" in argv
+    return args
+
+
+def normalize_subcommand_argv(argv: list[str]) -> tuple[list[str], str | None]:
+    normalized = list(argv)
+    index = 0
+    while index < len(normalized):
+        arg = normalized[index]
+        if arg == "--repo-root":
+            index += 2
+            continue
+        if arg.startswith("-"):
+            index += 1
+            continue
+        normalized[index] = SECRETS_SUBCOMMAND_ALIASES.get(arg, arg)
+        return normalized, arg
+    return normalized, None
+
+
+def suggest_subcommand(command: str) -> str | None:
+    candidates = list(SECRETS_SUBCOMMANDS) + list(SECRETS_SUBCOMMAND_ALIASES)
+    matches = difflib.get_close_matches(command, candidates, n=1, cutoff=0.6)
+    if matches:
+        return SECRETS_SUBCOMMAND_ALIASES.get(matches[0], matches[0])
+    return None
 
 
 def detect_shell_kind() -> str:
@@ -253,6 +307,7 @@ def ensure_bw_unlocked(env: dict) -> None:
                 capture_output=True,
                 text=True,
                 env=env,
+                timeout=BWH_CLI_TIMEOUT_SECONDS,
             )
             token = result.stdout.strip()
             if token:
@@ -260,6 +315,11 @@ def ensure_bw_unlocked(env: dict) -> None:
                 return
         except subprocess.CalledProcessError:
             pass  # fall through to manual error
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError(
+                f"`bw unlock` timed out after {BWH_CLI_TIMEOUT_SECONDS}s. "
+                "Check Bitwarden connectivity and CLI auth state."
+            ) from exc
 
     raise RuntimeError(
         "BW_SESSION is not set. Unlock Bitwarden first, for example with `export BW_SESSION=\"$(bw unlock --raw)\"` "
@@ -270,18 +330,32 @@ def ensure_bw_unlocked(env: dict) -> None:
 
 def read_bw_item(item_id: str, key: str) -> dict:
     env = os.environ.copy()
-    session = env.get("BW_SESSION")
+    session = env.get("BW_SESSION") or read_persisted_bw_session()
     if not session:
         ensure_bw_unlocked(env)
         session = env.get("BW_SESSION")
         if not session:
             raise RuntimeError("Failed to auto-unlock vault. Check BW_CLIENTID/BW_CLIENTSECRET/BW_PASSWORD.")
+    else:
+        env["BW_SESSION"] = session
 
     command = ["bw", "get", "item", item_id, "--session", session]
     try:
-        result = subprocess.run(command, check=True, capture_output=True, text=True, env=env)
+        result = subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=BWH_CLI_TIMEOUT_SECONDS,
+        )
     except FileNotFoundError as exc:
         raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"timed out resolving {key} from Bitwarden after {BWH_CLI_TIMEOUT_SECONDS}s "
+            f"(item {item_id})"
+        ) from exc
     except subprocess.CalledProcessError as exc:
         stderr = exc.stderr.strip()
         message = stderr or f"`{' '.join(command)}` failed"
@@ -353,7 +427,7 @@ def extract_local_overrides(content: str) -> list[str]:
     return [line for line in block.splitlines() if line != _LOCAL_DEFAULT_COMMENT]
 
 
-def render_zsh(entries: list[SecretEntry], backend: str, template_path: Path) -> str:
+def render_zsh(resolved_entries: list[tuple[str, str]], backend: str, template_path: Path) -> str:
     lines = [
         "# Generated by `oooconf secrets sync`.",
         "# Do not commit plaintext secrets. Update the tracked template instead.",
@@ -361,13 +435,13 @@ def render_zsh(entries: list[SecretEntry], backend: str, template_path: Path) ->
         f"# Backend: {backend}",
         "",
     ]
-    for entry in entries:
-        lines.append(shell_assignment(entry.key, resolve_value(entry, backend)))
+    for key, value in resolved_entries:
+        lines.append(shell_assignment(key, value))
     lines.append("")
     return "\n".join(lines)
 
 
-def render_ps1(entries: list[SecretEntry], backend: str, template_path: Path) -> str:
+def render_ps1(resolved_entries: list[tuple[str, str]], backend: str, template_path: Path) -> str:
     lines = [
         "# Generated by `oooconf secrets sync`.",
         "# Do not commit plaintext secrets. Update the tracked template instead.",
@@ -375,10 +449,19 @@ def render_ps1(entries: list[SecretEntry], backend: str, template_path: Path) ->
         f"# Backend: {backend}",
         "",
     ]
-    for entry in entries:
-        lines.append(powershell_assignment(entry.key, resolve_value(entry, backend)))
+    for key, value in resolved_entries:
+        lines.append(powershell_assignment(key, value))
     lines.append("")
     return "\n".join(lines)
+
+
+def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[tuple[str, str]]:
+    resolved_entries: list[tuple[str, str]] = []
+    total = len(entries)
+    for index, entry in enumerate(entries, start=1):
+        print(f"Resolving {index}/{total}: {entry.key}", flush=True)
+        resolved_entries.append((entry.key, resolve_value(entry, backend)))
+    return resolved_entries
 
 
 def ensure_private_directory(path: Path) -> None:
@@ -387,8 +470,38 @@ def ensure_private_directory(path: Path) -> None:
         path.chmod(0o700)
 
 
-def write_file(path: Path, content: str, force: bool) -> str:
+def session_file_path() -> Path:
+    return Path.home() / DEFAULT_BW_SESSION_RELATIVE_PATH
+
+
+def read_persisted_bw_session() -> str | None:
+    path = session_file_path()
+    if not path.exists():
+        return None
+    token = path.read_text(encoding="utf-8").strip()
+    return token or None
+
+
+def write_persisted_bw_session(token: str) -> Path:
+    path = session_file_path()
+    ensure_private_directory(path.parent)
+    path.write_text(token + "\n", encoding="utf-8")
+    if os.name != "nt":
+        path.chmod(0o600)
+    return path
+
+
+def clear_persisted_bw_session() -> None:
+    path = session_file_path()
     if path.exists():
+        path.unlink()
+
+
+def write_file(path: Path, content: str, force: bool) -> str:
+    created = not path.exists()
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if not created:
         existing = path.read_text(encoding="utf-8")
         overrides = extract_local_overrides(existing)
         # Append LOCAL OVERRIDES section
@@ -406,7 +519,7 @@ def write_file(path: Path, content: str, force: bool) -> str:
     path.write_text(content, encoding="utf-8")
     if os.name != "nt":
         path.chmod(0o600)
-    return "updated"
+    return "created" if created else "updated"
 
 
 def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
@@ -421,12 +534,18 @@ def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
     zsh_path = local_root / "env.zsh"
     ps1_path = local_root / "env.ps1"
 
-    zsh_content = render_zsh(entries, args.backend, template_path)
-    ps1_content = render_ps1(entries, args.backend, template_path)
+    print(f"Syncing secrets from {template_path}", flush=True)
+    print(f"Backend: {args.backend}", flush=True)
+    print(f"Targets: {zsh_path}, {ps1_path}", flush=True)
+
+    resolved_entries = resolve_entries_for_sync(entries, args.backend)
+    zsh_content = render_zsh(resolved_entries, args.backend, template_path)
+    ps1_content = render_ps1(resolved_entries, args.backend, template_path)
 
     if args.dry_run:
         print(f"Would render {zsh_path}")
         print(f"Would render {ps1_path}")
+        print("Dry run complete.")
         return 0
 
     ensure_private_directory(local_root)
@@ -434,6 +553,7 @@ def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
     ps1_status = write_file(ps1_path, ps1_content, args.force)
     print(f"{zsh_status}: {zsh_path}")
     print(f"{ps1_status}: {ps1_path}")
+    print("Secrets sync complete.")
     return 0
 
 
@@ -493,7 +613,32 @@ def unlock_command(args: argparse.Namespace) -> int:
         print("Bitwarden CLI (`bw`) is not installed or not on PATH.", file=sys.stderr)
         return 1
 
-    result = subprocess.run(["bw", "unlock", "--raw"], capture_output=True, text=True)
+    env = os.environ.copy()
+    should_persist = bool(args.password) or (not args.explicit_shell and not args.explicit_raw)
+    if should_persist:
+        password = args.password
+        if password is None:
+            try:
+                password = getpass.getpass("Bitwarden password: ")
+            except (EOFError, KeyboardInterrupt):
+                print("Unlock cancelled.", file=sys.stderr)
+                return 1
+        env["BW_PASSWORD"] = password
+        command = ["bw", "unlock", "--raw", "--passwordenv", "BW_PASSWORD"]
+    else:
+        command = ["bw", "unlock", "--raw"]
+
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=BWH_CLI_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        print(f"`bw unlock` timed out after {BWH_CLI_TIMEOUT_SECONDS}s.", file=sys.stderr)
+        return 1
     if result.returncode != 0:
         stderr = result.stderr.strip()
         if stderr:
@@ -504,6 +649,11 @@ def unlock_command(args: argparse.Namespace) -> int:
     if not token:
         print("`bw unlock --raw` returned an empty session token.", file=sys.stderr)
         return 1
+
+    if should_persist:
+        path = write_persisted_bw_session(token)
+        print(f"Saved BW_SESSION to {path}")
+        return 0
 
     if args.raw:
         print(token)
@@ -547,12 +697,13 @@ def check_bw_status() -> list[str]:
         )
 
     status_value = status.get("status")
+    session_available = bool(os.environ.get("BW_SESSION") or read_persisted_bw_session())
     if status_value == "unauthenticated":
         problems.append("Bitwarden CLI is not logged in. Run `bw login --server https://vaultwarden.ooodnakov.ru`.")
-    elif status_value == "locked" and not os.environ.get("BW_SESSION"):
-        problems.append("Bitwarden vault is locked. Unlock it and export BW_SESSION before syncing.")
-    elif status_value == "unlocked" and not os.environ.get("BW_SESSION"):
-        problems.append("Bitwarden reports unlocked, but BW_SESSION is not exported in this shell.")
+    elif status_value == "locked" and not session_available:
+        problems.append("Bitwarden vault is locked. Unlock it before syncing.")
+    elif status_value == "unlocked" and not session_available:
+        problems.append("Bitwarden reports unlocked, but no BW_SESSION is available. Run `oooconf secrets unlock`.")
 
     return problems
 
@@ -618,7 +769,8 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
             else:
                 print(f"{local_path}: up to date")
 
-    if os.environ.get("BW_SESSION"):
+    session_available = bool(os.environ.get("BW_SESSION") or read_persisted_bw_session())
+    if session_available:
         if shutil_which("bw"):
             try:
                 status_result = subprocess.run(
@@ -638,7 +790,7 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
         else:
             print("Vault status: bw CLI not found")
     else:
-        print("Vault status: no BW_SESSION exported")
+        print("Vault status: no BW_SESSION available")
 
     print()
     if problems:
@@ -647,7 +799,10 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
             print(f"  - {problem}")
         return 1
 
-    print("All synced and unlocked.")
+    if session_available:
+        print("All synced and unlocked.")
+    else:
+        print("Local env files are synced.")
     return 0
 
 
@@ -661,6 +816,7 @@ def logout_command() -> int:
         return lock_result.returncode
 
     logout_result = subprocess.run(["bw", "logout"], text=True)
+    clear_persisted_bw_session()
     return logout_result.returncode
 
 

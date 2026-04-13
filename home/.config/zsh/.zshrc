@@ -11,7 +11,19 @@ export HISTFILE="$OOODNAKOV_STATE_HOME/zsh/history"
 export ZSH_COMPDUMP="$OOODNAKOV_CACHE_HOME/zsh/.zcompdump-${HOST%%.*}-${ZSH_VERSION}"
 export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=30
 export ZSH_AUTOSUGGEST_USE_ASYNC=1
-export FORGIT_NO_ALIASES=1
+
+if [[ -f "$OOODNAKOV_CONFIG_HOME/local/env.zsh" ]]; then
+  source "$OOODNAKOV_CONFIG_HOME/local/env.zsh"
+  export OOODNAKOV_LOCAL_ENV_LOADED=1
+fi
+
+export OOODNAKOV_FORGIT_ALIAS_MODE="${OOODNAKOV_FORGIT_ALIAS_MODE:-plain}"
+
+case "$OOODNAKOV_FORGIT_ALIAS_MODE" in
+  plain) export FORGIT_NO_ALIASES=1 ;;
+  forgit) unset FORGIT_NO_ALIASES ;;
+  *) export FORGIT_NO_ALIASES=1 ;;
+esac
 
 fpath=("$OOODNAKOV_CONFIG_HOME/zsh/completions" $fpath)
 
@@ -33,6 +45,15 @@ if [[ -f "$ZSH_COMPDUMP" ]]; then
   unset zsh_compdump_header
 fi
 
+# Rebuild completion caches when tracked custom completion files change.
+zsh_oooconf_completion="$OOODNAKOV_CONFIG_HOME/zsh/completions/_oooconf"
+if [[ -f "$ZSH_COMPDUMP" && -f "$zsh_oooconf_completion" ]]; then
+  if [[ "$zsh_oooconf_completion" -nt "$ZSH_COMPDUMP" || "$zsh_oooconf_completion" -nt "$ZSH_COMPDUMP.zwc" ]]; then
+    rm -f "$ZSH_COMPDUMP" "$ZSH_COMPDUMP.zwc"
+  fi
+fi
+unset zsh_oooconf_completion
+
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
@@ -53,11 +74,11 @@ plugins=(
   python
   web-search
   history-substring-search
-  fzf-tab
   you-should-use
-  zsh-autosuggestions
   zsh-syntax-highlighting
   zsh-autocomplete
+  fzf-tab
+  zsh-autosuggestions
 )
 
 for brew_path in "${commands[brew]}" /opt/homebrew/bin/brew /usr/local/bin/brew "$HOME/.linuxbrew/bin/brew" /home/linuxbrew/.linuxbrew/bin/brew; do
@@ -125,6 +146,53 @@ if (( $+functions[forgit::log] )); then
   forgit_clean() { forgit::clean "$@"; }
   forgit_rebase() { forgit::rebase "$@"; }
   forgit_worktree() { forgit::worktree "$@"; }
+fi
+
+# Bind alias completions explicitly so fzf-tab sees the intended git/forgit
+# completer instead of relying on alias expansion heuristics.
+if (( $+functions[compdef] )); then
+  compdef _git-log forgit_log
+  compdef _git-forgit-diff forgit_diff
+  compdef _git-add forgit_add
+  compdef _git-show forgit_show
+  compdef _git-branches forgit_checkout_branch
+  compdef __git_recent_commits forgit_checkout_commit
+  compdef __git_tags forgit_checkout_tag
+  compdef _git-stash-show forgit_stash_show
+  compdef _git-add forgit_stash_push
+  compdef _git-clean forgit_clean
+  compdef _git-rebase forgit_rebase
+  compdef _git-worktree forgit_worktree
+
+  case "${OOODNAKOV_FORGIT_ALIAS_MODE:-plain}" in
+    forgit)
+      compdef _git-add ga
+      compdef _git-staged grh
+      compdef _git-log glo
+      compdef _git-reflog grl
+      compdef _git-forgit-diff gd
+      compdef _git-show gso
+      compdef _git-branches gcb
+      compdef _git-switch gsw
+      compdef __git_recent_commits gco
+      compdef __git_tags gct
+      compdef _git-clean gclean
+      compdef _git-stash-show gss
+      compdef _git-add gsp
+      compdef _git-rebase grb
+      compdef _git-worktree gwt
+      compdef _git-worktrees gwd
+      ;;
+    *)
+      compdef _git-status gs
+      compdef _git-diff gd
+      compdef _git-commit gc
+      compdef _git-push gp
+      compdef _git-pull gl
+      compdef _git-checkout gco
+      compdef _git-log glo
+      ;;
+  esac
 fi
 
 if (( $+commands[zoxide] )); then

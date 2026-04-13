@@ -113,12 +113,13 @@ Secrets commands:
 
 - `oooconf secrets login`: configure Bitwarden/Vaultwarden server and start login
 - `oooconf secrets unlock --shell zsh`: print shell code to export `BW_SESSION`
-- `oooconf secrets sync`: render local secret env files from the tracked template
+- `oooconf secrets sync`: render local secret env files from the tracked template, creating missing `env.zsh`/`env.ps1`
 - `oooconf secrets sync --dry-run`: preview rendered files without writing
 - `oooconf secrets list`: list secrets from the template (add `--resolved` to resolve `bw://` refs)
 - `oooconf secrets status`: check sync state and vault status
 - `oooconf secrets doctor`: validate prerequisites and rendered files
 - `oooconf secrets logout`: lock vault and revoke the Bitwarden session
+- `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
 The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, and `gum`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
@@ -320,7 +321,7 @@ export BW_PASSWORD="your-vault-password"
 oooconf secrets sync
 ```
 
-The sync will auto-unlock the vault and render local env files without any manual interaction.
+The sync will auto-unlock the vault, create missing local env files if needed, and render them without any manual interaction.
 
 **LOCAL OVERRIDES**: rendered files (`~/.config/ooodnakov/local/env.zsh`, `env.ps1`) contain a `# --- LOCAL OVERRIDES START/END ---` block. Lines inside this section survive every `oooconf secrets sync`, making it safe to add machine-specific env vars that are not tracked in the template. Anything outside the markers is overwritten on each sync.
 

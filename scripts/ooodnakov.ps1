@@ -14,6 +14,369 @@ $SetupScript = Join-Path $PSScriptRoot "setup.ps1"
 $GenerateLockScript = Join-Path $PSScriptRoot "generate-dependency-lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update-pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render-secrets.py"
+$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
+$KnownShellSubcommands = @("forgit-aliases", "typo-handling")
+$KnownShellForgitModes = @("plain", "forgit", "status")
+$KnownShellTypoModes = @("silent", "suggest", "help", "status")
+$LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
+$LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
+$ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
+$TypoHandlingVar = "OOODNAKOV_TYPO_HANDLING_MODE"
+
+function Get-ShellConfigHome {
+    $baseConfigHome = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME ".config" }
+    return Join-Path $baseConfigHome "ooodnakov"
+}
+
+function Get-LocalEnvZshPath {
+    return Join-Path (Get-ShellConfigHome) "local/env.zsh"
+}
+
+function Get-LocalEnvPs1Path {
+    return Join-Path (Get-ShellConfigHome) "local/env.ps1"
+}
+
+function Ensure-LocalOverrideFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $directory = Split-Path -Parent $Path
+    if (-not (Test-Path -LiteralPath $directory)) {
+        New-Item -ItemType Directory -Path $directory -Force | Out-Null
+    }
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        @(
+            $LocalOverridesStart
+            "# Add machine-specific env vars here. This section is preserved across syncs."
+            $LocalOverridesEnd
+        ) | Set-Content -LiteralPath $Path
+        return
+    }
+
+    $content = Get-Content -LiteralPath $Path
+    if ($content -notcontains $LocalOverridesStart) {
+        Add-Content -LiteralPath $Path -Value ""
+        Add-Content -LiteralPath $Path -Value $LocalOverridesStart
+        Add-Content -LiteralPath $Path -Value "# Add machine-specific env vars here. This section is preserved across syncs."
+        Add-Content -LiteralPath $Path -Value $LocalOverridesEnd
+    }
+}
+
+function Set-LocalOverrideLine {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$VariableName,
+        [Parameter(Mandatory = $true)]
+        [string]$ReplacementLine
+    )
+
+    Ensure-LocalOverrideFile -Path $Path
+    $lines = Get-Content -LiteralPath $Path
+    $result = New-Object System.Collections.Generic.List[string]
+    $inBlock = $false
+    $inserted = $false
+
+    foreach ($line in $lines) {
+        if ($line -eq $LocalOverridesStart) {
+            $inBlock = $true
+            $result.Add($line)
+            continue
+        }
+
+        if ($line -eq $LocalOverridesEnd) {
+            if ($inBlock -and -not $inserted) {
+                $result.Add($ReplacementLine)
+                $inserted = $true
+            }
+            $inBlock = $false
+            $result.Add($line)
+            continue
+        }
+
+        if ($inBlock -and ($line -match "^export $([regex]::Escape($VariableName))=" -or $line -match "^\$env:$([regex]::Escape($VariableName)) = ")) {
+            if (-not $inserted) {
+                $result.Add($ReplacementLine)
+                $inserted = $true
+            }
+            continue
+        }
+
+        $result.Add($line)
+    }
+
+    if (-not $inserted) {
+        if ($result.Count -gt 0 -and $result[$result.Count - 1] -ne "") {
+            $result.Add("")
+        }
+        $result.Add($LocalOverridesStart)
+        $result.Add($ReplacementLine)
+        $result.Add($LocalOverridesEnd)
+    }
+
+    Set-Content -LiteralPath $Path -Value $result
+}
+
+function Get-ForgitAliasMode {
+    $envPath = Get-LocalEnvZshPath
+    if (Test-Path -LiteralPath $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match "^export $([regex]::Escape($ForgitAliasVar))=""([^""]+)""$") {
+                return $Matches[1]
+            }
+        }
+    }
+
+    return "plain"
+}
+
+function Get-TypoHandlingMode {
+    if ($env:OOODNAKOV_TYPO_HANDLING_MODE) {
+        return $env:OOODNAKOV_TYPO_HANDLING_MODE
+    }
+
+    $envPath = Get-LocalEnvZshPath
+    if (Test-Path -LiteralPath $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match "^export $([regex]::Escape($TypoHandlingVar))=""([^""]+)""$") {
+                return $Matches[1]
+            }
+        }
+    }
+
+    return "help"
+}
+
+function Set-ForgitAliasMode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode
+    )
+
+    if ($Mode -notin @("plain", "forgit")) {
+        throw "Invalid forgit alias mode: $Mode`nExpected one of: plain, forgit"
+    }
+
+    $envZsh = Get-LocalEnvZshPath
+    $envPs1 = Get-LocalEnvPs1Path
+
+    Set-LocalOverrideLine -Path $envZsh -VariableName $ForgitAliasVar -ReplacementLine "export $ForgitAliasVar=""$Mode"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $ForgitAliasVar -ReplacementLine "`$env:$ForgitAliasVar = '$Mode'"
+
+    Write-Output "forgit alias mode set to $Mode"
+    Write-Output "zsh: $envZsh"
+    Write-Output "pwsh: $envPs1"
+    Write-Output "Open a new shell session to apply the change."
+}
+
+function Set-TypoHandlingMode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode
+    )
+
+    if ($Mode -notin @("silent", "suggest", "help")) {
+        throw "Invalid typo handling mode: $Mode`nExpected one of: silent, suggest, help"
+    }
+
+    $envZsh = Get-LocalEnvZshPath
+    $envPs1 = Get-LocalEnvPs1Path
+
+    Set-LocalOverrideLine -Path $envZsh -VariableName $TypoHandlingVar -ReplacementLine "export $TypoHandlingVar=""$Mode"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $TypoHandlingVar -ReplacementLine "`$env:$TypoHandlingVar = '$Mode'"
+
+    Write-Output "typo handling mode set to $Mode"
+    Write-Output "zsh: $envZsh"
+    Write-Output "pwsh: $envPs1"
+    Write-Output "Open a new shell session to apply the change."
+}
+
+function Write-UnknownCommandMessage {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        [string]$Suggestion,
+        [string]$Scope = "main"
+    )
+
+    $mode = Get-TypoHandlingMode
+    switch ($mode) {
+        "silent" {
+            return
+        }
+        "suggest" {
+            if ($Suggestion) {
+                Write-Output "Did you mean: $Suggestion"
+            } else {
+                Write-Output $Message
+            }
+            return
+        }
+        default {
+            Write-Output $Message
+            if ($Suggestion) {
+                Write-Output "Did you mean: $Suggestion"
+            }
+            if ($Scope -eq "shell") {
+                Show-CommandUsage "shell"
+            } else {
+                Show-Usage
+            }
+            return
+        }
+    }
+}
+
+function Invoke-ShellCommand {
+    param(
+        [string[]]$ShellArgs
+    )
+
+    $subcommand = if ($ShellArgs.Count -gt 0) { $ShellArgs[0] } else { "" }
+
+    switch ($subcommand) {
+        "" { Show-CommandUsage "shell"; return }
+        "help" { Show-CommandUsage "shell"; return }
+        "-h" { Show-CommandUsage "shell"; return }
+        "--help" { Show-CommandUsage "shell"; return }
+        "forgit-aliases" {
+            $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
+            switch ($mode) {
+                "status" { Write-Output (Get-ForgitAliasMode) }
+                "plain" { Set-ForgitAliasMode -Mode $mode }
+                "forgit" { Set-ForgitAliasMode -Mode $mode }
+                default {
+                    $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellForgitModes
+                    Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
+                    throw "Unknown shell option: $mode`nExpected one of: plain, forgit, status"
+                }
+            }
+            return
+        }
+        "typo-handling" {
+            $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
+            switch ($mode) {
+                "status" { Write-Output (Get-TypoHandlingMode) }
+                "silent" { Set-TypoHandlingMode -Mode $mode }
+                "suggest" { Set-TypoHandlingMode -Mode $mode }
+                "help" { Set-TypoHandlingMode -Mode $mode }
+                default {
+                    $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellTypoModes
+                    Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
+                    throw "Unknown shell option: $mode`nExpected one of: silent, suggest, help, status"
+                }
+            }
+            return
+        }
+        default {
+            $suggestion = Get-SuggestionFromList -InputValue $subcommand -Candidates $KnownShellSubcommands
+            Write-UnknownCommandMessage -Message "Unknown shell subcommand: $subcommand" -Suggestion $suggestion -Scope shell
+            throw "Unknown shell subcommand: $subcommand"
+        }
+    }
+}
+
+function Resolve-CommandAlias {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CommandName
+    )
+
+    switch ($CommandName) {
+        "check" { return "doctor" }
+        "preview" { return "dry-run" }
+        "upgrade" { return "update" }
+        default { return $CommandName }
+    }
+}
+
+function Get-EditDistance {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Left,
+        [Parameter(Mandatory = $true)]
+        [string]$Right
+    )
+
+    $rows = $Left.Length + 1
+    $cols = $Right.Length + 1
+    $dist = New-Object 'int[,]' $rows, $cols
+
+    for ($i = 0; $i -lt $rows; $i++) {
+        $dist[$i, 0] = $i
+    }
+    for ($j = 0; $j -lt $cols; $j++) {
+        $dist[0, $j] = $j
+    }
+
+    for ($i = 1; $i -lt $rows; $i++) {
+        for ($j = 1; $j -lt $cols; $j++) {
+            $cost = if ($Left[$i - 1] -ceq $Right[$j - 1]) { 0 } else { 1 }
+            $deletion = $dist[$i - 1, $j] + 1
+            $insertion = $dist[$i, $j - 1] + 1
+            $substitution = $dist[$i - 1, $j - 1] + $cost
+            $dist[$i, $j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
+        }
+    }
+
+    return $dist[$rows - 1, $cols - 1]
+}
+
+function Get-CommandSuggestion {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InputCommand
+    )
+
+    $bestCommand = $null
+    $bestDistance = [int]::MaxValue
+
+    foreach ($candidate in $KnownCommands) {
+        $distance = Get-EditDistance -Left $InputCommand -Right $candidate
+        if ($distance -lt $bestDistance) {
+            $bestDistance = $distance
+            $bestCommand = $candidate
+        }
+    }
+
+    $threshold = if ($InputCommand.Length -le 4) { 2 } else { 3 }
+    if ($bestDistance -le $threshold) {
+        return $bestCommand
+    }
+
+    return $null
+}
+
+function Get-SuggestionFromList {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InputValue,
+        [Parameter(Mandatory = $true)]
+        [string[]]$Candidates
+    )
+
+    $bestMatch = $null
+    $bestDistance = [int]::MaxValue
+
+    foreach ($candidate in $Candidates) {
+        $distance = Get-EditDistance -Left $InputValue -Right $candidate
+        if ($distance -lt $bestDistance) {
+            $bestDistance = $distance
+            $bestMatch = $candidate
+        }
+    }
+
+    $threshold = if ($InputValue.Length -le 4) { 2 } else { 3 }
+    if ($bestDistance -le $threshold) {
+        return $bestMatch
+    }
+
+    return $null
+}
 
 function Get-Version {
     if (Get-Command git -ErrorAction SilentlyContinue) {
@@ -66,8 +429,16 @@ Commands:
     lock                  regenerate dependency lock artifacts from pinned refs
     update-pins           compare/update pinned refs and refresh lock artifacts
 
+  Shell:
+    shell                 manage local shell preferences such as forgit aliases
+
   Secrets:
     secrets               sync or validate local secret env files
+
+Aliases:
+  check -> doctor
+  preview -> dry-run
+  upgrade -> update
 
 Note:
   bootstrap, delete, and remove commands are available in the Unix
@@ -106,6 +477,7 @@ function Show-CommandUsage {
         [string]$CommandName
     )
 
+    $CommandName = Resolve-CommandAlias -CommandName $CommandName
     switch ($CommandName) {
         "install" {
             @"
@@ -214,10 +586,14 @@ Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> 
 
 Render or validate local secret env files from the tracked template.
 Examples:
+  oooconf secrets                      # show current sync/session status
   oooconf secrets login
+  oooconf secrets unlock               # prompt for password and save session
+  oooconf secrets unlock 'your-password'
   oooconf secrets unlock --shell pwsh | Invoke-Expression
   oooconf secrets sync
   oooconf secrets sync --dry-run
+  oooconf secrets ls                   # alias for list
   oooconf secrets list
   oooconf secrets list --resolved
   oooconf secrets status
@@ -225,6 +601,7 @@ Examples:
   oooconf secrets logout
   oooconf secrets add GITHUB_TOKEN bw://item/abc123/password
   oooconf secrets add SOME_URL https://example.com
+  oooconf secrets rm GITHUB_TOKEN      # alias for remove
   oooconf secrets remove GITHUB_TOKEN
 
 Environment overrides:
@@ -242,11 +619,41 @@ Examples:
   oooconf version                      # show version and repo path
 "@
         }
+        "shell" {
+            @"
+Usage: oooconf shell forgit-aliases [plain|forgit|status]
+       oooconf shell typo-handling [silent|suggest|help|status]
+
+Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
+
+Forgit alias modes:
+  plain   keep plain git aliases like gd/gco and define glo as git log
+  forgit  enable upstream forgit aliases like glo/gd/gco
+  status  show the currently configured mode
+
+Typo handling modes:
+  silent   exit 1 without printing anything for wrong commands
+  suggest  print only the closest suggestion when available
+  help     print the unknown command, suggestion, and full help
+
+Examples:
+  oooconf shell forgit-aliases status
+  oooconf shell forgit-aliases plain
+  oooconf shell forgit-aliases forgit
+  oooconf shell typo-handling status
+  oooconf shell typo-handling suggest
+  oooconf shell typo-handling silent
+"@
+        }
         "" { Show-Usage }
         "help" { Show-Usage }
         "-h" { Show-Usage }
         "--help" { Show-Usage }
-        default { throw "Unknown command: $CommandName" }
+        default {
+            $suggestion = Get-CommandSuggestion -InputCommand $CommandName
+            Write-UnknownCommandMessage -Message "Unknown command: $CommandName" -Suggestion $suggestion
+            throw "Unknown command: $CommandName"
+        }
     }
 }
 
@@ -294,7 +701,7 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         }
         "-h" {
             if ($i + 1 -lt $Arguments.Count -and -not $Arguments[$i + 1].StartsWith("-")) {
-                Show-CommandUsage $Arguments[$i + 1]
+                Show-CommandUsage (Resolve-CommandAlias -CommandName $Arguments[$i + 1])
             } else {
                 Show-Usage
             }
@@ -302,7 +709,7 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         }
         "--help" {
             if ($i + 1 -lt $Arguments.Count -and -not $Arguments[$i + 1].StartsWith("-")) {
-                Show-CommandUsage $Arguments[$i + 1]
+                Show-CommandUsage (Resolve-CommandAlias -CommandName $Arguments[$i + 1])
             } else {
                 Show-Usage
             }
@@ -319,7 +726,7 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         }
         "help" {
             if ($i + 1 -lt $Arguments.Count) {
-                Show-CommandUsage $Arguments[$i + 1]
+                Show-CommandUsage (Resolve-CommandAlias -CommandName $Arguments[$i + 1])
             } else {
                 Show-Usage
             }
@@ -331,7 +738,7 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
             exit 0
         }
         default {
-            $command = $arg
+            $command = Resolve-CommandAlias -CommandName $arg
             for ($j = $i + 1; $j -lt $Arguments.Count; $j++) {
                 $remaining.Add($Arguments[$j])
             }
@@ -410,7 +817,12 @@ switch ($command) {
         Require-Python3
         & python3 $RenderSecretsScript --repo-root $RepoRoot @remaining
     }
+    "shell" {
+        Invoke-ShellCommand -ShellArgs $remaining
+    }
     default {
+        $suggestion = Get-CommandSuggestion -InputCommand $command
+        Write-UnknownCommandMessage -Message "Unknown command: $command" -Suggestion $suggestion
         throw "Unknown command: $command"
     }
 }
