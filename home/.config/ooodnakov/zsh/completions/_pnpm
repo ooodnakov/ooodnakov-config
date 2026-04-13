@@ -2,16 +2,25 @@
 ###-begin-pnpm-completion-###
 if type compdef &>/dev/null; then
   _pnpm_completion () {
-    local reply
-    local si=$IFS
+    local -a pnpm_completions
+    local out
+    
+    out=$(COMP_CWORD="$((CURRENT-1))" COMP_LINE="$BUFFER" COMP_POINT="$CURSOR" SHELL=zsh pnpm completion-server -- "${words[@]}" 2>/dev/null)
+    
+    if [[ -z "$out" ]]; then
+      return 0
+    fi
 
-    IFS=$'\n' reply=($(COMP_CWORD="$((CURRENT-1))" COMP_LINE="$BUFFER" COMP_POINT="$CURSOR" SHELL=zsh pnpm completion-server -- "${words[@]}"))
-    IFS=$si
-
-    if [ "$reply" = "__tabtab_complete_files__" ]; then
+    if [[ "$out" == "__tabtab_complete_files__" ]]; then
       _files
-    else
-      _describe 'values' reply
+      return 0
+    fi
+
+    # Split by line and convert tabs to colons for _describe
+    pnpm_completions=("${(@f)${out//$'\t'/:}}")
+    
+    if (( ${#pnpm_completions} > 0 )); then
+      _describe 'pnpm commands' pnpm_completions
     fi
   }
   if [[ $zsh_eval_context == *func ]]; then

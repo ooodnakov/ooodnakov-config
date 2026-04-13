@@ -168,6 +168,30 @@ function Confirm-Install {
 
 $script:OptionalDependencySpecsCache = $null
 
+function Detect-Platform {
+    if ($IsWindows) { return "windows" }
+    if ($IsMacOS) { return "macos" }
+    if ($IsLinux) { return "linux" }
+    # Fallback for older PowerShell on Windows
+    if ($env:OS -eq "Windows_NT") { return "windows" }
+    return "unknown"
+}
+
+function Test-OptionalDependencyApplicable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Spec
+    )
+
+    $platform = Detect-Platform
+    switch ($platform) {
+        "windows" { return $null -ne $Spec.Windows }
+        "macos"   { return $null -ne $Spec.Macos }
+        "linux"   { return $null -ne $Spec.Linux }
+        default   { return $true }
+    }
+}
+
 function Get-OptionalDependencySpecs {
     if ($script:OptionalDependencySpecsCache) {
         return $script:OptionalDependencySpecsCache
@@ -182,36 +206,50 @@ function Get-OptionalDependencySpecs {
 
     if (-not $json) {
         # Fallback: hardcoded specs when Python is unavailable
-        return @(
-            [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git version control" }
-            [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal" }
-            [pscustomobject]@{ Key = "nvim"; DisplayName = "nvim"; Description = "Neovim" }
-            [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt" }
-            [pscustomobject]@{ Key = "node"; DisplayName = "node"; Description = "Node.js LTS" }
-            [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey" }
-            [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo elevation helper" }
-            [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep search tool" }
-            [pscustomobject]@{ Key = "fd"; DisplayName = "fd"; Description = "fd find alternative" }
-            [pscustomobject]@{ Key = "direnv"; DisplayName = "direnv"; Description = "direnv shell integration" }
-            [pscustomobject]@{ Key = "fzf"; DisplayName = "fzf"; Description = "fzf shell integration" }
-            [pscustomobject]@{ Key = "bat"; DisplayName = "bat"; Description = "cat alternative with syntax highlighting" }
-            [pscustomobject]@{ Key = "delta"; DisplayName = "delta"; Description = "Git diff pager with syntax highlighting" }
-            [pscustomobject]@{ Key = "glow"; DisplayName = "glow"; Description = "terminal Markdown reader" }
-            [pscustomobject]@{ Key = "gum"; DisplayName = "gum"; Description = "interactive terminal UI toolkit" }
-            [pscustomobject]@{ Key = "q"; DisplayName = "q"; Description = "q text-as-data CLI" }
-            [pscustomobject]@{ Key = "eza"; DisplayName = "eza"; Description = "modern ls aliases" }
-            [pscustomobject]@{ Key = "uv"; DisplayName = "uv"; Description = "Python package manager" }
-            [pscustomobject]@{ Key = "python3"; DisplayName = "python3"; Description = "Python 3 runtime" }
-            [pscustomobject]@{ Key = "bw"; DisplayName = "bw"; Description = "Bitwarden CLI" }
-            [pscustomobject]@{ Key = "pnpm"; DisplayName = "pnpm"; Description = "pnpm package manager" }
-            [pscustomobject]@{ Key = "wget"; DisplayName = "wget"; Description = "download helper" }
-            [pscustomobject]@{ Key = "zsh"; DisplayName = "zsh"; Description = "default shell support" }
-            [pscustomobject]@{ Key = "autoconf"; DisplayName = "autoconf"; Description = "build ezsh native components" }
-            [pscustomobject]@{ Key = "fc-cache"; DisplayName = "fc-cache"; Description = "refresh font caches" }
-            [pscustomobject]@{ Key = "cargo"; DisplayName = "cargo"; Description = "Rust package manager" }
-            [pscustomobject]@{ Key = "dua"; DisplayName = "dua"; Description = "disk usage analysis" }
-            [pscustomobject]@{ Key = "k"; DisplayName = "k"; Description = "standalone k command" }
+        $all_specs = @(
+            [pscustomobject]@{ Key = "wget"; DisplayName = "wget"; Description = "download helper"; Linux = @{ manager = "apt"; package = "wget" }; Macos = @{ manager = "brew"; package = "wget" }; Windows = $null }
+            [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git version control"; Linux = $null; Macos = $null; Windows = @{ manager = "winget"; winget_id = "Git.Git" } }
+            [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = $null; Macos = $null; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
+            [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt"; Linux = $null; Macos = $null; Windows = @{ manager = "winget"; winget_id = "JanDeDobbeleer.OhMyPosh" } }
+            [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo elevation helper"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "gsudo" } }
+            [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep search tool"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "ripgrep" } }
+            [pscustomobject]@{ Key = "fd"; DisplayName = "fd"; Description = "fd find alternative"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "fd" } }
+            [pscustomobject]@{ Key = "zsh"; DisplayName = "zsh"; Description = "default shell support"; Linux = @{ manager = "apt"; package = "zsh" }; Macos = @{ manager = "brew"; package = "zsh" }; Windows = $null }
+            [pscustomobject]@{ Key = "direnv"; DisplayName = "direnv"; Description = "direnv shell integration"; Linux = @{ manager = "apt"; package = "direnv" }; Macos = @{ manager = "brew"; package = "direnv" }; Windows = @{ manager = "choco"; package = "direnv" } }
+            [pscustomobject]@{ Key = "fzf"; DisplayName = "fzf"; Description = "fzf shell integration"; Linux = @{ manager = "apt"; package = "fzf" }; Macos = @{ manager = "brew"; package = "fzf" }; Windows = @{ manager = "choco"; package = "fzf" } }
+            [pscustomobject]@{ Key = "bat"; DisplayName = "bat"; Description = "cat alternative with syntax highlighting"; Linux = @{ manager = "apt"; package = "bat" }; Macos = @{ manager = "brew"; package = "bat" }; Windows = @{ manager = "choco"; package = "bat" } }
+            [pscustomobject]@{ Key = "delta"; DisplayName = "delta"; Description = "Git diff pager with syntax highlighting"; Linux = @{ manager = "apt"; package = "git-delta" }; Macos = @{ manager = "brew"; package = "git-delta" }; Windows = @{ manager = "choco"; package = "delta" } }
+            [pscustomobject]@{ Key = "glow"; DisplayName = "glow"; Description = "terminal Markdown reader"; Linux = @{ manager = "apt"; package = "glow" }; Macos = @{ manager = "brew"; package = "glow" }; Windows = @{ manager = "choco"; package = "glow" } }
+            [pscustomobject]@{ Key = "gum"; DisplayName = "gum"; Description = "interactive terminal UI toolkit"; Linux = @{ manager = "apt"; package = "gum" }; Macos = @{ manager = "brew"; package = "gum" }; Windows = @{ manager = "winget"; winget_id = "charmbracelet.gum" } }
+            [pscustomobject]@{ Key = "zoxide"; DisplayName = "zoxide"; Description = "smart directory jumping"; Linux = @{ manager = "apt"; package = "zoxide" }; Macos = @{ manager = "brew"; package = "zoxide" }; Windows = @{ manager = "choco"; package = "zoxide" } }
+            [pscustomobject]@{ Key = "q"; DisplayName = "q"; Description = "q text-as-data CLI"; Linux = @{ manager = "apt"; package = "q" }; Macos = @{ manager = "brew"; package = "q" }; Windows = @{ manager = "choco"; package = "q-dns" } }
+            [pscustomobject]@{ Key = "eza"; DisplayName = "eza"; Description = "modern ls aliases"; Linux = @{ manager = "apt"; package = "eza" }; Macos = @{ manager = "brew"; package = "eza" }; Windows = @{ manager = "choco"; package = "eza" } }
+            [pscustomobject]@{ Key = "uv"; DisplayName = "uv"; Description = "Python package manager"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "uv" }; Windows = @{ manager = "choco"; package = "uv" } }
+            [pscustomobject]@{ Key = "bw"; DisplayName = "bw"; Description = "Bitwarden CLI"; Linux = @{ manager = "custom" }; Macos = @{ manager = "brew"; package = "bitwarden-cli" }; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "node"; DisplayName = "node"; Description = "Node.js LTS"; Linux = @{ manager = "apt"; package = "nodejs" }; Macos = @{ manager = "brew"; package = "node" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
+            [pscustomobject]@{ Key = "npm"; DisplayName = "npm"; Description = "Node package manager"; Linux = @{ manager = "apt"; package = "npm" }; Macos = @{ manager = "brew"; package = "npm" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
+            [pscustomobject]@{ Key = "pnpm"; DisplayName = "pnpm"; Description = "pnpm package manager"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "autoconf"; DisplayName = "autoconf"; Description = "build ezsh native components"; Linux = @{ manager = "apt"; package = "autoconf" }; Macos = @{ manager = "brew"; package = "autoconf" }; Windows = $null }
+            [pscustomobject]@{ Key = "fc-cache"; DisplayName = "fc-cache"; Description = "refresh font caches"; Linux = @{ manager = "apt"; package = "fontconfig" }; Macos = @{ manager = "custom" }; Windows = $null }
+            [pscustomobject]@{ Key = "cargo"; DisplayName = "cargo"; Description = "Rust package manager"; Linux = @{ manager = "apt"; package = "cargo" }; Macos = @{ manager = "brew"; package = "cargo" }; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "dua"; DisplayName = "dua"; Description = "disk usage analysis"; Linux = @{ manager = "cargo"; package = "dua-cli" }; Macos = @{ manager = "brew"; package = "dua-cli" }; Windows = @{ manager = "cargo"; package = "dua-cli" } }
+            [pscustomobject]@{ Key = "nvim"; DisplayName = "nvim"; Description = "Neovim"; Linux = @{ manager = "apt"; package = "neovim" }; Macos = @{ manager = "brew"; package = "neovim" }; Windows = @{ manager = "winget"; winget_id = "Neovim.Neovim" } }
+            [pscustomobject]@{ Key = "k"; DisplayName = "k"; Description = "standalone k command"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "python3"; DisplayName = "python3"; Description = "Python 3 runtime"; Linux = @{ manager = "apt"; package = "python3" }; Macos = @{ manager = "brew"; package = "python" }; Windows = @{ manager = "choco"; package = "python" } }
         )
+        $specs = @($all_specs | ForEach-Object {
+            [pscustomobject]@{
+                Key         = $_.Key
+                DisplayName = $_.DisplayName
+                Description = $_.Description
+                Linux       = $_.Linux
+                Macos       = $_.Macos
+                Windows     = $_.Windows
+            }
+        })
+        $script:OptionalDependencySpecsCache = $specs
+        return @($specs | Where-Object { Test-OptionalDependencyApplicable -Spec $_ })
     }
 
     $raw = $json | ConvertFrom-Json
@@ -228,7 +266,34 @@ function Get-OptionalDependencySpecs {
     })
 
     $script:OptionalDependencySpecsCache = $specs
-    return $specs
+    return @($specs | Where-Object { Test-OptionalDependencyApplicable -Spec $_ })
+}
+
+function Get-AllOptionalDependencySpecs {
+    """Return all specs including platform-inapplicable ones (for validation)."""
+    if ($script:OptionalDependencySpecsCache) {
+        # Rebuild from JSON without platform filtering
+        $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
+        $json = $null
+        try {
+            $json = & python3 $pythonScript json 2>$null
+        } catch {}
+        if ($json) {
+            $raw = $json | ConvertFrom-Json
+            return @($raw | ForEach-Object {
+                [pscustomobject]@{
+                    Key         = $_.key
+                    DisplayName = $_.display
+                    Description = $_.description
+                    Linux       = if ($_.linux) { $_.linux } else { $null }
+                    Macos       = if ($_.macos) { $_.macos } else { $null }
+                    Windows     = if ($_.windows) { $_.windows } else { $null }
+                }
+            })
+        }
+    }
+    # Fallback: return filtered (applicable only) specs
+    return $script:OptionalDependencySpecsCache
 }
 
 $script:SelectedOptionalKeys = @()
@@ -913,6 +978,43 @@ function Install-BitwardenCliIfMissing {
     return $false
 }
 
+function Install-CargoIfMissing {
+    if (Get-Command cargo -ErrorAction SilentlyContinue) {
+        Add-DependencySummary "cargo: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install Rust and cargo via rustup?")) {
+        Add-DependencySummary "cargo: skipped"
+        return $false
+    }
+
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        if ($DryRun) {
+            Write-Output "[dry-run] winget install Rustlang.Rustup"
+            Add-DependencySummary "cargo: install preview via winget"
+            return $false
+        }
+
+        try {
+            winget install Rustlang.Rustup --accept-package-agreements --accept-source-agreements
+        } catch {
+            Write-Output $_
+        }
+
+        if (Get-Command cargo -ErrorAction SilentlyContinue) {
+            Add-DependencySummary "cargo: installed via winget"
+            return $true
+        }
+
+        Add-DependencySummary "cargo: install attempted via winget"
+        return $false
+    }
+
+    Add-DependencySummary "cargo: missing (requires winget)"
+    return $false
+}
+
 function Install-OptionalDependencies {
     Write-Output "Dependency check:"
 
@@ -950,6 +1052,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "python3" -Action { Install-PackageIfMissing -CommandNames @("python3", "python") -ChocoId "python" -Description "Python 3" -SummaryName "python3" }
     $null = Invoke-SelectedOptionalDependency -Key "bw" -Action { Install-BitwardenCliIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "pnpm" -Action { Install-PnpmIfMissing }
+    $null = Invoke-SelectedOptionalDependency -Key "cargo" -Action { Install-CargoIfMissing }
 }
 
 function Write-Summary {

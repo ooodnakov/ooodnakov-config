@@ -138,8 +138,32 @@ prompt_yes_no() {
   esac
 }
 
+detect_platform() {
+  case "$(uname -s)" in
+    Linux*) echo "linux" ;;
+    Darwin*) echo "macos" ;;
+    CYGWIN*|MINGW*|MSYS*|Windows*) echo "windows" ;;
+    *) echo "unknown" ;;
+  esac
+}
+
+optional_dependency_applicable() {
+  local key="$1"
+  local platform
+  platform="$(detect_platform)"
+  local info
+  info="$(python3 "$REPO_ROOT/scripts/read-optional-deps.py" install-info "$key" "$platform" 2>/dev/null)" || return 1
+  local manager
+  manager="$(echo "$info" | cut -d'|' -f1)"
+  [ -n "$manager" ] && [ "$manager" != "none" ]
+}
+
 optional_dependency_catalog() {
-  python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog
+  local key label description
+  while IFS='|' read -r key label description; do
+    optional_dependency_applicable "$key" || continue
+    printf '%s|%s|%s\n' "$key" "$label" "$description"
+  done < <(python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog)
 }
 
 optional_dependency_exists() {
@@ -433,7 +457,7 @@ ensure_gum_for_optional_selector() {
 
 choose_optional_dependencies_without_gum() {
   local key label description selection selected_keys_csv
-  local -a all_keys all_labels
+  local -a all_keys=() all_labels=()
 
   while IFS='|' read -r key label description; do
     if optional_dependency_present "$key"; then
@@ -460,7 +484,7 @@ choose_optional_dependencies_without_gum() {
   fi
 
   selection="$(echo "$selection" | tr ',' ' ')"
-  local wanted_keys
+  local -a wanted_keys=()
   read -ra wanted_keys <<< "$selection"
 
   if [ "${#wanted_keys[@]}" -eq 0 ]; then
@@ -483,7 +507,8 @@ choose_optional_dependencies_without_gum() {
 
 choose_optional_dependencies_with_gum() {
   local key label description selection selected_key
-  local -a options selected_keys
+  local -a options=()
+  local -a selected_keys=()
 
   ensure_gum_for_optional_selector || return 1
 
@@ -504,9 +529,11 @@ choose_optional_dependencies_with_gum() {
       gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue."
   )" || return 1
 
-  while IFS=$'\t' read -r selected_key _; do
-    [ -n "$selected_key" ] && selected_keys+=("$selected_key")
-  done <<< "$selection"
+  if [ -n "$selection" ]; then
+    while IFS=$'\t' read -r selected_key _; do
+      [ -n "$selected_key" ] && selected_keys+=("$selected_key")
+    done <<< "$selection"
+  fi
 
   if [ "${#selected_keys[@]}" -eq 0 ]; then
     return 1
@@ -1465,6 +1492,34 @@ run_doctor() {
   echo "Doctor checks passed."
 }
 
+maybe_install_cargo() {
+  if command -v cargo >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("cargo: present")
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install Rust and cargo via rustup (official installer)?"; then
+    echo "skipping cargo" >&2
+    DEPENDENCY_SUMMARY+=("cargo: skipped")
+    return 0
+  fi
+
+  if command -v curl >/dev/null 2>&1; then
+    run_with_spinner "Installing Rust via rustup" sh -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+  elif command -v wget >/dev/null 2>&1; then
+    run_with_spinner "Installing Rust via rustup" sh -c 'wget -qO- https://sh.rustup.rs | sh -s -- -y'
+  else
+    DEPENDENCY_SUMMARY+=("cargo: missing (requires curl or wget)")
+    return 0
+  fi
+
+  if command -v cargo >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/cargo" ]; then
+    DEPENDENCY_SUMMARY+=("cargo: installed")
+  else
+    DEPENDENCY_SUMMARY+=("cargo: install attempted")
+  fi
+}
+
 install_optional_dependencies() {
   local manager
   manager="$(detect_package_manager)"
@@ -1489,7 +1544,7 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected pnpm maybe_install_pnpm
   install_optional_dependency_if_selected autoconf maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
   install_optional_dependency_if_selected fc-cache maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
-  install_optional_dependency_if_selected cargo maybe_install_dependency "$manager" cargo cargo "Rust package manager"
+  install_optional_dependency_if_selected cargo maybe_install_cargo
   install_optional_dependency_if_selected dua maybe_install_dua_cli "$manager"
   install_optional_dependency_if_selected nvim maybe_install_neovim "$manager"
   install_optional_dependency_if_selected k maybe_note_dependency k "manual install if you want the standalone k command"
@@ -1539,7 +1594,10 @@ case "$COMMAND" in
       else
         _deps_gum_rc=$?
         case $_deps_gum_rc in
-          2) exit 0 ;;
+          2)
+            echo "All optional dependencies are already present."
+            exit 0
+            ;;
           1)
             # gum not available, fall back to text prompt
             if selected_optional_key_csv="$(choose_optional_dependencies_without_gum)"; then
@@ -1547,7 +1605,10 @@ case "$COMMAND" in
             else
               _deps_fallback_rc=$?
               case $_deps_fallback_rc in
-                2) exit 0 ;;
+                2)
+                  echo "All optional dependencies are already present."
+                  exit 0
+                  ;;
                 *) echo "No optional dependencies selected." >&2; exit 1 ;;
               esac
             fi
