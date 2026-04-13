@@ -40,6 +40,18 @@ if (Get-Command uv -ErrorAction SilentlyContinue) {
     (& uv generate-shell-completion powershell) | Out-String | Invoke-Expression
 }
 
+if (Get-Command rustup -ErrorAction SilentlyContinue) {
+    (& rustup completions powershell) | Out-String | Invoke-Expression
+}
+
+if (Get-Command gum -ErrorAction SilentlyContinue) {
+    (& gum completion powershell) | Out-String | Invoke-Expression
+}
+
+if (Get-Command bw -ErrorAction SilentlyContinue) {
+    (& bw completion --shell powershell) | Out-String | Invoke-Expression
+}
+
 if (Get-Command direnv -ErrorAction SilentlyContinue) {
     (& direnv hook pwsh) | Out-String | Invoke-Expression
 }

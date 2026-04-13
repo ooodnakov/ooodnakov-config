@@ -219,9 +219,27 @@ if (( $+commands[direnv] )); then
   add-zsh-hook chpwd _ooodnakov_direnv_hook
 fi
 
-# Enable uv/uvx completions when uv is installed.
+# Enable completions for optional tools when installed.
 if (( $+commands[uv] )); then
   eval "$(uv generate-shell-completion zsh)"
+fi
+
+if (( $+commands[rustup] )); then
+  source <(rustup completions zsh)
+fi
+
+if (( $+commands[pnpm] )); then
+  # Already has static file in fpath, but if we wanted dynamic:
+  # eval "$(pnpm completion zsh)"
+  :
+fi
+
+if (( $+commands[gum] )); then
+  source <(gum completion zsh)
+fi
+
+if (( $+commands[bw] )); then
+  source <(bw completion --shell zsh)
 fi
 
 alias k='k -h'
