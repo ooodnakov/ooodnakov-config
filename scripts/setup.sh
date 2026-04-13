@@ -166,6 +166,10 @@ optional_dependency_catalog() {
   done < <(python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog)
 }
 
+optional_dependency_catalog_all() {
+  python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog
+}
+
 optional_dependency_exists() {
   local expected_key="$1"
   local key label description
@@ -177,12 +181,32 @@ optional_dependency_exists() {
   return 1
 }
 
+optional_dependency_exists_any() {
+  # Check if key exists in full catalog (including platform-inapplicable deps).
+  local expected_key="$1"
+  local key label description
+
+  while IFS='|' read -r key label description; do
+    [ "$key" = "$expected_key" ] && return 0
+  done < <(optional_dependency_catalog_all)
+
+  return 1
+}
+
 optional_dependency_keys() {
   local key label description
 
   while IFS='|' read -r key label description; do
     printf '%s\n' "$key"
   done < <(optional_dependency_catalog)
+}
+
+optional_dependency_keys_all() {
+  local key label description
+
+  while IFS='|' read -r key label description; do
+    printf '%s\n' "$key"
+  done < <(optional_dependency_catalog_all)
 }
 
 edit_distance() {
@@ -263,7 +287,7 @@ suggest_dependency_key() {
 
   while IFS= read -r key; do
     [ -n "$key" ] && keys+=("$key")
-  done < <(optional_dependency_keys)
+  done < <(optional_dependency_keys_all)
 
   suggest_from_candidates "$input" "${keys[@]}"
 }
@@ -1316,6 +1340,26 @@ install_fonts() {
   fi
 }
 
+generate_autogen_completions() {
+  local target_dir="$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
+  [ "$DRY_RUN" -eq 1 ] && { echo "[dry-run] Generating autogen completions in $target_dir"; return 0; }
+
+  mkdir -p "$target_dir"
+  
+  if command -v rustup >/dev/null 2>&1; then
+    run_with_spinner "Generating rustup completions" sh -c "rustup completions zsh > '$target_dir/_rustup'"
+    run_with_spinner "Generating cargo completions" sh -c "rustup completions zsh cargo > '$target_dir/_cargo'"
+  fi
+
+  if command -v gum >/dev/null 2>&1; then
+    run_with_spinner "Generating gum completions" sh -c "gum completion zsh > '$target_dir/_gum'"
+  fi
+
+  if command -v bw >/dev/null 2>&1; then
+    run_with_spinner "Generating bw completions" sh -c "bw completion --shell zsh > '$target_dir/_bw'"
+  fi
+}
+
 install_managed_tools() {
   local bin_dir="$STATE_HOME/bin"
 
@@ -1564,7 +1608,7 @@ while [ "$#" -gt 0 ]; do
       exit 1
       ;;
     *)
-      if ! optional_dependency_exists "$1"; then
+      if ! optional_dependency_exists_any "$1"; then
         echo "unknown dependency key: $1" >&2
         suggestion="$(suggest_dependency_key "$1")"
         if [ -n "$suggestion" ]; then
@@ -1572,6 +1616,11 @@ while [ "$#" -gt 0 ]; do
         fi
         usage >&2
         exit 1
+      fi
+      if ! optional_dependency_applicable "$1" 2>/dev/null; then
+        local _platform
+        _platform="$(detect_platform)"
+        echo "Note: $1 is not applicable on $_platform; skipping." >&2
       fi
       cli_selected_optional_keys+=("$1")
       ;;
@@ -1670,6 +1719,8 @@ link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim" || true
 link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
 run_cmd mkdir -p "$HOME_DIR/.local/bin"
 link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
+
+generate_autogen_completions || true
 
 run_cmd mkdir -p "$CONFIG_HOME/ohmyposh" "$CONFIG_HOME/powershell"
 link_file "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json" || true

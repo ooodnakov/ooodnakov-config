@@ -25,7 +25,7 @@ case "$OOODNAKOV_FORGIT_ALIAS_MODE" in
   *) export FORGIT_NO_ALIASES=1 ;;
 esac
 
-fpath=("$OOODNAKOV_CONFIG_HOME/zsh/completions" $fpath)
+fpath=("$OOODNAKOV_CONFIG_HOME/zsh/completions" "$OOODNAKOV_CONFIG_HOME/zsh/completions/autogen" $fpath)
 
 # Create runtime directories with explicit permissions so compaudit accepts
 # the Oh My Zsh completion cache regardless of the caller's umask.
@@ -224,23 +224,9 @@ if (( $+commands[uv] )); then
   eval "$(uv generate-shell-completion zsh)"
 fi
 
-if (( $+commands[rustup] )); then
-  source <(rustup completions zsh)
-  source <(rustup completions zsh cargo)
-fi
-
 if (( $+commands[pnpm] )); then
-  # Already has static file in fpath, but if we wanted dynamic:
-  # eval "$(pnpm completion zsh)"
+  # Already has static file in fpath.
   :
-fi
-
-if (( $+commands[gum] )); then
-  source <(gum completion zsh)
-fi
-
-if (( $+commands[bw] )); then
-  source <(bw completion --shell zsh)
 fi
 
 alias k='k -h'
