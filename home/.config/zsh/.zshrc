@@ -254,8 +254,21 @@ if [ -f "$OOODNAKOV_CONFIG_HOME/p10k.zsh" ]; then
   source "$OOODNAKOV_CONFIG_HOME/p10k.zsh"
 fi
 
-if [ -f "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" ]; then
-  source "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh"
+if [[ -f "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" ]]; then
+  # Guard against duplicate hook registration when the profile is re-sourced.
+  # Multiple auto_uv_env chpwd hooks can cause repeated "Creating UV environment"
+  # / activation status lines for a single directory change.
+  if [[ -z "${OOODNAKOV_AUTO_UV_ENV_LOADED:-}" ]]; then
+    export OOODNAKOV_AUTO_UV_ENV_LOADED=1
+    # auto-uv-env runs an immediate startup check when sourced. Quiet only that
+    # first run so opening a shell in a Python project doesn't spam status text.
+    source "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" >/dev/null 2>&1
+  fi
+
+  if (( $+functions[add-zsh-hook] )) && (( $+functions[auto_uv_env] )); then
+    add-zsh-hook -d chpwd auto_uv_env 2>/dev/null || true
+    add-zsh-hook chpwd auto_uv_env
+  fi
 fi
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
