@@ -18,6 +18,16 @@ LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
 FORGIT_ALIAS_VAR="OOODNAKOV_FORGIT_ALIAS_MODE"
 TYPO_HANDLING_VAR="OOODNAKOV_TYPO_HANDLING_MODE"
 
+# Run a Python script, preferring `uv run` (which uses the pinned .python-version
+# and .venv) when uv is available, falling back to plain python3.
+run_python() {
+  if command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ]; then
+    uv run "$@"
+  else
+    python3 "$@"
+  fi
+}
+
 visible_error() {
   if [ -t 1 ]; then
     printf '%s\n' "$*"
@@ -869,11 +879,8 @@ case "$command" in
       echo "--dry-run is not supported for lock" >&2
       exit 1
     fi
-    if ! command -v python3 >/dev/null 2>&1; then
-      echo "python3 is required to generate dependency lock artifacts." >&2
-      exit 1
-    fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$GEN_LOCK" "$@"
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$GEN_LOCK" "$@"
+    exit $?
     ;;
   update-pins)
     if [ "$dry_run_requested" -eq 1 ]; then
@@ -884,11 +891,8 @@ case "$command" in
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" "$@"
     ;;
   secrets)
-    if ! command -v python3 >/dev/null 2>&1; then
-      echo "python3 is required for secrets sync." >&2
-      exit 1
-    fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"
+    exit $?
     ;;
   shell)
     handle_shell_command "$@"

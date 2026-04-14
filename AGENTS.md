@@ -76,6 +76,20 @@ Do not treat `third_party/` as active config unless the user explicitly asks to 
 - The large local fork snapshot in `third_party/local-snapshots/wezterm-current` is for audit/reference only.
 - If borrowing features from the snapshot, port them intentionally into the active config instead of replacing the active tree wholesale.
 
+## Python and uv
+
+The project uses `uv` for Python version and dependency management.
+
+- `pyproject.toml`: Defines project metadata and (currently empty) dependencies.
+- `.python-version`: Pins the Python version (e.g., 3.12).
+- `uv.lock`: Ensures deterministic environment state.
+- Helper scripts (`scripts/*.sh`, `scripts/*.ps1`) use a `run_python` / `Run-Python` function that prefers `uv run` if available, ensuring they run with the correct Python version and environment.
+- The virtual environment `.venv/` is ignored by git.
+
+When adding new Python dependencies:
+- Use `uv add <package>` to update `pyproject.toml` and `uv.lock`.
+- Ensure scripts remain compatible with the pinned Python version.
+
 ## Upstream tracking
 
 - `third_party/upstream/ezsh` is managed as a git subtree.

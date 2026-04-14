@@ -23,6 +23,17 @@ $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
 $TypoHandlingVar = "OOODNAKOV_TYPO_HANDLING_MODE"
 
+# Run a Python script, preferring `uv run` when available.
+function Run-Python {
+    param([string]$ScriptPath, [string[]]$Args)
+    $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
+    if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
+        & uv run $ScriptPath @Args
+    } else {
+        & python3 $ScriptPath @Args
+    }
+}
+
 function Get-ShellConfigHome {
     $baseConfigHome = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME ".config" }
     return Join-Path $baseConfigHome "ooodnakov"
@@ -803,19 +814,16 @@ switch ($command) {
         if ($dryRunRequested) {
             throw "--dry-run is not supported for lock"
         }
-        Require-Python3
-        & python3 $GenerateLockScript @remaining
+        Run-Python -ScriptPath $GenerateLockScript -Args @remaining
     }
     "update-pins" {
         if ($dryRunRequested) {
             throw "--dry-run is not supported for update-pins"
         }
-        Require-Python3
-        & python3 $UpdatePinsScript @remaining
+        Run-Python -ScriptPath $UpdatePinsScript -Args @remaining
     }
     "secrets" {
-        Require-Python3
-        & python3 $RenderSecretsScript --repo-root $RepoRoot @remaining
+        Run-Python -ScriptPath $RenderSecretsScript -Args @("--repo-root", $RepoRoot) + @remaining
     }
     "shell" {
         Invoke-ShellCommand -ShellArgs $remaining

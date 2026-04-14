@@ -4,6 +4,15 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT="$REPO_ROOT/scripts/update-pins.py"
 
+# Run a Python script, preferring `uv run` when available.
+run_python() {
+  if command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ]; then
+    uv run "$@"
+  else
+    python3 "$@"
+  fi
+}
+
 usage() {
   cat <<'EOF'
 Usage: ./scripts/update-pins.sh [--apply]
@@ -27,4 +36,4 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-exec python3 "$SCRIPT" "${args[@]}"
+run_python "$SCRIPT" "${args[@]}"

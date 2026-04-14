@@ -23,6 +23,15 @@ LOG_FILE=""
 LOG_LATEST=""
 KNOWN_SETUP_COMMANDS=(install update doctor deps)
 
+# Run a Python script, preferring `uv run` when available.
+run_python() {
+  if command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ]; then
+    uv run "$@"
+  else
+    python3 "$@"
+  fi
+}
+
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
 OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
 P10K_REPO="https://github.com/romkatv/powerlevel10k.git"
@@ -152,7 +161,7 @@ optional_dependency_applicable() {
   local platform
   platform="$(detect_platform)"
   local info
-  info="$(python3 "$REPO_ROOT/scripts/read-optional-deps.py" install-info "$key" "$platform" 2>/dev/null)" || return 1
+  info="$(run_python "$REPO_ROOT/scripts/read-optional-deps.py" install-info "$key" "$platform" 2>/dev/null)" || return 1
   local manager
   manager="$(echo "$info" | cut -d'|' -f1)"
   [ -n "$manager" ] && [ "$manager" != "none" ]
@@ -163,11 +172,11 @@ optional_dependency_catalog() {
   while IFS='|' read -r key label description; do
     optional_dependency_applicable "$key" || continue
     printf '%s|%s|%s\n' "$key" "$label" "$description"
-  done < <(python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog)
+  done < <(run_python "$REPO_ROOT/scripts/read-optional-deps.py" catalog)
 }
 
 optional_dependency_catalog_all() {
-  python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog
+  run_python "$REPO_ROOT/scripts/read-optional-deps.py" catalog
 }
 
 optional_dependency_exists() {

@@ -109,6 +109,8 @@ Primary commands:
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
 - `oooconf update-pins --apply`: update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
 
+The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts will run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`). If `uv` is missing, they fall back to the system `python3`.
+
 Secrets commands:
 
 - `oooconf secrets login`: configure Bitwarden/Vaultwarden server and start login

@@ -4,6 +4,13 @@ Thumbs.db
 .local/
 tmp/
 
+# uv-managed virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
 home/.config/ooodnakov/local/*.zsh
 home/.config/ooodnakov/local/*.ps1
 home/.config/ooodnakov/local/*.lua
@@ -25,6 +32,4 @@ home/.config/zsh/.zcompdump*
 .qwen
 
 
-*/__pycache__/*
-
-**/bw-session
+*/bw-sessionhome/.config/ooodnakov/local/bw-session
