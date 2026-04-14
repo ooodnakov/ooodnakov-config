@@ -205,7 +205,6 @@ case "$command_name" in
         _describe -t options 'oooconf agents doctor option' \
           $agents_opts \
           '--strict-config-paths:fail if no default config path exists for a target'
-        ;;
     esac
     return 0
     ;;

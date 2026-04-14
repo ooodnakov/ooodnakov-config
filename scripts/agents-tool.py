@@ -101,7 +101,8 @@ def discover_agent_files(repo_root: Path, configured_files: list[str]) -> list[P
         if candidate.exists() and candidate.is_file():
             discovered.add(candidate)
     for path in repo_root.rglob("AGENTS.md"):
-        if any(part in {".git", "third_party"} for part in path.parts):
+        rel_path = path.resolve().relative_to(repo_root)
+        if any(part in {".git", "third_party"} for part in rel_path.parts):
             continue
         discovered.add(path.resolve())
     return sorted(discovered)
@@ -208,7 +209,10 @@ def check_common_entries(content: str, common_data: dict[str, Any]) -> tuple[lis
     for skill in common_data.get("skills", []):
         # lightweight fuzzy check: require at least one distinct token for each skill phrase
         tokens = [token for token in skill.lower().replace("(", " ").replace(")", " ").split() if len(token) >= 5]
-        if tokens and not any(token in lowered for token in tokens):
+        if not tokens:
+            if skill.lower() not in lowered:
+                missing_skills.append(skill)
+        elif not any(token in lowered for token in tokens):
             missing_skills.append(skill)
 
     return missing_mcp, missing_skills
@@ -253,6 +257,9 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
     agent_files = discover_agent_files(repo_root, config["agent_files"])
 
     failed = False
+    if not agent_files:
+        print("No AGENTS.md files found from configured locations/discovery.", file=sys.stderr)
+        failed = True
     for path in agent_files:
         text = path.read_text(encoding="utf-8")
         if upsert_managed_block(text, managed_block) != text:
