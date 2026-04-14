@@ -9,8 +9,8 @@ BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
 GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
-<<<<<<< HEAD
-KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins secrets shell version check preview upgrade)
+AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
+KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins agents secrets shell version check preview upgrade)
 KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
 KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
@@ -429,9 +429,6 @@ suggest_from_list() {
 
   return 0
 }
-=======
-AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
->>>>>>> ce51ca7 (Revert top-tools and add Cursor agent CLI detection)
 
 print_version() {
   if command -v git >/dev/null 2>&1 && [ -d "$REPO_ROOT/.git" ]; then
@@ -456,7 +453,6 @@ Global options:
       --print-repo-root print the resolved repo root and exit
 
 Commands:
-<<<<<<< HEAD
   Setup:
     bootstrap             clone/update repo then run install
     install               apply managed config and optional dependency installs
@@ -479,6 +475,9 @@ Commands:
 
   Secrets:
     secrets               sync or validate local secret env files
+
+  Agents:
+    agents                detect/sync/doctor AGENTS.md shared policy sections
 
 Aliases:
   check -> doctor
@@ -506,22 +505,6 @@ Common workflows:
 
   # Update to latest config:
   oooconf update
-=======
-  bootstrap             clone/update repo then run install
-  install               run setup install
-  deps                  install optional dependencies only
-  update                run setup update
-  doctor                run setup doctor
-  dry-run               run setup install --dry-run
-  delete                remove managed links and restore latest backups
-  remove                remove managed links only
-  lock                  regenerate dependency lock artifacts
-  update-pins           check/update pinned refs and refresh lock artifacts
-  agents                detect/sync/doctor AGENTS.md common policy blocks
-  secrets               sync or validate local secret env files
-  help [command]        show general or command-specific help
-  version               show CLI version information
->>>>>>> ce51ca7 (Revert top-tools and add Cursor agent CLI detection)
 
 Repo root:
   $REPO_ROOT
