@@ -135,3 +135,9 @@ After changing CLI help output or completions:
 - Verify `oooconf help <command>` shows examples for each command
 - Test PowerShell completions load without errors
 - Confirm completions work for commands, options, and secrets subcommands
+
+## Task Completion and Commits
+
+- After finishing a requested task, the agent MUST organize, stage, and commit the changes to the current branch.
+- Propose a clear and concise commit message following the existing style (e.g., `feat(scope): ...`, `fix(scope): ...`).
+- Only push to the remote repository if specifically asked by the user or if it is the natural conclusion of the task (e.g., "organize, commit and push").
