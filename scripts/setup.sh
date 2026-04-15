@@ -1109,7 +1109,7 @@ maybe_install_p7zip() {
     brew) package_name="p7zip" ;;
   esac
 
-  maybe_install_dependency "$manager" p7zip "$package_name" "archive preview and extraction for yazi"
+  maybe_install_dependency "$manager" 7z "$package_name" "archive preview and extraction for yazi"
 }
 
 maybe_install_poppler() {
