@@ -14,8 +14,7 @@ $SetupScript = Join-Path $PSScriptRoot "setup.ps1"
 $GenerateLockScript = Join-Path $PSScriptRoot "generate-dependency-lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update-pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render-secrets.py"
-<<<<<<< HEAD
-$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
+$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
 $KnownShellSubcommands = @("forgit-aliases", "typo-handling")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
@@ -110,7 +109,7 @@ function Set-LocalOverrideLine {
             continue
         }
 
-        if ($inBlock -and ($line -match "^export $([regex]::Escape($VariableName))=" -or $line -match "^\$env:$([regex]::Escape($VariableName)) = ")) {
+        if ($inBlock -and ($line -match "^export $([regex]::Escape($VariableName))=" -or $line -match "^\`$env:$([regex]::Escape($VariableName)) = ")) {
             if (-not $inserted) {
                 $result.Add($ReplacementLine)
                 $inserted = $true
@@ -389,9 +388,8 @@ function Get-SuggestionFromList {
 
     return $null
 }
-=======
+
 $AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
->>>>>>> ce51ca7 (Revert top-tools and add Cursor agent CLI detection)
 
 function Get-Version {
     if (Get-Command git -ErrorAction SilentlyContinue) {
@@ -430,7 +428,6 @@ Global options:
       --print-repo-root print the resolved repo root and exit
 
 Commands:
-<<<<<<< HEAD
   Setup:
     install               apply managed config and optional dependency installs
     deps                  install optional dependencies only
@@ -444,6 +441,7 @@ Commands:
   Manage State:
     lock                  regenerate dependency lock artifacts from pinned refs
     update-pins           compare/update pinned refs and refresh lock artifacts
+    agents                detect/sync/doctor AGENTS.md common policy blocks
 
   Shell:
     shell                 manage local shell preferences such as forgit aliases
@@ -482,19 +480,6 @@ Common workflows:
 
   # Update to latest config:
   oooconf update
-=======
-  install               run setup install
-  deps                  install optional dependencies only
-  update                run setup update
-  doctor                run setup doctor
-  dry-run               run setup install --dry-run
-  lock                  regenerate dependency lock artifacts
-  update-pins           check/update pinned refs and refresh lock artifacts
-  agents                detect/sync/doctor AGENTS.md common policy blocks
-  secrets               sync or validate local secret env files
-  help [command]        show general or command-specific help
-  version               show CLI version information
->>>>>>> ce51ca7 (Revert top-tools and add Cursor agent CLI detection)
 
 Repo root:
   `$RepoRoot
