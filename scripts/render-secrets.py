@@ -349,7 +349,7 @@ def fetch_all_bw_items() -> list[dict]:
     """Fetch all Bitwarden items in a single call and return parsed JSON list."""
     env = _get_session_env()
     _ensure_session_available(env)
-    command = ["bw", "get", "items", "--session", env["BW_SESSION"]]
+    command = ["bw", "list", "items", "--session", env["BW_SESSION"]]
     try:
         result = subprocess.run(
             command,
@@ -379,20 +379,29 @@ def fetch_all_bw_items() -> list[dict]:
 def build_item_cache(item_ids: set[str]) -> dict[str, dict]:
     """Build a lookup dict for the requested item IDs, using batch fetch when possible."""
     cache: dict[str, dict] = {}
-    needed = item_ids - set(cache.keys())
-    if not needed:
+    if not item_ids:
         return cache
 
-    try:
-        all_items = fetch_all_bw_items()
-        for item in all_items:
-            item_id = item.get("id")
-            if item_id in needed:
-                cache[item_id] = item
-    except RuntimeError:
-        pass  # fall through — missing items will error during resolution
-
+    all_items = fetch_all_bw_items()
+    for item in all_items:
+        item_id = item.get("id")
+        if item_id in item_ids:
+            cache[item_id] = item
     return cache
+
+
+def format_missing_bw_references(
+    missing_item_ids: set[str],
+    references_by_item_id: dict[str, list[str]],
+) -> str:
+    lines = [
+        "Bitwarden items referenced by the tracked template were not found in the current vault:",
+    ]
+    for item_id in sorted(missing_item_ids):
+        keys = ", ".join(sorted(references_by_item_id.get(item_id, []))) or "<unknown>"
+        lines.append(f"  - {keys}: {item_id}")
+    lines.append("Update the `bw://item/...` references in the template or log into the intended vault.")
+    return "\n".join(lines)
 
 
 def read_bw_item(item_id: str, key: str, cache: dict[str, dict] | None = None) -> dict:
@@ -523,17 +532,24 @@ def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[t
     cache: dict[str, dict] = {}
     if backend == "bw":
         item_ids = set()
+        references_by_item_id: dict[str, list[str]] = {}
         for entry in entries:
             if entry.value.startswith("bw://"):
                 try:
                     item_id, _ = parse_bw_reference(entry.value)
                     item_ids.add(item_id)
+                    references_by_item_id.setdefault(item_id, []).append(entry.key)
                 except (ValueError, RuntimeError):
                     pass  # will error during resolution with proper context
         if item_ids:
             total_ids = len(item_ids)
             print(f"Fetching {total_ids} Bitwarden item(s) in batch...", flush=True)
             cache = build_item_cache(item_ids)
+            missing_item_ids = item_ids - set(cache.keys())
+            if missing_item_ids:
+                raise RuntimeError(
+                    format_missing_bw_references(missing_item_ids, references_by_item_id)
+                )
 
     resolved_entries: list[tuple[str, str]] = []
     total = len(entries)
