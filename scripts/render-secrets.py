@@ -345,10 +345,61 @@ def _ensure_session_available(env: dict) -> None:
             raise RuntimeError("Failed to auto-unlock vault. Check BW_CLIENTID/BW_CLIENTSECRET/BW_PASSWORD.")
 
 
+def get_bw_status(env: dict | None = None) -> dict:
+    """Return parsed `bw status` output using the provided session-aware env."""
+    status_env = env.copy() if env is not None else _get_session_env()
+    try:
+        status_result = subprocess.run(
+            ["bw", "status"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=status_env,
+            timeout=BWH_CLI_TIMEOUT_SECONDS,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip()
+        raise RuntimeError(stderr or "`bw status` failed") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"`bw status` timed out after {BWH_CLI_TIMEOUT_SECONDS}s"
+        ) from exc
+
+    try:
+        return json.loads(status_result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("`bw status` did not return valid JSON") from exc
+
+
+def sync_bw_vault(env: dict) -> None:
+    """Refresh the Bitwarden CLI cache before resolving secrets."""
+    command = ["bw", "sync", "--session", env["BW_SESSION"]]
+    try:
+        subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=BWH_CLI_TIMEOUT_SECONDS,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"`bw sync` timed out after {BWH_CLI_TIMEOUT_SECONDS}s"
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip()
+        message = stderr or f"`{' '.join(command)}` failed"
+        raise RuntimeError(f"failed to sync Bitwarden vault: {message}") from exc
+
+
 def fetch_all_bw_items() -> list[dict]:
     """Fetch all Bitwarden items in a single call and return parsed JSON list."""
     env = _get_session_env()
     _ensure_session_available(env)
+    sync_bw_vault(env)
     command = ["bw", "list", "items", "--session", env["BW_SESSION"]]
     try:
         result = subprocess.run(
@@ -411,6 +462,7 @@ def read_bw_item(item_id: str, key: str, cache: dict[str, dict] | None = None) -
     # Fallback: individual fetch (for callers outside sync context)
     env = _get_session_env()
     _ensure_session_available(env)
+    sync_bw_vault(env)
     command = ["bw", "get", "item", item_id, "--session", env["BW_SESSION"]]
     try:
         result = subprocess.run(
@@ -765,22 +817,9 @@ def unlock_command(args: argparse.Namespace) -> int:
 def check_bw_status() -> list[str]:
     problems: list[str] = []
     try:
-        status_result = subprocess.run(
-            ["bw", "status"],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=os.environ.copy(),
-        )
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr.strip()
-        problems.append(stderr or "`bw status` failed")
-        return problems
-
-    try:
-        status = json.loads(status_result.stdout)
-    except json.JSONDecodeError:
-        problems.append("`bw status` did not return valid JSON")
+        status = get_bw_status()
+    except RuntimeError as exc:
+        problems.append(str(exc))
         return problems
 
     current_server = (status.get("serverUrl") or "").rstrip("/")
@@ -868,19 +907,12 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
     if session_available:
         if shutil_which("bw"):
             try:
-                status_result = subprocess.run(
-                    ["bw", "status"],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                    env=os.environ.copy(),
-                )
-                status = json.loads(status_result.stdout)
+                status = get_bw_status()
                 vault_status = status.get("status", "unknown")
                 print(f"Vault status: {vault_status}")
                 if vault_status == "locked":
                     problems.append("Vault is locked, BW_SESSION may be expired")
-            except (subprocess.CalledProcessError, json.JSONDecodeError) as exc:
+            except RuntimeError as exc:
                 print(f"Vault status: error checking ({exc})")
         else:
             print("Vault status: bw CLI not found")
