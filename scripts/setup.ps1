@@ -225,6 +225,11 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "zoxide"; DisplayName = "zoxide"; Description = "smart directory jumping"; Linux = @{ manager = "apt"; package = "zoxide" }; Macos = @{ manager = "brew"; package = "zoxide" }; Windows = @{ manager = "choco"; package = "zoxide" } }
             [pscustomobject]@{ Key = "q"; DisplayName = "q"; Description = "q text-as-data CLI"; Linux = @{ manager = "apt"; package = "q" }; Macos = @{ manager = "brew"; package = "q" }; Windows = @{ manager = "choco"; package = "q-dns" } }
             [pscustomobject]@{ Key = "eza"; DisplayName = "eza"; Description = "modern ls aliases"; Linux = @{ manager = "apt"; package = "eza" }; Macos = @{ manager = "brew"; package = "eza" }; Windows = @{ manager = "choco"; package = "eza" } }
+            [pscustomobject]@{ Key = "yazi"; DisplayName = "yazi"; Description = "terminal file manager"; Linux = @{ manager = "apt"; package = "yazi" }; Macos = @{ manager = "brew"; package = "yazi" }; Windows = @{ manager = "winget"; winget_id = "sxyazi.yazi" } }
+            [pscustomobject]@{ Key = "ffmpeg"; DisplayName = "ffmpeg"; Description = "media preview backend for yazi"; Linux = @{ manager = "apt"; package = "ffmpeg" }; Macos = @{ manager = "brew"; package = "ffmpeg" }; Windows = @{ manager = "winget"; winget_id = "Gyan.FFmpeg" } }
+            [pscustomobject]@{ Key = "jq"; DisplayName = "jq"; Description = "JSON parsing helper for yazi plugins"; Linux = @{ manager = "apt"; package = "jq" }; Macos = @{ manager = "brew"; package = "jq" }; Windows = @{ manager = "winget"; winget_id = "jqlang.jq" } }
+            [pscustomobject]@{ Key = "p7zip"; DisplayName = "p7zip"; Description = "archive preview and extraction for yazi"; Linux = @{ manager = "apt"; package = "p7zip-full" }; Macos = @{ manager = "brew"; package = "p7zip" }; Windows = @{ manager = "winget"; winget_id = "7zip.7zip" } }
+            [pscustomobject]@{ Key = "poppler"; DisplayName = "poppler"; Description = "PDF preview support for yazi"; Linux = @{ manager = "apt"; package = "poppler-utils" }; Macos = @{ manager = "brew"; package = "poppler" }; Windows = @{ manager = "winget"; winget_id = "oschwartz10612.Poppler" } }
             [pscustomobject]@{ Key = "uv"; DisplayName = "uv"; Description = "Python package manager"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "uv" }; Windows = @{ manager = "choco"; package = "uv" } }
             [pscustomobject]@{ Key = "bw"; DisplayName = "bw"; Description = "Bitwarden CLI"; Linux = @{ manager = "custom" }; Macos = @{ manager = "brew"; package = "bitwarden-cli" }; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "node"; DisplayName = "node"; Description = "Node.js LTS"; Linux = @{ manager = "apt"; package = "nodejs" }; Macos = @{ manager = "brew"; package = "node" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
@@ -338,6 +343,11 @@ function Test-OptionalDependencyPresent {
         "zoxide" { return [bool](Get-Command zoxide -ErrorAction SilentlyContinue) }
         "q" { return [bool](Get-Command q -ErrorAction SilentlyContinue) }
         "eza" { return [bool](Get-Command eza -ErrorAction SilentlyContinue) }
+        "yazi" { return [bool](Get-Command yazi -ErrorAction SilentlyContinue) }
+        "ffmpeg" { return [bool](Get-Command ffmpeg -ErrorAction SilentlyContinue) }
+        "jq" { return [bool](Get-Command jq -ErrorAction SilentlyContinue) }
+        "p7zip" { return [bool](Get-Command 7z -ErrorAction SilentlyContinue) }
+        "poppler" { return [bool](Get-Command pdftotext -ErrorAction SilentlyContinue) }
         "uv" { return [bool](Get-Command uv -ErrorAction SilentlyContinue) }
         "python3" { return [bool](Get-Command python -ErrorAction SilentlyContinue) -or [bool](Get-Command python3 -ErrorAction SilentlyContinue) }
         "bw" { return [bool](Get-Command bw -ErrorAction SilentlyContinue) }
@@ -1059,6 +1069,11 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "zoxide" -Action { Install-PackageIfMissing -CommandNames @("zoxide") -ChocoId "zoxide" -Description "zoxide" -SummaryName "zoxide" }
     $null = Invoke-SelectedOptionalDependency -Key "q" -Action { Install-PackageIfMissing -CommandNames @("q") -ChocoId "q" -Description "q" -SummaryName "q" }
     $null = Invoke-SelectedOptionalDependency -Key "eza" -Action { Install-PackageIfMissing -CommandNames @("eza") -ChocoId "eza" -Description "eza" -SummaryName "eza" }
+    $null = Invoke-SelectedOptionalDependency -Key "yazi" -Action { Install-PackageIfMissing -CommandNames @("yazi") -WingetId "sxyazi.yazi" -Description "yazi" -SummaryName "yazi" }
+    $null = Invoke-SelectedOptionalDependency -Key "ffmpeg" -Action { Install-PackageIfMissing -CommandNames @("ffmpeg") -WingetId "Gyan.FFmpeg" -Description "ffmpeg" -SummaryName "ffmpeg" }
+    $null = Invoke-SelectedOptionalDependency -Key "jq" -Action { Install-PackageIfMissing -CommandNames @("jq") -WingetId "jqlang.jq" -Description "jq" -SummaryName "jq" }
+    $null = Invoke-SelectedOptionalDependency -Key "p7zip" -Action { Install-PackageIfMissing -CommandNames @("7z") -WingetId "7zip.7zip" -Description "7-Zip" -SummaryName "p7zip" }
+    $null = Invoke-SelectedOptionalDependency -Key "poppler" -Action { Install-PackageIfMissing -CommandNames @("pdftotext") -WingetId "oschwartz10612.Poppler" -Description "poppler-utils" -SummaryName "poppler" }
     $null = Invoke-SelectedOptionalDependency -Key "uv" -Action { Install-PackageIfMissing -CommandNames @("uv") -ChocoId "uv" -Description "uv" -SummaryName "uv" }
     $null = Invoke-SelectedOptionalDependency -Key "python3" -Action { Install-PackageIfMissing -CommandNames @("python3", "python") -ChocoId "python" -Description "Python 3" -SummaryName "python3" }
     $null = Invoke-SelectedOptionalDependency -Key "bw" -Action { Install-BitwardenCliIfMissing }

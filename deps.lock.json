@@ -1,11 +1,16 @@
 {
-  "generated_at_utc": "2026-04-07T08:56:07+00:00",
+  "generated_at_utc": "2026-04-14T15:44:43+00:00",
   "source": "scripts/setup.sh",
   "dependencies": [
     {
       "name": "auto_uv_env",
       "repo": "https://github.com/ashwch/auto-uv-env.git",
       "ref": "76589a0fe4a3eaba9817b7195b9fc05ef4139289"
+    },
+    {
+      "name": "forgit",
+      "repo": "https://github.com/wfxr/forgit.git",
+      "ref": "7663f3a809bdd19837eb67e4ce607a8162518dee"
     },
     {
       "name": "fzf_tab",
@@ -41,6 +46,11 @@
       "name": "todo",
       "repo": "https://github.com/todotxt/todo.txt-cli.git",
       "ref": "b20f9b45e210129ef020d3ba212d86b9ba9cf70d"
+    },
+    {
+      "name": "you_should_use",
+      "repo": "https://github.com/MichaelAquilina/zsh-you-should-use.git",
+      "ref": "ff371d6a11b653e1fa8dda4e61c896c78de26bfa"
     },
     {
       "name": "zsh_autocomplete",

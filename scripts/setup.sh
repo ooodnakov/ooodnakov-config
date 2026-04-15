@@ -325,7 +325,7 @@ optional_dependency_present() {
   local key="$1"
 
   case "$key" in
-    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|oh-my-posh|wezterm|node|npm|pnpm|autoconf|fc-cache|cargo|k|python3)
+    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|yazi|ffmpeg|jq|oh-my-posh|wezterm|node|npm|pnpm|autoconf|fc-cache|cargo|k|python3)
       command -v "$key" >/dev/null 2>&1
       ;;
     fd)
@@ -339,6 +339,12 @@ optional_dependency_present() {
       ;;
     dua)
       command -v dua >/dev/null 2>&1
+      ;;
+    p7zip)
+      command -v 7z >/dev/null 2>&1
+      ;;
+    poppler)
+      command -v pdftotext >/dev/null 2>&1
       ;;
     nvim)
       have_supported_nvim
@@ -1089,6 +1095,40 @@ maybe_install_q() {
   esac
 }
 
+maybe_install_p7zip() {
+  local manager="$1"
+  local package_name="p7zip"
+
+  if command -v 7z >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("p7zip: present")
+    return 0
+  fi
+
+  case "$manager" in
+    apt) package_name="p7zip-full" ;;
+    brew) package_name="p7zip" ;;
+  esac
+
+  maybe_install_dependency "$manager" p7zip "$package_name" "archive preview and extraction for yazi"
+}
+
+maybe_install_poppler() {
+  local manager="$1"
+  local package_name="poppler"
+
+  if command -v pdftotext >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("poppler: present")
+    return 0
+  fi
+
+  case "$manager" in
+    apt) package_name="poppler-utils" ;;
+    brew) package_name="poppler" ;;
+  esac
+
+  maybe_install_dependency "$manager" poppler "$package_name" "PDF preview support for yazi"
+}
+
 maybe_install_uv() {
   if command -v uv >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("uv: present")
@@ -1682,6 +1722,11 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected zoxide maybe_install_dependency "$manager" zoxide zoxide "smart directory jumping with z/zi"
   install_optional_dependency_if_selected q maybe_install_q "$manager"
   install_optional_dependency_if_selected eza maybe_install_eza "$manager"
+  install_optional_dependency_if_selected yazi maybe_install_dependency "$manager" yazi yazi "terminal file manager"
+  install_optional_dependency_if_selected ffmpeg maybe_install_dependency "$manager" ffmpeg ffmpeg "media preview backend for yazi"
+  install_optional_dependency_if_selected jq maybe_install_dependency "$manager" jq jq "JSON parsing helper for yazi plugins"
+  install_optional_dependency_if_selected p7zip maybe_install_p7zip "$manager"
+  install_optional_dependency_if_selected poppler maybe_install_poppler "$manager"
   install_optional_dependency_if_selected oh-my-posh maybe_note_dependency oh-my-posh "Oh My Posh prompt (manual install recommended for Linux/macOS)"
   install_optional_dependency_if_selected wezterm maybe_install_wezterm "$manager"
   install_optional_dependency_if_selected uv maybe_install_uv

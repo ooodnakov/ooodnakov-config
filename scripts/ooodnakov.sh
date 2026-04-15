@@ -547,7 +547,7 @@ Install optional dependencies only. Without dependency keys, an interactive
 gum-based multi-select picker is used when available.
 
 Dependency keys match those defined in deps.lock.json. Common keys include:
-bat, delta, eza, fd, fzf, gum, glow, ripgrep, zoxide, and others.
+bat, delta, eza, fd, fzf, gum, glow, rg, yazi, ffmpeg, jq, p7zip, poppler, zoxide, and others.
 
 Examples:
   oooconf deps                         # interactive picker (when gum available)
