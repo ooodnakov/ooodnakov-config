@@ -9,7 +9,8 @@ BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
 GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
-KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins secrets shell version check preview upgrade)
+AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
+KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins agents secrets shell version check preview upgrade)
 KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
 KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
@@ -17,6 +18,16 @@ LOCAL_OVERRIDES_START="# --- LOCAL OVERRIDES START ---"
 LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
 FORGIT_ALIAS_VAR="OOODNAKOV_FORGIT_ALIAS_MODE"
 TYPO_HANDLING_VAR="OOODNAKOV_TYPO_HANDLING_MODE"
+
+# Run a Python script, preferring `uv run` (which uses the pinned .python-version
+# and .venv) when uv is available, falling back to plain python3.
+run_python() {
+  if command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ]; then
+    uv run "$@"
+  else
+    python3 "$@"
+  fi
+}
 
 visible_error() {
   if [ -t 1 ]; then
@@ -465,6 +476,9 @@ Commands:
   Secrets:
     secrets               sync or validate local secret env files
 
+  Agents:
+    agents                detect/sync/doctor AGENTS.md shared policy sections
+
 Aliases:
   check -> doctor
   preview -> dry-run
@@ -650,6 +664,19 @@ Examples:
   oooconf update-pins --apply          # update pins and regenerate lock
 EOF
       ;;
+    agents)
+      cat <<'EOF'
+Usage: oooconf agents <detect|sync|doctor> [options]
+
+Manage shared AGENTS.md instructions and validate configured agent tooling.
+
+Subcommands:
+  detect [--json]       detect configured agent CLIs on PATH
+  sync [--check]        append/update shared AGENTS.md managed block
+  doctor [--strict-config-paths]
+                        verify AGENTS.md managed block and default agent config paths
+EOF
+      ;;
     secrets)
       cat <<'EOF'
 Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> [options]
@@ -726,6 +753,7 @@ while [ "$#" -gt 0 ]; do
       GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
       UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
       RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
+      AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
       shift 2
       ;;
     --print-repo-root)
@@ -869,11 +897,8 @@ case "$command" in
       echo "--dry-run is not supported for lock" >&2
       exit 1
     fi
-    if ! command -v python3 >/dev/null 2>&1; then
-      echo "python3 is required to generate dependency lock artifacts." >&2
-      exit 1
-    fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$GEN_LOCK" "$@"
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$GEN_LOCK" "$@"
+    exit $?
     ;;
   update-pins)
     if [ "$dry_run_requested" -eq 1 ]; then
@@ -883,12 +908,20 @@ case "$command" in
     require_repo_script "$UPDATE_PINS"
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" "$@"
     ;;
-  secrets)
-    if ! command -v python3 >/dev/null 2>&1; then
-      echo "python3 is required for secrets sync." >&2
+  agents)
+    if [ "$dry_run_requested" -eq 1 ]; then
+      echo "--dry-run is not supported for agents" >&2
       exit 1
     fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "python3 is required for agents command." >&2
+      exit 1
+    fi
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$AGENTS_TOOL" --repo-root "$REPO_ROOT" "$@"
+    ;;
+  secrets)
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"
+    exit $?
     ;;
   shell)
     handle_shell_command "$@"

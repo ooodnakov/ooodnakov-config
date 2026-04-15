@@ -76,6 +76,20 @@ Do not treat `third_party/` as active config unless the user explicitly asks to 
 - The large local fork snapshot in `third_party/local-snapshots/wezterm-current` is for audit/reference only.
 - If borrowing features from the snapshot, port them intentionally into the active config instead of replacing the active tree wholesale.
 
+## Python and uv
+
+The project uses `uv` for Python version and dependency management.
+
+- `pyproject.toml`: Defines project metadata and (currently empty) dependencies.
+- `.python-version`: Pins the Python version (e.g., 3.12).
+- `uv.lock`: Ensures deterministic environment state.
+- Helper scripts (`scripts/*.sh`, `scripts/*.ps1`) use a `run_python` / `Run-Python` function that prefers `uv run` if available, ensuring they run with the correct Python version and environment.
+- The virtual environment `.venv/` is ignored by git.
+
+When adding new Python dependencies:
+- Use `uv add <package>` to update `pyproject.toml` and `uv.lock`.
+- Ensure scripts remain compatible with the pinned Python version.
+
 ## Upstream tracking
 
 - `third_party/upstream/ezsh` is managed as a git subtree.
@@ -121,3 +135,30 @@ After changing CLI help output or completions:
 - Verify `oooconf help <command>` shows examples for each command
 - Test PowerShell completions load without errors
 - Confirm completions work for commands, options, and secrets subcommands
+
+## Task Completion and Commits
+
+- After finishing a requested task, the agent MUST organize, stage, and commit the changes to the current branch.
+- Propose a clear and concise commit message following the existing style (e.g., `feat(scope): ...`, `fix(scope): ...`).
+- Only push to the remote repository if specifically asked by the user or if it is the natural conclusion of the task (e.g., "organize, commit and push").
+
+<!-- oooconf:agents-common:start -->
+## oooconf shared agent policy
+
+- Keep responses concise and action-oriented.
+- Favor reproducible commands and explicit file paths.
+- Prefer tracked shared config over machine-specific local overrides.
+- Never include secrets, private keys, or access tokens in tracked files.
+
+## Common MCP servers
+
+- `filesystem`: local repository and home config trees
+- `git`: commit history, diff summaries, and branch status
+- `shell`: deterministic local inspection commands (rg, fd, git, python3)
+
+## Common Skills
+
+- Dotfiles portability review (Linux + Windows + macOS safety)
+- Shell bootstrap audit (idempotency and dry-run behavior)
+- Secrets hygiene review (template references vs local plaintext files)
+<!-- oooconf:agents-common:end -->

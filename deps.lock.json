@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-04-14T15:44:43+00:00",
+  "generated_at_utc": "2026-04-15T08:31:07+00:00",
   "source": "scripts/setup.sh",
   "dependencies": [
     {
@@ -10,7 +10,7 @@
     {
       "name": "forgit",
       "repo": "https://github.com/wfxr/forgit.git",
-      "ref": "7663f3a809bdd19837eb67e4ce607a8162518dee"
+      "ref": "9280ebbb01cd37b26380a16adb15d08354a9f5ee"
     },
     {
       "name": "fzf_tab",
@@ -30,12 +30,12 @@
     {
       "name": "nvm",
       "repo": "https://github.com/nvm-sh/nvm.git",
-      "ref": "6b307d0c75041ce5f25829b225470540f2711882"
+      "ref": "d200a215594bdda07e130117c9d392fff29cba84"
     },
     {
       "name": "oh_my_zsh",
       "repo": "https://github.com/ohmyzsh/ohmyzsh.git",
-      "ref": "8df5c1b18b1393dc5046c729094f897bd3636a9b"
+      "ref": "061f773dd356df52a8bccd5e73377c012f97ef14"
     },
     {
       "name": "p10k",
@@ -55,7 +55,7 @@
     {
       "name": "zsh_autocomplete",
       "repo": "https://github.com/marlonrichert/zsh-autocomplete.git",
-      "ref": "2be4e7f0b435138b0237d4f068b2a882fb06edc4"
+      "ref": "20f6c34f20270084b21211428afb6d2534aae8e9"
     },
     {
       "name": "zsh_autosuggestions",

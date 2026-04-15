@@ -68,19 +68,18 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     (& zoxide init pwsh) | Out-String | Invoke-Expression
 }
 
-$markerInit = Join-Path $env:OOODNAKOV_SHARE_HOME "marker/marker.ps1"
-if (Test-Path $markerInit) {
-    . $markerInit
-}
-
-# Load oooconf completions
-$OooconfCompletions = Join-Path $env:OOODNAKOV_CONFIG_HOME "completions/oooconf-completions.ps1"
-if (Test-Path $OooconfCompletions) {
-    . $OooconfCompletions
+$oooconfCompletions = Join-Path $env:OOODNAKOV_CONFIG_HOME "completions/oooconf-completions.ps1"
+if (Test-Path $oooconfCompletions) {
+    . $oooconfCompletions
 }
 
 # Load pnpm completions
 $PnpmCompletions = Join-Path $env:OOODNAKOV_CONFIG_HOME "completions/pnpm-completions.ps1"
 if (Test-Path $PnpmCompletions) {
     . $PnpmCompletions
+}
+
+$markerInit = Join-Path $env:OOODNAKOV_SHARE_HOME "marker/marker.ps1"
+if (Test-Path $markerInit) {
+    . $markerInit
 }

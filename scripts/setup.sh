@@ -23,8 +23,17 @@ LOG_FILE=""
 LOG_LATEST=""
 KNOWN_SETUP_COMMANDS=(install update doctor deps)
 
+# Run a Python script, preferring `uv run` when available.
+run_python() {
+  if command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ]; then
+    uv run "$@"
+  else
+    python3 "$@"
+  fi
+}
+
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
-OH_MY_ZSH_REF="8df5c1b18b1393dc5046c729094f897bd3636a9b"
+OH_MY_ZSH_REF="061f773dd356df52a8bccd5e73377c012f97ef14"
 P10K_REPO="https://github.com/romkatv/powerlevel10k.git"
 P10K_REF="604f19a9eaa18e76db2e60b8d446d5f879065f90"
 ZSH_AUTOSUGGESTIONS_REPO="https://github.com/zsh-users/zsh-autosuggestions.git"
@@ -34,17 +43,17 @@ ZSH_HIGHLIGHTING_REF="1d85c692615a25fe2293bdd44b34c217d5d2bf04"
 ZSH_HISTORY_REPO="https://github.com/zsh-users/zsh-history-substring-search.git"
 ZSH_HISTORY_REF="14c8d2e0ffaee98f2df9850b19944f32546fdea5"
 ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
-ZSH_AUTOCOMPLETE_REF="2be4e7f0b435138b0237d4f068b2a882fb06edc4"
+ZSH_AUTOCOMPLETE_REF="20f6c34f20270084b21211428afb6d2534aae8e9"
 FZF_TAB_REPO="https://github.com/Aloxaf/fzf-tab.git"
 FZF_TAB_REF="0983009f8666f11e91a2ee1f88cfdb748d14f656"
 FORGIT_REPO="https://github.com/wfxr/forgit.git"
-FORGIT_REF="7663f3a809bdd19837eb67e4ce607a8162518dee"
+FORGIT_REF="9280ebbb01cd37b26380a16adb15d08354a9f5ee"
 YOU_SHOULD_USE_REPO="https://github.com/MichaelAquilina/zsh-you-should-use.git"
 YOU_SHOULD_USE_REF="ff371d6a11b653e1fa8dda4e61c896c78de26bfa"
 AUTO_UV_ENV_REPO="https://github.com/ashwch/auto-uv-env.git"
 AUTO_UV_ENV_REF="76589a0fe4a3eaba9817b7195b9fc05ef4139289"
 NVM_REPO="https://github.com/nvm-sh/nvm.git"
-NVM_REF="6b307d0c75041ce5f25829b225470540f2711882"
+NVM_REF="d200a215594bdda07e130117c9d392fff29cba84"
 K_REPO="https://github.com/supercrabtree/k.git"
 K_REF="e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e"
 MARKER_REPO="https://github.com/jotyGill/marker.git"
@@ -152,7 +161,7 @@ optional_dependency_applicable() {
   local platform
   platform="$(detect_platform)"
   local info
-  info="$(python3 "$REPO_ROOT/scripts/read-optional-deps.py" install-info "$key" "$platform" 2>/dev/null)" || return 1
+  info="$(run_python "$REPO_ROOT/scripts/read-optional-deps.py" install-info "$key" "$platform" 2>/dev/null)" || return 1
   local manager
   manager="$(echo "$info" | cut -d'|' -f1)"
   [ -n "$manager" ] && [ "$manager" != "none" ]
@@ -163,11 +172,11 @@ optional_dependency_catalog() {
   while IFS='|' read -r key label description; do
     optional_dependency_applicable "$key" || continue
     printf '%s|%s|%s\n' "$key" "$label" "$description"
-  done < <(python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog)
+  done < <(run_python "$REPO_ROOT/scripts/read-optional-deps.py" catalog)
 }
 
 optional_dependency_catalog_all() {
-  python3 "$REPO_ROOT/scripts/read-optional-deps.py" catalog
+  run_python "$REPO_ROOT/scripts/read-optional-deps.py" catalog
 }
 
 optional_dependency_exists() {

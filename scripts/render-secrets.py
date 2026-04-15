@@ -247,17 +247,17 @@ def strip_matching_quotes(value: str) -> str:
     return value
 
 
-def resolve_value(entry: SecretEntry, backend: str) -> str:
+def resolve_value(entry: SecretEntry, backend: str, cache: dict[str, dict] | None = None) -> str:
     if entry.value.startswith("bw://"):
         if backend != "bw":
             raise ValueError(f"unsupported backend for secret reference: {backend}")
-        return read_bw_secret(entry.value, entry.key)
+        return read_bw_secret(entry.value, entry.key, cache)
     return entry.value
 
 
-def read_bw_secret(reference: str, key: str) -> str:
+def read_bw_secret(reference: str, key: str, cache: dict[str, dict] | None = None) -> str:
     item_id, selector = parse_bw_reference(reference)
-    item = read_bw_item(item_id, key)
+    item = read_bw_item(item_id, key, cache)
     return select_bw_value(item, selector, key)
 
 
@@ -328,18 +328,81 @@ def ensure_bw_unlocked(env: dict) -> None:
     )
 
 
-def read_bw_item(item_id: str, key: str) -> dict:
+def _get_session_env() -> dict:
+    """Return a copy of os.environ with BW_SESSION set if available."""
     env = os.environ.copy()
     session = env.get("BW_SESSION") or read_persisted_bw_session()
-    if not session:
-        ensure_bw_unlocked(env)
-        session = env.get("BW_SESSION")
-        if not session:
-            raise RuntimeError("Failed to auto-unlock vault. Check BW_CLIENTID/BW_CLIENTSECRET/BW_PASSWORD.")
-    else:
+    if session:
         env["BW_SESSION"] = session
+    return env
 
-    command = ["bw", "get", "item", item_id, "--session", session]
+
+def _ensure_session_available(env: dict) -> None:
+    """Ensure BW_SESSION is set in env, auto-unlocking if needed."""
+    if not env.get("BW_SESSION"):
+        ensure_bw_unlocked(env)
+        if not env.get("BW_SESSION"):
+            raise RuntimeError("Failed to auto-unlock vault. Check BW_CLIENTID/BW_CLIENTSECRET/BW_PASSWORD.")
+
+
+def fetch_all_bw_items() -> list[dict]:
+    """Fetch all Bitwarden items in a single call and return parsed JSON list."""
+    env = _get_session_env()
+    _ensure_session_available(env)
+    command = ["bw", "get", "items", "--session", env["BW_SESSION"]]
+    try:
+        result = subprocess.run(
+            command,
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=BWH_CLI_TIMEOUT_SECONDS,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"timed out fetching Bitwarden items after {BWH_CLI_TIMEOUT_SECONDS}s"
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.strip()
+        message = stderr or f"`{' '.join(command)}` failed"
+        raise RuntimeError(f"failed to fetch Bitwarden items: {message}") from exc
+
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Bitwarden returned invalid JSON for items list.") from exc
+
+
+def build_item_cache(item_ids: set[str]) -> dict[str, dict]:
+    """Build a lookup dict for the requested item IDs, using batch fetch when possible."""
+    cache: dict[str, dict] = {}
+    needed = item_ids - set(cache.keys())
+    if not needed:
+        return cache
+
+    try:
+        all_items = fetch_all_bw_items()
+        for item in all_items:
+            item_id = item.get("id")
+            if item_id in needed:
+                cache[item_id] = item
+    except RuntimeError:
+        pass  # fall through — missing items will error during resolution
+
+    return cache
+
+
+def read_bw_item(item_id: str, key: str, cache: dict[str, dict] | None = None) -> dict:
+    if cache is not None and item_id in cache:
+        return cache[item_id]
+
+    # Fallback: individual fetch (for callers outside sync context)
+    env = _get_session_env()
+    _ensure_session_available(env)
+    command = ["bw", "get", "item", item_id, "--session", env["BW_SESSION"]]
     try:
         result = subprocess.run(
             command,
@@ -456,11 +519,27 @@ def render_ps1(resolved_entries: list[tuple[str, str]], backend: str, template_p
 
 
 def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[tuple[str, str]]:
+    # Pre-fetch all needed Bitwarden items in a single batch call.
+    cache: dict[str, dict] = {}
+    if backend == "bw":
+        item_ids = set()
+        for entry in entries:
+            if entry.value.startswith("bw://"):
+                try:
+                    item_id, _ = parse_bw_reference(entry.value)
+                    item_ids.add(item_id)
+                except (ValueError, RuntimeError):
+                    pass  # will error during resolution with proper context
+        if item_ids:
+            total_ids = len(item_ids)
+            print(f"Fetching {total_ids} Bitwarden item(s) in batch...", flush=True)
+            cache = build_item_cache(item_ids)
+
     resolved_entries: list[tuple[str, str]] = []
     total = len(entries)
     for index, entry in enumerate(entries, start=1):
         print(f"Resolving {index}/{total}: {entry.key}", flush=True)
-        resolved_entries.append((entry.key, resolve_value(entry, backend)))
+        resolved_entries.append((entry.key, resolve_value(entry, backend, cache)))
     return resolved_entries
 
 

@@ -5,6 +5,7 @@ import argparse
 import datetime as dt
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -99,7 +100,7 @@ def update_report(rows: list[dict[str, str]]) -> None:
 
 
 def run_lock_generator() -> None:
-    subprocess.run(["python3", str(GEN_LOCK)], check=True)
+    subprocess.run([sys.executable, str(GEN_LOCK)], check=True)
 
 
 def main() -> int:
