@@ -7,7 +7,7 @@ This document explains why each dependency is installed automatically, offered a
 | Category | Meaning | Examples |
 | --- | --- | --- |
 | **Automated** | Installed during `oooconf install` without prompts. Required for tracked config to work correctly. | oh-my-zsh, powerlevel10k, zsh plugins, auto_uv_env |
-| **Optional (picker)** | Offered during `oooconf deps` or via `--yes-optional`. Useful but not required. | bat, delta, glow, gum, zoxide, fzf, bw, node |
+| **Optional (picker)** | Offered during `oooconf deps` or via `--yes-optional`. Useful but not required. | bat, delta, glow, gum, zoxide, fzf, bw, node, yazi |
 | **Manual** | Not offered by the bootstrap. Intentionally outside automated install. | WezTerm, Neovim, VS Code |
 
 ## Automated Dependencies
@@ -47,6 +47,11 @@ These are offered by `oooconf deps`. Each entry includes the install mechanism a
 | `zoxide` | system package manager | Smart directory jumping |
 | `q` | system package manager (choco on Windows) | Text-as-data CLI |
 | `eza` | system package manager (choco on Windows) | Modern `ls` aliases |
+| `yazi` | system package manager / winget | Terminal file manager |
+| `ffmpeg` | system package manager / winget | Media preview backend used by Yazi |
+| `jq` | system package manager / winget | JSON helper used by Yazi plugins |
+| `p7zip` | system package manager / winget (`7zip` on Windows) | Archive preview and extraction support for Yazi |
+| `poppler` | system package manager / winget | PDF preview support for Yazi |
 | `uv` | system package manager (choco on Windows) | Python package manager |
 | `bw` | official archive (Linux) / winget (Windows) | Bitwarden CLI for secrets sync |
 | `node` | system package manager / winget | Node.js runtime |

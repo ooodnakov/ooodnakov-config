@@ -127,7 +127,7 @@ Secrets commands:
 - `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
-The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, and `gum`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, `gum`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`) and `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 Shell completion:
@@ -237,6 +237,8 @@ Additional setup behavior:
 - `glow` is installed via the system package manager when available as a terminal Markdown reader
 - `gum` is installed via the official Charm package source when needed for the interactive dependency picker, or via the system package manager where available
 - `q` is installed via the upstream natesales APT repo on Debian/Ubuntu, or via the system package manager when available elsewhere
+- `yazi` is available as an optional terminal file manager
+- `ffmpeg`, `jq`, `p7zip`, and `poppler` are available as optional companion tools for richer Yazi previews/plugins
 - `uv` uses Astral's official installer
 - `bw` uses Bitwarden's official native CLI release archive
 - `pnpm` uses a pinned version via `corepack`, or falls back to `npm install --global`
@@ -244,7 +246,7 @@ Additional setup behavior:
 - Linux setup requires `nvim >= 0.11.0` for LazyVim and falls back to a pinned official Neovim tarball if the distro package is too old
 - setup normalizes `oh-my-zsh` permissions on every run so `compaudit` and `compinit` do not reject the install
 
-On Windows, setup can prompt to install common tools with `winget` and `choco`, including WezTerm, Node.js LTS, `oh-my-posh`, `gum`, `ripgrep`, `fd`, `bat`, `delta`, `glow`, and `q`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
+On Windows, setup can prompt to install common tools with `winget` and `choco`, including WezTerm, Node.js LTS, `oh-my-posh`, `gum`, `ripgrep`, `fd`, `bat`, `delta`, `glow`, `q`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
 
 ## Fonts
 
