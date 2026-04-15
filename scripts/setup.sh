@@ -1126,7 +1126,7 @@ maybe_install_poppler() {
     brew) package_name="poppler" ;;
   esac
 
-  maybe_install_dependency "$manager" poppler "$package_name" "PDF preview support for yazi"
+  maybe_install_dependency "$manager" pdftotext "$package_name" "PDF preview support for yazi"
 }
 
 maybe_install_uv() {
