@@ -39,8 +39,17 @@ def parse_setup_pins(text: str) -> list[dict[str, str]]:
 
 
 def write_json_lock(pins: list[dict[str, str]]) -> None:
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    if JSON_LOCK.exists():
+        try:
+            existing = json.loads(JSON_LOCK.read_text(encoding="utf-8"))
+            if "generated_at_utc" in existing:
+                generated_at = existing["generated_at_utc"]
+        except Exception:
+            pass
+
     payload = {
-        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "generated_at_utc": generated_at,
         "source": "scripts/setup.sh",
         "dependencies": pins,
     }
@@ -49,6 +58,15 @@ def write_json_lock(pins: list[dict[str, str]]) -> None:
 
 def write_markdown_lock(pins: list[dict[str, str]]) -> None:
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    if MD_LOCK.exists():
+        try:
+            content = MD_LOCK.read_text(encoding="utf-8")
+            match = re.search(r"Generated at \(UTC\): `(.+?)`", content)
+            if match:
+                generated_at = match.group(1)
+        except Exception:
+            pass
+
     lines = [
         "# Dependency Lock",
         "",
