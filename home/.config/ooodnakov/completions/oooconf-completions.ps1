@@ -71,9 +71,11 @@ $OooconfTypoHandlingModes = @(
 $ShellValues = @('zsh', 'pwsh', 'bash', 'fish')
 
 $OooconfDepsKeys = @(
-    'wget', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide',
-    'q', 'eza', 'uv', 'bw', 'node', 'npm', 'pnpm', 'autoconf', 'fc-cache',
-    'cargo', 'dua', 'nvim', 'k', 'python3'
+    'wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco',
+    'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow',
+    'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler',
+    'uv', 'bw', 'node', 'npm', 'pnpm', 'autoconf', 'fc-cache', 'cargo',
+    'dua', 'nvim', 'k', 'python3'
 )
 
 function Get-OooconfCompleter {
@@ -189,10 +191,7 @@ function Get-OooconfCompleter {
 
     # install, deps, update global options
     if ($command -in @('install', 'deps', 'update', 'upgrade')) {
-        $completions = @('--dry-run', '--yes-optional')
-        if ($command -eq 'deps') {
-            $completions += $OooconfDepsKeys
-        }
+        $completions = @('--dry-run', '--yes-optional') + $OooconfDepsKeys
         return $completions | Where-Object { $_ -like "$WordToComplete*" }
     }
 
