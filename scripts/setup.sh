@@ -1761,6 +1761,7 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected nvim maybe_install_neovim "$manager"
   install_optional_dependency_if_selected k maybe_note_dependency k "manual install if you want the standalone k command"
   install_optional_dependency_if_selected python3 maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
+  install_optional_dependency_if_selected lazygit maybe_install_dependency "$manager" lazygit lazygit "simple terminal UI for git commands"
 }
 
 shift || true
