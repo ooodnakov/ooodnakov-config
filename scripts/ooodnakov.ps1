@@ -692,10 +692,17 @@ Examples:
     }
 }
 
-function Require-Python3 {
-    if (-not (Get-Command python3 -ErrorAction SilentlyContinue)) {
-        throw "python3 is required."
+function Require-PythonRuntime {
+    $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
+    if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
+        return
     }
+
+    if (Get-Command python3 -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    throw "python3 or uv is required."
 }
 
 $dryRunRequested = $false
@@ -856,8 +863,12 @@ switch ($command) {
         if ($dryRunRequested) {
             throw "--dry-run is not supported for agents"
         }
-        Require-Python3
-        & python3 $AgentsToolScript --repo-root $RepoRoot @remaining
+        if ($remaining.Count -eq 0 -or $remaining[0] -in @("-h", "--help", "help")) {
+            Show-CommandUsage "agents"
+            exit 0
+        }
+        Require-PythonRuntime
+        Run-Python -ScriptPath $AgentsToolScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
     }
     default {
         $suggestion = Get-CommandSuggestion -InputCommand $command
