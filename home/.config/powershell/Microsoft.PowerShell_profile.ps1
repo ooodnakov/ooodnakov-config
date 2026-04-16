@@ -33,10 +33,14 @@ if (Get-Module -ListAvailable -Name PSFzf) {
 
 if (Get-Module -ListAvailable -Name PSReadLine) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
+    Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+    Set-PSReadLineOption -PredictionViewStyle InlineView
     Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
     Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
     Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
+
+    Set-Alias oooconf oooconf.ps1 -ErrorAction SilentlyContinue
 
     if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
         $psFzfArgs = @{

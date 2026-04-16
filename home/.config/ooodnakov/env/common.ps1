@@ -96,6 +96,22 @@ if (Get-Command direnv -ErrorAction SilentlyContinue) {
         $env:DIRENV_BASH = $gitBash
     }
 
+    # Normalize common Windows env var names to all-caps for direnv compatibility.
+    # This prevents direnv from constantly trying to "fix" the case (e.g., Path -> PATH)
+    # which can be noisy and sometimes disrupts other shell hooks on Windows.
+    $varsToNormalize = @("Path", "ComSpec", "SystemRoot", "windir", "ProgramFiles", "CommonProgramFiles", "SystemDrive", "TEMP", "TMP", "HOME")
+    foreach ($v in $varsToNormalize) {
+        $envVar = Get-ChildItem "env:/$v" -ErrorAction SilentlyContinue
+        if ($null -ne $envVar) {
+            $u = $v.ToUpperInvariant()
+            if ($envVar.Name -cne $u) {
+                $val = $envVar.Value
+                Remove-Item "env:/$($envVar.Name)"
+                Set-Content "env:/$u" $val
+            }
+        }
+    }
+
     $direnvConfigRoot = Get-DirenvConfigRoot
     if (-not (Test-Path -LiteralPath $direnvConfigRoot)) {
         New-Item -ItemType Directory -Path $direnvConfigRoot -Force | Out-Null
