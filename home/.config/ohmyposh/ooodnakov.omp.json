@@ -16,9 +16,11 @@
           "background": "#3a3a3a",
           "foreground": "#00afff",
           "style": "plain",
-          "template": "\u2502 {{ .Path }} ",
+          "template": "\u2502 {{ .Icon }} {{ .Path }} ",
           "properties": {
-            "style": "full"
+            "style": "full",
+            "folder_icon": "\uf07c",
+            "home_icon": "\uf015"
           },
           "type": "path"
         },
@@ -73,7 +75,7 @@
         {
           "background": "#3a3a3a",
           "foreground": "#666666",
-          "style": "plain",
+          "style": "diamond",
           "template": "\u2502 {{ .CurrentDate | date \"15:04:05\" }} \uf017 ",
           "trailing_diamond": "\u2500\u256e",
           "type": "time"
@@ -86,7 +88,7 @@
       "newline": true,
       "segments": [
         {
-          "foreground": "#3a3a3a",
+          "foreground": "#ffffff",
           "style": "plain",
           "template": "\u2570\u2500",
           "type": "text"
