@@ -301,27 +301,29 @@ function Get-OptionalDependencySpecs {
 
 function Get-AllOptionalDependencySpecs {
     # Return all specs including platform-inapplicable ones (for validation).
-    if ($script:OptionalDependencySpecsCache) {
-        # Rebuild from JSON without platform filtering
-        $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
-        $json = $null
-        try {
-            $json = Run-Python -ScriptPath $pythonScript -ScriptArgs @("json") 2>$null
-        } catch {}
-        if ($json) {
-            $raw = $json | ConvertFrom-Json
-            return @($raw | ForEach-Object {
-                [pscustomobject]@{
-                    Key         = $_.key
-                    DisplayName = $_.display
-                    Description = $_.description
-                    Linux       = if ($_.linux) { $_.linux } else { $null }
-                    Macos       = if ($_.macos) { $_.macos } else { $null }
-                    Windows     = if ($_.windows) { $_.windows } else { $null }
-                }
-            })
-        }
+    $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
+    $json = $null
+    try {
+        $json = Run-Python -ScriptPath $pythonScript -ScriptArgs @("json") 2>$null
+    } catch {}
+    if ($json) {
+        $raw = $json | ConvertFrom-Json
+        return @($raw | ForEach-Object {
+            [pscustomobject]@{
+                Key         = $_.key
+                DisplayName = $_.display
+                Description = $_.description
+                Linux       = if ($_.linux) { $_.linux } else { $null }
+                Macos       = if ($_.macos) { $_.macos } else { $null }
+                Windows     = if ($_.windows) { $_.windows } else { $null }
+            }
+        })
     }
+
+    if (-not $script:OptionalDependencySpecsCache) {
+        $null = Get-OptionalDependencySpecs
+    }
+
     # Fallback: return filtered (applicable only) specs
     return $script:OptionalDependencySpecsCache
 }
@@ -341,49 +343,58 @@ function Test-OptionalDependencySelected {
     return $script:SelectedOptionalKeys -contains $Key
 }
 
-function Test-OptionalDependencyPresent {
+function Get-OptionalDependencyCommandNames {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Key
     )
 
     switch ($Key) {
-        "wget" { return [bool](Get-Command wget -ErrorAction SilentlyContinue) }
-        "git" { return [bool](Get-Command git -ErrorAction SilentlyContinue) }
-        "wezterm" { return [bool](Get-Command wezterm -ErrorAction SilentlyContinue) }
-        "zsh" { return [bool](Get-Command zsh -ErrorAction SilentlyContinue) }
-        "nvim" { return [bool](Get-Command nvim -ErrorAction SilentlyContinue) }
-        "oh-my-posh" { return [bool](Get-Command oh-my-posh -ErrorAction SilentlyContinue) }
-        "node" { return [bool](Get-Command node -ErrorAction SilentlyContinue) }
-        "choco" { return [bool](Get-Command choco -ErrorAction SilentlyContinue) }
-        "gsudo" { return [bool](Get-Command gsudo -ErrorAction SilentlyContinue) }
-        "rg" { return [bool](Get-Command rg -ErrorAction SilentlyContinue) }
-        "fd" { return [bool](Get-Command fd -ErrorAction SilentlyContinue) }
-        "direnv" { return [bool](Get-Command direnv -ErrorAction SilentlyContinue) }
-        "fzf" { return [bool](Get-Command fzf -ErrorAction SilentlyContinue) }
-        "bat" { return [bool](Get-Command bat -ErrorAction SilentlyContinue) }
-        "delta" { return [bool](Get-Command delta -ErrorAction SilentlyContinue) }
-        "glow" { return [bool](Get-Command glow -ErrorAction SilentlyContinue) }
-        "gum" { return [bool](Get-Command gum -ErrorAction SilentlyContinue) }
-        "zoxide" { return [bool](Get-Command zoxide -ErrorAction SilentlyContinue) }
-        "q" { return [bool](Get-Command q -ErrorAction SilentlyContinue) }
-        "eza" { return [bool](Get-Command eza -ErrorAction SilentlyContinue) }
-        "yazi" { return [bool](Get-Command yazi -ErrorAction SilentlyContinue) }
-        "ffmpeg" { return [bool](Get-Command ffmpeg -ErrorAction SilentlyContinue) }
-        "jq" { return [bool](Get-Command jq -ErrorAction SilentlyContinue) }
-        "p7zip" { return [bool](Get-Command 7z -ErrorAction SilentlyContinue) }
-        "poppler" { return [bool](Get-Command pdftotext -ErrorAction SilentlyContinue) }
-        "uv" { return [bool](Get-Command uv -ErrorAction SilentlyContinue) }
-        "python3" { return [bool](Get-Command python -ErrorAction SilentlyContinue) -or [bool](Get-Command python3 -ErrorAction SilentlyContinue) }
-        "bw" { return [bool](Get-Command bw -ErrorAction SilentlyContinue) }
-        "pnpm" { return [bool](Get-Command pnpm -ErrorAction SilentlyContinue) }
-        "autoconf" { return [bool](Get-Command autoconf -ErrorAction SilentlyContinue) }
-        "fc-cache" { return [bool](Get-Command fc-cache -ErrorAction SilentlyContinue) }
-        "cargo" { return [bool](Get-Command cargo -ErrorAction SilentlyContinue) }
-        "dua" { return [bool](Get-Command dua -ErrorAction SilentlyContinue) }
-        "k" { return [bool](Get-Command k -ErrorAction SilentlyContinue) }
-        default { return $false }
+        "wget" { return @("wget") }
+        "git" { return @("git") }
+        "wezterm" { return @("wezterm") }
+        "zsh" { return @("zsh") }
+        "nvim" { return @("nvim") }
+        "oh-my-posh" { return @("oh-my-posh") }
+        "node" { return @("node") }
+        "choco" { return @("choco") }
+        "gsudo" { return @("gsudo") }
+        "rg" { return @("rg") }
+        "fd" { return @("fd") }
+        "direnv" { return @("direnv") }
+        "fzf" { return @("fzf") }
+        "bat" { return @("bat") }
+        "delta" { return @("delta") }
+        "glow" { return @("glow") }
+        "gum" { return @("gum") }
+        "zoxide" { return @("zoxide") }
+        "q" { return @("q") }
+        "eza" { return @("eza") }
+        "yazi" { return @("yazi") }
+        "ffmpeg" { return @("ffmpeg") }
+        "jq" { return @("jq") }
+        "p7zip" { return @("7z") }
+        "poppler" { return @("pdftotext") }
+        "uv" { return @("uv") }
+        "python3" { return @("python", "python3") }
+        "bw" { return @("bw") }
+        "pnpm" { return @("pnpm") }
+        "autoconf" { return @("autoconf") }
+        "fc-cache" { return @("fc-cache") }
+        "cargo" { return @("cargo") }
+        "dua" { return @("dua") }
+        "k" { return @("k") }
+        default { return @() }
     }
+}
+
+function Test-OptionalDependencyPresent {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Key
+    )
+
+    return Test-AnyCommand -Names (Get-OptionalDependencyCommandNames -Key $Key)
 }
 
 function Invoke-SelectedOptionalDependency {
@@ -785,6 +796,11 @@ function Test-AnyCommand {
     foreach ($name in $Names) {
         if (Get-Command $name -ErrorAction SilentlyContinue) {
             return $true
+        }
+        if ($IsWindows -and -not $name.EndsWith(".exe")) {
+            if (Get-Command "$name.exe" -ErrorAction SilentlyContinue) {
+                return $true
+            }
         }
     }
 
@@ -1246,11 +1262,12 @@ function Invoke-Install {
 Start-SetupLogging
 try {
     $allPresent = $false
+    $requestedDependencyKeys = @($DependencyKeys | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
-    if ($DependencyKeys.Count -gt 0) {
+    if ($requestedDependencyKeys.Count -gt 0) {
         # Validate against ALL specs (including platform-inapplicable ones)
-        $allKeys = @((Get-AllOptionalDependencySpecs).Key)
-        foreach ($key in $DependencyKeys) {
+        $allKeys = @((Get-AllOptionalDependencySpecs).Key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        foreach ($key in $requestedDependencyKeys) {
             if ($allKeys -notcontains $key) {
                 $suggestion = Get-ClosestSuggestion -InputText $key -Candidates $allKeys
                 if ($suggestion) {
@@ -1265,7 +1282,7 @@ try {
                 Write-Information "Note: $key is not applicable on $platform; skipping." -InformationAction Continue
             }
         }
-        $script:SelectedOptionalKeys = @($DependencyKeys)
+        $script:SelectedOptionalKeys = @($requestedDependencyKeys)
         $InstallOptionalMode = "always"
     } elseif ($Command -eq "deps") {
         if (-not (Test-Interactive)) {
