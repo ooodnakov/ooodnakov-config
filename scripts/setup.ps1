@@ -153,7 +153,21 @@ function Test-Interactive {
     switch ($InteractiveMode) {
         "always" { return $true }
         "never" { return $false }
-        default { return $Host.Name -ne "ServerRemoteHost" }
+        default {
+            if ($Host.Name -eq "ServerRemoteHost") {
+                return $false
+            }
+
+            try {
+                if ([Console]::IsInputRedirected -or [Console]::IsOutputRedirected) {
+                    return $false
+                }
+            } catch {
+                return $false
+            }
+
+            return [Environment]::UserInteractive
+        }
     }
 }
 
