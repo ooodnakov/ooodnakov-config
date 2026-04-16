@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from dataclasses import dataclass
@@ -17,6 +18,24 @@ except ModuleNotFoundError:  # pragma: no cover
 MANAGED_BEGIN = "<!-- oooconf:agents-common:start -->"
 MANAGED_END = "<!-- oooconf:agents-common:end -->"
 DEFAULT_CONFIG_PATH = Path("home/.config/ooodnakov/agents/config.json")
+ASCII_ICONS = {
+    "section": "==",
+    "ok": "[ok]",
+    "warn": "[warn]",
+    "fail": "[fail]",
+    "missing": "[missing]",
+    "outdated": "[outdated]",
+    "bullet": "-",
+}
+NERD_FONT_ICONS = {
+    "section": "󰆍",
+    "ok": "󰄬",
+    "warn": "󰀪",
+    "fail": "󰅖",
+    "missing": "󰅖",
+    "outdated": "󰏫",
+    "bullet": "󰘍",
+}
 
 
 @dataclass(frozen=True)
@@ -135,13 +154,28 @@ def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
     return targets
 
 
+def supports_nerd_font_output() -> bool:
+    if os.environ.get("OOOCONF_ASCII") == "1":
+        return False
+    if not sys.stdout.isatty():
+        return False
+    encoding = (sys.stdout.encoding or "").lower()
+    return "utf" in encoding
+
+
+def icon(name: str) -> str:
+    palette = NERD_FONT_ICONS if supports_nerd_font_output() else ASCII_ICONS
+    return palette[name]
+
+
 def print_section(title: str) -> None:
-    print(title)
-    print("-" * len(title))
+    prefix = icon("section")
+    print(f"{prefix} {title}")
+    print("─" * (len(title) + 2) if prefix != ASCII_ICONS["section"] else "-" * (len(title) + 3))
 
 
 def print_status_line(status: str, message: str) -> None:
-    print(f"[{status}] {message}")
+    print(f"{icon(status)} {message}")
 
 
 def detect_clis(agent_clis: list[AgentCli]) -> list[dict[str, str | bool]]:
@@ -324,7 +358,7 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
         print("")
         print("Changed files:")
         for file_path in changed_files:
-            print(f"- {file_path}")
+            print(f"{icon('bullet')} {file_path}")
     else:
         print("")
         print("All discovered AGENTS.md files are up to date.")
