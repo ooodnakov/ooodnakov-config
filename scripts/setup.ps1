@@ -1355,6 +1355,7 @@ function Test-Doctor {
     Write-Output "Running doctor checks..."
 
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
@@ -1397,8 +1398,22 @@ function Invoke-Install {
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")) {
         Add-ToolSummary "wezterm: linked"
     }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")) {
+        Add-ToolSummary "lazygit: linked"
+    }
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")) {
         Add-ToolSummary "nvim: linked"
+
+        # Sync LazyVim plugins non-interactively
+        if (Get-Command nvim -ErrorAction SilentlyContinue) {
+            Write-Output "Syncing LazyVim plugins..."
+            & nvim --headless "+Lazy! sync" +qa
+            if ($LASTEXITCODE -eq 0) {
+                Add-ToolSummary "nvim: plugins synced"
+            } else {
+                Write-Warning "LazyVim plugin sync exited with code $LASTEXITCODE"
+            }
+        }
     }
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")) {
         Add-ToolSummary "ooodnakov config: linked"

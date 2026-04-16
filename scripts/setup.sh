@@ -1890,9 +1890,20 @@ install_managed_tools
 link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc" || true
 link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh" || true
 link_file "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm" || true
-link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim" || true
-link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
-run_cmd mkdir -p "$HOME_DIR/.local/bin"
+if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
+  # Sync LazyVim plugins non-interactively
+  if command -v nvim >/dev/null 2>&1; then
+    echo "Syncing LazyVim plugins..."
+    nvim --headless "+Lazy! sync" +qa
+    if [ $? -eq 0 ]; then
+      TOOL_SUMMARY+=("nvim: plugins synced")
+    else
+      echo "Warning: LazyVim plugin sync exited with code $?"
+    fi
+  fi
+  fi
+  link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
+  run_cmd mkdir -p "$HOME_DIR/.local/bin"
 link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
 
 generate_autogen_completions || true
