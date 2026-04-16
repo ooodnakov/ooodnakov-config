@@ -33,6 +33,15 @@ class AgentConfigTarget:
     docs_url: str
 
 
+@dataclass(frozen=True)
+class DoctorConfigResult:
+    target: AgentConfigTarget
+    existing_path: Path | None
+    missing_mcp: list[str]
+    missing_skills: list[str]
+    parse_error: str = ""
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="oooconf agents",
@@ -124,6 +133,15 @@ def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
             )
         )
     return targets
+
+
+def print_section(title: str) -> None:
+    print(title)
+    print("-" * len(title))
+
+
+def print_status_line(status: str, message: str) -> None:
+    print(f"[{status}] {message}")
 
 
 def detect_clis(agent_clis: list[AgentCli]) -> list[dict[str, str | bool]]:
@@ -218,6 +236,56 @@ def check_common_entries(content: str, common_data: dict[str, Any]) -> tuple[lis
     return missing_mcp, missing_skills
 
 
+def inspect_agent_configs(
+    targets: list[AgentConfigTarget], common_data: dict[str, Any]
+) -> tuple[list[DoctorConfigResult], bool]:
+    results: list[DoctorConfigResult] = []
+    has_failures = False
+
+    for target in targets:
+        existing = existing_default_path(target.default_paths)
+        if existing is None:
+            results.append(
+                DoctorConfigResult(
+                    target=target,
+                    existing_path=None,
+                    missing_mcp=[],
+                    missing_skills=[],
+                )
+            )
+            continue
+
+        try:
+            search_space = extract_search_space(existing, target.format)
+        except Exception as exc:
+            results.append(
+                DoctorConfigResult(
+                    target=target,
+                    existing_path=existing,
+                    missing_mcp=[],
+                    missing_skills=[],
+                    parse_error=str(exc),
+                )
+            )
+            has_failures = True
+            continue
+
+        missing_mcp, missing_skills = check_common_entries(search_space, common_data)
+        if missing_mcp or missing_skills:
+            has_failures = True
+
+        results.append(
+            DoctorConfigResult(
+                target=target,
+                existing_path=existing,
+                missing_mcp=missing_mcp,
+                missing_skills=missing_skills,
+            )
+        )
+
+    return results, has_failures
+
+
 def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
     rows = detect_clis(parse_agent_clis(config["agent_clis"]))
     installed = sum(1 for row in rows if row["installed"])
@@ -225,11 +293,14 @@ def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
     if json_output:
         print(json.dumps({"detected": rows}, indent=2))
     else:
-        print("Agent CLI detection:")
+        print_section("Agent CLI Detection")
         for row in rows:
-            status = "installed" if row["installed"] else "missing"
-            print(f"- {row['name']}: {status} ({row['command']}) {row['path'] or '-'}")
-        print(f"Detected {installed}/{len(rows)} configured agent CLIs.")
+            status = "ok" if row["installed"] else "missing"
+            location = row["path"] or "-"
+            print_status_line(status, f"{row['name']} ({row['command']})")
+            print(f"  path: {location}")
+        print("")
+        print(f"Summary: detected {installed}/{len(rows)} configured agent CLIs.")
     return 0
 
 
@@ -244,9 +315,20 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
         return 1
 
     changed_count, changed_files = sync_files(agent_files, managed_block, check_only)
-    print(f"Agent file {'check' if check_only else 'sync'} complete: {changed_count} file(s) need updates.")
-    for file_path in changed_files:
-        print(f"- {file_path}")
+    print_section("AGENTS Sync")
+    print(f"Mode: {'check' if check_only else 'sync'}")
+    print(f"Files scanned: {len(agent_files)}")
+    print(f"Files needing updates: {changed_count}")
+
+    if changed_files:
+        print("")
+        print("Changed files:")
+        for file_path in changed_files:
+            print(f"- {file_path}")
+    else:
+        print("")
+        print("All discovered AGENTS.md files are up to date.")
+
     return 1 if check_only and changed_count > 0 else 0
 
 
@@ -255,54 +337,83 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
     common_data = read_json(repo_root, config["common_data_file"])
     managed_block = render_markdown_block(common_text, common_data)
     agent_files = discover_agent_files(repo_root, config["agent_files"])
+    config_targets = parse_agent_targets(config["agent_configs"])
+    config_results, config_failures = inspect_agent_configs(config_targets, common_data)
+    rows = detect_clis(parse_agent_clis(config["agent_clis"]))
 
     failed = False
+    outdated_agent_files: list[Path] = []
     if not agent_files:
-        print("No AGENTS.md files found from configured locations/discovery.", file=sys.stderr)
         failed = True
-    for path in agent_files:
-        text = path.read_text(encoding="utf-8")
-        if upsert_managed_block(text, managed_block) != text:
-            print(f"- outdated AGENTS managed block: {path}")
-            failed = True
+    else:
+        for path in agent_files:
+            text = path.read_text(encoding="utf-8")
+            if upsert_managed_block(text, managed_block) != text:
+                outdated_agent_files.append(path)
+                failed = True
 
-    print(f"Checked AGENTS.md managed block in {len(agent_files)} file(s).")
+    print_section("AGENTS Doctor")
 
-    for target in parse_agent_targets(config["agent_configs"]):
-        existing = existing_default_path(target.default_paths)
-        if existing is None:
-            msg = f"- config path not found for {target.name}: {', '.join(target.default_paths)}"
+    print("AGENTS.md Files")
+    print("---------------")
+    if not agent_files:
+        print_status_line("fail", "No AGENTS.md files found from configured locations/discovery.")
+    elif outdated_agent_files:
+        for path in outdated_agent_files:
+            print_status_line("outdated", f"Managed block needs update: {path}")
+    else:
+        print_status_line("ok", f"Managed blocks are current in {len(agent_files)} file(s).")
+
+    print("")
+    print("Agent Configs")
+    print("-------------")
+    for result in config_results:
+        target = result.target
+        if result.existing_path is None:
+            message = f"{target.name}: config path not found ({', '.join(target.default_paths)})"
             if target.docs_url:
-                msg += f" (docs: {target.docs_url})"
-            print(msg)
+                message += f" | docs: {target.docs_url}"
+            print_status_line("warn", message)
             if strict_paths:
                 failed = True
             continue
 
-        try:
-            search_space = extract_search_space(existing, target.format)
-        except Exception as exc:
-            print(f"- failed parsing {target.name} config ({existing}): {exc}")
-            failed = True
+        if result.parse_error:
+            print_status_line("fail", f"{target.name}: failed parsing {result.existing_path}")
+            print(f"  error: {result.parse_error}")
             continue
 
-        missing_mcp, missing_skills = check_common_entries(search_space, common_data)
-        if missing_mcp or missing_skills:
-            failed = True
-            print(f"- {target.name} config is missing entries ({existing}):")
-            if missing_mcp:
-                print(f"  * missing MCPs: {', '.join(missing_mcp)}")
-            if missing_skills:
-                print(f"  * missing skills hints: {len(missing_skills)} item(s)")
-        else:
-            print(f"- {target.name} config contains configured MCP/skills markers ({existing}).")
+        if result.missing_mcp or result.missing_skills:
+            print_status_line("fail", f"{target.name}: missing required markers in {result.existing_path}")
+            if result.missing_mcp:
+                print(f"  missing MCPs: {', '.join(result.missing_mcp)}")
+            if result.missing_skills:
+                print(f"  missing skills: {', '.join(result.missing_skills)}")
+            continue
 
-    rows = detect_clis(parse_agent_clis(config["agent_clis"]))
+        print_status_line("ok", f"{target.name}: required MCP/skills markers found in {result.existing_path}")
+
+    print("")
+    print("Agent CLIs")
+    print("----------")
     missing_clis = [row for row in rows if not row["installed"]]
-    if missing_clis:
-        print("Missing configured agent CLIs:")
-        for row in missing_clis:
-            print(f"- {row['name']} ({row['command']})")
+    installed_clis = [row for row in rows if row["installed"]]
+    for row in installed_clis:
+        print_status_line("ok", f"{row['name']} ({row['command']})")
+    for row in missing_clis:
+        print_status_line("missing", f"{row['name']} ({row['command']})")
+
+    print("")
+    strict_note = "strict config paths enabled" if strict_paths else "missing config paths are warnings"
+    print(
+        "Summary: "
+        f"{len(agent_files)} AGENTS.md file(s), "
+        f"{len(outdated_agent_files)} outdated, "
+        f"{len(installed_clis)}/{len(rows)} CLIs installed, "
+        f"{strict_note}."
+    )
+
+    failed = failed or config_failures
 
     return 1 if failed else 0
 
