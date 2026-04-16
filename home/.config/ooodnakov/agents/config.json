@@ -10,7 +10,8 @@
     { "name": "Gemini CLI", "command": "gemini" },
     { "name": "Aider", "command": "aider" },
     { "name": "Qwen Code", "command": "qwen" },
-    { "name": "Cursor Agent", "command": "cursor-agent" }
+    { "name": "Cursor Agent", "command": "cursor-agent" },
+    { "name": "OpenCode", "command": "opencode" }
   ],
   "agent_configs": [
     {
@@ -36,6 +37,12 @@
       "format": "yaml",
       "default_paths": ["~/.aider.conf.yml", "~/.config/aider/aider.conf.yml"],
       "docs_url": "https://aider.chat/docs/config/aider_conf.html"
+    },
+    {
+      "name": "OpenCode",
+      "format": "json",
+      "default_paths": ["~/.config/opencode/opencode.json"],
+      "docs_url": "https://opencode.ai/docs"
     }
   ]
 }
