@@ -23,6 +23,32 @@ $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
 $TypoHandlingVar = "OOODNAKOV_TYPO_HANDLING_MODE"
+$UiAscii = @{
+    section = "=="
+    ok = "[ok]"
+    warn = "[warn]"
+    fail = "[fail]"
+    info = "[info]"
+    hint = "->"
+}
+$UiNerd = @{
+    section = 0xF018D
+    ok = 0xF012C
+    warn = 0xF002A
+    fail = 0xF0156
+    info = 0xF02FC
+    hint = 0xF0311
+}
+$UiAnsi = @{
+    Reset = "$([char]27)[0m"
+    Bold = "$([char]27)[1m"
+    Section = "$([char]27)[38;5;111m"
+    Ok = "$([char]27)[38;5;78m"
+    Warn = "$([char]27)[38;5;221m"
+    Fail = "$([char]27)[38;5;203m"
+    Info = "$([char]27)[38;5;117m"
+    Muted = "$([char]27)[38;5;245m"
+}
 
 # Run a Python script, preferring `uv run` when available.
 function Run-Python {
@@ -33,6 +59,71 @@ function Run-Python {
     } else {
         & python3 $ScriptPath @ScriptArgs
     }
+}
+
+function Test-UiInteractive {
+    try {
+        return -not [Console]::IsOutputRedirected
+    } catch {
+        return $false
+    }
+}
+
+function Test-UiColor {
+    if (${env:NO_COLOR}) { return $false }
+    if (${env:OOOCONF_COLOR} -in @("0", "false", "never")) { return $false }
+    if (${env:OOOCONF_COLOR} -in @("1", "true", "always") -or ${env:FORCE_COLOR}) { return $true }
+    return Test-UiInteractive
+}
+
+function Test-UiNerdFont {
+    if (${env:OOOCONF_ASCII} -eq "1") { return $false }
+    if (-not (Test-UiInteractive)) { return $false }
+    return (($OutputEncoding.WebName -match "utf") -or ([Console]::OutputEncoding.WebName -match "utf"))
+}
+
+function Get-UiIcon {
+    param([string]$Name)
+    if (Test-UiNerdFont) { return [char]::ConvertFromUtf32($UiNerd[$Name]) }
+    return $UiAscii[$Name]
+}
+
+function Format-UiText {
+    param(
+        [Parameter(Mandatory = $true)][string]$Text,
+        [Parameter(Mandatory = $true)][string]$Role,
+        [switch]$Bold
+    )
+    if (-not (Test-UiColor)) { return $Text }
+    $color = switch ($Role) {
+        "section" { $UiAnsi.Section }
+        "ok" { $UiAnsi.Ok }
+        "warn" { $UiAnsi.Warn }
+        "fail" { $UiAnsi.Fail }
+        "info" { $UiAnsi.Info }
+        default { $UiAnsi.Muted }
+    }
+    $prefix = if ($Bold) { "$($UiAnsi.Bold)$color" } else { $color }
+    return "$prefix$Text$($UiAnsi.Reset)"
+}
+
+function Write-UiLine {
+    param(
+        [Parameter(Mandatory = $true)][string]$Role,
+        [Parameter(Mandatory = $true)][string]$Message
+    )
+    $icon = Format-UiText -Text (Get-UiIcon $Role) -Role $Role -Bold
+    Write-Output "$icon $Message"
+}
+
+function Write-UiSection {
+    param([Parameter(Mandatory = $true)][string]$Title)
+    $icon = Format-UiText -Text (Get-UiIcon "section") -Role "section" -Bold
+    $heading = Format-UiText -Text $Title -Role "section" -Bold
+    $ruleChar = "-"
+    $rule = Format-UiText -Text ($ruleChar * ($Title.Length + 3)) -Role "muted"
+    Write-Output "$icon $heading"
+    Write-Output $rule
 }
 
 function Get-ShellConfigHome {
@@ -179,10 +270,10 @@ function Set-ForgitAliasMode {
     Set-LocalOverrideLine -Path $envZsh -VariableName $ForgitAliasVar -ReplacementLine "export $ForgitAliasVar=""$Mode"""
     Set-LocalOverrideLine -Path $envPs1 -VariableName $ForgitAliasVar -ReplacementLine "`$env:$ForgitAliasVar = '$Mode'"
 
-    Write-Output "forgit alias mode set to $Mode"
-    Write-Output "zsh: $envZsh"
-    Write-Output "pwsh: $envPs1"
-    Write-Output "Open a new shell session to apply the change."
+    Write-UiLine -Role ok -Message "forgit alias mode set to $Mode"
+    Write-UiLine -Role info -Message "zsh: $envZsh"
+    Write-UiLine -Role info -Message "pwsh: $envPs1"
+    Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
 }
 
 function Set-TypoHandlingMode {
@@ -201,10 +292,10 @@ function Set-TypoHandlingMode {
     Set-LocalOverrideLine -Path $envZsh -VariableName $TypoHandlingVar -ReplacementLine "export $TypoHandlingVar=""$Mode"""
     Set-LocalOverrideLine -Path $envPs1 -VariableName $TypoHandlingVar -ReplacementLine "`$env:$TypoHandlingVar = '$Mode'"
 
-    Write-Output "typo handling mode set to $Mode"
-    Write-Output "zsh: $envZsh"
-    Write-Output "pwsh: $envPs1"
-    Write-Output "Open a new shell session to apply the change."
+    Write-UiLine -Role ok -Message "typo handling mode set to $Mode"
+    Write-UiLine -Role info -Message "zsh: $envZsh"
+    Write-UiLine -Role info -Message "pwsh: $envPs1"
+    Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
 }
 
 function Write-UnknownCommandMessage {
@@ -222,16 +313,16 @@ function Write-UnknownCommandMessage {
         }
         "suggest" {
             if ($Suggestion) {
-                Write-Output "Did you mean: $Suggestion"
+                Write-UiLine -Role hint -Message "Did you mean: $Suggestion"
             } else {
-                Write-Output $Message
+                Write-UiLine -Role fail -Message $Message
             }
             return
         }
         default {
-            Write-Output $Message
+            Write-UiLine -Role fail -Message $Message
             if ($Suggestion) {
-                Write-Output "Did you mean: $Suggestion"
+                Write-UiLine -Role hint -Message "Did you mean: $Suggestion"
             }
             if ($Scope -eq "shell") {
                 Show-CommandUsage "shell"
@@ -422,6 +513,7 @@ function Get-Version {
 }
 
 function Show-Usage {
+    Write-UiSection "oooconf"
     @"
 Usage: oooconf [global options] <command> [command options]
 
@@ -500,6 +592,7 @@ function Show-CommandUsage {
     )
 
     $CommandName = Resolve-CommandAlias -CommandName $CommandName
+    Write-UiSection "oooconf $CommandName"
     switch ($CommandName) {
         "install" {
             @"
@@ -728,17 +821,17 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
             $i++
         }
         "--print-repo-root" {
-            Write-Output $RepoRoot
+            Write-UiLine -Role info -Message $RepoRoot
             exit 0
         }
         "-V" {
-            Write-Output "oooconf $(Get-Version)"
-            Write-Output $RepoRoot
+            Write-UiLine -Role info -Message "oooconf $(Get-Version)"
+            Write-UiLine -Role info -Message $RepoRoot
             exit 0
         }
         "--version" {
-            Write-Output "oooconf $(Get-Version)"
-            Write-Output $RepoRoot
+            Write-UiLine -Role info -Message "oooconf $(Get-Version)"
+            Write-UiLine -Role info -Message $RepoRoot
             exit 0
         }
         "-h" {
@@ -775,8 +868,8 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
             exit 0
         }
         "version" {
-            Write-Output "oooconf $(Get-Version)"
-            Write-Output $RepoRoot
+            Write-UiLine -Role info -Message "oooconf $(Get-Version)"
+            Write-UiLine -Role info -Message $RepoRoot
             exit 0
         }
         default {

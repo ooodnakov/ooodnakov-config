@@ -7,6 +7,50 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
 RESTORE_MODE="${1:-restore}"
 
+ui_is_interactive() {
+  [ -t 1 ]
+}
+
+ui_icon() {
+  local name="$1"
+  if [ "${OOOCONF_ASCII:-0}" != "1" ] && ui_is_interactive; then
+    case "$name" in
+      ok) printf '󰄬' ;;
+      info) printf '󰋼' ;;
+      section) printf '󰆍' ;;
+      *) printf '󰅖' ;;
+    esac
+  else
+    case "$name" in
+      ok) printf '[ok]' ;;
+      info) printf '[info]' ;;
+      section) printf '==' ;;
+      *) printf '[fail]' ;;
+    esac
+  fi
+}
+
+ui_colorize() {
+  local role="$1"
+  local text="$2"
+  if [ -n "${NO_COLOR:-}" ] || ! ui_is_interactive; then
+    printf '%s' "$text"
+    return 0
+  fi
+  case "$role" in
+    ok) printf '\033[1;38;5;78m%s\033[0m' "$text" ;;
+    info) printf '\033[1;38;5;117m%s\033[0m' "$text" ;;
+    section) printf '\033[1;38;5;111m%s\033[0m' "$text" ;;
+    *) printf '\033[1;38;5;203m%s\033[0m' "$text" ;;
+  esac
+}
+
+ui_line() {
+  local role="$1"
+  shift
+  printf '%s %s\n' "$(ui_colorize "$role" "$(ui_icon "$role")")" "$*"
+}
+
 remove_managed_link() {
   local source="$1"
   local target="$2"
@@ -16,7 +60,7 @@ remove_managed_link() {
     current="$(readlink "$target")"
     if [ "$current" = "$source" ]; then
       rm -f "$target"
-      echo "removed $target"
+      ui_line ok "removed $target"
     fi
   fi
 }
@@ -44,7 +88,7 @@ restore_backup() {
   backup="$(latest_backup_for "$target" || true)"
   if [ -n "$backup" ] && [ ! -e "$target" ] && [ ! -L "$target" ]; then
     mv "$backup" "$target"
-    echo "restored $target"
+    ui_line ok "restored $target"
   fi
 }
 
@@ -52,11 +96,12 @@ remove_font_dir() {
   local font_dir="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
   if [ -d "$font_dir" ]; then
     rm -rf "$font_dir"
-    echo "removed $font_dir"
+    ui_line ok "removed $font_dir"
   fi
 }
 
 usage() {
+  ui_line section "delete"
   cat <<'EOF'
 Usage: ./scripts/delete.sh [restore|remove]
 
@@ -94,5 +139,5 @@ if [ "$RESTORE_MODE" = "restore" ]; then
 fi
 
 echo
-echo "Managed config removed."
-echo "Repo checkout was left in place at $REPO_ROOT."
+ui_line ok "Managed config removed."
+ui_line info "Repo checkout was left in place at $REPO_ROOT."

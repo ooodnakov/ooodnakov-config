@@ -19,6 +19,87 @@ LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
 FORGIT_ALIAS_VAR="OOODNAKOV_FORGIT_ALIAS_MODE"
 TYPO_HANDLING_VAR="OOODNAKOV_TYPO_HANDLING_MODE"
 
+ui_is_interactive() {
+  [ -t 1 ]
+}
+
+ui_use_nerd_font() {
+  [ "${OOOCONF_ASCII:-0}" != "1" ] && ui_is_interactive
+}
+
+ui_use_color() {
+  case "${OOOCONF_COLOR:-auto}" in
+    0|false|never) return 1 ;;
+    1|true|always) return 0 ;;
+  esac
+  [ -z "${NO_COLOR:-}" ] && ui_is_interactive
+}
+
+ui_icon() {
+  local name="$1"
+  if ui_use_nerd_font; then
+    case "$name" in
+      section) printf '%b' '\U000f018d' ;;
+      ok) printf '%b' '\U000f012c' ;;
+      warn) printf '%b' '\U000f002a' ;;
+      fail) printf '%b' '\U000f0156' ;;
+      info) printf '%b' '\U000f02fc' ;;
+      hint) printf '%b' '\U000f0311' ;;
+      *) printf '•' ;;
+    esac
+  else
+    case "$name" in
+      section) printf '==' ;;
+      ok) printf '[ok]' ;;
+      warn) printf '[warn]' ;;
+      fail) printf '[fail]' ;;
+      info) printf '[info]' ;;
+      hint) printf '->' ;;
+      *) printf '-' ;;
+    esac
+  fi
+}
+
+ui_colorize() {
+  local role="$1"
+  local text="$2"
+  local code=""
+  if ! ui_use_color; then
+    printf '%s' "$text"
+    return 0
+  fi
+  case "$role" in
+    section) code='1;38;5;111' ;;
+    ok) code='1;38;5;78' ;;
+    warn) code='1;38;5;221' ;;
+    fail) code='1;38;5;203' ;;
+    info) code='1;38;5;117' ;;
+    hint) code='38;5;245' ;;
+    muted) code='38;5;245' ;;
+    *) code='' ;;
+  esac
+  if [ -n "$code" ]; then
+    printf '\033[%sm%s\033[0m' "$code" "$text"
+  else
+    printf '%s' "$text"
+  fi
+}
+
+ui_line() {
+  local role="$1"
+  shift
+  printf '%s %s\n' "$(ui_colorize "$role" "$(ui_icon "$role")")" "$*"
+}
+
+ui_section() {
+  local title="$1"
+  local rule_char='-'
+  ui_use_nerd_font && rule_char='─'
+  ui_line section "$title"
+  ui_colorize muted "$(printf '%*s' "$((${#title}+3))" '' | tr ' ' "$rule_char")"
+  printf '\n'
+}
+
 # Run a Python script, preferring `uv run` (which uses the pinned .python-version
 # and .venv) when uv is available, falling back to plain python3.
 run_python() {
@@ -31,7 +112,7 @@ run_python() {
 
 visible_error() {
   if [ -t 1 ]; then
-    printf '%s\n' "$*"
+    ui_line fail "$*"
   else
     printf '%s\n' "$*" >&2
   fi
@@ -184,10 +265,10 @@ set_forgit_alias_mode() {
   upsert_override_line "$env_zsh" "$FORGIT_ALIAS_VAR" "export $FORGIT_ALIAS_VAR=\"$mode\""
   upsert_override_line "$env_ps1" "$FORGIT_ALIAS_VAR" "\$env:$FORGIT_ALIAS_VAR = '$mode'"
 
-  printf 'forgit alias mode set to %s\n' "$mode"
-  printf 'zsh: %s\n' "$env_zsh"
-  printf 'pwsh: %s\n' "$env_ps1"
-  printf 'Open a new shell or run: exec zsh\n'
+  ui_line ok "forgit alias mode set to $mode"
+  ui_line info "zsh: $env_zsh"
+  ui_line info "pwsh: $env_ps1"
+  ui_line hint "Open a new shell or run: exec zsh"
 }
 
 set_typo_handling_mode() {
@@ -209,10 +290,10 @@ set_typo_handling_mode() {
   upsert_override_line "$env_zsh" "$TYPO_HANDLING_VAR" "export $TYPO_HANDLING_VAR=\"$mode\""
   upsert_override_line "$env_ps1" "$TYPO_HANDLING_VAR" "\$env:$TYPO_HANDLING_VAR = '$mode'"
 
-  printf 'typo handling mode set to %s\n' "$mode"
-  printf 'zsh: %s\n' "$env_zsh"
-  printf 'pwsh: %s\n' "$env_ps1"
-  printf 'Open a new shell or run: exec zsh\n'
+  ui_line ok "typo handling mode set to $mode"
+  ui_line info "zsh: $env_zsh"
+  ui_line info "pwsh: $env_ps1"
+  ui_line hint "Open a new shell or run: exec zsh"
 }
 
 print_help_for_scope() {
@@ -261,6 +342,7 @@ handle_shell_command() {
 
   case "$subcommand" in
     ""|-h|--help|help)
+      ui_section "oooconf shell"
       cat <<'EOF'
 Usage:
   oooconf shell forgit-aliases [plain|forgit|status]
@@ -439,6 +521,7 @@ print_version() {
 }
 
 usage() {
+  ui_section "oooconf"
   cat <<EOF
 Usage: oooconf [global options] <command> [command options]
 
@@ -514,6 +597,7 @@ EOF
 command_usage() {
   local command="$1"
   command="$(resolve_command_alias "$command")"
+  ui_section "oooconf $command"
 
   case "$command" in
     bootstrap)
@@ -757,12 +841,12 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     --print-repo-root)
-      echo "$REPO_ROOT"
+      ui_line info "$REPO_ROOT"
       exit 0
       ;;
     -V|--version)
-      echo "oooconf $(print_version)"
-      echo "$REPO_ROOT"
+      ui_line info "oooconf $(print_version)"
+      ui_line info "$REPO_ROOT"
       exit 0
       ;;
     -h|--help)
@@ -786,8 +870,8 @@ while [ "$#" -gt 0 ]; do
       exit 0
       ;;
     version)
-      echo "oooconf $(print_version)"
-      echo "$REPO_ROOT"
+      ui_line info "oooconf $(print_version)"
+      ui_line info "$REPO_ROOT"
       exit 0
       ;;
     -*)
