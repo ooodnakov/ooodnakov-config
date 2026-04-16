@@ -75,6 +75,13 @@ windows.manager = "custom"
 windows.command = "installed from the PowerShell Gallery in setup.ps1"
 
 [[deps]]
+key = "psfzf"
+display = "PSFzf"
+description = "PowerShell fzf integration for history, files, and tab completion"
+windows.manager = "custom"
+windows.command = "installed from the PowerShell Gallery in setup.ps1"
+
+[[deps]]
 key = "choco"
 display = "choco"
 description = "Chocolatey package manager (Windows)"

@@ -25,11 +25,37 @@ if (Test-Path $LocalEnv) {
 
 if (Get-Module -ListAvailable -Name posh-git) {
     Import-Module posh-git -ErrorAction SilentlyContinue
+
+    function Set-PoshGitStatus {
+        $global:GitStatus = Get-GitStatus
+        $env:POSH_GIT_STRING = Write-GitStatus -Status $global:GitStatus
+    }
+
+    New-Alias -Name Set-PoshContext -Value Set-PoshGitStatus -Scope Global -Force
+}
+
+if (Get-Module -ListAvailable -Name PSFzf) {
+    Import-Module PSFzf -ErrorAction SilentlyContinue
 }
 
 if (Get-Module -ListAvailable -Name PSReadLine) {
     Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
     Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
+
+    if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+        $psFzfArgs = @{
+            PSReadlineChordProvider       = 'Ctrl+t'
+            PSReadlineChordReverseHistory = 'Ctrl+r'
+            TabExpansion                  = $true
+            GitKeyBindings                = $true
+        }
+
+        if (Get-Command fd -ErrorAction SilentlyContinue) {
+            $psFzfArgs.EnableFd = $true
+        }
+
+        Set-PsFzfOption @psFzfArgs
+    }
 }
 
 Set-Alias ll Get-ChildItem

@@ -237,6 +237,7 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = @{ manager = "apt" }; Macos = @{ manager = "brew"; package = "wezterm" }; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
             [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "jandedobbeleer/oh-my-posh/oh-my-posh" }; Windows = @{ manager = "winget"; winget_id = "JanDeDobbeleer.OhMyPosh" } }
             [pscustomobject]@{ Key = "posh-git"; DisplayName = "posh-git"; Description = "PowerShell Git completions and shell integration"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "psfzf"; DisplayName = "PSFzf"; Description = "PowerShell fzf integration for history, files, and tab completion"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo elevation helper"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "gsudo" } }
             [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep search tool"; Linux = @{ manager = "apt"; package = "ripgrep" }; Macos = @{ manager = "brew"; package = "ripgrep" }; Windows = @{ manager = "choco"; package = "ripgrep" } }
@@ -358,6 +359,7 @@ function Get-OptionalDependencyCommandNames {
         "nvim" { return @("nvim") }
         "oh-my-posh" { return @("oh-my-posh") }
         "posh-git" { return @() }
+        "psfzf" { return @() }
         "node" { return @("node") }
         "choco" { return @("choco") }
         "gsudo" { return @("gsudo") }
@@ -402,6 +404,9 @@ function Test-OptionalDependencyPresent {
 
     if ($Key -eq "posh-git") {
         return [bool](Get-Module -ListAvailable -Name posh-git)
+    }
+    if ($Key -eq "psfzf") {
+        return [bool](Get-Module -ListAvailable -Name PSFzf)
     }
 
     $commandNames = @(Get-OptionalDependencyCommandNames -Key $Key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
@@ -1038,6 +1043,44 @@ function Install-PoshGitIfMissing {
     return $false
 }
 
+function Install-PSFzfIfMissing {
+    if (Get-Module -ListAvailable -Name PSFzf) {
+        Add-DependencySummary "psfzf: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install PSFzf from the PowerShell Gallery?")) {
+        Add-DependencySummary "psfzf: skipped"
+        return $false
+    }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Install-Module PSFzf -Scope CurrentUser -Force"
+        Add-DependencySummary "psfzf: install preview via PowerShell Gallery"
+        return $false
+    }
+
+    try {
+        $nuget = Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue
+        if (-not $nuget) {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
+        }
+
+        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+        Install-Module PSFzf -Scope CurrentUser -Force -AllowClobber
+    } catch {
+        Write-Output $_
+    }
+
+    if (Get-Module -ListAvailable -Name PSFzf) {
+        Add-DependencySummary "psfzf: installed via PowerShell Gallery"
+        return $true
+    }
+
+    Add-DependencySummary "psfzf: install attempted"
+    return $false
+}
+
 function Install-BitwardenCliIfMissing {
     if (Get-Command bw -ErrorAction SilentlyContinue) {
         Add-DependencySummary "bw: present"
@@ -1142,6 +1185,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "nvim" -Action { Install-PackageIfMissing -CommandNames @("nvim") -WingetId "Neovim.Neovim" -Description "Neovim" -SummaryName "nvim" }
     $null = Invoke-SelectedOptionalDependency -Key "oh-my-posh" -Action { Install-PackageIfMissing -CommandNames @("oh-my-posh") -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh" -SummaryName "oh-my-posh" }
     $null = Invoke-SelectedOptionalDependency -Key "posh-git" -Action { Install-PoshGitIfMissing }
+    $null = Invoke-SelectedOptionalDependency -Key "psfzf" -Action { Install-PSFzfIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "node" -Action { Install-PackageIfMissing -CommandNames @("node") -WingetId "OpenJS.NodeJS.LTS" -Description "Node.js LTS" -SummaryName "node" }
 
     $needsChocolatey = Test-OptionalDependencySelected -Key "choco"

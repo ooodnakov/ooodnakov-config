@@ -127,7 +127,7 @@ Secrets commands:
 - `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
-The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, `gum`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`), `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`), and the PowerShell Gallery (`posh-git`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, `gum`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`), `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`), and the PowerShell Gallery (`posh-git`, `PSFzf`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 Shell completion:
@@ -246,9 +246,9 @@ Additional setup behavior:
 - Linux setup requires `nvim >= 0.11.0` for LazyVim and falls back to a pinned official Neovim tarball if the distro package is too old
 - setup normalizes `oh-my-zsh` permissions on every run so `compaudit` and `compinit` do not reject the install
 
-On Windows, setup can prompt to install common tools with `winget`, `choco`, and the PowerShell Gallery, including WezTerm, Node.js LTS, `oh-my-posh`, `posh-git`, `gum`, `ripgrep`, `fd`, `bat`, `delta`, `glow`, `q`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
+On Windows, setup can prompt to install common tools with `winget`, `choco`, and the PowerShell Gallery, including WezTerm, Node.js LTS, `oh-my-posh`, `posh-git`, `PSFzf`, `gum`, `ripgrep`, `fd`, `bat`, `delta`, `glow`, `q`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
 
-The tracked `oh-my-posh` theme already uses its own `git` segment in [home/.config/ohmyposh/ooodnakov.omp.json](C:/Users/coolk/src/ooodnakov-config/home/.config/ohmyposh/ooodnakov.omp.json:63), so `posh-git` is included for native PowerShell Git completion and shell integration rather than to render prompt status text.
+The tracked `oh-my-posh` theme already uses its own `git` segment in [home/.config/ohmyposh/ooodnakov.omp.json](C:/Users/coolk/src/ooodnakov-config/home/.config/ohmyposh/ooodnakov.omp.json:63). The PowerShell profile also exposes `POSH_GIT_STRING` from `posh-git`, and the theme renders that in a small text segment, so you get both the built-in `oh-my-posh` git segment and the classic `posh-git` status string when `posh-git` is installed.
 
 ## Fonts
 

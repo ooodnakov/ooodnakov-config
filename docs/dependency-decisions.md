@@ -45,6 +45,7 @@ These are offered by `oooconf deps`. Each entry includes the install mechanism a
 | `glow` | system package manager (choco on Windows) | Terminal Markdown reader |
 | `gum` | system package manager (winget on Windows) | Interactive terminal UI for selectors |
 | `posh-git` | PowerShell Gallery (Windows) | Native PowerShell Git completions and shell integration |
+| `psfzf` | PowerShell Gallery (Windows) | Native PowerShell fzf integration for history, files, and tab completion |
 | `zoxide` | system package manager | Smart directory jumping |
 | `q` | system package manager (choco on Windows) | Text-as-data CLI |
 | `eza` | system package manager (choco on Windows) | Modern `ls` aliases |

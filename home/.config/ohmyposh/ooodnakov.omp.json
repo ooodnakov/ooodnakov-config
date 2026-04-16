@@ -64,10 +64,16 @@
           "style": "diamond",
           "foreground": "#ffffff",
           "background": "#3c873a"
+        },
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "#b7c4d3",
+          "background": "#2f2f2f",
+          "template": "{{ if env \"POSH_GIT_STRING\" }} {{ env \"POSH_GIT_STRING\" }}{{ end }}"
         }
       ]
     }
   ],
   "version": 3
 }
-
