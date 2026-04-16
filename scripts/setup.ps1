@@ -627,7 +627,7 @@ function Invoke-ActionWithSpinner {
 
     $ps = [PowerShell]::Create()
 
-    $null = $ps.AddScript("`$env:PATH = '$($env:PATH -replace "'", "''")';")
+    $null = $ps.AddCommand("Set-Item").AddParameter("Path", "Env:PATH").AddParameter("Value", $env:PATH).AddStatement()
 
     $null = $ps.AddScript($Action)
     if ($ArgumentList.Count -gt 0) {
@@ -637,7 +637,7 @@ function Invoke-ActionWithSpinner {
     }
 
     $asyncResult = $ps.BeginInvoke()
-    $frames = @("-", "", "|", "/")
+    $frames = @("-", "\", "|", "/")
     $i = 0
     while (-not $asyncResult.IsCompleted) {
         if ($interactive) {
@@ -651,9 +651,12 @@ function Invoke-ActionWithSpinner {
 
     try {
         $results = $ps.EndInvoke($asyncResult)
-        $hadErrors = $ps.Streams.Error.Count -gt 0
+        $hadErrors = $ps.HadErrors
+
+        # Streams.Error might contain non-terminating errors from native commands (like winget).
+        # We'll just echo them instead of failing immediately.
         foreach ($err in $ps.Streams.Error) {
-            Write-Output "Error: $err"
+            Write-Output "Message: $err"
         }
     } catch {
         $hadErrors = $true
@@ -912,28 +915,48 @@ function Test-AnyCommand {
     return $false
 }
 
-function Install-Chocolatey {
+function Test-DependencyStatus {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CommandName,
+        [Parameter(Mandatory = $true)]
+        [string]$SummaryName,
+        [switch]$IsModule
+    )
+
     if (-not $DryRun) {
         if (Test-Interactive) {
-            Write-Host "[-] Checking choco..." -NoNewline
+            Write-Host "[-] Checking $SummaryName..." -NoNewline
         }
     }
 
-    if (Get-Command choco -ErrorAction SilentlyContinue) {
+    $isPresent = $false
+    if ($IsModule) {
+        $isPresent = [bool](Get-Module -ListAvailable -Name $CommandName -ErrorAction SilentlyContinue)
+    } else {
+        $isPresent = (Test-AnyCommand -Names @($CommandName))
+    }
+
+    if ($isPresent) {
         if (-not $DryRun) {
             if (Test-Interactive) {
-                Write-Host "`r[ok] choco is present.             "
+                Write-Host "`r[ok] $SummaryName is present.             "
             } else {
-                Write-Output "[ok] choco is present."
+                Write-Output "[ok] $SummaryName is present."
             }
         }
-        Add-DependencySummary "choco: present"
+        Add-DependencySummary "${SummaryName}: present"
         return $true
     }
 
     if (-not $DryRun -and (Test-Interactive)) {
         Write-Host "`r" -NoNewline
     }
+    return $false
+}
+
+function Install-Chocolatey {
+    if (Test-DependencyStatus -CommandName "choco" -SummaryName "choco") { return $true }
 
     if (-not (Confirm-Install "Install Chocolatey for optional Windows CLI packages?")) {
         Add-DependencySummary "choco: skipped"
@@ -976,27 +999,7 @@ function Install-PackageIfMissing {
         [string]$SummaryName
     )
 
-    if (-not $DryRun) {
-        if (Test-Interactive) {
-            Write-Host "[-] Checking $SummaryName..." -NoNewline
-        }
-    }
-
-    if (Test-AnyCommand -Names $CommandNames) {
-        if (-not $DryRun) {
-            if (Test-Interactive) {
-                Write-Host "`r[ok] $SummaryName is present.             "
-            } else {
-                Write-Output "[ok] $SummaryName is present."
-            }
-        }
-        Add-DependencySummary "${SummaryName}: present"
-        return $true
-    }
-
-    if (-not $DryRun -and (Test-Interactive)) {
-        Write-Host "`r" -NoNewline
-    }
+    if (Test-DependencyStatus -CommandName $CommandNames[0] -SummaryName $SummaryName) { return $true }
 
     if ($WingetId -and (Get-Command winget -ErrorAction SilentlyContinue)) {
         if (Confirm-Install "Install $Description with winget?") {
@@ -1055,27 +1058,7 @@ function Install-PackageIfMissing {
 }
 
 function Install-PnpmIfMissing {
-    if (-not $DryRun) {
-        if (Test-Interactive) {
-            Write-Host "[-] Checking pnpm..." -NoNewline
-        }
-    }
-
-    if (Get-Command pnpm -ErrorAction SilentlyContinue) {
-        if (-not $DryRun) {
-            if (Test-Interactive) {
-                Write-Host "`r[ok] pnpm is present.             "
-            } else {
-                Write-Output "[ok] pnpm is present."
-            }
-        }
-        Add-DependencySummary "pnpm: present"
-        return $true
-    }
-
-    if (-not $DryRun -and (Test-Interactive)) {
-        Write-Host "`r" -NoNewline
-    }
+    if (Test-DependencyStatus -CommandName "pnpm" -SummaryName "pnpm") { return $true }
 
     if (-not (Confirm-Install "Install pnpm package manager?")) {
         Add-DependencySummary "pnpm: skipped"
@@ -1213,27 +1196,7 @@ function Install-PSFzfIfMissing {
 }
 
 function Install-BitwardenCliIfMissing {
-    if (-not $DryRun) {
-        if (Test-Interactive) {
-            Write-Host "[-] Checking bw..." -NoNewline
-        }
-    }
-
-    if (Get-Command bw -ErrorAction SilentlyContinue) {
-        if (-not $DryRun) {
-            if (Test-Interactive) {
-                Write-Host "`r[ok] bw is present.             "
-            } else {
-                Write-Output "[ok] bw is present."
-            }
-        }
-        Add-DependencySummary "bw: present"
-        return $true
-    }
-
-    if (-not $DryRun -and (Test-Interactive)) {
-        Write-Host "`r" -NoNewline
-    }
+    if (Test-DependencyStatus -CommandName "bw" -SummaryName "bw") { return $true }
 
     if (-not (Confirm-Install "Install Bitwarden CLI from the official native executable archive?")) {
         Add-DependencySummary "bw: skipped"
@@ -1287,27 +1250,7 @@ function Install-BitwardenCliIfMissing {
 }
 
 function Install-CargoIfMissing {
-    if (-not $DryRun) {
-        if (Test-Interactive) {
-            Write-Host "[-] Checking cargo..." -NoNewline
-        }
-    }
-
-    if (Get-Command cargo -ErrorAction SilentlyContinue) {
-        if (-not $DryRun) {
-            if (Test-Interactive) {
-                Write-Host "`r[ok] cargo is present.             "
-            } else {
-                Write-Output "[ok] cargo is present."
-            }
-        }
-        Add-DependencySummary "cargo: present"
-        return $true
-    }
-
-    if (-not $DryRun -and (Test-Interactive)) {
-        Write-Host "`r" -NoNewline
-    }
+    if (Test-DependencyStatus -CommandName "cargo" -SummaryName "cargo") { return $true }
 
     if (-not (Confirm-Install "Install Rust and cargo via rustup?")) {
         Add-DependencySummary "cargo: skipped"
