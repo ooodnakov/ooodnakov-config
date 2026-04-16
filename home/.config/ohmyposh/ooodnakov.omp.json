@@ -16,11 +16,10 @@
           "background": "#3a3a3a",
           "foreground": "#00afff",
           "style": "plain",
-          "template": "\u2502 {{ .Path }} ",
+          "template": "\u2502 {{ if hasPrefix \"~\" .Path }}\uf015 {{ else }}\uf07c {{ end }}{{ .Path }} ",
           "properties": {
-            "style": "folder",
-            "folder_icon": "\uf07c",
-            "home_icon": "\uf015"
+            "style": "full",
+            "home_icon": "~"
           },
           "type": "path"
         },
@@ -88,7 +87,7 @@
       "newline": true,
       "segments": [
         {
-          "foreground": "#ffffff",
+          "foreground": "#a8a8a8",
           "style": "plain",
           "template": "\u2570\u2500",
           "type": "text"
@@ -101,6 +100,18 @@
           "style": "plain",
           "template": "\u276f ",
           "type": "status"
+        }
+      ],
+      "type": "prompt"
+    },
+    {
+      "alignment": "right",
+      "segments": [
+        {
+          "foreground": "#a8a8a8",
+          "style": "plain",
+          "template": "\u2500\u256f",
+          "type": "text"
         }
       ],
       "type": "prompt"
