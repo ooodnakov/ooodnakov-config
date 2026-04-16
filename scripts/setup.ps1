@@ -394,7 +394,16 @@ function Test-OptionalDependencyPresent {
         [string]$Key
     )
 
-    return Test-AnyCommand -Names (Get-OptionalDependencyCommandNames -Key $Key)
+    if ([string]::IsNullOrWhiteSpace($Key)) {
+        return $false
+    }
+
+    $commandNames = @(Get-OptionalDependencyCommandNames -Key $Key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($commandNames.Count -eq 0) {
+        return $false
+    }
+
+    return Test-AnyCommand -Names $commandNames
 }
 
 function Invoke-SelectedOptionalDependency {
@@ -443,7 +452,9 @@ function Ensure-GumForDependencySelector {
 
 function Select-OptionalDependenciesWithoutGum {
     $allPresent = $true
-    $available = @(Get-OptionalDependencySpecs | Where-Object { -not (Test-OptionalDependencyPresent -Key $_.Key) })
+    $available = @(Get-OptionalDependencySpecs | Where-Object {
+        -not [string]::IsNullOrWhiteSpace($_.Key) -and -not (Test-OptionalDependencyPresent -Key $_.Key)
+    })
 
     if ($available.Count -eq 0) {
         Write-Information "All optional dependencies are already present." -InformationAction Continue
@@ -482,6 +493,9 @@ function Select-OptionalDependenciesWithGum {
     }
 
     $options = foreach ($spec in Get-OptionalDependencySpecs) {
+        if ([string]::IsNullOrWhiteSpace($spec.Key)) {
+            continue
+        }
         if (Test-OptionalDependencyPresent -Key $spec.Key) {
             continue
         }
