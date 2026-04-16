@@ -51,3 +51,4 @@ This file tracks deliberate follow-up work for the repo. It is ordered by impact
   - add `prompt [default|minimal|off|status]`
   - add toggles for `direnv`, `zoxide`, `fzf-tab`, `zsh-autosuggestions`, and `zsh-autocomplete`
 - [ ] Add release notes guidance for `v*` tags and archive consumers
+
