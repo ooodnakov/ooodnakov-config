@@ -612,7 +612,6 @@ function Show-Usage {
 Usage: oooconf [global options] <command> [command options]
 
 oooconf - reproducible cross-platform dotfiles manager
-
 Global options:
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
@@ -620,61 +619,47 @@ Global options:
       --yes-optional    auto-accept optional dependency installs
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
-
 Commands:
   Setup:
     install               apply managed config and optional dependency installs
     deps                  install optional dependencies only
     update                pull repo with --ff-only, then re-run install
-
   Inspect & Validate:
     doctor                validate managed symlinks and required commands
     dry-run               preview install flow without mutating filesystem
     version               print CLI version and repo root
-
   Manage State:
     lock                  regenerate dependency lock artifacts from pinned refs
     update-pins           compare/update pinned refs and refresh lock artifacts
     agents                detect/sync/doctor AGENTS.md common policy blocks
-
   Shell:
     shell                 manage local shell preferences such as forgit aliases
-
   Secrets:
     secrets               sync or validate local secret env files
-
 Aliases:
   check -> doctor
   preview -> dry-run
   upgrade -> update
-
 Note:
   bootstrap, delete, and remove commands are available in the Unix
   version only. On Windows, use setup.ps1 directly for bootstrap,
   and manual cleanup for delete/remove scenarios.
-
 Getting help:
   oooconf --help                     show this message
   oooconf help <command>             show command-specific help
   oooconf help secrets               show secrets subcommand help
-
 Common workflows:
   # Initial setup on a new machine:
   oooconf bootstrap
-
   # Preview what install would do:
   oooconf dry-run
-
   # Apply config and install dependencies:
   oooconf install
   oooconf deps
-
   # Check if everything is set up correctly:
   oooconf doctor
-
   # Update to latest config:
   oooconf update
-
 Repo root:
   `$RepoRoot
 "@
@@ -693,11 +678,9 @@ function Show-CommandUsage {
 Usage: oooconf install [--dry-run] [--yes-optional]
 
 Apply managed config and optional dependency installation.
-
 Creates symlinks from tracked config in home/ to their target locations,
 backing up any replaced files. Optionally installs dependencies when
 allowed.
-
 Examples:
   oooconf install                      # interactive dependency prompts
   oooconf install --yes-optional       # auto-accept all optional installs
@@ -710,10 +693,8 @@ Usage: oooconf deps [--dry-run] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
 gum-based multi-select picker is used when available.
-
 Dependency keys match those defined in deps.lock.json. Common keys include:
 bat, delta, eza, fd, fzf, gum, glow, rg, yazi, ffmpeg, jq, p7zip, poppler, zoxide, and others.
-
 Examples:
   oooconf deps                         # interactive picker (when gum available)
   oooconf deps bat delta fd ripgrep    # install specific tools
@@ -725,10 +706,8 @@ Examples:
 Usage: oooconf update [--dry-run] [--yes-optional]
 
 Pull the repo with --ff-only, then re-run the install flow.
-
 Use this to update your config to the latest tracked state. It performs
 a fast-forward pull only, failing if local changes would prevent it.
-
 Examples:
   oooconf update                       # pull and reinstall
   oooconf update --yes-optional        # also install missing dependencies
@@ -740,10 +719,8 @@ Examples:
 Usage: oooconf doctor
 
 Validate managed symlinks and required commands.
-
 Checks that all managed config links point to valid targets and that
 key tools (git, zsh, wezterm, nvim, etc.) are available on PATH.
-
 Examples:
   oooconf doctor                       # run all checks
 "@
@@ -753,10 +730,8 @@ Examples:
 Usage: oooconf dry-run
 
 Preview the install flow without mutating the filesystem.
-
 Shows what links would be created, what files would be backed up, and
 what dependencies would be installed, without making any changes.
-
 Examples:
   oooconf dry-run                      # preview install
   oooconf --yes-optional dry-run       # preview with dependency installs
@@ -767,10 +742,8 @@ Examples:
 Usage: oooconf lock
 
 Regenerate dependency lock artifacts from pinned refs in setup scripts.
-
 Reads pinned versions from scripts/setup.ps1 (or setup.sh) and writes
 the resolved lock file to deps.lock.json.
-
 Examples:
   oooconf lock                         # regenerate lock artifact
 "@
@@ -780,10 +753,8 @@ Examples:
 Usage: oooconf update-pins [--apply]
 
 Compare pinned git refs to upstream HEAD and refresh lock artifacts.
-
 Without --apply, only reports differences. With --apply, updates the
 pinned refs in setup scripts and regenerates lock artifacts.
-
 Examples:
   oooconf update-pins                  # check for pin drift
   oooconf update-pins --apply          # update pins and regenerate lock
@@ -794,12 +765,10 @@ Examples:
 Usage: oooconf agents <detect|sync|doctor> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
-
 Subcommands:
-  detect [--json]       detect configured agent CLIs on PATH
-  sync [--check]        append/update shared AGENTS.md managed block
-  doctor [--strict-config-paths]
-                        verify AGENTS.md managed block and default agent config paths
+  detect [--json]                detect configured agent CLIs on PATH
+  sync [--check]                 append/update shared AGENTS.md managed block
+  doctor [--strict-config-paths] verify AGENTS.md managed block and default agent config paths
 "@
         }
         "secrets" {
@@ -825,7 +794,6 @@ Examples:
   oooconf secrets add SOME_URL https://example.com
   oooconf secrets rm GITHUB_TOKEN      # alias for remove
   oooconf secrets remove GITHUB_TOKEN
-
 Environment overrides:
   OOODNAKOV_SECRETS_BACKEND
   OOODNAKOV_BW_SERVER
@@ -849,22 +817,18 @@ Usage: oooconf shell forgit-aliases [plain|forgit|status]
        oooconf shell psfzf-git [enabled|disabled|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
-
 Forgit alias modes:
   plain   keep plain git aliases like gd/gco and define glo as git log
   forgit  enable upstream forgit aliases like glo/gd/gco
   status  show the currently configured mode
-
 Typo handling modes:
   silent   exit 1 without printing anything for wrong commands
   suggest  print only the closest suggestion when available
   help     print the unknown command, suggestion, and full help
-
 PSFzf options:
   psfzf-tab  enable or disable fzf-based tab completion in PowerShell
   psfzf-git  enable or disable fzf-based git keybindings in PowerShell
   status     show the currently configured mode
-
 Examples:
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain

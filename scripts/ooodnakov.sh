@@ -628,7 +628,6 @@ usage() {
 Usage: oooconf [global options] <command> [command options]
 
 oooconf — reproducible cross-platform dotfiles manager
-
 Global options:
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
@@ -636,61 +635,47 @@ Global options:
       --yes-optional    auto-accept optional dependency installs
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
-
 Commands:
   Setup:
     bootstrap             clone/update repo then run install
     install               apply managed config and optional dependency installs
     deps                  install optional dependencies only
     update                pull repo with --ff-only, then re-run install
-
   Inspect & Validate:
     doctor                validate managed symlinks and required commands
     dry-run               preview install flow without mutating filesystem
     version               print CLI version and repo root
-
   Manage State:
     delete                remove managed links and restore latest backups
     remove                remove managed links only (no backup restore)
     lock                  regenerate dependency lock artifacts from pinned refs
     update-pins           compare/update pinned refs and refresh lock artifacts
-
   Shell:
     shell                 manage local shell preferences such as forgit aliases
-
   Secrets:
     secrets               sync or validate local secret env files
-
   Agents:
     agents                detect/sync/doctor AGENTS.md shared policy sections
-
 Aliases:
   check -> doctor
   preview -> dry-run
   upgrade -> update
-
 Getting help:
   oooconf --help                     show this message
   oooconf help <command>             show command-specific help
   oooconf help secrets               show secrets subcommand help
-
 Common workflows:
   # Initial setup on a new machine:
   oooconf bootstrap
-
   # Preview what install would do:
   oooconf dry-run
-
   # Apply config and install dependencies:
   oooconf install
   oooconf deps
-
   # Check if everything is set up correctly:
   oooconf doctor
-
   # Update to latest config:
   oooconf update
-
 Repo root:
   $REPO_ROOT
 EOF
@@ -707,17 +692,14 @@ command_usage() {
 Usage: oooconf bootstrap
 
 Clone or update the configured repo checkout, then run the install flow.
-
 This is the recommended first command on a new machine. It handles repo
 cloning (if missing), pulls latest changes, and runs the full install.
-
 Environment overrides:
   OOODNAKOV_CONFIG_DIR          custom config directory
   OOODNAKOV_CONFIG_BRANCH       git branch to checkout (default: main)
   OOODNAKOV_CONFIG_REPO_URL     SSH repo URL for git clone
   OOODNAKOV_CONFIG_HTTPS_REPO_URL HTTPS repo URL for git clone
   OOODNAKOV_INTERACTIVE         set to "never" to skip all prompts
-
 Examples:
   oooconf bootstrap
   OOODNAKOV_INTERACTIVE=never oooconf bootstrap
@@ -728,11 +710,9 @@ EOF
 Usage: oooconf install [--dry-run] [--yes-optional]
 
 Apply managed config and optional dependency installation.
-
 Creates symlinks from tracked config in home/ to their target locations,
 backing up any replaced files. Optionally installs dependencies when
 allowed.
-
 Examples:
   oooconf install                      # interactive dependency prompts
   oooconf install --yes-optional       # auto-accept all optional installs
@@ -745,10 +725,8 @@ Usage: oooconf deps [--dry-run] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
 gum-based multi-select picker is used when available.
-
 Dependency keys match those defined in deps.lock.json. Common keys include:
 bat, delta, eza, fd, fzf, gum, glow, rg, yazi, ffmpeg, jq, p7zip, poppler, zoxide, and others.
-
 Examples:
   oooconf deps                         # interactive picker (when gum available)
   oooconf deps bat delta fd ripgrep    # install specific tools
@@ -760,10 +738,8 @@ EOF
 Usage: oooconf update [--dry-run] [--yes-optional]
 
 Pull the repo with --ff-only, then re-run the install flow.
-
 Use this to update your config to the latest tracked state. It performs
 a fast-forward pull only, failing if local changes would prevent it.
-
 Examples:
   oooconf update                       # pull and reinstall
   oooconf update --yes-optional        # also install missing dependencies
@@ -775,10 +751,8 @@ EOF
 Usage: oooconf doctor
 
 Validate managed symlinks and required commands.
-
 Checks that all managed config links point to valid targets and that
 key tools (git, zsh, wezterm, nvim, etc.) are available on PATH.
-
 Examples:
   oooconf doctor                       # run all checks
 EOF
@@ -788,10 +762,8 @@ EOF
 Usage: oooconf dry-run
 
 Preview the install flow without mutating the filesystem.
-
 Shows what links would be created, what files would be backed up, and
 what dependencies would be installed, without making any changes.
-
 Examples:
   oooconf dry-run                      # preview install
   oooconf --yes-optional dry-run       # preview with dependency installs
@@ -802,10 +774,8 @@ EOF
 Usage: oooconf delete
 
 Remove managed links and restore the latest backups when available.
-
 Use this to undo the managed config and return to your previous state.
 Backup files are stored in ~/.local/state/ooodnakov-config/backups/.
-
 Examples:
   oooconf delete                       # restore from backups
 EOF
@@ -815,10 +785,8 @@ EOF
 Usage: oooconf remove
 
 Remove managed links without restoring backups.
-
 Use this when you want to cleanly remove the managed config without
 attempting to restore previous configurations.
-
 Examples:
   oooconf remove                       # clean removal
 EOF
@@ -828,10 +796,8 @@ EOF
 Usage: oooconf lock
 
 Regenerate dependency lock artifacts from pinned refs in setup scripts.
-
 Reads pinned versions from scripts/setup.sh (or setup.ps1) and writes
 the resolved lock file to deps.lock.json.
-
 Examples:
   oooconf lock                         # regenerate lock artifact
 EOF
@@ -841,10 +807,8 @@ EOF
 Usage: oooconf update-pins [--apply]
 
 Compare pinned git refs to upstream HEAD and refresh lock artifacts.
-
 Without --apply, only reports differences. With --apply, updates the
 pinned refs in setup scripts and regenerates lock artifacts.
-
 Examples:
   oooconf update-pins                  # check for pin drift
   oooconf update-pins --apply          # update pins and regenerate lock
@@ -855,7 +819,6 @@ EOF
 Usage: oooconf agents <detect|sync|doctor> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
-
 Subcommands:
   detect [--json]       detect configured agent CLIs on PATH
   sync [--check]        append/update shared AGENTS.md managed block
@@ -886,7 +849,6 @@ Examples:
   oooconf secrets add SOME_URL https://example.com
   oooconf secrets rm GITHUB_TOKEN      # alias for remove
   oooconf secrets remove GITHUB_TOKEN
-
 Environment overrides:
   OOODNAKOV_SECRETS_BACKEND
   OOODNAKOV_BW_SERVER
@@ -900,7 +862,6 @@ EOF
 Usage: oooconf version
 
 Print the CLI version (git describe or commit SHA) and resolved repo root.
-
 Examples:
   oooconf version                      # show version and repo path
 EOF
