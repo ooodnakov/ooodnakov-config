@@ -38,17 +38,16 @@ def parse_setup_pins(text: str) -> list[dict[str, str]]:
     return pins
 
 
-def write_json_lock(pins: list[dict[str, str]]) -> None:
+def write_json_lock(pins: list[dict[str, str]], generated_at: str) -> None:
     payload = {
-        "generated_at_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "generated_at_utc": generated_at,
         "source": "scripts/setup.sh",
         "dependencies": pins,
     }
     JSON_LOCK.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
-def write_markdown_lock(pins: list[dict[str, str]]) -> None:
-    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+def write_markdown_lock(pins: list[dict[str, str]], generated_at: str) -> None:
     lines = [
         "# Dependency Lock",
         "",
@@ -68,8 +67,18 @@ def write_markdown_lock(pins: list[dict[str, str]]) -> None:
 def main() -> int:
     setup_text = SETUP_SH.read_text(encoding="utf-8")
     pins = parse_setup_pins(setup_text)
-    write_json_lock(pins)
-    write_markdown_lock(pins)
+
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    if JSON_LOCK.exists():
+        try:
+            old_lock = json.loads(JSON_LOCK.read_text(encoding="utf-8"))
+            if old_lock.get("dependencies") == pins:
+                generated_at = old_lock.get("generated_at_utc", generated_at)
+        except Exception:
+            pass
+
+    write_json_lock(pins, generated_at)
+    write_markdown_lock(pins, generated_at)
     print(f"Wrote {JSON_LOCK}")
     print(f"Wrote {MD_LOCK}")
     return 0
