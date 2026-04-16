@@ -36,6 +36,17 @@ NERD_FONT_ICONS = {
     "outdated": "󰏫",
     "bullet": "󰘍",
 }
+ANSI_RESET = "\033[0m"
+ANSI_BOLD = "\033[1m"
+ANSI_COLORS = {
+    "section": "\033[38;5;111m",
+    "ok": "\033[38;5;78m",
+    "warn": "\033[38;5;221m",
+    "fail": "\033[38;5;203m",
+    "missing": "\033[38;5;203m",
+    "outdated": "\033[38;5;215m",
+    "muted": "\033[38;5;245m",
+}
 
 
 @dataclass(frozen=True)
@@ -163,6 +174,23 @@ def supports_nerd_font_output() -> bool:
     return "utf" in encoding
 
 
+def supports_color_output() -> bool:
+    mode = os.environ.get("OOOCONF_COLOR", "").lower()
+    if mode in {"0", "false", "never"} or os.environ.get("NO_COLOR") is not None:
+        return False
+    if mode in {"1", "true", "always"} or os.environ.get("FORCE_COLOR") is not None:
+        return True
+    return sys.stdout.isatty()
+
+
+def colorize(text: str, role: str, *, bold: bool = False) -> str:
+    if not supports_color_output():
+        return text
+    color = ANSI_COLORS.get(role, "")
+    weight = ANSI_BOLD if bold else ""
+    return f"{weight}{color}{text}{ANSI_RESET}"
+
+
 def icon(name: str) -> str:
     palette = NERD_FONT_ICONS if supports_nerd_font_output() else ASCII_ICONS
     return palette[name]
@@ -170,12 +198,13 @@ def icon(name: str) -> str:
 
 def print_section(title: str) -> None:
     prefix = icon("section")
-    print(f"{prefix} {title}")
-    print("─" * (len(title) + 2) if prefix != ASCII_ICONS["section"] else "-" * (len(title) + 3))
+    print(f"{colorize(prefix, 'section', bold=True)} {colorize(title, 'section', bold=True)}")
+    line = "─" * (len(title) + 2) if prefix != ASCII_ICONS["section"] else "-" * (len(title) + 3)
+    print(colorize(line, "muted"))
 
 
 def print_status_line(status: str, message: str) -> None:
-    print(f"{icon(status)} {message}")
+    print(f"{colorize(icon(status), status, bold=True)} {message}")
 
 
 def detect_clis(agent_clis: list[AgentCli]) -> list[dict[str, str | bool]]:
