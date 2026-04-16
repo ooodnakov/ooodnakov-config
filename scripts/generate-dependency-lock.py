@@ -6,6 +6,8 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cli_ui import status
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SETUP_SH = REPO_ROOT / "scripts" / "setup.sh"
 JSON_LOCK = REPO_ROOT / "deps.lock.json"
@@ -79,8 +81,8 @@ def main() -> int:
 
     write_json_lock(pins, generated_at)
     write_markdown_lock(pins, generated_at)
-    print(f"Wrote {JSON_LOCK}")
-    print(f"Wrote {MD_LOCK}")
+    status("ok", f"Wrote {JSON_LOCK}")
+    status("ok", f"Wrote {MD_LOCK}")
     return 0
 
 

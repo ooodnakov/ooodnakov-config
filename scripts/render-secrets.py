@@ -12,6 +12,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from cli_ui import bullet, section, status
+
 
 DEFAULT_TEMPLATE_RELATIVE_PATH = Path("home/.config/ooodnakov/secrets/env.template")
 DEFAULT_CONFIG_RELATIVE_PATH = Path(".config/ooodnakov")
@@ -677,7 +679,7 @@ def write_file(path: Path, content: str, force: bool) -> str:
 def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
     template_path = resolve_template_path(repo_root, args.template)
     if not template_path.is_file():
-        print(f"Template not found: {template_path}", file=sys.stderr)
+        status("fail", f"Template not found: {template_path}")
         return 1
 
     entries = parse_template(template_path)
@@ -686,26 +688,27 @@ def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
     zsh_path = local_root / "env.zsh"
     ps1_path = local_root / "env.ps1"
 
-    print(f"Syncing secrets from {template_path}", flush=True)
-    print(f"Backend: {args.backend}", flush=True)
-    print(f"Targets: {zsh_path}, {ps1_path}", flush=True)
+    section("Secrets Sync")
+    status("info", f"Template: {template_path}")
+    status("info", f"Backend: {args.backend}")
+    status("info", f"Targets: {zsh_path}, {ps1_path}")
 
     resolved_entries = resolve_entries_for_sync(entries, args.backend)
     zsh_content = render_zsh(resolved_entries, args.backend, template_path)
     ps1_content = render_ps1(resolved_entries, args.backend, template_path)
 
     if args.dry_run:
-        print(f"Would render {zsh_path}")
-        print(f"Would render {ps1_path}")
-        print("Dry run complete.")
+        bullet(f"Would render {zsh_path}")
+        bullet(f"Would render {ps1_path}")
+        status("ok", "Dry run complete.")
         return 0
 
     ensure_private_directory(local_root)
     zsh_status = write_file(zsh_path, zsh_content, args.force)
     ps1_status = write_file(ps1_path, ps1_content, args.force)
-    print(f"{zsh_status}: {zsh_path}")
-    print(f"{ps1_status}: {ps1_path}")
-    print("Secrets sync complete.")
+    status("ok", f"{zsh_status}: {zsh_path}")
+    status("ok", f"{ps1_status}: {ps1_path}")
+    status("ok", "Secrets sync complete.")
     return 0
 
 
@@ -737,18 +740,19 @@ def doctor_command(args: argparse.Namespace, repo_root: Path) -> int:
 
     if problems:
         for problem in problems:
-            print(f"ERROR: {problem}")
+            status("fail", problem)
         return 1
 
-    print("Secrets doctor passed.")
-    print(f"Template: {template_path}")
-    print(f"Backend: {args.backend}")
+    section("Secrets Doctor")
+    status("ok", "Secrets doctor passed.")
+    status("info", f"Template: {template_path}")
+    status("info", f"Backend: {args.backend}")
     return 0
 
 
 def login_command(args: argparse.Namespace) -> int:
     if shutil_which("bw") is None:
-        print("Bitwarden CLI (`bw`) is not installed or not on PATH.", file=sys.stderr)
+        status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
         return 1
 
     server = args.server.rstrip("/")
@@ -758,7 +762,7 @@ def login_command(args: argparse.Namespace) -> int:
 
     env = os.environ.copy()
     if env.get("BW_CLIENTID") and env.get("BW_CLIENTSECRET"):
-        print("Detected BW_CLIENTID and BW_CLIENTSECRET. Attempting API key login...")
+        status("info", "Detected BW_CLIENTID and BW_CLIENTSECRET. Attempting API key login...")
         login_result = subprocess.run(["bw", "login", "--apikey"], env=env, text=True)
     else:
         login_result = subprocess.run(["bw", "login"], text=True)
@@ -768,7 +772,7 @@ def login_command(args: argparse.Namespace) -> int:
 
 def unlock_command(args: argparse.Namespace) -> int:
     if shutil_which("bw") is None:
-        print("Bitwarden CLI (`bw`) is not installed or not on PATH.", file=sys.stderr)
+        status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
         return 1
 
     env = os.environ.copy()
@@ -779,7 +783,7 @@ def unlock_command(args: argparse.Namespace) -> int:
             try:
                 password = getpass.getpass("Bitwarden password: ")
             except (EOFError, KeyboardInterrupt):
-                print("Unlock cancelled.", file=sys.stderr)
+                status("warn", "Unlock cancelled.")
                 return 1
         env["BW_PASSWORD"] = password
         command = ["bw", "unlock", "--raw", "--passwordenv", "BW_PASSWORD"]
@@ -796,22 +800,22 @@ def unlock_command(args: argparse.Namespace) -> int:
             timeout=BWH_CLI_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired:
-        print(f"`bw unlock` timed out after {BWH_CLI_TIMEOUT_SECONDS}s.", file=sys.stderr)
+        status("fail", f"`bw unlock` timed out after {BWH_CLI_TIMEOUT_SECONDS}s.")
         return 1
     if result.returncode != 0:
         stderr = result.stderr.strip()
         if stderr:
-            print(stderr, file=sys.stderr)
+            status("fail", stderr)
         return result.returncode
 
     token = result.stdout.strip()
     if not token:
-        print("`bw unlock --raw` returned an empty session token.", file=sys.stderr)
+        status("fail", "`bw unlock --raw` returned an empty session token.")
         return 1
 
     if should_persist:
         path = write_persisted_bw_session(token)
-        print(f"Saved BW_SESSION to {path}")
+        status("ok", f"Saved BW_SESSION to {path}")
         return 0
 
     if args.raw:
@@ -857,15 +861,16 @@ def check_bw_status() -> list[str]:
 def list_command(args: argparse.Namespace, repo_root: Path) -> int:
     template_path = resolve_template_path(repo_root, args.template)
     if not template_path.is_file():
-        print(f"Template not found: {template_path}", file=sys.stderr)
+        status("fail", f"Template not found: {template_path}")
         return 1
 
     entries = parse_template(template_path)
     if not entries:
-        print("No secrets defined in template.")
+        status("info", "No secrets defined in template.")
         return 0
 
-    print(f"Template: {template_path}")
+    section("Secrets List")
+    status("info", f"Template: {template_path}")
     print()
 
     for entry in entries:
@@ -893,61 +898,62 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
     ps1_path = local_root / "env.ps1"
 
     if not template_path.is_file():
-        print(f"ERROR: Template not found: {template_path}", file=sys.stderr)
+        status("fail", f"Template not found: {template_path}")
         return 1
 
     template_mtime = template_path.stat().st_mtime
     problems: list[str] = []
 
-    print(f"Template: {template_path}")
-    print(f"Backend: {os.environ.get('OOODNAKOV_SECRETS_BACKEND', 'bw')}")
+    section("Secrets Status")
+    status("info", f"Template: {template_path}")
+    status("info", f"Backend: {os.environ.get('OOODNAKOV_SECRETS_BACKEND', 'bw')}")
     print()
 
     for local_path in (zsh_path, ps1_path):
         if not local_path.exists():
-            print(f"{local_path}: missing")
+            status("fail", f"{local_path}: missing")
             problems.append(f"{local_path.name} is not synced")
         else:
             local_mtime = local_path.stat().st_mtime
             if local_mtime < template_mtime:
-                print(f"{local_path}: stale (template updated after last sync)")
+                status("warn", f"{local_path}: stale (template updated after last sync)")
                 problems.append(f"{local_path.name} is stale")
             else:
-                print(f"{local_path}: up to date")
+                status("ok", f"{local_path}: up to date")
 
     session_available = bool(os.environ.get("BW_SESSION") or read_persisted_bw_session())
     if session_available:
         if shutil_which("bw"):
             try:
-                status = get_bw_status()
-                vault_status = status.get("status", "unknown")
-                print(f"Vault status: {vault_status}")
+                vault_state = get_bw_status()
+                vault_status = vault_state.get("status", "unknown")
+                status("info", f"Vault status: {vault_status}")
                 if vault_status == "locked":
                     problems.append("Vault is locked, BW_SESSION may be expired")
             except RuntimeError as exc:
-                print(f"Vault status: error checking ({exc})")
+                status("fail", f"Vault status: error checking ({exc})")
         else:
-            print("Vault status: bw CLI not found")
+            status("warn", "Vault status: bw CLI not found")
     else:
-        print("Vault status: no BW_SESSION available")
+        status("warn", "Vault status: no BW_SESSION available")
 
     print()
     if problems:
-        print("Issues:")
+        section("Issues")
         for problem in problems:
-            print(f"  - {problem}")
+            bullet(problem)
         return 1
 
     if session_available:
-        print("All synced and unlocked.")
+        status("ok", "All synced and unlocked.")
     else:
-        print("Local env files are synced.")
+        status("ok", "Local env files are synced.")
     return 0
 
 
 def logout_command() -> int:
     if shutil_which("bw") is None:
-        print("Bitwarden CLI (`bw`) is not installed or not on PATH.", file=sys.stderr)
+        status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
         return 1
 
     lock_result = subprocess.run(["bw", "lock"], text=True)
@@ -962,12 +968,12 @@ def logout_command() -> int:
 def add_command(args: argparse.Namespace, repo_root: Path) -> int:
     import re
     if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', args.key):
-        print(f"Invalid key name: {args.key}. Use UPPER_SNAKE_CASE letters.", file=sys.stderr)
+        status("fail", f"Invalid key name: {args.key}. Use UPPER_SNAKE_CASE letters.")
         return 1
 
     template_path = resolve_template_path(repo_root, args.template)
     if not template_path.is_file():
-        print(f"Template not found: {template_path}", file=sys.stderr)
+        status("fail", f"Template not found: {template_path}")
         return 1
 
     lines = template_path.read_text(encoding="utf-8").splitlines()
@@ -977,7 +983,7 @@ def add_command(args: argparse.Namespace, repo_root: Path) -> int:
         if stripped.startswith("#") or not stripped:
             continue
         if "=" in stripped and stripped.split("=", 1)[0].strip() == args.key:
-            print(f"Key already exists in template: {args.key}", file=sys.stderr)
+            status("fail", f"Key already exists in template: {args.key}")
             return 1
 
     # Insert after header comments, before first non-comment entry (or at end)
@@ -991,15 +997,15 @@ def add_command(args: argparse.Namespace, repo_root: Path) -> int:
 
     lines.insert(insert_at, f"{args.key}={args.value}")
     template_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"Added {args.key}={args.value}")
-    print(f"Template: {template_path}")
+    status("ok", f"Added {args.key}={args.value}")
+    status("info", f"Template: {template_path}")
     return 0
 
 
 def remove_command(args: argparse.Namespace, repo_root: Path) -> int:
     template_path = resolve_template_path(repo_root, args.template)
     if not template_path.is_file():
-        print(f"Template not found: {template_path}", file=sys.stderr)
+        status("fail", f"Template not found: {template_path}")
         return 1
 
     lines = template_path.read_text(encoding="utf-8").splitlines()
@@ -1013,12 +1019,12 @@ def remove_command(args: argparse.Namespace, repo_root: Path) -> int:
         new_lines.append(line)
 
     if not found:
-        print(f"Key not found in template: {args.key}", file=sys.stderr)
+        status("fail", f"Key not found in template: {args.key}")
         return 1
 
     template_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
-    print(f"Removed {args.key}")
-    print(f"Template: {template_path}")
+    status("ok", f"Removed {args.key}")
+    status("info", f"Template: {template_path}")
     return 0
 
 
@@ -1047,7 +1053,7 @@ def main() -> int:
             return remove_command(args, repo_root)
         raise ValueError(f"unsupported command: {args.command}")
     except (RuntimeError, ValueError) as exc:
-        print(str(exc), file=sys.stderr)
+        status("fail", str(exc))
         return 1
 
 

@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from cli_ui import bullet, section, status
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SETUP_SH = REPO_ROOT / "scripts" / "setup.sh"
 REPORT_PATH = REPO_ROOT / "docs" / "imports" / "upstream-audit.md"
@@ -117,15 +119,16 @@ def main() -> int:
             SETUP_SH.write_text(updated_text, encoding="utf-8")
             setup_text = updated_text
             rows = build_rows(parse_pins(setup_text))
-        print(f"Applied {applied} ref update(s) to {SETUP_SH}.")
+        status("ok", f"Applied {applied} ref update(s) to {SETUP_SH}.")
 
-    print("Dependency pin status:")
-    print("name\tstatus\tcurrent\tlatest")
+    section("Dependency Pin Status")
     for row in rows:
-        print(f"{row['name'].lower()}\t{row['status']}\t{row['current'][:10]}\t{row['latest'][:10]}")
+        role = "ok" if row["status"] == "up-to-date" else "warn" if row["status"] == "update-available" else "fail"
+        status(role, f"{row['name'].lower():<20} {row['status']:<16} {row['current'][:10]} -> {row['latest'][:10]}")
 
     update_report(rows)
-    print(f"Updated automated pin-check section in {REPORT_PATH}.")
+    print()
+    bullet(f"Updated automated pin-check section in {REPORT_PATH}.")
 
     run_lock_generator()
     return 0
