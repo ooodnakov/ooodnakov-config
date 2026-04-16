@@ -27,8 +27,8 @@ linux.manager = "apt"
 linux.package = "wget"
 macos.manager = "brew"
 macos.package = "wget"
-windows.manager = "winget"
-windows.winget_id = "GNU.Wget"
+windows.manager = "choco"
+windows.choco_id = "wget"
 windows.package = "wget"
 
 [[deps]]
@@ -353,8 +353,6 @@ linux.manager = "apt"
 linux.package = "autoconf"
 macos.manager = "brew"
 macos.package = "autoconf"
-windows.manager = "custom"
-windows.command = "not typically used on Windows shell"
 
 [[deps]]
 key = "fc-cache"
@@ -364,8 +362,6 @@ linux.manager = "apt"
 linux.package = "fontconfig"
 macos.manager = "custom"
 macos.command = "not needed on macOS (manual install)"
-windows.manager = "custom"
-windows.command = "not needed on Windows"
 
 [[deps]]
 key = "cargo"

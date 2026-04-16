@@ -334,7 +334,7 @@ optional_dependency_present() {
   local key="$1"
 
   case "$key" in
-    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|yazi|ffmpeg|jq|oh-my-posh|wezterm|node|npm|pnpm|autoconf|fc-cache|cargo|k|python3)
+    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|yazi|ffmpeg|jq|oh-my-posh|wezterm|node|npm|pnpm|fc-cache|cargo|k|python3)
       command -v "$key" >/dev/null 2>&1
       ;;
     fd)
@@ -1754,7 +1754,6 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected node maybe_install_dependency "$manager" node nodejs "Node.js runtime"
   install_optional_dependency_if_selected npm maybe_install_dependency "$manager" npm npm "Node package manager"
   install_optional_dependency_if_selected pnpm maybe_install_pnpm
-  install_optional_dependency_if_selected autoconf maybe_install_dependency "$manager" autoconf autoconf "building optional ezsh native components"
   install_optional_dependency_if_selected fc-cache maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
   install_optional_dependency_if_selected cargo maybe_install_cargo
   install_optional_dependency_if_selected dua maybe_install_dua_cli "$manager"

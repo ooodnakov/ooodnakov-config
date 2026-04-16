@@ -262,8 +262,6 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "node"; DisplayName = "node"; Description = "Node.js LTS"; Linux = @{ manager = "apt"; package = "nodejs" }; Macos = @{ manager = "brew"; package = "node" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
             [pscustomobject]@{ Key = "npm"; DisplayName = "npm"; Description = "Node package manager"; Linux = @{ manager = "apt"; package = "npm" }; Macos = @{ manager = "brew"; package = "npm" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
             [pscustomobject]@{ Key = "pnpm"; DisplayName = "pnpm"; Description = "pnpm package manager"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "autoconf"; DisplayName = "autoconf"; Description = "build ezsh native components"; Linux = @{ manager = "apt"; package = "autoconf" }; Macos = @{ manager = "brew"; package = "autoconf" }; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "fc-cache"; DisplayName = "fc-cache"; Description = "refresh font caches"; Linux = @{ manager = "apt"; package = "fontconfig" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "cargo"; DisplayName = "cargo"; Description = "Rust package manager"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "dua"; DisplayName = "dua"; Description = "disk usage analysis"; Linux = @{ manager = "cargo"; package = "dua-cli" }; Macos = @{ manager = "brew"; package = "dua-cli" }; Windows = @{ manager = "cargo"; package = "dua-cli" } }
             [pscustomobject]@{ Key = "nvim"; DisplayName = "nvim"; Description = "Neovim"; Linux = @{ manager = "apt"; package = "neovim" }; Macos = @{ manager = "brew"; package = "neovim" }; Windows = @{ manager = "winget"; winget_id = "Neovim.Neovim" } }
@@ -384,8 +382,6 @@ function Get-OptionalDependencyCommandNames {
         "python3" { return @("python", "python3") }
         "bw" { return @("bw") }
         "pnpm" { return @("pnpm") }
-        "autoconf" { return @("autoconf") }
-        "fc-cache" { return @("fc-cache") }
         "cargo" { return @("cargo") }
         "dua" { return @("dua") }
         "k" { return @("k") }
@@ -520,12 +516,29 @@ function Select-OptionalDependenciesWithGum {
         return @("__all_present__")
     }
 
-    $selection = $options | & gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue."
-    if (-not $selection) {
-        return @()
+    # Stop transcript if active, as it can interfere with interactive TUI tools like gum on Windows
+    $transcriptActive = $script:TranscriptStarted
+    if ($transcriptActive) {
+        try { Stop-Transcript | Out-Null } catch {}
     }
 
-    return @($selection | ForEach-Object { ($_ -split "`t")[0] })
+    try {
+        # Use arguments instead of pipe for better reliability with interactive TUI on Windows.
+        # Splatting @options passes each item as a separate positional argument to gum choose.
+        $selection = & gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue." @options
+        $exitCode = $LASTEXITCODE
+
+        if ($exitCode -ne 0 -or -not $selection) {
+            return @()
+        }
+
+        return @($selection | ForEach-Object { ($_ -split "`t")[0] })
+    } finally {
+        # Restart transcript if it was previously active
+        if ($transcriptActive) {
+            try { Start-Transcript -Path $script:LogFile -Append | Out-Null } catch {}
+        }
+    }
 }
 
 function Add-DependencySummary {
@@ -1232,6 +1245,7 @@ function Install-DuaIfMissing {
     Add-DependencySummary "dua: install attempted"
     return $false
 }
+
 function Install-OptionalDependencies {
     Write-Output "Dependency check:"
 
@@ -1247,7 +1261,7 @@ function Install-OptionalDependencies {
 
     $needsChocolatey = Test-OptionalDependencySelected -Key "choco"
     if (-not $needsChocolatey) {
-        foreach ($key in @("gsudo", "rg", "fd", "direnv", "fzf", "bat", "delta", "glow", "q", "eza", "uv", "python3", "autoconf")) {
+        foreach ($key in @("gsudo", "rg", "fd", "direnv", "fzf", "bat", "delta", "glow", "q", "eza", "uv", "python3")) {
             if (Test-OptionalDependencySelected -Key $key) {
                 $needsChocolatey = $true
                 break
@@ -1280,8 +1294,6 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "bw" -Action { Install-BitwardenCliIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "pnpm" -Action { Install-PnpmIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "cargo" -Action { Install-CargoIfMissing }
-    $null = Invoke-SelectedOptionalDependency -Key "autoconf" -Action { Install-PackageIfMissing -CommandNames @("autoconf") -ChocoId "autoconf" -Description "autoconf" -SummaryName "autoconf" }
-    $null = Invoke-SelectedOptionalDependency -Key "fc-cache" -Action { Write-Warning "fc-cache is not applicable on Windows." }
     $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Install-DuaIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "k" -Action { Write-Warning "k is not available on Windows." }
     $null = Invoke-SelectedOptionalDependency -Key "lazygit" -Action { Install-PackageIfMissing -CommandNames @("lazygit") -WingetId "JesseDuffield.lazygit" -Description "lazygit" -SummaryName "lazygit" }
