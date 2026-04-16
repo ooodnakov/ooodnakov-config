@@ -1,9 +1,21 @@
 {
-  "mcp_servers": [
-    { "name": "filesystem", "description": "local repository and home config trees" },
-    { "name": "git", "description": "commit history, diff summaries, and branch status" },
-    { "name": "shell", "description": "deterministic local inspection commands (rg, fd, git, python3)" }
-  ],
+  "mcp_servers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "local repository and home config trees"
+    },
+    "git": {
+      "command": "uv",
+      "args": ["run", "mcp-server-git"],
+      "description": "commit history, diff summaries, and branch status"
+    },
+    "shell": {
+      "command": "python3",
+      "args": ["scripts/agents_tool.py", "shell-mcp"],
+      "description": "deterministic local inspection commands (rg, fd, git, python3)"
+    }
+  },
   "skills": [
     "Dotfiles portability review (Linux + Windows + macOS safety)",
     "Shell bootstrap audit (idempotency and dry-run behavior)",

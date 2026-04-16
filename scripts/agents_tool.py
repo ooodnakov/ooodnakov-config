@@ -87,6 +87,7 @@ def parse_args() -> argparse.Namespace:
 
     sync_parser = subparsers.add_parser("sync", help="Append/update a managed common block in AGENTS.md files.")
     sync_parser.add_argument("--check", action="store_true", help="Validate only; do not write files.")
+    sync_parser.add_argument("--global", dest="global_sync", action="store_true", help="Also sync MCP servers to global agent configs.")
 
     doctor_parser = subparsers.add_parser(
         "doctor", help="Validate AGENTS.md managed block and check common MCP/skills in agent config paths."
@@ -131,6 +132,38 @@ def read_json(repo_root: Path, relative_path: str) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"missing configured JSON file: {path}")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_common_data(repo_root: Path, config: dict[str, Any], include_local: bool = True) -> dict[str, Any]:
+    common_data = read_json(repo_root, config["common_data_file"])
+    
+    if not include_local:
+        return common_data
+
+    # Merge local data if it exists
+    local_data_path = Path("~/.config/ooodnakov/local/agents/data.json").expanduser()
+    if local_data_path.exists():
+        try:
+            local_data = json.loads(local_data_path.read_text(encoding="utf-8"))
+            if "skills" in local_data:
+                # Use a list to preserve order, but set for uniqueness
+                current_skills = common_data.get("skills", [])
+                for skill in local_data["skills"]:
+                    if skill not in current_skills:
+                        current_skills.append(skill)
+                common_data["skills"] = current_skills
+            if "mcp_servers" in local_data:
+                common_data.setdefault("mcp_servers", {}).update(local_data["mcp_servers"])
+            if "extensions" in local_data:
+                current_exts = common_data.get("extensions", [])
+                for ext in local_data["extensions"]:
+                    if ext not in current_exts:
+                        current_exts.append(ext)
+                common_data["extensions"] = current_exts
+        except Exception as exc:
+            print(f"warning: failed to load local agent data: {exc}", file=sys.stderr)
+            
+    return common_data
 
 
 def discover_agent_files(repo_root: Path, configured_files: list[str]) -> list[Path]:
@@ -216,8 +249,8 @@ def detect_clis(agent_clis: list[AgentCli]) -> list[dict[str, str | bool]]:
 
 
 def render_markdown_block(common_text: str, common_data: dict[str, Any]) -> str:
-    mcp_entries: list[dict[str, str]] = common_data.get("mcp_servers", [])
-    skills_entries: list[str] = common_data.get("skills", [])
+    mcp_servers: dict[str, dict[str, Any]] = common_data.get("mcp_servers", {})
+    skills_entries: list[str] = sorted(common_data.get("skills", []))
 
     lines = [
         MANAGED_BEGIN,
@@ -228,7 +261,10 @@ def render_markdown_block(common_text: str, common_data: dict[str, Any]) -> str:
         "## Common MCP servers",
         "",
     ]
-    lines.extend([f"- `{entry['name']}`: {entry['description']}" for entry in mcp_entries])
+    for name, config in sorted(mcp_servers.items()):
+        desc = config.get("description", "No description")
+        lines.append(f"- `{name}`: {desc}")
+        
     lines.extend(["", "## Common Skills", ""])
     lines.extend([f"- {skill}" for skill in skills_entries])
     lines.extend([MANAGED_END, ""])
@@ -283,9 +319,10 @@ def check_common_entries(content: str, common_data: dict[str, Any]) -> tuple[lis
     missing_mcp: list[str] = []
     missing_skills: list[str] = []
 
-    for entry in common_data.get("mcp_servers", []):
-        if entry["name"].lower() not in lowered:
-            missing_mcp.append(entry["name"])
+    mcp_servers = common_data.get("mcp_servers", {})
+    for name in mcp_servers:
+        if name.lower() not in lowered:
+            missing_mcp.append(name)
 
     for skill in common_data.get("skills", []):
         # lightweight fuzzy check: require at least one distinct token for each skill phrase
@@ -349,6 +386,46 @@ def inspect_agent_configs(
     return results, has_failures
 
 
+def sync_global_configs(
+    targets: list[AgentConfigTarget], common_data: dict[str, Any], check_only: bool
+) -> tuple[int, list[Path]]:
+    changed: list[Path] = []
+    mcp_servers = common_data.get("mcp_servers", {})
+    if not mcp_servers:
+        return 0, []
+
+    for target in targets:
+        existing = existing_default_path(target.default_paths)
+        if existing is None or target.format != "json":
+            continue
+
+        try:
+            data = json.loads(existing.read_text(encoding="utf-8"))
+            # Standard MCP injection (Claude/Gemini format)
+            if "mcpServers" not in data:
+                data["mcpServers"] = {}
+            
+            needs_update = False
+            for name, config in mcp_servers.items():
+                if name not in data["mcpServers"]:
+                    data["mcpServers"][name] = {
+                        "command": config["command"],
+                        "args": config["args"],
+                    }
+                    if "env" in config:
+                        data["mcpServers"][name]["env"] = config["env"]
+                    needs_update = True
+            
+            if needs_update:
+                changed.append(existing)
+                if not check_only:
+                    existing.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        except Exception as exc:
+            print(f"warning: failed to sync global config {existing}: {exc}", file=sys.stderr)
+
+    return len(changed), changed
+
+
 def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
     rows = detect_clis(parse_agent_clis(config["agent_clis"]))
     installed = sum(1 for row in rows if row["installed"])
@@ -367,37 +444,50 @@ def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
     return 0
 
 
-def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_sync: bool) -> int:
     common_text = read_text(repo_root, config["common_text_file"])
-    common_data = read_json(repo_root, config["common_data_file"])
-    managed_block = render_markdown_block(common_text, common_data)
+    repo_data = load_common_data(repo_root, config, include_local=False)
+    managed_block_repo = render_markdown_block(common_text, repo_data)
     agent_files = discover_agent_files(repo_root, config["agent_files"])
 
     if not agent_files:
         print("No AGENTS.md files found from configured locations/discovery.", file=sys.stderr)
         return 1
 
-    changed_count, changed_files = sync_files(agent_files, managed_block, check_only)
+    changed_count, changed_files = sync_files(agent_files, managed_block_repo, check_only)
+    
     print_section("AGENTS Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
     print(f"Files scanned: {len(agent_files)}")
-    print(f"Files needing updates: {changed_count}")
+    print(f"Repo files needing updates: {changed_count}")
 
     if changed_files:
         print("")
-        print("Changed files:")
+        print("Changed repo files:")
         for file_path in changed_files:
             print(f"{icon('bullet')} {file_path}")
-    else:
+    
+    if global_sync:
+        merged_data = load_common_data(repo_root, config, include_local=True)
+        config_targets = parse_agent_targets(config["agent_configs"])
+        g_count, g_files = sync_global_configs(config_targets, merged_data, check_only)
         print("")
-        print("All discovered AGENTS.md files are up to date.")
+        print(f"Global configs scanned: {len(config_targets)}")
+        print(f"Global configs needing updates: {g_count}")
+        if g_files:
+            for file_path in g_files:
+                print(f"{icon('bullet')} {file_path}")
+    
+    if not changed_files and (not global_sync or not g_files):
+        print("")
+        print("All target files are up to date.")
 
-    return 1 if check_only and changed_count > 0 else 0
+    return 1 if check_only and (changed_count > 0) else 0
 
 
 def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> int:
     common_text = read_text(repo_root, config["common_text_file"])
-    common_data = read_json(repo_root, config["common_data_file"])
+    common_data = load_common_data(repo_root, config)
     managed_block = render_markdown_block(common_text, common_data)
     agent_files = discover_agent_files(repo_root, config["agent_files"])
     config_targets = parse_agent_targets(config["agent_configs"])
@@ -494,7 +584,7 @@ if __name__ == "__main__":
     if args.command == "detect":
         raise SystemExit(cmd_detect(cfg, json_output=args.json))
     if args.command == "sync":
-        raise SystemExit(cmd_sync(root, cfg, check_only=args.check))
+        raise SystemExit(cmd_sync(root, cfg, check_only=args.check, global_sync=args.global_sync))
     if args.command == "doctor":
         raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths))
     raise SystemExit(1)

@@ -159,6 +159,6 @@ After changing CLI help output or completions:
 ## Common Skills
 
 - Dotfiles portability review (Linux + Windows + macOS safety)
-- Shell bootstrap audit (idempotency and dry-run behavior)
 - Secrets hygiene review (template references vs local plaintext files)
+- Shell bootstrap audit (idempotency and dry-run behavior)
 <!-- oooconf:agents-common:end -->
