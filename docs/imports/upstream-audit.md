@@ -116,17 +116,17 @@ Remote shell files contained secrets. Those were inspected for migration risk bu
 
 ## Automated Pin Checks
 
-Last checked (UTC): `2026-04-15T08:31:07+00:00`
+Last checked (UTC): `2026-04-16T21:42:43+00:00`
 
 | Dependency | Status | Current ref | Latest HEAD |
 | --- | --- | --- | --- |
 | `auto_uv_env` | `up-to-date` | `76589a0fe4a3eaba9817b7195b9fc05ef4139289` | `76589a0fe4a3eaba9817b7195b9fc05ef4139289` |
-| `forgit` | `up-to-date` | `9280ebbb01cd37b26380a16adb15d08354a9f5ee` | `9280ebbb01cd37b26380a16adb15d08354a9f5ee` |
+| `forgit` | `update-available` | `9280ebbb01cd37b26380a16adb15d08354a9f5ee` | `1d6552e5762f9173a168975b9b3af80b06900d4b` |
 | `fzf_tab` | `up-to-date` | `0983009f8666f11e91a2ee1f88cfdb748d14f656` | `0983009f8666f11e91a2ee1f88cfdb748d14f656` |
 | `k` | `up-to-date` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` |
 | `marker` | `up-to-date` | `c123085891228e51cfa58d555708bad67ed98f02` | `c123085891228e51cfa58d555708bad67ed98f02` |
 | `nvm` | `up-to-date` | `d200a215594bdda07e130117c9d392fff29cba84` | `d200a215594bdda07e130117c9d392fff29cba84` |
-| `oh_my_zsh` | `up-to-date` | `061f773dd356df52a8bccd5e73377c012f97ef14` | `061f773dd356df52a8bccd5e73377c012f97ef14` |
+| `oh_my_zsh` | `update-available` | `061f773dd356df52a8bccd5e73377c012f97ef14` | `e42ac8c57bc7eb473b689ffcbb98473ba45dbab8` |
 | `p10k` | `up-to-date` | `604f19a9eaa18e76db2e60b8d446d5f879065f90` | `604f19a9eaa18e76db2e60b8d446d5f879065f90` |
 | `todo` | `up-to-date` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` |
 | `you_should_use` | `up-to-date` | `ff371d6a11b653e1fa8dda4e61c896c78de26bfa` | `ff371d6a11b653e1fa8dda4e61c896c78de26bfa` |

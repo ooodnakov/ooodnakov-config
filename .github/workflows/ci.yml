@@ -39,7 +39,7 @@ jobs:
 
       - name: Validate lock artifacts are reproducible
         run: |
-          python3 scripts/generate-dependency-lock.py
+          python3 scripts/generate_dependency_lock.py
           git diff --exit-code deps.lock.json docs/dependency-lock.md
 
   powershell-validation:

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPT="$REPO_ROOT/scripts/update-pins.py"
+SCRIPT="$REPO_ROOT/scripts/update_pins.py"
 
 ui_is_interactive() {
   [ -t 1 ]

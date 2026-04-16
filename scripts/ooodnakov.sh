@@ -6,10 +6,10 @@ REPO_ROOT="${OOODNAKOV_REPO_ROOT:-$DEFAULT_REPO_ROOT}"
 SETUP="$REPO_ROOT/scripts/setup.sh"
 DELETE="$REPO_ROOT/scripts/delete.sh"
 BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
-GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
+GEN_LOCK="$REPO_ROOT/scripts/generate_dependency_lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
-RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
-AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
+RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
+AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
 KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins agents secrets shell version check preview upgrade)
 KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling psfzf-tab psfzf-git)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
@@ -897,10 +897,10 @@ while [ "$#" -gt 0 ]; do
       SETUP="$REPO_ROOT/scripts/setup.sh"
       DELETE="$REPO_ROOT/scripts/delete.sh"
       BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
-      GEN_LOCK="$REPO_ROOT/scripts/generate-dependency-lock.py"
+      GEN_LOCK="$REPO_ROOT/scripts/generate_dependency_lock.py"
       UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
-      RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
-      AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
+      RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
+      AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
       shift 2
       ;;
     --print-repo-root)

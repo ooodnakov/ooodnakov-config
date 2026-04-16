@@ -161,7 +161,7 @@ optional_dependency_applicable() {
   local platform
   platform="$(detect_platform)"
   local info
-  info="$(run_python "$REPO_ROOT/scripts/read-optional-deps.py" install-info "$key" "$platform" 2>/dev/null)" || return 1
+  info="$(run_python "$REPO_ROOT/scripts/read_optional_deps.py" install-info "$key" "$platform" 2>/dev/null)" || return 1
   local manager
   manager="$(echo "$info" | cut -d'|' -f1)"
   [ -n "$manager" ] && [ "$manager" != "none" ]
@@ -172,11 +172,11 @@ optional_dependency_catalog() {
   while IFS='|' read -r key label description; do
     optional_dependency_applicable "$key" || continue
     printf '%s|%s|%s\n' "$key" "$label" "$description"
-  done < <(run_python "$REPO_ROOT/scripts/read-optional-deps.py" catalog)
+  done < <(run_python "$REPO_ROOT/scripts/read_optional_deps.py" catalog)
 }
 
 optional_dependency_catalog_all() {
-  run_python "$REPO_ROOT/scripts/read-optional-deps.py" catalog
+  run_python "$REPO_ROOT/scripts/read_optional_deps.py" catalog
 }
 
 optional_dependency_exists() {

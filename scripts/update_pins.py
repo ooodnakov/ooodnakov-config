@@ -13,7 +13,7 @@ from cli_ui import bullet, section, status
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SETUP_SH = REPO_ROOT / "scripts" / "setup.sh"
 REPORT_PATH = REPO_ROOT / "docs" / "imports" / "upstream-audit.md"
-GEN_LOCK = REPO_ROOT / "scripts" / "generate-dependency-lock.py"
+GEN_LOCK = REPO_ROOT / "scripts" / "generate_dependency_lock.py"
 AUTOMATED_SECTION_HEADER = "## Automated Pin Checks"
 PAIR_RE = re.compile(r'^(?P<name>[A-Z0-9_]+)_(?P<kind>REPO|REF)="(?P<value>.+)"$')
 

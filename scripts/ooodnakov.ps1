@@ -11,10 +11,10 @@ $RepoRoot = if ($env:OOODNAKOV_REPO_ROOT) {
     (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 }
 $SetupScript = Join-Path $PSScriptRoot "setup.ps1"
-$GenerateLockScript = Join-Path $PSScriptRoot "generate-dependency-lock.py"
-$UpdatePinsScript = Join-Path $PSScriptRoot "update-pins.py"
-$RenderSecretsScript = Join-Path $PSScriptRoot "render-secrets.py"
-$AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
+$GenerateLockScript = Join-Path $PSScriptRoot "generate_dependency_lock.py"
+$UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
+$RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
+$AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
 $KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
 $KnownShellSubcommands = @("forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git")
 $KnownShellForgitModes = @("plain", "forgit", "status")
@@ -582,7 +582,7 @@ function Get-SuggestionFromList {
     return $null
 }
 
-$AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
+$AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
 
 function Get-Version {
     if (Get-Command git -ErrorAction SilentlyContinue) {

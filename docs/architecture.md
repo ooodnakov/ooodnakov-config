@@ -58,7 +58,7 @@ Primary commands:
 
 Pinned third-party shell dependencies are installed outside the repo into user-local state instead of being committed into the active tracked tree.
 
-Optional dependencies are defined in `scripts/optional-deps.toml` — a single TOML file that both Unix and PowerShell setup scripts read through `scripts/read-optional-deps.py`. Each entry specifies per-platform install methods (apt, brew, choco, winget, cargo, curl, or custom), so adding or removing an optional dep is a one-file change with platform install info ready for reuse.
+Optional dependencies are defined in `scripts/optional-deps.toml` — a single TOML file that both Unix and PowerShell setup scripts read through `scripts/read_optional_deps.py`. Each entry specifies per-platform install methods (apt, brew, choco, winget, cargo, curl, or custom), so adding or removing an optional dep is a one-file change with platform install info ready for reuse.
 
 This gives two properties:
 
