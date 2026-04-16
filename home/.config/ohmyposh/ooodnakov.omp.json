@@ -3,9 +3,10 @@
   "blocks": [
     {
       "alignment": "left",
+      "type": "prompt",
       "segments": [
         {
-          "foreground": "#6c6c6c",
+          "foreground": "#4c4c4c",
           "style": "plain",
           "template": "\u256d\u2500",
           "type": "text"
@@ -19,10 +20,11 @@
         {
           "foreground": "#00afff",
           "style": "plain",
-          "template": "\u2502 {{ if .InHome }}\uf015 {{ else }}\uf07c {{ end }}{{ .Path }} ",
+          "template": "\u2502 {{ .Path }} ",
           "properties": {
             "style": "full",
-            "home_icon": "~"
+            "home_icon": "\uf015 ~",
+            "folder_icon": "\uf07c"
           },
           "type": "path"
         },
@@ -35,11 +37,11 @@
           "template": "\u2502 {{ .HEAD }}{{ if gt .Ahead 0 }} \uf062{{ .Ahead }}{{ end }}{{ if gt .Behind 0 }} \uf063{{ .Behind }}{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0 }} \ueb4b {{ .StashCount }}{{ end }} ",
           "type": "git"
         }
-      ],
-      "type": "prompt"
+      ]
     },
     {
       "alignment": "right",
+      "type": "prompt",
       "segments": [
         {
           "foreground": "#ff0000",
@@ -69,20 +71,20 @@
           "type": "time"
         },
         {
-          "foreground": "#6c6c6c",
+          "foreground": "#4c4c4c",
           "style": "plain",
           "template": "\u2500\u256e",
           "type": "text"
         }
-      ],
-      "type": "prompt"
+      ]
     },
     {
       "alignment": "left",
+      "type": "prompt",
       "newline": true,
       "segments": [
         {
-          "foreground": "#6c6c6c",
+          "foreground": "#4c4c4c",
           "style": "plain",
           "template": "\u2570\u2500",
           "type": "text"
@@ -96,20 +98,19 @@
           "template": "\u276f ",
           "type": "status"
         }
-      ],
-      "type": "prompt"
+      ]
     },
     {
       "alignment": "right",
+      "type": "rprompt",
       "segments": [
         {
-          "foreground": "#6c6c6c",
+          "foreground": "#4c4c4c",
           "style": "plain",
           "template": "\u2500\u256f",
           "type": "text"
         }
-      ],
-      "type": "rprompt"
+      ]
     }
   ],
   "console_title_template": "{{if .Root}}root :: {{end}}{{.Shell}} :: {{.Folder}}",
