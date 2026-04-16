@@ -16,13 +16,16 @@ $UpdatePinsScript = Join-Path $PSScriptRoot "update-pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render-secrets.py"
 $AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
 $KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
-$KnownShellSubcommands = @("forgit-aliases", "typo-handling")
+$KnownShellSubcommands = @("forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
+$KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
 $TypoHandlingVar = "OOODNAKOV_TYPO_HANDLING_MODE"
+$PsfzfTabVar = "OOODNAKOV_PSFZF_TAB"
+$PsfzfGitVar = "OOODNAKOV_PSFZF_GIT"
 $UiAscii = @{
     section = "=="
     ok = "[ok]"
@@ -257,6 +260,30 @@ function Get-TypoHandlingMode {
     return "help"
 }
 
+function Get-PsfzfTabMode {
+    $envPath = Get-LocalEnvPs1Path
+    if (Test-Path -LiteralPath $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match ('^\$env:' + [regex]::Escape($PsfzfTabVar) + " = '([^']+)'$")) {
+                return $Matches[1]
+            }
+        }
+    }
+    return "enabled"
+}
+
+function Get-PsfzfGitMode {
+    $envPath = Get-LocalEnvPs1Path
+    if (Test-Path -LiteralPath $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match ('^\$env:' + [regex]::Escape($PsfzfGitVar) + " = '([^']+)'$")) {
+                return $Matches[1]
+            }
+        }
+    }
+    return "enabled"
+}
+
 function Set-ForgitAliasMode {
     param(
         [Parameter(Mandatory = $true)]
@@ -297,6 +324,42 @@ function Set-TypoHandlingMode {
 
     Write-UiLine -Role ok -Message "typo handling mode set to $Mode"
     Write-UiLine -Role info -Message "zsh: $envZsh"
+    Write-UiLine -Role info -Message "pwsh: $envPs1"
+    Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
+}
+
+function Set-PsfzfTabMode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode
+    )
+
+    if ($Mode -notin @("enabled", "disabled")) {
+        throw "Invalid psfzf-tab mode: $Mode`nExpected one of: enabled, disabled"
+    }
+
+    $envPs1 = Get-LocalEnvPs1Path
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $PsfzfTabVar -ReplacementLine "`$env:$PsfzfTabVar = '$Mode'"
+
+    Write-UiLine -Role ok -Message "psfzf-tab mode set to $Mode"
+    Write-UiLine -Role info -Message "pwsh: $envPs1"
+    Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
+}
+
+function Set-PsfzfGitMode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode
+    )
+
+    if ($Mode -notin @("enabled", "disabled")) {
+        throw "Invalid psfzf-git mode: $Mode`nExpected one of: enabled, disabled"
+    }
+
+    $envPs1 = Get-LocalEnvPs1Path
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $PsfzfGitVar -ReplacementLine "`$env:$PsfzfGitVar = '$Mode'"
+
+    Write-UiLine -Role ok -Message "psfzf-git mode set to $Mode"
     Write-UiLine -Role info -Message "pwsh: $envPs1"
     Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
 }
@@ -374,6 +437,34 @@ function Invoke-ShellCommand {
                     $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellTypoModes
                     Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
                     throw "Unknown shell option: $mode`nExpected one of: silent, suggest, help, status"
+                }
+            }
+            return
+        }
+        "psfzf-tab" {
+            $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
+            switch ($mode) {
+                "status" { Write-Output (Get-PsfzfTabMode) }
+                "enabled" { Set-PsfzfTabMode -Mode $mode }
+                "disabled" { Set-PsfzfTabMode -Mode $mode }
+                default {
+                    $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellPsfzfModes
+                    Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
+                    throw "Unknown shell option: $mode`nExpected one of: enabled, disabled, status"
+                }
+            }
+            return
+        }
+        "psfzf-git" {
+            $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
+            switch ($mode) {
+                "status" { Write-Output (Get-PsfzfGitMode) }
+                "enabled" { Set-PsfzfGitMode -Mode $mode }
+                "disabled" { Set-PsfzfGitMode -Mode $mode }
+                default {
+                    $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellPsfzfModes
+                    Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
+                    throw "Unknown shell option: $mode`nExpected one of: enabled, disabled, status"
                 }
             }
             return
@@ -754,6 +845,8 @@ Examples:
             @"
 Usage: oooconf shell forgit-aliases [plain|forgit|status]
        oooconf shell typo-handling [silent|suggest|help|status]
+       oooconf shell psfzf-tab [enabled|disabled|status]
+       oooconf shell psfzf-git [enabled|disabled|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
 
@@ -767,6 +860,11 @@ Typo handling modes:
   suggest  print only the closest suggestion when available
   help     print the unknown command, suggestion, and full help
 
+PSFzf options:
+  psfzf-tab  enable or disable fzf-based tab completion in PowerShell
+  psfzf-git  enable or disable fzf-based git keybindings in PowerShell
+  status     show the currently configured mode
+
 Examples:
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain
@@ -774,6 +872,9 @@ Examples:
   oooconf shell typo-handling status
   oooconf shell typo-handling suggest
   oooconf shell typo-handling silent
+  oooconf shell psfzf-tab enabled
+  oooconf shell psfzf-tab disabled
+  oooconf shell psfzf-git status
 "@
         }
         "" { Show-Usage }

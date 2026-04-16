@@ -11,13 +11,16 @@ UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render-secrets.py"
 AGENTS_TOOL="$REPO_ROOT/scripts/agents-tool.py"
 KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins agents secrets shell version check preview upgrade)
-KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling)
+KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling psfzf-tab psfzf-git)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
 KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
+KNOWN_SHELL_PSFZF_MODES=(enabled disabled status)
 LOCAL_OVERRIDES_START="# --- LOCAL OVERRIDES START ---"
 LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
 FORGIT_ALIAS_VAR="OOODNAKOV_FORGIT_ALIAS_MODE"
 TYPO_HANDLING_VAR="OOODNAKOV_TYPO_HANDLING_MODE"
+PSFZF_TAB_VAR="OOODNAKOV_PSFZF_TAB"
+PSFZF_GIT_VAR="OOODNAKOV_PSFZF_GIT"
 
 ui_is_interactive() {
   [ -t 1 ]
@@ -37,27 +40,15 @@ ui_use_color() {
 
 ui_icon() {
   local name="$1"
-  if ui_use_nerd_font; then
-    case "$name" in
-      section) printf '%b' '\U000f018d' ;;
-      ok) printf '%b' '\U000f012c' ;;
-      warn) printf '%b' '\U000f002a' ;;
-      fail) printf '%b' '\U000f0156' ;;
-      info) printf '%b' '\U000f02fc' ;;
-      hint) printf '%b' '\U000f0311' ;;
-      *) printf '•' ;;
-    esac
-  else
-    case "$name" in
-      section) printf '==' ;;
-      ok) printf '[ok]' ;;
-      warn) printf '[warn]' ;;
-      fail) printf '[fail]' ;;
-      info) printf '[info]' ;;
-      hint) printf '->' ;;
-      *) printf '-' ;;
-    esac
-  fi
+  case "$name" in
+    section) printf '▸' ;;
+    ok) printf '✓' ;;
+    warn) printf '⚠' ;;
+    fail) printf '✗' ;;
+    info) printf 'ℹ' ;;
+    hint) printf '→' ;;
+    *) printf '•' ;;
+  esac
 }
 
 ui_colorize() {
@@ -246,6 +237,36 @@ get_typo_handling_mode() {
   printf 'help\n'
 }
 
+get_psfzf_tab_mode() {
+  local env_ps1 mode
+  env_ps1="$(shell_local_env_ps1_path)"
+
+  if [ -f "$env_ps1" ]; then
+    mode="$(sed -n "s/^\$env:${PSFZF_TAB_VAR} = '\\([^']*\\)'$/\\1/p" "$env_ps1" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+  fi
+
+  printf 'enabled\n'
+}
+
+get_psfzf_git_mode() {
+  local env_ps1 mode
+  env_ps1="$(shell_local_env_ps1_path)"
+
+  if [ -f "$env_ps1" ]; then
+    mode="$(sed -n "s/^\$env:${PSFZF_GIT_VAR} = '\\([^']*\\)'$/\\1/p" "$env_ps1" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+  fi
+
+  printf 'enabled\n'
+}
+
 set_forgit_alias_mode() {
   local mode="$1"
   local env_zsh env_ps1
@@ -296,6 +317,48 @@ set_typo_handling_mode() {
   ui_line hint "Open a new shell or run: exec zsh"
 }
 
+set_psfzf_tab_mode() {
+  local mode="$1"
+  local env_ps1
+
+  case "$mode" in
+    enabled|disabled) ;;
+    *)
+      visible_error "Invalid psfzf-tab mode: $mode"
+      visible_error "Expected one of: enabled, disabled"
+      return 1
+      ;;
+  esac
+
+  env_ps1="$(shell_local_env_ps1_path)"
+  upsert_override_line "$env_ps1" "$PSFZF_TAB_VAR" "\$env:$PSFZF_TAB_VAR = '$mode'"
+
+  ui_line ok "psfzf-tab mode set to $mode"
+  ui_line info "pwsh: $env_ps1"
+  ui_line hint "Open a new shell session to apply the change."
+}
+
+set_psfzf_git_mode() {
+  local mode="$1"
+  local env_ps1
+
+  case "$mode" in
+    enabled|disabled) ;;
+    *)
+      visible_error "Invalid psfzf-git mode: $mode"
+      visible_error "Expected one of: enabled, disabled"
+      return 1
+      ;;
+  esac
+
+  env_ps1="$(shell_local_env_ps1_path)"
+  upsert_override_line "$env_ps1" "$PSFZF_GIT_VAR" "\$env:$PSFZF_GIT_VAR = '$mode'"
+
+  ui_line ok "psfzf-git mode set to $mode"
+  ui_line info "pwsh: $env_ps1"
+  ui_line hint "Open a new shell session to apply the change."
+}
+
 print_help_for_scope() {
   local scope="${1:-main}"
 
@@ -342,11 +405,12 @@ handle_shell_command() {
 
   case "$subcommand" in
     ""|-h|--help|help)
-      ui_section "oooconf shell"
       cat <<'EOF'
 Usage:
   oooconf shell forgit-aliases [plain|forgit|status]
   oooconf shell typo-handling [silent|suggest|help|status]
+  oooconf shell psfzf-tab [enabled|disabled|status]
+  oooconf shell psfzf-git [enabled|disabled|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
 
@@ -360,6 +424,11 @@ Typo handling modes:
   suggest  print only the closest suggestion when available
   help     print the unknown command, suggestion, and full help
 
+PSFzf options:
+  psfzf-tab  enable or disable fzf-based tab completion in PowerShell
+  psfzf-git  enable or disable fzf-based git keybindings in PowerShell
+  status     show the currently configured mode
+
 Examples:
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain
@@ -367,6 +436,9 @@ Examples:
   oooconf shell typo-handling status
   oooconf shell typo-handling suggest
   oooconf shell typo-handling silent
+  oooconf shell psfzf-tab enabled
+  oooconf shell psfzf-tab disabled
+  oooconf shell psfzf-git status
 EOF
       ;;
     forgit-aliases)
@@ -394,6 +466,36 @@ EOF
           ;;
         *)
           suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_TYPO_MODES[@]}")"
+          report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
+          return 1
+          ;;
+      esac
+      ;;
+    psfzf-tab)
+      case "${2:-status}" in
+        status)
+          get_psfzf_tab_mode
+          ;;
+        enabled|disabled)
+          set_psfzf_tab_mode "$2"
+          ;;
+        *)
+          suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_PSFZF_MODES[@]}")"
+          report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
+          return 1
+          ;;
+      esac
+      ;;
+    psfzf-git)
+      case "${2:-status}" in
+        status)
+          get_psfzf_git_mode
+          ;;
+        enabled|disabled)
+          set_psfzf_git_mode "$2"
+          ;;
+        *)
+          suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_PSFZF_MODES[@]}")"
           report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
           return 1
           ;;

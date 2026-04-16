@@ -46,14 +46,14 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
         $psFzfArgs = @{
             PSReadlineChordProvider       = 'Ctrl+t'
             PSReadlineChordReverseHistory = 'Ctrl+r'
-            TabExpansion                  = $true
-            GitKeyBindings                = $true
+            TabExpansion                  = ($env:OOODNAKOV_PSFZF_TAB -ne 'disabled')
+            GitKeyBindings                = ($env:OOODNAKOV_PSFZF_GIT -ne 'disabled')
         }
 
         if (Get-Command fd -ErrorAction SilentlyContinue) {
             $psFzfArgs.EnableFd = $true
         }
-
+        Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
         Set-PsFzfOption @psFzfArgs
     }
 }

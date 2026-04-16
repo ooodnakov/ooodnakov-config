@@ -20,9 +20,10 @@ function Get-OooconfCompletions {
         'logout', 'add', 'remove', 'rm', 'del'
     )
 
-    $OooconfShellSubcommands = @('forgit-aliases', 'typo-handling')
+    $OooconfShellSubcommands = @('forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git')
     $OooconfForgitAliasModes = @('plain', 'forgit', 'status')
     $OooconfTypoHandlingModes = @('silent', 'suggest', 'help', 'status')
+    $OooconfPsfzfModes = @('enabled', 'disabled', 'status')
     $ShellValues = @('zsh', 'pwsh', 'bash', 'fish')
 
     $OooconfDepsKeys = @(
@@ -116,6 +117,8 @@ function Get-OooconfCompletions {
             switch ($shellSub) {
                 'forgit-aliases' { $completions = $OooconfForgitAliasModes }
                 'typo-handling'  { $completions = $OooconfTypoHandlingModes }
+                'psfzf-tab'      { $completions = $OooconfPsfzfModes }
+                'psfzf-git'      { $completions = $OooconfPsfzfModes }
             }
         }
     }

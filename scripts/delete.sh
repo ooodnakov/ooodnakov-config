@@ -13,21 +13,12 @@ ui_is_interactive() {
 
 ui_icon() {
   local name="$1"
-  if [ "${OOOCONF_ASCII:-0}" != "1" ] && ui_is_interactive; then
-    case "$name" in
-      ok) printf '󰄬' ;;
-      info) printf '󰋼' ;;
-      section) printf '󰆍' ;;
-      *) printf '󰅖' ;;
-    esac
-  else
-    case "$name" in
-      ok) printf '[ok]' ;;
-      info) printf '[info]' ;;
-      section) printf '==' ;;
-      *) printf '[fail]' ;;
-    esac
-  fi
+  case "$name" in
+    ok) printf '✓' ;;
+    info) printf 'ℹ' ;;
+    section) printf '▸' ;;
+    *) printf '✗' ;;
+  esac
 }
 
 ui_colorize() {
