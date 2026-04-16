@@ -638,6 +638,65 @@ function Invoke-Action {
     }
 }
 
+function Invoke-WithProgress {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Description,
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Action
+    )
+
+    if ($DryRun) {
+        Write-Output "[dry-run] $Description"
+        return 0
+    }
+
+    $stdoutLog = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-{0}.stdout.log" -f ([guid]::NewGuid().ToString("N")))
+    $stderrLog = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-{0}.stderr.log" -f ([guid]::NewGuid().ToString("N")))
+
+    try {
+        $process = & $Action $stdoutLog $stderrLog
+    } catch {
+        if (Test-Path $stdoutLog) { Remove-Item -LiteralPath $stdoutLog -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $stderrLog) { Remove-Item -LiteralPath $stderrLog -Force -ErrorAction SilentlyContinue }
+        throw
+    }
+
+    if ($process -isnot [System.Diagnostics.Process]) {
+        if (Test-Path $stdoutLog) { Remove-Item -LiteralPath $stdoutLog -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $stderrLog) { Remove-Item -LiteralPath $stderrLog -Force -ErrorAction SilentlyContinue }
+        throw "Invoke-WithProgress action for '$Description' did not return a process handle."
+    }
+
+    $activityId = Get-Random -Minimum 1000 -Maximum 9999
+
+    try {
+        while (-not $process.HasExited) {
+            Write-Progress -Id $activityId -Activity $Description -Status "Working..." -PercentComplete -1
+            Start-Sleep -Milliseconds 125
+            $process.Refresh()
+        }
+
+        $process.WaitForExit()
+        $exitCode = $process.ExitCode
+        Write-Progress -Id $activityId -Activity $Description -Completed
+
+        if ($exitCode -ne 0) {
+            if (Test-Path $stdoutLog) {
+                Get-Content -LiteralPath $stdoutLog -ErrorAction SilentlyContinue | Write-Output
+            }
+            if (Test-Path $stderrLog) {
+                Get-Content -LiteralPath $stderrLog -ErrorAction SilentlyContinue | Write-Output
+            }
+        }
+
+        return $exitCode
+    } finally {
+        if (Test-Path $stdoutLog) { Remove-Item -LiteralPath $stdoutLog -Force -ErrorAction SilentlyContinue }
+        if (Test-Path $stderrLog) { Remove-Item -LiteralPath $stderrLog -Force -ErrorAction SilentlyContinue }
+    }
+}
+
 function Ensure-Directory {
     param(
         [Parameter(Mandatory = $true)]
@@ -1406,12 +1465,20 @@ function Invoke-Install {
 
         # Sync LazyVim plugins non-interactively
         if (Get-Command nvim -ErrorAction SilentlyContinue) {
-            Write-Output "Syncing LazyVim plugins..."
-            & nvim --headless "+Lazy! sync" +qa
-            if ($LASTEXITCODE -eq 0) {
+            $syncExitCode = Invoke-WithProgress -Description "Syncing LazyVim plugins" -Action {
+                param($stdoutLog, $stderrLog)
+                Start-Process -FilePath "nvim" `
+                    -ArgumentList @("--headless", "+Lazy! sync", "+qa") `
+                    -NoNewWindow `
+                    -RedirectStandardOutput $stdoutLog `
+                    -RedirectStandardError $stderrLog `
+                    -PassThru
+            }
+
+            if ($syncExitCode -eq 0) {
                 Add-ToolSummary "nvim: plugins synced"
             } else {
-                Write-Warning "LazyVim plugin sync exited with code $LASTEXITCODE"
+                Write-Warning "LazyVim plugin sync exited with code $syncExitCode"
             }
         }
     }

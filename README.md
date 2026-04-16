@@ -93,6 +93,8 @@ oooconf dry-run
 oooconf doctor
 ```
 
+During `oooconf install` and `oooconf update`, LazyVim plugin sync runs headlessly with progress-only output. Detailed Neovim plugin logs stay hidden unless the sync fails.
+
 ## CLI Entry Points
 
 Primary commands:

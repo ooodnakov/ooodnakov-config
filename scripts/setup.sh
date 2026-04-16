@@ -1892,13 +1892,13 @@ link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh" || true
 link_file "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm" || true
 if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
   # Sync LazyVim plugins non-interactively
-  if command -v nvim >/dev/null 2>&1; then
-    echo "Syncing LazyVim plugins..."
-    nvim --headless "+Lazy! sync" +qa
-    if [ $? -eq 0 ]; then
+  nvim_cmd=""
+  nvim_cmd="$(resolve_nvim_command 2>/dev/null || true)"
+  if [ -n "$nvim_cmd" ]; then
+    if run_with_spinner "Syncing LazyVim plugins" "$nvim_cmd" --headless "+Lazy! sync" +qa; then
       TOOL_SUMMARY+=("nvim: plugins synced")
     else
-      echo "Warning: LazyVim plugin sync exited with code $?"
+      TOOL_SUMMARY+=("nvim: plugin sync failed")
     fi
   fi
   fi
