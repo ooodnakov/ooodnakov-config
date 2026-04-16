@@ -91,6 +91,11 @@ if (Get-Command fd -ErrorAction SilentlyContinue) {
 }
 
 if (Get-Command direnv -ErrorAction SilentlyContinue) {
+    $gitBash = "C:\Program Files\Git\bin\bash.exe"
+    if (Test-Path $gitBash) {
+        $env:DIRENV_BASH = $gitBash
+    }
+
     $direnvConfigRoot = Get-DirenvConfigRoot
     if (-not (Test-Path -LiteralPath $direnvConfigRoot)) {
         New-Item -ItemType Directory -Path $direnvConfigRoot -Force | Out-Null
@@ -99,7 +104,7 @@ if (Get-Command direnv -ErrorAction SilentlyContinue) {
 }
 
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    Invoke-CompletionScript { zoxide init pwsh }
+    Invoke-CompletionScript { zoxide init powershell }
 }
 
 $oooconfCompletions = Join-Path $env:OOODNAKOV_CONFIG_HOME "completions/oooconf-completions.ps1"

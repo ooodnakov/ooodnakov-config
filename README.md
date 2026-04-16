@@ -248,7 +248,7 @@ Additional setup behavior:
 
 On Windows, setup can prompt to install common tools with `winget`, `choco`, and the PowerShell Gallery, including WezTerm, Node.js LTS, `oh-my-posh`, `posh-git`, `PSFzf`, `gum`, `ripgrep`, `fd`, `bat`, `delta`, `glow`, `q`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
 
-The tracked `oh-my-posh` theme already uses its own `git` segment in [home/.config/ohmyposh/ooodnakov.omp.json](C:/Users/coolk/src/ooodnakov-config/home/.config/ohmyposh/ooodnakov.omp.json:63). The PowerShell profile also exposes `POSH_GIT_STRING` from `posh-git`, and the theme renders that in a small text segment, so you get both the built-in `oh-my-posh` git segment and the classic `posh-git` status string when `posh-git` is installed.
+The tracked `oh-my-posh` theme uses its own unified `git` segment in [home/.config/ohmyposh/ooodnakov.omp.json](home/.config/ohmyposh/ooodnakov.omp.json). It provides a clean, single-branch status with detailed working and staging information. The PowerShell profile still imports `posh-git` to provide git command completions, but prompt rendering is handled entirely by Oh My Posh for a consistent look.
 
 ## Fonts
 
