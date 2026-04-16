@@ -14,13 +14,13 @@ ASCII_ICONS = {
 }
 
 NERD_FONT_ICONS = {
-    "section": "󰆍",
-    "ok": "󰄬",
-    "warn": "󰀪",
-    "fail": "󰅖",
-    "info": "󰋼",
-    "hint": "󰌑",
-    "bullet": "󰘍",
+    "section": "▸",
+    "ok": "✓",
+    "warn": "⚠",
+    "fail": "✗",
+    "info": "ℹ",
+    "hint": "→",
+    "bullet": "•",
 }
 
 ANSI_RESET = "\033[0m"
@@ -45,6 +45,15 @@ def supports_nerd_font_output() -> bool:
     return "utf" in encoding
 
 
+def can_encode(text: str) -> bool:
+    encoding = sys.stdout.encoding or "utf-8"
+    try:
+        text.encode(encoding)
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
 def supports_color_output() -> bool:
     mode = os.environ.get("OOOCONF_COLOR", "").lower()
     if mode in {"0", "false", "never"} or os.environ.get("NO_COLOR") is not None:
@@ -55,8 +64,10 @@ def supports_color_output() -> bool:
 
 
 def icon(name: str) -> str:
-    palette = NERD_FONT_ICONS if supports_nerd_font_output() else ASCII_ICONS
-    return palette.get(name, ASCII_ICONS["bullet"])
+    candidate = (NERD_FONT_ICONS if supports_nerd_font_output() else ASCII_ICONS).get(name, ASCII_ICONS["bullet"])
+    if not can_encode(candidate):
+        return ASCII_ICONS.get(name, ASCII_ICONS["bullet"])
+    return candidate
 
 
 def colorize(text: str, role: str, *, bold: bool = False) -> str:

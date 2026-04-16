@@ -32,12 +32,12 @@ $UiAscii = @{
     hint = "->"
 }
 $UiNerd = @{
-    section = 0xF018D
-    ok = 0xF012C
-    warn = 0xF002A
-    fail = 0xF0156
-    info = 0xF02FC
-    hint = 0xF0311
+    section = 0x25B8
+    ok = 0x2713
+    warn = 0x26A0
+    fail = 0x2717
+    info = 0x2139
+    hint = 0x2192
 }
 $UiAnsi = @{
     Reset = "$([char]27)[0m"
@@ -84,7 +84,10 @@ function Test-UiNerdFont {
 
 function Get-UiIcon {
     param([string]$Name)
-    if (Test-UiNerdFont) { return [char]::ConvertFromUtf32($UiNerd[$Name]) }
+    if (Test-UiNerdFont) {
+        $codepoint = $UiNerd[$Name]
+        if ($codepoint) { return [char]::ConvertFromUtf32($codepoint) }
+    }
     return $UiAscii[$Name]
 }
 
