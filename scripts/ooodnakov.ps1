@@ -397,6 +397,8 @@ function Get-SuggestionFromList {
     return $null
 }
 
+$AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
+
 function Get-Version {
     if (Get-Command git -ErrorAction SilentlyContinue) {
         try {
