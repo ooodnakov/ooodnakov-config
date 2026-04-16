@@ -449,8 +449,7 @@ install_gum_package() {
 maybe_install_gum() {
   local manager="$1"
 
-  if command -v gum >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("gum: present")
+  if check_dependency_status "gum" "gum"; then
     return 0
   fi
 
@@ -723,14 +722,37 @@ apt_package_available() {
   apt-cache show "$package_name" >/dev/null 2>&1
 }
 
+check_dependency_status() {
+  local command_name="$1"
+  local log_name="${2:-$1}"
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking %s...\r" "$log_name" > /dev/tty
+  fi
+
+  if command -v "$command_name" >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
+    else
+      printf "[ok] %s is present.\n" "$log_name"
+    fi
+    DEPENDENCY_SUMMARY+=("$log_name: present")
+    return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
+  fi
+  return 1
+}
+
 maybe_install_dependency() {
   local manager="$1"
   local command_name="$2"
   local package_name="$3"
   local description="$4"
 
-  if command -v "$command_name" >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("$command_name: present")
+  if check_dependency_status "$command_name"; then
     return 0
   fi
 
@@ -935,8 +957,7 @@ maybe_note_dependency() {
 maybe_install_eza() {
   local manager="$1"
 
-  if command -v eza >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("eza: present")
+  if check_dependency_status "eza" "eza"; then
     return 0
   fi
 
@@ -999,8 +1020,7 @@ setup_wezterm_apt_repo() {
 maybe_install_wezterm() {
   local manager="$1"
 
-  if command -v wezterm >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("wezterm: present")
+  if check_dependency_status "wezterm" "wezterm"; then
     return 0
   fi
 
@@ -1077,8 +1097,7 @@ setup_q_apt_repo() {
 maybe_install_q() {
   local manager="$1"
 
-  if command -v q >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("q: present")
+  if check_dependency_status "q" "q"; then
     return 0
   fi
 
@@ -1114,8 +1133,7 @@ maybe_install_p7zip() {
   local manager="$1"
   local package_name="p7zip"
 
-  if command -v 7z >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("p7zip: present")
+  if check_dependency_status "7z" "p7zip"; then
     return 0
   fi
 
@@ -1131,8 +1149,7 @@ maybe_install_poppler() {
   local manager="$1"
   local package_name="poppler"
 
-  if command -v pdftotext >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("poppler: present")
+  if check_dependency_status "pdftotext" "poppler"; then
     return 0
   fi
 
@@ -1145,8 +1162,7 @@ maybe_install_poppler() {
 }
 
 maybe_install_uv() {
-  if command -v uv >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("uv: present")
+  if check_dependency_status "uv" "uv"; then
     return 0
   fi
 
@@ -1690,8 +1706,7 @@ run_doctor() {
 }
 
 maybe_install_cargo() {
-  if command -v cargo >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("cargo: present")
+  if check_dependency_status "cargo" "cargo"; then
     return 0
   fi
 
