@@ -50,7 +50,58 @@ function gl {
     git pull @args
 }
 
-if (($env:OOODNAKOV_FORGIT_ALIAS_MODE ?? "plain") -eq "plain") {
+function Test-AnyCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Names
+    )
+
+    foreach ($name in $Names) {
+        if (Get-Command $name -ErrorAction SilentlyContinue) {
+            return $true
+        }
+        if (-not $name.EndsWith(".exe") -and (Get-Command "$name.exe" -ErrorAction SilentlyContinue)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Invoke-ForgitOrGit {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$ForgitNames,
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$GitFallback
+    )
+
+    foreach ($name in $ForgitNames) {
+        if (Get-Command $name -ErrorAction SilentlyContinue) {
+            & $name @args
+            return
+        }
+    }
+
+    & $GitFallback
+}
+
+$forgitMode = $env:OOODNAKOV_FORGIT_ALIAS_MODE ?? "plain"
+$forgitAvailable = (Test-AnyCommand -Names @("forgit", "forgit_log", "forgit_diff", "forgit_checkout"))
+
+if ($forgitMode -eq "forgit" -and $forgitAvailable) {
+    function gd {
+        Invoke-ForgitOrGit -ForgitNames @("forgit_diff") -GitFallback { git diff @args }
+    }
+
+    function gco {
+        Invoke-ForgitOrGit -ForgitNames @("forgit_checkout") -GitFallback { git checkout @args }
+    }
+
+    function glo {
+        Invoke-ForgitOrGit -ForgitNames @("forgit_log", "forgit") -GitFallback { git log --oneline --graph --decorate --all @args }
+    }
+} else {
     function gd {
         git diff @args
     }
