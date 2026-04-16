@@ -615,6 +615,11 @@ run_with_spinner() {
     printf "[dry-run] %s: %s\n" "$label" "$*"
     return 0
   fi
+
+  # Print the intent immediately so the user knows what we are starting,
+  # especially helpful if is_interactive is false or sudo prompts.
+  printf "[-] %s..." "$label"
+
   local logfile pid spinner_index=0
   local -a frames=('-' "\\" '|' '/')
 
@@ -640,13 +645,14 @@ run_with_spinner() {
     if is_interactive; then
       printf "[ok] %s\n" "$label" > /dev/tty
     else
-      printf "[ok] %s\n" "$label"
+      # Overwrite the "[-] label..." line with [ok]
+      printf "\r[ok] %s\n" "$label"
     fi
   else
     if is_interactive; then
       printf "[failed] %s\n" "$label" > /dev/tty
     else
-      printf "[failed] %s\n" "$label"
+      printf "\r[failed] %s\n" "$label"
     fi
     cat "$logfile" >&2
     FAILURES+=("$label")
@@ -659,7 +665,7 @@ run_with_spinner() {
 record_failure() {
   local label="$1"
   FAILURES+=("$label")
-  printf "[failed] %s\n" "$label" >&2
+  printf "\r[failed] %s\n" "$label" >&2
 }
 
 detect_package_manager() {
@@ -1715,6 +1721,11 @@ install_optional_dependencies() {
   local manager
   manager="$(detect_package_manager)"
   PACKAGE_MANAGER="$manager"
+
+  if [ "$manager" != "none" ] && [ "$manager" != "brew" ] && is_interactive; then
+    printf "Refreshing sudo credentials before dependency installation...\n" > /dev/tty
+    sudo -v || return 1
+  fi
 
   echo "Dependency check:"
   install_optional_dependency_if_selected wget maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
