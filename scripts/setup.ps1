@@ -1177,6 +1177,61 @@ function Install-CargoIfMissing {
     return $false
 }
 
+function Install-DuaIfMissing {
+    $duaRepoUrl = "https://github.com/byron/dua-cli.git"
+    $cargoBinDir = Join-Path $HomeDir ".cargo/bin"
+    $cargoExe = Join-Path $cargoBinDir "cargo.exe"
+    $duaExe = Join-Path $cargoBinDir "dua.exe"
+
+    if ((Get-Command dua -ErrorAction SilentlyContinue) -or (Test-Path $duaExe)) {
+        Add-DependencySummary "dua: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install dua-cli for disk usage analysis from byron/dua-cli via cargo?")) {
+        Add-DependencySummary "dua: skipped"
+        return $false
+    }
+
+    if (-not (Install-CargoIfMissing)) {
+        Add-DependencySummary "dua: missing (cargo unavailable)"
+        return $false
+    }
+
+    if (($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ }) -notcontains $cargoBinDir) {
+        $env:PATH = "$cargoBinDir$([IO.Path]::PathSeparator)$env:PATH"
+    }
+
+    $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
+    if (-not $cargoCommand -and (Test-Path $cargoExe)) {
+        $cargoCommand = $cargoExe
+    }
+
+    if (-not $cargoCommand) {
+        Add-DependencySummary "dua: missing (cargo unavailable)"
+        return $false
+    }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] cargo install --locked --git $duaRepoUrl dua-cli"
+        Add-DependencySummary "dua: install preview via cargo"
+        return $false
+    }
+
+    try {
+        & $cargoCommand install --locked --git $duaRepoUrl dua-cli
+    } catch {
+        Write-Output $_
+    }
+
+    if ((Get-Command dua -ErrorAction SilentlyContinue) -or (Test-Path $duaExe)) {
+        Add-DependencySummary "dua: installed"
+        return $true
+    }
+
+    Add-DependencySummary "dua: install attempted"
+    return $false
+}
 function Install-OptionalDependencies {
     Write-Output "Dependency check:"
 
@@ -1227,7 +1282,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "cargo" -Action { Install-CargoIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "autoconf" -Action { Install-PackageIfMissing -CommandNames @("autoconf") -ChocoId "autoconf" -Description "autoconf" -SummaryName "autoconf" }
     $null = Invoke-SelectedOptionalDependency -Key "fc-cache" -Action { Write-Warning "fc-cache is not applicable on Windows." }
-    $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Write-Warning "dua installation via cargo not yet implemented in setup.ps1" }
+    $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Install-DuaIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "k" -Action { Write-Warning "k is not available on Windows." }
     $null = Invoke-SelectedOptionalDependency -Key "lazygit" -Action { Install-PackageIfMissing -CommandNames @("lazygit") -WingetId "JesseDuffield.lazygit" -Description "lazygit" -SummaryName "lazygit" }
 }
