@@ -47,6 +47,15 @@ setup_opts=(
 
 deps_keys=(
   'wget:download helpers and ezsh parity'
+  'git:version control system'
+  'wezterm:terminal emulator'
+  'oh-my-posh:prompt theme engine'
+  'posh-git:Git status prompt for PowerShell'
+  'psfzf:fzf integration for PowerShell'
+  'choco:Windows package manager'
+  'gsudo:sudo for Windows'
+  'rg:ripgrep search tool'
+  'fd:fd find alternative'
   'zsh:default shell support'
   'direnv:direnv shell integration'
   'fzf:fzf shell integration'
@@ -57,6 +66,11 @@ deps_keys=(
   'zoxide:smart directory jumping'
   'q:q text-as-data CLI'
   'eza:modern ls aliases'
+  'yazi:terminal file manager'
+  'ffmpeg:video/audio converter'
+  'jq:JSON processor'
+  'p7zip:7-Zip file archiver'
+  'poppler:PDF rendering library'
   'uv:Python package manager'
   'bw:Bitwarden CLI'
   'node:Node.js runtime'
@@ -159,11 +173,7 @@ case "$command_name" in
     _message 'unknown oooconf help target; press Enter to run CLI typo suggestions'
     return 0
     ;;
-  install|update)
-    _describe -t options 'oooconf option' setup_opts
-    return 0
-    ;;
-  deps)
+  install|update|deps)
     _describe -t options 'oooconf option' setup_opts
     _describe -t dependencies 'dependency key' deps_keys
     return 0
