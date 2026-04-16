@@ -39,6 +39,9 @@ if (Get-Module -ListAvailable -Name PSFzf) {
 }
 
 if (Get-Module -ListAvailable -Name PSReadLine) {
+    Set-PSReadLineOption -HistorySearchCursorMovesToEnd
+    Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
+    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
     Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
     Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
 
