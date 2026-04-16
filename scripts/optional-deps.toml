@@ -68,6 +68,13 @@ windows.winget_id = "JanDeDobbeleer.OhMyPosh"
 windows.package = "oh-my-posh"
 
 [[deps]]
+key = "posh-git"
+display = "posh-git"
+description = "PowerShell Git completions and shell integration"
+windows.manager = "custom"
+windows.command = "installed from the PowerShell Gallery in setup.ps1"
+
+[[deps]]
 key = "choco"
 display = "choco"
 description = "Chocolatey package manager (Windows)"

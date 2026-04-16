@@ -236,6 +236,7 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git version control"; Linux = @{ manager = "apt"; package = "git" }; Macos = @{ manager = "brew"; package = "git" }; Windows = @{ manager = "winget"; winget_id = "Git.Git" } }
             [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = @{ manager = "apt" }; Macos = @{ manager = "brew"; package = "wezterm" }; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
             [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "jandedobbeleer/oh-my-posh/oh-my-posh" }; Windows = @{ manager = "winget"; winget_id = "JanDeDobbeleer.OhMyPosh" } }
+            [pscustomobject]@{ Key = "posh-git"; DisplayName = "posh-git"; Description = "PowerShell Git completions and shell integration"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo elevation helper"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "gsudo" } }
             [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep search tool"; Linux = @{ manager = "apt"; package = "ripgrep" }; Macos = @{ manager = "brew"; package = "ripgrep" }; Windows = @{ manager = "choco"; package = "ripgrep" } }
@@ -356,6 +357,7 @@ function Get-OptionalDependencyCommandNames {
         "zsh" { return @("zsh") }
         "nvim" { return @("nvim") }
         "oh-my-posh" { return @("oh-my-posh") }
+        "posh-git" { return @() }
         "node" { return @("node") }
         "choco" { return @("choco") }
         "gsudo" { return @("gsudo") }
@@ -396,6 +398,10 @@ function Test-OptionalDependencyPresent {
 
     if ([string]::IsNullOrWhiteSpace($Key)) {
         return $false
+    }
+
+    if ($Key -eq "posh-git") {
+        return [bool](Get-Module -ListAvailable -Name posh-git)
     }
 
     $commandNames = @(Get-OptionalDependencyCommandNames -Key $Key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
@@ -994,6 +1000,44 @@ function Install-PnpmIfMissing {
     return $false
 }
 
+function Install-PoshGitIfMissing {
+    if (Get-Module -ListAvailable -Name posh-git) {
+        Add-DependencySummary "posh-git: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install posh-git from the PowerShell Gallery?")) {
+        Add-DependencySummary "posh-git: skipped"
+        return $false
+    }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Install-Module posh-git -Scope CurrentUser -Force"
+        Add-DependencySummary "posh-git: install preview via PowerShell Gallery"
+        return $false
+    }
+
+    try {
+        $nuget = Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue
+        if (-not $nuget) {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
+        }
+
+        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+        Install-Module posh-git -Scope CurrentUser -Force -AllowClobber
+    } catch {
+        Write-Output $_
+    }
+
+    if (Get-Module -ListAvailable -Name posh-git) {
+        Add-DependencySummary "posh-git: installed via PowerShell Gallery"
+        return $true
+    }
+
+    Add-DependencySummary "posh-git: install attempted"
+    return $false
+}
+
 function Install-BitwardenCliIfMissing {
     if (Get-Command bw -ErrorAction SilentlyContinue) {
         Add-DependencySummary "bw: present"
@@ -1097,6 +1141,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "zsh" -Action { Write-Warning "zsh is not natively supported on Windows; use WSL or a custom build." }
     $null = Invoke-SelectedOptionalDependency -Key "nvim" -Action { Install-PackageIfMissing -CommandNames @("nvim") -WingetId "Neovim.Neovim" -Description "Neovim" -SummaryName "nvim" }
     $null = Invoke-SelectedOptionalDependency -Key "oh-my-posh" -Action { Install-PackageIfMissing -CommandNames @("oh-my-posh") -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh" -SummaryName "oh-my-posh" }
+    $null = Invoke-SelectedOptionalDependency -Key "posh-git" -Action { Install-PoshGitIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "node" -Action { Install-PackageIfMissing -CommandNames @("node") -WingetId "OpenJS.NodeJS.LTS" -Description "Node.js LTS" -SummaryName "node" }
 
     $needsChocolatey = Test-OptionalDependencySelected -Key "choco"

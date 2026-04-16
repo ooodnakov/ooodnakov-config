@@ -23,6 +23,10 @@ if (Test-Path $LocalEnv) {
     . $LocalEnv
 }
 
+if (Get-Module -ListAvailable -Name posh-git) {
+    Import-Module posh-git -ErrorAction SilentlyContinue
+}
+
 if (Get-Module -ListAvailable -Name PSReadLine) {
     Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
     Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
