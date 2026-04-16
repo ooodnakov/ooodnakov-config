@@ -269,6 +269,7 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "nvim"; DisplayName = "nvim"; Description = "Neovim"; Linux = @{ manager = "apt"; package = "neovim" }; Macos = @{ manager = "brew"; package = "neovim" }; Windows = @{ manager = "winget"; winget_id = "Neovim.Neovim" } }
             [pscustomobject]@{ Key = "k"; DisplayName = "k"; Description = "standalone k command"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "python3"; DisplayName = "python3"; Description = "Python 3 runtime"; Linux = @{ manager = "apt"; package = "python3" }; Macos = @{ manager = "brew"; package = "python" }; Windows = @{ manager = "choco"; package = "python" } }
+            [pscustomobject]@{ Key = "lazygit"; DisplayName = "lazygit"; Description = "simple terminal UI for git commands"; Linux = @{ manager = "brew"; package = "lazygit" }; Macos = @{ manager = "brew"; package = "lazygit" }; Windows = @{ manager = "winget"; winget_id = "JesseDuffield.lazygit" } }
         )
         $specs = @($all_specs | ForEach-Object {
             [pscustomobject]@{
@@ -388,6 +389,7 @@ function Get-OptionalDependencyCommandNames {
         "cargo" { return @("cargo") }
         "dua" { return @("dua") }
         "k" { return @("k") }
+        "lazygit" { return @("lazygit") }
         default { return @() }
     }
 }
@@ -1227,6 +1229,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "fc-cache" -Action { Write-Warning "fc-cache is not applicable on Windows." }
     $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Write-Warning "dua installation via cargo not yet implemented in setup.ps1" }
     $null = Invoke-SelectedOptionalDependency -Key "k" -Action { Write-Warning "k is not available on Windows." }
+    $null = Invoke-SelectedOptionalDependency -Key "lazygit" -Action { Install-PackageIfMissing -CommandNames @("lazygit") -WingetId "JesseDuffield.lazygit" -Description "lazygit" -SummaryName "lazygit" }
 }
 
 function Write-Summary {

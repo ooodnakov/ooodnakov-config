@@ -25,13 +25,6 @@ if (Test-Path $LocalEnv) {
 
 if (Get-Module -ListAvailable -Name posh-git) {
     Import-Module posh-git -ErrorAction SilentlyContinue
-
-    function Set-PoshGitStatus {
-        $global:GitStatus = Get-GitStatus
-        $env:POSH_GIT_STRING = Write-GitStatus -Status $global:GitStatus
-    }
-
-    New-Alias -Name Set-PoshContext -Value Set-PoshGitStatus -Scope Global -Force
 }
 
 if (Get-Module -ListAvailable -Name PSFzf) {

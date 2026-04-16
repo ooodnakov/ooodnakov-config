@@ -306,6 +306,7 @@ def ensure_bw_unlocked(env: dict) -> None:
                 check=True,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
                 env=env,
                 timeout=BWH_CLI_TIMEOUT_SECONDS,
             )
@@ -354,6 +355,7 @@ def get_bw_status(env: dict | None = None) -> dict:
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=status_env,
             timeout=BWH_CLI_TIMEOUT_SECONDS,
         )
@@ -380,6 +382,7 @@ def sync_bw_vault(env: dict) -> None:
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=env,
             timeout=BWH_CLI_TIMEOUT_SECONDS,
         )
@@ -407,6 +410,7 @@ def fetch_all_bw_items() -> list[dict]:
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=env,
             timeout=BWH_CLI_TIMEOUT_SECONDS,
         )
@@ -470,6 +474,7 @@ def read_bw_item(item_id: str, key: str, cache: dict[str, dict] | None = None) -
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=env,
             timeout=BWH_CLI_TIMEOUT_SECONDS,
         )
@@ -751,7 +756,13 @@ def login_command(args: argparse.Namespace) -> int:
     if config_result.returncode != 0:
         return config_result.returncode
 
-    login_result = subprocess.run(["bw", "login", "--server", server], text=True)
+    env = os.environ.copy()
+    if env.get("BW_CLIENTID") and env.get("BW_CLIENTSECRET"):
+        print("Detected BW_CLIENTID and BW_CLIENTSECRET. Attempting API key login...")
+        login_result = subprocess.run(["bw", "login", "--apikey"], env=env, text=True)
+    else:
+        login_result = subprocess.run(["bw", "login"], text=True)
+
     return login_result.returncode
 
 
@@ -780,6 +791,7 @@ def unlock_command(args: argparse.Namespace) -> int:
             command,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             env=env,
             timeout=BWH_CLI_TIMEOUT_SECONDS,
         )
@@ -833,7 +845,7 @@ def check_bw_status() -> list[str]:
     status_value = status.get("status")
     session_available = bool(os.environ.get("BW_SESSION") or read_persisted_bw_session())
     if status_value == "unauthenticated":
-        problems.append("Bitwarden CLI is not logged in. Run `bw login --server https://vaultwarden.ooodnakov.ru`.")
+        problems.append("Bitwarden CLI is not logged in. Run `bw login`.")
     elif status_value == "locked" and not session_available:
         problems.append("Bitwarden vault is locked. Unlock it before syncing.")
     elif status_value == "unlocked" and not session_available:
