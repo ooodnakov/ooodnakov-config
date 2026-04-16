@@ -39,12 +39,12 @@ $ValidSetupCommands = @("install", "update", "doctor", "deps")
 
 # Run a Python script, preferring `uv run` when available.
 function Run-Python {
-    param([string]$ScriptPath, [string[]]$Args)
+    param([string]$ScriptPath, [string[]]$ScriptArgs)
     $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
     if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
-        & uv run $ScriptPath @Args
+        & uv run $ScriptPath @ScriptArgs
     } else {
-        & python3 $ScriptPath @Args
+        & python3 $ScriptPath @ScriptArgs
     }
 }
 
@@ -153,7 +153,21 @@ function Test-Interactive {
     switch ($InteractiveMode) {
         "always" { return $true }
         "never" { return $false }
-        default { return $Host.Name -ne "ServerRemoteHost" }
+        default {
+            if ($Host.Name -eq "ServerRemoteHost") {
+                return $false
+            }
+
+            try {
+                if ([Console]::IsInputRedirected -or [Console]::IsOutputRedirected) {
+                    return $false
+                }
+            } catch {
+                return $false
+            }
+
+            return [Environment]::UserInteractive
+        }
     }
 }
 
@@ -211,7 +225,7 @@ function Get-OptionalDependencySpecs {
     $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
     $json = $null
     try {
-        $json = Run-Python -ScriptPath $pythonScript -Args @("json") 2>$null
+        $json = Run-Python -ScriptPath $pythonScript -ScriptArgs @("json") 2>$null
     } catch {
     }
 
@@ -222,6 +236,8 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git version control"; Linux = @{ manager = "apt"; package = "git" }; Macos = @{ manager = "brew"; package = "git" }; Windows = @{ manager = "winget"; winget_id = "Git.Git" } }
             [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = @{ manager = "apt" }; Macos = @{ manager = "brew"; package = "wezterm" }; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
             [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "jandedobbeleer/oh-my-posh/oh-my-posh" }; Windows = @{ manager = "winget"; winget_id = "JanDeDobbeleer.OhMyPosh" } }
+            [pscustomobject]@{ Key = "posh-git"; DisplayName = "posh-git"; Description = "PowerShell Git completions and shell integration"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
+            [pscustomobject]@{ Key = "psfzf"; DisplayName = "PSFzf"; Description = "PowerShell fzf integration for history, files, and tab completion"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo elevation helper"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "gsudo" } }
             [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep search tool"; Linux = @{ manager = "apt"; package = "ripgrep" }; Macos = @{ manager = "brew"; package = "ripgrep" }; Windows = @{ manager = "choco"; package = "ripgrep" } }
@@ -287,27 +303,29 @@ function Get-OptionalDependencySpecs {
 
 function Get-AllOptionalDependencySpecs {
     # Return all specs including platform-inapplicable ones (for validation).
-    if ($script:OptionalDependencySpecsCache) {
-        # Rebuild from JSON without platform filtering
-        $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
-        $json = $null
-        try {
-            $json = Run-Python -ScriptPath $pythonScript -Args @("json") 2>$null
-        } catch {}
-        if ($json) {
-            $raw = $json | ConvertFrom-Json
-            return @($raw | ForEach-Object {
-                [pscustomobject]@{
-                    Key         = $_.key
-                    DisplayName = $_.display
-                    Description = $_.description
-                    Linux       = if ($_.linux) { $_.linux } else { $null }
-                    Macos       = if ($_.macos) { $_.macos } else { $null }
-                    Windows     = if ($_.windows) { $_.windows } else { $null }
-                }
-            })
-        }
+    $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
+    $json = $null
+    try {
+        $json = Run-Python -ScriptPath $pythonScript -ScriptArgs @("json") 2>$null
+    } catch {}
+    if ($json) {
+        $raw = $json | ConvertFrom-Json
+        return @($raw | ForEach-Object {
+            [pscustomobject]@{
+                Key         = $_.key
+                DisplayName = $_.display
+                Description = $_.description
+                Linux       = if ($_.linux) { $_.linux } else { $null }
+                Macos       = if ($_.macos) { $_.macos } else { $null }
+                Windows     = if ($_.windows) { $_.windows } else { $null }
+            }
+        })
     }
+
+    if (-not $script:OptionalDependencySpecsCache) {
+        $null = Get-OptionalDependencySpecs
+    }
+
     # Fallback: return filtered (applicable only) specs
     return $script:OptionalDependencySpecsCache
 }
@@ -327,49 +345,76 @@ function Test-OptionalDependencySelected {
     return $script:SelectedOptionalKeys -contains $Key
 }
 
-function Test-OptionalDependencyPresent {
+function Get-OptionalDependencyCommandNames {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Key
     )
 
     switch ($Key) {
-        "wget" { return [bool](Get-Command wget -ErrorAction SilentlyContinue) }
-        "git" { return [bool](Get-Command git -ErrorAction SilentlyContinue) }
-        "wezterm" { return [bool](Get-Command wezterm -ErrorAction SilentlyContinue) }
-        "zsh" { return [bool](Get-Command zsh -ErrorAction SilentlyContinue) }
-        "nvim" { return [bool](Get-Command nvim -ErrorAction SilentlyContinue) }
-        "oh-my-posh" { return [bool](Get-Command oh-my-posh -ErrorAction SilentlyContinue) }
-        "node" { return [bool](Get-Command node -ErrorAction SilentlyContinue) }
-        "choco" { return [bool](Get-Command choco -ErrorAction SilentlyContinue) }
-        "gsudo" { return [bool](Get-Command gsudo -ErrorAction SilentlyContinue) }
-        "rg" { return [bool](Get-Command rg -ErrorAction SilentlyContinue) }
-        "fd" { return [bool](Get-Command fd -ErrorAction SilentlyContinue) }
-        "direnv" { return [bool](Get-Command direnv -ErrorAction SilentlyContinue) }
-        "fzf" { return [bool](Get-Command fzf -ErrorAction SilentlyContinue) }
-        "bat" { return [bool](Get-Command bat -ErrorAction SilentlyContinue) }
-        "delta" { return [bool](Get-Command delta -ErrorAction SilentlyContinue) }
-        "glow" { return [bool](Get-Command glow -ErrorAction SilentlyContinue) }
-        "gum" { return [bool](Get-Command gum -ErrorAction SilentlyContinue) }
-        "zoxide" { return [bool](Get-Command zoxide -ErrorAction SilentlyContinue) }
-        "q" { return [bool](Get-Command q -ErrorAction SilentlyContinue) }
-        "eza" { return [bool](Get-Command eza -ErrorAction SilentlyContinue) }
-        "yazi" { return [bool](Get-Command yazi -ErrorAction SilentlyContinue) }
-        "ffmpeg" { return [bool](Get-Command ffmpeg -ErrorAction SilentlyContinue) }
-        "jq" { return [bool](Get-Command jq -ErrorAction SilentlyContinue) }
-        "p7zip" { return [bool](Get-Command 7z -ErrorAction SilentlyContinue) }
-        "poppler" { return [bool](Get-Command pdftotext -ErrorAction SilentlyContinue) }
-        "uv" { return [bool](Get-Command uv -ErrorAction SilentlyContinue) }
-        "python3" { return [bool](Get-Command python -ErrorAction SilentlyContinue) -or [bool](Get-Command python3 -ErrorAction SilentlyContinue) }
-        "bw" { return [bool](Get-Command bw -ErrorAction SilentlyContinue) }
-        "pnpm" { return [bool](Get-Command pnpm -ErrorAction SilentlyContinue) }
-        "autoconf" { return [bool](Get-Command autoconf -ErrorAction SilentlyContinue) }
-        "fc-cache" { return [bool](Get-Command fc-cache -ErrorAction SilentlyContinue) }
-        "cargo" { return [bool](Get-Command cargo -ErrorAction SilentlyContinue) }
-        "dua" { return [bool](Get-Command dua -ErrorAction SilentlyContinue) }
-        "k" { return [bool](Get-Command k -ErrorAction SilentlyContinue) }
-        default { return $false }
+        "wget" { return @("wget") }
+        "git" { return @("git") }
+        "wezterm" { return @("wezterm") }
+        "zsh" { return @("zsh") }
+        "nvim" { return @("nvim") }
+        "oh-my-posh" { return @("oh-my-posh") }
+        "posh-git" { return @() }
+        "psfzf" { return @() }
+        "node" { return @("node") }
+        "choco" { return @("choco") }
+        "gsudo" { return @("gsudo") }
+        "rg" { return @("rg") }
+        "fd" { return @("fd") }
+        "direnv" { return @("direnv") }
+        "fzf" { return @("fzf") }
+        "bat" { return @("bat") }
+        "delta" { return @("delta") }
+        "glow" { return @("glow") }
+        "gum" { return @("gum") }
+        "zoxide" { return @("zoxide") }
+        "q" { return @("q") }
+        "eza" { return @("eza") }
+        "yazi" { return @("yazi") }
+        "ffmpeg" { return @("ffmpeg") }
+        "jq" { return @("jq") }
+        "p7zip" { return @("7z") }
+        "poppler" { return @("pdftotext") }
+        "uv" { return @("uv") }
+        "python3" { return @("python", "python3") }
+        "bw" { return @("bw") }
+        "pnpm" { return @("pnpm") }
+        "autoconf" { return @("autoconf") }
+        "fc-cache" { return @("fc-cache") }
+        "cargo" { return @("cargo") }
+        "dua" { return @("dua") }
+        "k" { return @("k") }
+        default { return @() }
     }
+}
+
+function Test-OptionalDependencyPresent {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Key
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Key)) {
+        return $false
+    }
+
+    if ($Key -eq "posh-git") {
+        return [bool](Get-Module -ListAvailable -Name posh-git)
+    }
+    if ($Key -eq "psfzf") {
+        return [bool](Get-Module -ListAvailable -Name PSFzf)
+    }
+
+    $commandNames = @(Get-OptionalDependencyCommandNames -Key $Key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($commandNames.Count -eq 0) {
+        return $false
+    }
+
+    return Test-AnyCommand -Names $commandNames
 }
 
 function Invoke-SelectedOptionalDependency {
@@ -418,7 +463,9 @@ function Ensure-GumForDependencySelector {
 
 function Select-OptionalDependenciesWithoutGum {
     $allPresent = $true
-    $available = @(Get-OptionalDependencySpecs | Where-Object { -not (Test-OptionalDependencyPresent -Key $_.Key) })
+    $available = @(Get-OptionalDependencySpecs | Where-Object {
+        -not [string]::IsNullOrWhiteSpace($_.Key) -and -not (Test-OptionalDependencyPresent -Key $_.Key)
+    })
 
     if ($available.Count -eq 0) {
         Write-Information "All optional dependencies are already present." -InformationAction Continue
@@ -457,6 +504,9 @@ function Select-OptionalDependenciesWithGum {
     }
 
     $options = foreach ($spec in Get-OptionalDependencySpecs) {
+        if ([string]::IsNullOrWhiteSpace($spec.Key)) {
+            continue
+        }
         if (Test-OptionalDependencyPresent -Key $spec.Key) {
             continue
         }
@@ -772,6 +822,11 @@ function Test-AnyCommand {
         if (Get-Command $name -ErrorAction SilentlyContinue) {
             return $true
         }
+        if ($IsWindows -and -not $name.EndsWith(".exe")) {
+            if (Get-Command "$name.exe" -ErrorAction SilentlyContinue) {
+                return $true
+            }
+        }
     }
 
     return $false
@@ -950,6 +1005,82 @@ function Install-PnpmIfMissing {
     return $false
 }
 
+function Install-PoshGitIfMissing {
+    if (Get-Module -ListAvailable -Name posh-git) {
+        Add-DependencySummary "posh-git: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install posh-git from the PowerShell Gallery?")) {
+        Add-DependencySummary "posh-git: skipped"
+        return $false
+    }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Install-Module posh-git -Scope CurrentUser -Force"
+        Add-DependencySummary "posh-git: install preview via PowerShell Gallery"
+        return $false
+    }
+
+    try {
+        $nuget = Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue
+        if (-not $nuget) {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
+        }
+
+        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+        Install-Module posh-git -Scope CurrentUser -Force -AllowClobber
+    } catch {
+        Write-Output $_
+    }
+
+    if (Get-Module -ListAvailable -Name posh-git) {
+        Add-DependencySummary "posh-git: installed via PowerShell Gallery"
+        return $true
+    }
+
+    Add-DependencySummary "posh-git: install attempted"
+    return $false
+}
+
+function Install-PSFzfIfMissing {
+    if (Get-Module -ListAvailable -Name PSFzf) {
+        Add-DependencySummary "psfzf: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install PSFzf from the PowerShell Gallery?")) {
+        Add-DependencySummary "psfzf: skipped"
+        return $false
+    }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Install-Module PSFzf -Scope CurrentUser -Force"
+        Add-DependencySummary "psfzf: install preview via PowerShell Gallery"
+        return $false
+    }
+
+    try {
+        $nuget = Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue
+        if (-not $nuget) {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
+        }
+
+        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+        Install-Module PSFzf -Scope CurrentUser -Force -AllowClobber
+    } catch {
+        Write-Output $_
+    }
+
+    if (Get-Module -ListAvailable -Name PSFzf) {
+        Add-DependencySummary "psfzf: installed via PowerShell Gallery"
+        return $true
+    }
+
+    Add-DependencySummary "psfzf: install attempted"
+    return $false
+}
+
 function Install-BitwardenCliIfMissing {
     if (Get-Command bw -ErrorAction SilentlyContinue) {
         Add-DependencySummary "bw: present"
@@ -1053,6 +1184,8 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "zsh" -Action { Write-Warning "zsh is not natively supported on Windows; use WSL or a custom build." }
     $null = Invoke-SelectedOptionalDependency -Key "nvim" -Action { Install-PackageIfMissing -CommandNames @("nvim") -WingetId "Neovim.Neovim" -Description "Neovim" -SummaryName "nvim" }
     $null = Invoke-SelectedOptionalDependency -Key "oh-my-posh" -Action { Install-PackageIfMissing -CommandNames @("oh-my-posh") -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh" -SummaryName "oh-my-posh" }
+    $null = Invoke-SelectedOptionalDependency -Key "posh-git" -Action { Install-PoshGitIfMissing }
+    $null = Invoke-SelectedOptionalDependency -Key "psfzf" -Action { Install-PSFzfIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "node" -Action { Install-PackageIfMissing -CommandNames @("node") -WingetId "OpenJS.NodeJS.LTS" -Description "Node.js LTS" -SummaryName "node" }
 
     $needsChocolatey = Test-OptionalDependencySelected -Key "choco"
@@ -1232,11 +1365,12 @@ function Invoke-Install {
 Start-SetupLogging
 try {
     $allPresent = $false
+    $requestedDependencyKeys = @($DependencyKeys | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
-    if ($DependencyKeys.Count -gt 0) {
+    if ($requestedDependencyKeys.Count -gt 0) {
         # Validate against ALL specs (including platform-inapplicable ones)
-        $allKeys = @((Get-AllOptionalDependencySpecs).Key)
-        foreach ($key in $DependencyKeys) {
+        $allKeys = @((Get-AllOptionalDependencySpecs).Key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        foreach ($key in $requestedDependencyKeys) {
             if ($allKeys -notcontains $key) {
                 $suggestion = Get-ClosestSuggestion -InputText $key -Candidates $allKeys
                 if ($suggestion) {
@@ -1251,7 +1385,7 @@ try {
                 Write-Information "Note: $key is not applicable on $platform; skipping." -InformationAction Continue
             }
         }
-        $script:SelectedOptionalKeys = @($DependencyKeys)
+        $script:SelectedOptionalKeys = @($requestedDependencyKeys)
         $InstallOptionalMode = "always"
     } elseif ($Command -eq "deps") {
         if (-not (Test-Interactive)) {

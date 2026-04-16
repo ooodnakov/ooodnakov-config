@@ -14,6 +14,7 @@ $SetupScript = Join-Path $PSScriptRoot "setup.ps1"
 $GenerateLockScript = Join-Path $PSScriptRoot "generate-dependency-lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update-pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render-secrets.py"
+$AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
 $KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
 $KnownShellSubcommands = @("forgit-aliases", "typo-handling")
 $KnownShellForgitModes = @("plain", "forgit", "status")
@@ -25,12 +26,12 @@ $TypoHandlingVar = "OOODNAKOV_TYPO_HANDLING_MODE"
 
 # Run a Python script, preferring `uv run` when available.
 function Run-Python {
-    param([string]$ScriptPath, [string[]]$Args)
+    param([string]$ScriptPath, [string[]]$ScriptArgs)
     $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
     if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
-        & uv run $ScriptPath @Args
+        & uv run $ScriptPath @ScriptArgs
     } else {
-        & python3 $ScriptPath @Args
+        & python3 $ScriptPath @ScriptArgs
     }
 }
 
@@ -109,7 +110,7 @@ function Set-LocalOverrideLine {
             continue
         }
 
-        if ($inBlock -and ($line -match "^export $([regex]::Escape($VariableName))=" -or $line -match "^\`$env:$([regex]::Escape($VariableName)) = ")) {
+        if ($inBlock -and ($line -match ("^export " + [regex]::Escape($VariableName) + "=") -or $line -match ('^\$env:' + [regex]::Escape($VariableName) + ' = '))) {
             if (-not $inserted) {
                 $result.Add($ReplacementLine)
                 $inserted = $true
@@ -313,28 +314,33 @@ function Get-EditDistance {
         [string]$Right
     )
 
-    $rows = $Left.Length + 1
-    $cols = $Right.Length + 1
-    $dist = New-Object 'int[,]' $rows, $cols
+    $Left = [string]$Left
+    $Right = [string]$Right
 
-    for ($i = 0; $i -lt $rows; $i++) {
-        $dist[$i, 0] = $i
-    }
-    for ($j = 0; $j -lt $cols; $j++) {
-        $dist[0, $j] = $j
+    $rightLength = $Right.Length
+    $previous = New-Object int[] ($rightLength + 1)
+    for ($j = 0; $j -le $rightLength; $j++) {
+        $previous[$j] = $j
     }
 
-    for ($i = 1; $i -lt $rows; $i++) {
-        for ($j = 1; $j -lt $cols; $j++) {
-            $cost = if ($Left[$i - 1] -ceq $Right[$j - 1]) { 0 } else { 1 }
-            $deletion = $dist[$i - 1, $j] + 1
-            $insertion = $dist[$i, $j - 1] + 1
-            $substitution = $dist[$i - 1, $j - 1] + $cost
-            $dist[$i, $j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
+    for ($i = 1; $i -le $Left.Length; $i++) {
+        $current = New-Object int[] ($rightLength + 1)
+        $current[0] = $i
+        $leftChar = $Left.Substring($i - 1, 1)
+
+        for ($j = 1; $j -le $rightLength; $j++) {
+            $rightChar = $Right.Substring($j - 1, 1)
+            $cost = if ($leftChar -ceq $rightChar) { 0 } else { 1 }
+            $deletion = $previous[$j] + 1
+            $insertion = $current[$j - 1] + 1
+            $substitution = $previous[$j - 1] + $cost
+            $current[$j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
         }
+
+        $previous = $current
     }
 
-    return $dist[$rows - 1, $cols - 1]
+    return $previous[$rightLength]
 }
 
 function Get-CommandSuggestion {
@@ -346,11 +352,12 @@ function Get-CommandSuggestion {
     $bestCommand = $null
     $bestDistance = [int]::MaxValue
 
-    foreach ($candidate in $KnownCommands) {
-        $distance = Get-EditDistance -Left $InputCommand -Right $candidate
+    foreach ($candidate in @($KnownCommands | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
+        $candidateText = [string]$candidate
+        $distance = Get-EditDistance -Left $InputCommand -Right $candidateText
         if ($distance -lt $bestDistance) {
             $bestDistance = $distance
-            $bestCommand = $candidate
+            $bestCommand = $candidateText
         }
     }
 
@@ -373,11 +380,12 @@ function Get-SuggestionFromList {
     $bestMatch = $null
     $bestDistance = [int]::MaxValue
 
-    foreach ($candidate in $Candidates) {
-        $distance = Get-EditDistance -Left $InputValue -Right $candidate
+    foreach ($candidate in @($Candidates | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
+        $candidateText = [string]$candidate
+        $distance = Get-EditDistance -Left $InputValue -Right $candidateText
         if ($distance -lt $bestDistance) {
             $bestDistance = $distance
-            $bestMatch = $candidate
+            $bestMatch = $candidateText
         }
     }
 
@@ -830,16 +838,16 @@ switch ($command) {
         if ($dryRunRequested) {
             throw "--dry-run is not supported for lock"
         }
-        Run-Python -ScriptPath $GenerateLockScript -Args @remaining
+        Run-Python -ScriptPath $GenerateLockScript -ScriptArgs $remaining
     }
     "update-pins" {
         if ($dryRunRequested) {
             throw "--dry-run is not supported for update-pins"
         }
-        Run-Python -ScriptPath $UpdatePinsScript -Args @remaining
+        Run-Python -ScriptPath $UpdatePinsScript -ScriptArgs $remaining
     }
     "secrets" {
-        Run-Python -ScriptPath $RenderSecretsScript -Args @("--repo-root", $RepoRoot) + @remaining
+        Run-Python -ScriptPath $RenderSecretsScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
     }
     "shell" {
         Invoke-ShellCommand -ShellArgs $remaining

@@ -15,6 +15,7 @@ $OooconfCommands = @(
     'remove',
     'lock',
     'update-pins',
+    'agents',
     'shell',
     'secrets',
     'help',
@@ -50,12 +51,20 @@ $OooconfSecretsSubcommands = @(
 )
 
 $OooconfShellSubcommands = @(
-    'forgit-aliases'
+    'forgit-aliases',
+    'typo-handling'
 )
 
 $OooconfForgitAliasModes = @(
     'plain',
     'forgit',
+    'status'
+)
+
+$OooconfTypoHandlingModes = @(
+    'silent',
+    'suggest',
+    'help',
     'status'
 )
 
@@ -158,11 +167,18 @@ function Get-OooconfCompleter {
         if ($subcommand -eq 'forgit-aliases') {
             return $OooconfForgitAliasModes | Where-Object { $_ -like "$WordToComplete*" }
         }
+        if ($subcommand -eq 'typo-handling') {
+            return $OooconfTypoHandlingModes | Where-Object { $_ -like "$WordToComplete*" }
+        }
     }
 
     # update-pins options
     if ($command -eq 'update-pins') {
         return @('--apply') | Where-Object { $_ -like "$WordToComplete*" }
+    }
+
+    if ($command -eq 'agents') {
+        return @('detect', 'sync', 'doctor', '--json', '--check', '--strict-config-paths') | Where-Object { $_ -like "$WordToComplete*" }
     }
 
     # install, deps, update global options

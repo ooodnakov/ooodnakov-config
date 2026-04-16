@@ -23,12 +23,127 @@ if (Test-Path $LocalEnv) {
     . $LocalEnv
 }
 
+if (Get-Module -ListAvailable -Name posh-git) {
+    Import-Module posh-git -ErrorAction SilentlyContinue
+
+    function Set-PoshGitStatus {
+        $global:GitStatus = Get-GitStatus
+        $env:POSH_GIT_STRING = Write-GitStatus -Status $global:GitStatus
+    }
+
+    New-Alias -Name Set-PoshContext -Value Set-PoshGitStatus -Scope Global -Force
+}
+
+if (Get-Module -ListAvailable -Name PSFzf) {
+    Import-Module PSFzf -ErrorAction SilentlyContinue
+}
+
 if (Get-Module -ListAvailable -Name PSReadLine) {
     Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
     Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
+
+    if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+        $psFzfArgs = @{
+            PSReadlineChordProvider       = 'Ctrl+t'
+            PSReadlineChordReverseHistory = 'Ctrl+r'
+            TabExpansion                  = $true
+            GitKeyBindings                = $true
+        }
+
+        if (Get-Command fd -ErrorAction SilentlyContinue) {
+            $psFzfArgs.EnableFd = $true
+        }
+
+        Set-PsFzfOption @psFzfArgs
+    }
 }
 
 Set-Alias ll Get-ChildItem
+
+function gs {
+    git status @args
+}
+
+function gst {
+    git status @args
+}
+
+function gc {
+    git commit -v @args
+}
+
+function gp {
+    git push @args
+}
+
+function gl {
+    git pull @args
+}
+
+function Test-AnyCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Names
+    )
+
+    foreach ($name in $Names) {
+        if (Get-Command $name -ErrorAction SilentlyContinue) {
+            return $true
+        }
+        if (-not $name.EndsWith(".exe") -and (Get-Command "$name.exe" -ErrorAction SilentlyContinue)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Invoke-ForgitOrGit {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$ForgitNames,
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$GitFallback
+    )
+
+    foreach ($name in $ForgitNames) {
+        if (Get-Command $name -ErrorAction SilentlyContinue) {
+            & $name @args
+            return
+        }
+    }
+
+    & $GitFallback
+}
+
+$forgitMode = $env:OOODNAKOV_FORGIT_ALIAS_MODE ?? "plain"
+$forgitAvailable = (Test-AnyCommand -Names @("forgit", "forgit_log", "forgit_diff", "forgit_checkout"))
+
+if ($forgitMode -eq "forgit" -and $forgitAvailable) {
+    function gd {
+        Invoke-ForgitOrGit -ForgitNames @("forgit_diff") -GitFallback { git diff @args }
+    }
+
+    function gco {
+        Invoke-ForgitOrGit -ForgitNames @("forgit_checkout") -GitFallback { git checkout @args }
+    }
+
+    function glo {
+        Invoke-ForgitOrGit -ForgitNames @("forgit_log", "forgit") -GitFallback { git log --oneline --graph --decorate --all @args }
+    }
+} else {
+    function gd {
+        git diff @args
+    }
+
+    function gco {
+        git checkout @args
+    }
+
+    function glo {
+        git log --oneline --graph --decorate --all @args
+    }
+}
 
 function Test-Command {
     param(
