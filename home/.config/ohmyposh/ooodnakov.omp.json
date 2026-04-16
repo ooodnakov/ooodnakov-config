@@ -16,9 +16,9 @@
           "background": "#3a3a3a",
           "foreground": "#00afff",
           "style": "plain",
-          "template": "\u2502 {{ .Icon }} {{ .Path }} ",
+          "template": "\u2502 {{ .Path }} ",
           "properties": {
-            "style": "full",
+            "style": "folder",
             "folder_icon": "\uf07c",
             "home_icon": "\uf015"
           },
