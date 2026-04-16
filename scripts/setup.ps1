@@ -602,6 +602,84 @@ function Stop-SetupLogging {
     }
 }
 
+
+function Invoke-ActionWithSpinner {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Description,
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Action,
+        [object[]]$ArgumentList = @()
+    )
+
+    if ($DryRun) {
+        Write-Output "[dry-run] $Description"
+        return $true
+    }
+
+    $interactive = Test-Interactive
+
+    if (-not $interactive) {
+        Write-Output "[-] $Description..."
+    } else {
+        Write-Host "[-] $Description..." -NoNewline
+    }
+
+    $ps = [PowerShell]::Create()
+
+    $null = $ps.AddScript("`$env:PATH = '$($env:PATH -replace "'", "''")';")
+
+    $null = $ps.AddScript($Action)
+    if ($ArgumentList.Count -gt 0) {
+        foreach ($arg in $ArgumentList) {
+            $null = $ps.AddArgument($arg)
+        }
+    }
+
+    $asyncResult = $ps.BeginInvoke()
+    $frames = @("-", "", "|", "/")
+    $i = 0
+    while (-not $asyncResult.IsCompleted) {
+        if ($interactive) {
+            Write-Host "`r[$($frames[$i])] $Description..." -NoNewline
+            $i = ($i + 1) % $frames.Length
+            Start-Sleep -Milliseconds 120
+        } else {
+            Start-Sleep -Milliseconds 1000
+        }
+    }
+
+    try {
+        $results = $ps.EndInvoke($asyncResult)
+        $hadErrors = $ps.Streams.Error.Count -gt 0
+        foreach ($err in $ps.Streams.Error) {
+            Write-Output "Error: $err"
+        }
+    } catch {
+        $hadErrors = $true
+        Write-Output $_
+    } finally {
+        $ps.Dispose()
+    }
+
+    if (-not $hadErrors) {
+        if ($interactive) {
+            Write-Host "`r[ok] $Description                            "
+        } else {
+            Write-Output "`r[ok] $Description"
+        }
+        return $true
+    } else {
+        if ($interactive) {
+            Write-Host "`r[failed] $Description                        "
+        } else {
+            Write-Output "`r[failed] $Description"
+        }
+        Add-Failure $Description
+        return $false
+    }
+}
+
 function Invoke-Action {
     param(
         [Parameter(Mandatory = $true)]
@@ -835,9 +913,26 @@ function Test-AnyCommand {
 }
 
 function Install-Chocolatey {
+    if (-not $DryRun) {
+        if (Test-Interactive) {
+            Write-Host "[-] Checking choco..." -NoNewline
+        }
+    }
+
     if (Get-Command choco -ErrorAction SilentlyContinue) {
+        if (-not $DryRun) {
+            if (Test-Interactive) {
+                Write-Host "`r[ok] choco is present.             "
+            } else {
+                Write-Output "[ok] choco is present."
+            }
+        }
         Add-DependencySummary "choco: present"
         return $true
+    }
+
+    if (-not $DryRun -and (Test-Interactive)) {
+        Write-Host "`r" -NoNewline
     }
 
     if (-not (Confirm-Install "Install Chocolatey for optional Windows CLI packages?")) {
@@ -881,9 +976,26 @@ function Install-PackageIfMissing {
         [string]$SummaryName
     )
 
+    if (-not $DryRun) {
+        if (Test-Interactive) {
+            Write-Host "[-] Checking $SummaryName..." -NoNewline
+        }
+    }
+
     if (Test-AnyCommand -Names $CommandNames) {
+        if (-not $DryRun) {
+            if (Test-Interactive) {
+                Write-Host "`r[ok] $SummaryName is present.             "
+            } else {
+                Write-Output "[ok] $SummaryName is present."
+            }
+        }
         Add-DependencySummary "${SummaryName}: present"
         return $true
+    }
+
+    if (-not $DryRun -and (Test-Interactive)) {
+        Write-Host "`r" -NoNewline
     }
 
     if ($WingetId -and (Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -894,11 +1006,10 @@ function Install-PackageIfMissing {
                 return $false
             }
 
-            try {
-                winget install --exact --id $WingetId --accept-package-agreements --accept-source-agreements
-            } catch {
-                Write-Output $_
-            }
+            Invoke-ActionWithSpinner -Description "Installing $Description via winget" -Action {
+                param($wid)
+                winget install --exact --id $wid --accept-package-agreements --accept-source-agreements --silent | Out-Null
+            } -ArgumentList $WingetId
 
             if (Test-AnyCommand -Names $CommandNames) {
                 Add-DependencySummary "${SummaryName}: installed via winget"
@@ -921,11 +1032,10 @@ function Install-PackageIfMissing {
                 return $false
             }
 
-            try {
-                choco install $ChocoId -y
-            } catch {
-                Write-Output $_
-            }
+            Invoke-ActionWithSpinner -Description "Installing $Description via choco" -Action {
+                param($cid)
+                choco install $cid -y | Out-Null
+            } -ArgumentList $ChocoId
 
             if (Test-AnyCommand -Names $CommandNames) {
                 Add-DependencySummary "${SummaryName}: installed via choco"
@@ -945,9 +1055,26 @@ function Install-PackageIfMissing {
 }
 
 function Install-PnpmIfMissing {
+    if (-not $DryRun) {
+        if (Test-Interactive) {
+            Write-Host "[-] Checking pnpm..." -NoNewline
+        }
+    }
+
     if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+        if (-not $DryRun) {
+            if (Test-Interactive) {
+                Write-Host "`r[ok] pnpm is present.             "
+            } else {
+                Write-Output "[ok] pnpm is present."
+            }
+        }
         Add-DependencySummary "pnpm: present"
         return $true
+    }
+
+    if (-not $DryRun -and (Test-Interactive)) {
+        Write-Host "`r" -NoNewline
     }
 
     if (-not (Confirm-Install "Install pnpm package manager?")) {
@@ -975,12 +1102,11 @@ function Install-PnpmIfMissing {
             return $false
         }
 
-        try {
-            & corepack enable --install-directory $pnpmHome pnpm
-            & corepack prepare "pnpm@$PnpmVersion" --activate
-        } catch {
-            Write-Output $_
-        }
+        Invoke-ActionWithSpinner -Description "Installing pnpm@$PnpmVersion via corepack" -Action {
+            param($homeDir, $version)
+            corepack enable --install-directory $homeDir pnpm | Out-Null
+            corepack prepare "pnpm@$version" --activate | Out-Null
+        } -ArgumentList $pnpmHome, $PnpmVersion
     } elseif (Get-Command npm -ErrorAction SilentlyContinue) {
         if ($DryRun) {
             Write-Output "[dry-run] npm install --global pnpm@$PnpmVersion --prefix $pnpmHome"
@@ -988,11 +1114,10 @@ function Install-PnpmIfMissing {
             return $false
         }
 
-        try {
-            & npm install --global "pnpm@$PnpmVersion" --prefix $pnpmHome
-        } catch {
-            Write-Output $_
-        }
+        Invoke-ActionWithSpinner -Description "Installing pnpm@$PnpmVersion via npm" -Action {
+            param($homeDir, $version)
+            npm install --global "pnpm@$version" --prefix $homeDir | Out-Null
+        } -ArgumentList $pnpmHome, $PnpmVersion
     } else {
         Add-DependencySummary "pnpm: missing (requires corepack or npm)"
         return $false
@@ -1030,8 +1155,10 @@ function Install-PoshGitIfMissing {
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
         }
 
-        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
-        Install-Module posh-git -Scope CurrentUser -Force -AllowClobber
+        Invoke-ActionWithSpinner -Description "Installing posh-git via PowerShell Gallery" -Action {
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+            Install-Module posh-git -Scope CurrentUser -Force -AllowClobber | Out-Null
+        }
     } catch {
         Write-Output $_
     }
@@ -1068,8 +1195,10 @@ function Install-PSFzfIfMissing {
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
         }
 
-        Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
-        Install-Module PSFzf -Scope CurrentUser -Force -AllowClobber
+        Invoke-ActionWithSpinner -Description "Installing PSFzf via PowerShell Gallery" -Action {
+            Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+            Install-Module PSFzf -Scope CurrentUser -Force -AllowClobber | Out-Null
+        }
     } catch {
         Write-Output $_
     }
@@ -1084,9 +1213,26 @@ function Install-PSFzfIfMissing {
 }
 
 function Install-BitwardenCliIfMissing {
+    if (-not $DryRun) {
+        if (Test-Interactive) {
+            Write-Host "[-] Checking bw..." -NoNewline
+        }
+    }
+
     if (Get-Command bw -ErrorAction SilentlyContinue) {
+        if (-not $DryRun) {
+            if (Test-Interactive) {
+                Write-Host "`r[ok] bw is present.             "
+            } else {
+                Write-Output "[ok] bw is present."
+            }
+        }
         Add-DependencySummary "bw: present"
         return $true
+    }
+
+    if (-not $DryRun -and (Test-Interactive)) {
+        Write-Host "`r" -NoNewline
     }
 
     if (-not (Confirm-Install "Install Bitwarden CLI from the official native executable archive?")) {
@@ -1141,9 +1287,26 @@ function Install-BitwardenCliIfMissing {
 }
 
 function Install-CargoIfMissing {
+    if (-not $DryRun) {
+        if (Test-Interactive) {
+            Write-Host "[-] Checking cargo..." -NoNewline
+        }
+    }
+
     if (Get-Command cargo -ErrorAction SilentlyContinue) {
+        if (-not $DryRun) {
+            if (Test-Interactive) {
+                Write-Host "`r[ok] cargo is present.             "
+            } else {
+                Write-Output "[ok] cargo is present."
+            }
+        }
         Add-DependencySummary "cargo: present"
         return $true
+    }
+
+    if (-not $DryRun -and (Test-Interactive)) {
+        Write-Host "`r" -NoNewline
     }
 
     if (-not (Confirm-Install "Install Rust and cargo via rustup?")) {

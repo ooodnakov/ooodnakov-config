@@ -449,9 +449,22 @@ install_gum_package() {
 maybe_install_gum() {
   local manager="$1"
 
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking gum...\r" > /dev/tty
+  fi
+
   if command -v gum >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] gum is present.             \n" > /dev/tty
+    else
+      printf "[ok] gum is present.\n"
+    fi
     DEPENDENCY_SUMMARY+=("gum: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   if [ "$manager" = "none" ]; then
@@ -729,9 +742,22 @@ maybe_install_dependency() {
   local package_name="$3"
   local description="$4"
 
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking %s...\r" "$command_name" > /dev/tty
+  fi
+
   if command -v "$command_name" >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] %s is present.             \n" "$command_name" > /dev/tty
+    else
+      printf "[ok] %s is present.\n" "$command_name"
+    fi
     DEPENDENCY_SUMMARY+=("$command_name: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   if [ "$manager" = "none" ]; then
@@ -935,9 +961,22 @@ maybe_note_dependency() {
 maybe_install_eza() {
   local manager="$1"
 
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking eza...\r" > /dev/tty
+  fi
+
   if command -v eza >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] eza is present.             \n" > /dev/tty
+    else
+      printf "[ok] eza is present.\n"
+    fi
     DEPENDENCY_SUMMARY+=("eza: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   case "$manager" in
@@ -999,9 +1038,22 @@ setup_wezterm_apt_repo() {
 maybe_install_wezterm() {
   local manager="$1"
 
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking wezterm...\r" > /dev/tty
+  fi
+
   if command -v wezterm >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] wezterm is present.             \n" > /dev/tty
+    else
+      printf "[ok] wezterm is present.\n"
+    fi
     DEPENDENCY_SUMMARY+=("wezterm: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   case "$manager" in
@@ -1077,9 +1129,22 @@ setup_q_apt_repo() {
 maybe_install_q() {
   local manager="$1"
 
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking q...\r" > /dev/tty
+  fi
+
   if command -v q >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] q is present.             \n" > /dev/tty
+    else
+      printf "[ok] q is present.\n"
+    fi
     DEPENDENCY_SUMMARY+=("q: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   case "$manager" in
@@ -1114,9 +1179,22 @@ maybe_install_p7zip() {
   local manager="$1"
   local package_name="p7zip"
 
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking p7zip...\r" > /dev/tty
+  fi
+
   if command -v 7z >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] p7zip is present.             \n" > /dev/tty
+    else
+      printf "[ok] p7zip is present.\n"
+    fi
     DEPENDENCY_SUMMARY+=("p7zip: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   case "$manager" in
@@ -1131,9 +1209,22 @@ maybe_install_poppler() {
   local manager="$1"
   local package_name="poppler"
 
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking poppler...\r" > /dev/tty
+  fi
+
   if command -v pdftotext >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] poppler is present.             \n" > /dev/tty
+    else
+      printf "[ok] poppler is present.\n"
+    fi
     DEPENDENCY_SUMMARY+=("poppler: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   case "$manager" in
@@ -1145,9 +1236,22 @@ maybe_install_poppler() {
 }
 
 maybe_install_uv() {
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking uv...\r" > /dev/tty
+  fi
+
   if command -v uv >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] uv is present.             \n" > /dev/tty
+    else
+      printf "[ok] uv is present.\n"
+    fi
     DEPENDENCY_SUMMARY+=("uv: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   if ! prompt_yes_no "Install uv for Python package manager (official installer)?"; then
@@ -1690,9 +1794,22 @@ run_doctor() {
 }
 
 maybe_install_cargo() {
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "[-] Checking cargo...\r" > /dev/tty
+  fi
+
   if command -v cargo >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+      printf "\r[ok] cargo is present.             \n" > /dev/tty
+    else
+      printf "[ok] cargo is present.\n"
+    fi
     DEPENDENCY_SUMMARY+=("cargo: present")
     return 0
+  fi
+
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    printf "\r" > /dev/tty
   fi
 
   if ! prompt_yes_no "Install Rust and cargo via rustup (official installer)?"; then
