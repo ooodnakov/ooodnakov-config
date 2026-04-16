@@ -14,8 +14,8 @@ $SetupScript = Join-Path $PSScriptRoot "setup.ps1"
 $GenerateLockScript = Join-Path $PSScriptRoot "generate-dependency-lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update-pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render-secrets.py"
-<<<<<<< HEAD
-$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
+$AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
+$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
 $KnownShellSubcommands = @("forgit-aliases", "typo-handling")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
@@ -26,12 +26,12 @@ $TypoHandlingVar = "OOODNAKOV_TYPO_HANDLING_MODE"
 
 # Run a Python script, preferring `uv run` when available.
 function Run-Python {
-    param([string]$ScriptPath, [string[]]$Args)
+    param([string]$ScriptPath, [string[]]$ScriptArgs)
     $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
     if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
-        & uv run $ScriptPath @Args
+        & uv run $ScriptPath @ScriptArgs
     } else {
-        & python3 $ScriptPath @Args
+        & python3 $ScriptPath @ScriptArgs
     }
 }
 
@@ -110,7 +110,7 @@ function Set-LocalOverrideLine {
             continue
         }
 
-        if ($inBlock -and ($line -match "^export $([regex]::Escape($VariableName))=" -or $line -match "^\$env:$([regex]::Escape($VariableName)) = ")) {
+        if ($inBlock -and ($line -match ("^export " + [regex]::Escape($VariableName) + "=") -or $line -match ('^\$env:' + [regex]::Escape($VariableName) + ' = '))) {
             if (-not $inserted) {
                 $result.Add($ReplacementLine)
                 $inserted = $true
@@ -389,9 +389,6 @@ function Get-SuggestionFromList {
 
     return $null
 }
-=======
-$AgentsToolScript = Join-Path $PSScriptRoot "agents-tool.py"
->>>>>>> ce51ca7 (Revert top-tools and add Cursor agent CLI detection)
 
 function Get-Version {
     if (Get-Command git -ErrorAction SilentlyContinue) {
@@ -430,7 +427,6 @@ Global options:
       --print-repo-root print the resolved repo root and exit
 
 Commands:
-<<<<<<< HEAD
   Setup:
     install               apply managed config and optional dependency installs
     deps                  install optional dependencies only
@@ -444,6 +440,7 @@ Commands:
   Manage State:
     lock                  regenerate dependency lock artifacts from pinned refs
     update-pins           compare/update pinned refs and refresh lock artifacts
+    agents                detect/sync/doctor AGENTS.md common policy blocks
 
   Shell:
     shell                 manage local shell preferences such as forgit aliases
@@ -482,19 +479,6 @@ Common workflows:
 
   # Update to latest config:
   oooconf update
-=======
-  install               run setup install
-  deps                  install optional dependencies only
-  update                run setup update
-  doctor                run setup doctor
-  dry-run               run setup install --dry-run
-  lock                  regenerate dependency lock artifacts
-  update-pins           check/update pinned refs and refresh lock artifacts
-  agents                detect/sync/doctor AGENTS.md common policy blocks
-  secrets               sync or validate local secret env files
-  help [command]        show general or command-specific help
-  version               show CLI version information
->>>>>>> ce51ca7 (Revert top-tools and add Cursor agent CLI detection)
 
 Repo root:
   `$RepoRoot
@@ -845,16 +829,16 @@ switch ($command) {
         if ($dryRunRequested) {
             throw "--dry-run is not supported for lock"
         }
-        Run-Python -ScriptPath $GenerateLockScript -Args @remaining
+        Run-Python -ScriptPath $GenerateLockScript -ScriptArgs $remaining
     }
     "update-pins" {
         if ($dryRunRequested) {
             throw "--dry-run is not supported for update-pins"
         }
-        Run-Python -ScriptPath $UpdatePinsScript -Args @remaining
+        Run-Python -ScriptPath $UpdatePinsScript -ScriptArgs $remaining
     }
     "secrets" {
-        Run-Python -ScriptPath $RenderSecretsScript -Args @("--repo-root", $RepoRoot) + @remaining
+        Run-Python -ScriptPath $RenderSecretsScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
     }
     "shell" {
         Invoke-ShellCommand -ShellArgs $remaining

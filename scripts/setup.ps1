@@ -39,12 +39,12 @@ $ValidSetupCommands = @("install", "update", "doctor", "deps")
 
 # Run a Python script, preferring `uv run` when available.
 function Run-Python {
-    param([string]$ScriptPath, [string[]]$Args)
+    param([string]$ScriptPath, [string[]]$ScriptArgs)
     $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
     if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
-        & uv run $ScriptPath @Args
+        & uv run $ScriptPath @ScriptArgs
     } else {
-        & python3 $ScriptPath @Args
+        & python3 $ScriptPath @ScriptArgs
     }
 }
 
@@ -211,7 +211,7 @@ function Get-OptionalDependencySpecs {
     $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
     $json = $null
     try {
-        $json = Run-Python -ScriptPath $pythonScript -Args @("json") 2>$null
+        $json = Run-Python -ScriptPath $pythonScript -ScriptArgs @("json") 2>$null
     } catch {
     }
 
@@ -292,7 +292,7 @@ function Get-AllOptionalDependencySpecs {
         $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
         $json = $null
         try {
-            $json = Run-Python -ScriptPath $pythonScript -Args @("json") 2>$null
+            $json = Run-Python -ScriptPath $pythonScript -ScriptArgs @("json") 2>$null
         } catch {}
         if ($json) {
             $raw = $json | ConvertFrom-Json

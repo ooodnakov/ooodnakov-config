@@ -30,6 +30,40 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
 
 Set-Alias ll Get-ChildItem
 
+function gs {
+    git status @args
+}
+
+function gst {
+    git status @args
+}
+
+function gc {
+    git commit -v @args
+}
+
+function gp {
+    git push @args
+}
+
+function gl {
+    git pull @args
+}
+
+if (($env:OOODNAKOV_FORGIT_ALIAS_MODE ?? "plain") -eq "plain") {
+    function gd {
+        git diff @args
+    }
+
+    function gco {
+        git checkout @args
+    }
+
+    function glo {
+        git log --oneline --graph --decorate --all @args
+    }
+}
+
 function Test-Command {
     param(
         [Parameter(Mandatory = $true)]
