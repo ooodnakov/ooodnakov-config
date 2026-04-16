@@ -5,23 +5,23 @@ setopt hist_ignore_dups
 setopt share_history
 setopt auto_cd
 
-alias l="ls --hyperlink=auto -lAhrtF"
-alias a="eza -la --git --colour-scale all -g --smart-group --icons always"
-alias aa="eza -la --git --colour-scale all -g --smart-group --icons always -s modified -r"
+alias l="ls -lAhrtF"
+alias a="eza -lah --git --colour-scale all -g --smart-group --icons always --hyperlinks"
+alias aa="a -s modified -r"
 alias e="exit"
 alias ip="ip --color=auto"
 alias myip="wget -qO- https://wtfismyip.com/text"
 
 # Git aliases
-alias gs="git status"
-alias gc="git commit -v"
-alias gp="git push"
-alias gl="git pull"
 
 case "${OOODNAKOV_FORGIT_ALIAS_MODE:-plain}" in
   forgit)
     ;;
   *)
+    alias gs="git status"
+    alias gc="git commit -v"
+    alias gp="git push"
+    alias gl="git pull"
     alias gd="git diff"
     alias gco="git checkout"
     alias glo="git log --oneline --graph --decorate --all"
