@@ -15,7 +15,7 @@ $GenerateLockScript = Join-Path $PSScriptRoot "generate_dependency_lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
 $AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
-$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "bootstrap", "delete", "remove", "check", "preview", "upgrade")
+$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
 $KnownShellSubcommands = @("forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
@@ -94,6 +94,40 @@ function Get-UiIcon {
     return $UiAscii[$Name]
 }
 
+function Get-UiCommandIcon {
+    param([Parameter(Mandatory = $true)][string]$Name)
+    if (Test-UiNerdFont) {
+        return switch ($Name) {
+            "install" { [char]::ConvertFromUtf32(0xF05E0) }
+            "deps" { [char]::ConvertFromUtf32(0xF03D6) }
+            "update" { [char]::ConvertFromUtf32(0xF06B0) }
+            "doctor" { [char]::ConvertFromUtf32(0xF04D9) }
+            "dry-run" { [char]::ConvertFromUtf32(0xF0709) }
+            "version" { [char]::ConvertFromUtf32(0xF0386) }
+            "lock" { [char]::ConvertFromUtf32(0xF033E) }
+            "update-pins" { [char]::ConvertFromUtf32(0xF1962) }
+            "shell" { [char]::ConvertFromUtf32(0xF1183) }
+            "secrets" { [char]::ConvertFromUtf32(0xF082E) }
+            "agents" { [char]::ConvertFromUtf32(0xF0B79) }
+            default { [char]::ConvertFromUtf32(0xF060D) }
+        }
+    }
+    return switch ($Name) {
+        "install" { "[inst]" }
+        "deps" { "[deps]" }
+        "update" { "[up]" }
+        "doctor" { "[doc]" }
+        "dry-run" { "[dry]" }
+        "version" { "[ver]" }
+        "lock" { "[lock]" }
+        "update-pins" { "[pins]" }
+        "shell" { "[sh]" }
+        "secrets" { "[sec]" }
+        "agents" { "[agt]" }
+        default { "[cmd]" }
+    }
+}
+
 function Format-UiText {
     param(
         [Parameter(Mandatory = $true)][string]$Text,
@@ -107,6 +141,8 @@ function Format-UiText {
         "warn" { $UiAnsi.Warn }
         "fail" { $UiAnsi.Fail }
         "info" { $UiAnsi.Info }
+        "hint" { $UiAnsi.Muted }
+        "muted" { $UiAnsi.Muted }
         default { $UiAnsi.Muted }
     }
     $prefix = if ($Bold) { "$($UiAnsi.Bold)$color" } else { $color }
@@ -126,10 +162,49 @@ function Write-UiSection {
     param([Parameter(Mandatory = $true)][string]$Title)
     $icon = Format-UiText -Text (Get-UiIcon "section") -Role "section" -Bold
     $heading = Format-UiText -Text $Title -Role "section" -Bold
-    $ruleChar = "-"
+    $ruleChar = if (Test-UiNerdFont) { [char]0x2500 } else { "-" }
     $rule = Format-UiText -Text ($ruleChar * ($Title.Length + 3)) -Role "muted"
     Write-Output "$icon $heading"
     Write-Output $rule
+}
+
+function Write-UiCommandRow {
+    param(
+        [Parameter(Mandatory = $true)][string]$CommandName,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+    $paddedIcon = (Get-UiCommandIcon $CommandName).PadRight(6)
+    $iconText = Format-UiText -Text $paddedIcon -Role "hint"
+    $paddedCommand = $CommandName.PadRight(16)
+    $commandText = Format-UiText -Text $paddedCommand -Role "info"
+    $descriptionText = Format-UiText -Text $Description -Role "muted"
+    Write-Output ("    " + $iconText + " " + $commandText + " " + $descriptionText)
+}
+
+function Write-UiHelpBlock {
+    param(
+        [Parameter(Mandatory = $true)][string]$Text
+    )
+
+    foreach ($line in ($Text -split "`r?`n")) {
+        switch -Regex ($line) {
+            '^Usage:' {
+                Write-Output (Format-UiText -Text $line -Role "section")
+                continue
+            }
+            '^(Examples:|Environment overrides:|Subcommands:|Forgit alias modes:|Typo handling modes:|PSFzf options:)$' {
+                Write-Output (Format-UiText -Text $line -Role "info")
+                continue
+            }
+            '^\s{2}(oooconf|OOODNAKOV_)' {
+                Write-Output (Format-UiText -Text $line -Role "hint")
+                continue
+            }
+            default {
+                Write-Output $line
+            }
+        }
+    }
 }
 
 function Get-ShellConfigHome {
@@ -608,49 +683,50 @@ function Get-Version {
 
 function Show-Usage {
     Write-UiSection "oooconf"
-    @"
-Usage: oooconf [global options] <command> [command options]
-
-oooconf - reproducible cross-platform dotfiles manager
-Global options:
+    Write-Output "Usage: oooconf [global options] <command> [command options]"
+    Write-Output ""
+    Write-Output (Format-UiText -Text "oooconf — reproducible cross-platform dotfiles manager" -Role "section")
+    Write-Output (Format-UiText -Text "Global options:" -Role "info")
+@"
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
-Commands:
-  Setup:
-    install               apply managed config and optional dependency installs
-    deps                  install optional dependencies only
-    update                pull repo with --ff-only, then re-run install
-  Inspect & Validate:
-    doctor                validate managed symlinks and required commands
-    dry-run               preview install flow without mutating filesystem
-    version               print CLI version and repo root
-  Manage State:
-    lock                  regenerate dependency lock artifacts from pinned refs
-    update-pins           compare/update pinned refs and refresh lock artifacts
-    agents                detect/sync/doctor AGENTS.md common policy blocks
-  Shell:
-    shell                 manage local shell preferences such as forgit aliases
-  Secrets:
-    secrets               sync or validate local secret env files
+"@ | Write-Output
+    Write-Output ""
+    Write-Output (Format-UiText -Text "Commands:" -Role "info")
+    Write-Output ("  " + (Format-UiText -Text "Setup:" -Role "hint"))
+    Write-UiCommandRow -CommandName "install" -Description "apply managed config and optional dependency installs"
+    Write-UiCommandRow -CommandName "deps" -Description "install optional dependencies only"
+    Write-UiCommandRow -CommandName "update" -Description "pull repo with --ff-only, then re-run install"
+    Write-Output ("  " + (Format-UiText -Text "Inspect & Validate:" -Role "hint"))
+    Write-UiCommandRow -CommandName "doctor" -Description "validate managed symlinks and required commands"
+    Write-UiCommandRow -CommandName "dry-run" -Description "preview install flow without mutating filesystem"
+    Write-UiCommandRow -CommandName "version" -Description "print CLI version and repo root"
+    Write-Output ("  " + (Format-UiText -Text "Manage State:" -Role "hint"))
+    Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
+    Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
+    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor AGENTS.md common policy blocks"
+    Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
+    Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
+    Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
+    @"
 Aliases:
   check -> doctor
   preview -> dry-run
   upgrade -> update
 Note:
-  bootstrap, delete, and remove commands are available in the Unix
-  version only. On Windows, use setup.ps1 directly for bootstrap,
-  and manual cleanup for delete/remove scenarios.
+  bootstrap, delete, and remove are Unix-only in this wrapper.
+  On Windows, run `scripts/setup.ps1 install` for initial setup.
 Getting help:
   oooconf --help                     show this message
   oooconf help <command>             show command-specific help
   oooconf help secrets               show secrets subcommand help
 Common workflows:
-  # Initial setup on a new machine:
-  oooconf bootstrap
+  # Initial setup on Windows:
+  ./scripts/setup.ps1 install
   # Preview what install would do:
   oooconf dry-run
   # Apply config and install dependencies:
@@ -662,7 +738,7 @@ Common workflows:
   oooconf update
 Repo root:
   `$RepoRoot
-"@
+"@ | Write-Output
 }
 
 function Show-CommandUsage {
@@ -674,7 +750,7 @@ function Show-CommandUsage {
     Write-UiSection "oooconf $CommandName"
     switch ($CommandName) {
         "install" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf install [--dry-run] [--yes-optional]
 
 Apply managed config and optional dependency installation.
@@ -688,7 +764,7 @@ Examples:
 "@
         }
         "deps" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf deps [--dry-run] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
@@ -702,7 +778,7 @@ Examples:
 "@
         }
         "update" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf update [--dry-run] [--yes-optional]
 
 Pull the repo with --ff-only, then re-run the install flow.
@@ -715,7 +791,7 @@ Examples:
 "@
         }
         "doctor" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf doctor
 
 Validate managed symlinks and required commands.
@@ -726,7 +802,7 @@ Examples:
 "@
         }
         "dry-run" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf dry-run
 
 Preview the install flow without mutating the filesystem.
@@ -738,7 +814,7 @@ Examples:
 "@
         }
         "lock" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf lock
 
 Regenerate dependency lock artifacts from pinned refs in setup scripts.
@@ -749,7 +825,7 @@ Examples:
 "@
         }
         "update-pins" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf update-pins [--apply]
 
 Compare pinned git refs to upstream HEAD and refresh lock artifacts.
@@ -761,7 +837,7 @@ Examples:
 "@
         }
         "agents" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf agents <detect|sync|doctor> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
@@ -772,7 +848,7 @@ Subcommands:
 "@
         }
         "secrets" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> [options]
 
 Render or validate local secret env files from the tracked template.
@@ -800,7 +876,7 @@ Environment overrides:
 "@
         }
         "version" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf version
 
 Print the CLI version (git describe or commit SHA) and resolved repo root.
@@ -810,7 +886,7 @@ Examples:
 "@
         }
         "shell" {
-            @"
+            Write-UiHelpBlock @"
 Usage: oooconf shell forgit-aliases [plain|forgit|status]
        oooconf shell typo-handling [silent|suggest|help|status]
        oooconf shell psfzf-tab [enabled|disabled|status]

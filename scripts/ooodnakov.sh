@@ -27,7 +27,13 @@ ui_is_interactive() {
 }
 
 ui_use_nerd_font() {
-  [ "${OOOCONF_ASCII:-0}" != "1" ] && ui_is_interactive
+  if [ "${OOOCONF_ASCII:-0}" = "1" ] || ! ui_is_interactive; then
+    return 1
+  fi
+  case "$(ui_stdout_charmap)" in
+    utf-8|utf8) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 ui_use_color() {
@@ -36,6 +42,16 @@ ui_use_color() {
     1|true|always) return 0 ;;
   esac
   [ -z "${NO_COLOR:-}" ] && ui_is_interactive
+}
+
+ui_stdout_charmap() {
+  local map
+  map="$(locale charmap 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+  if [ -n "$map" ]; then
+    printf '%s\n' "$map"
+    return 0
+  fi
+  printf '%s\n' "unknown"
 }
 
 ui_icon() {
@@ -49,6 +65,47 @@ ui_icon() {
     hint) printf '→' ;;
     *) printf '•' ;;
   esac
+}
+
+ui_cmd_icon() {
+  local name="$1"
+  if ui_use_nerd_font; then
+    case "$name" in
+      bootstrap) printf '󰌠' ;;
+      install) printf '󰗠' ;;
+      deps) printf '󰏖' ;;
+      update) printf '󰚰' ;;
+      doctor) printf '󰓙' ;;
+      dry-run) printf '󰜉' ;;
+      version) printf '󰎆' ;;
+      delete) printf '󰩺' ;;
+      remove) printf '󱈸' ;;
+      lock) printf '󰌾' ;;
+      update-pins) printf '󱥂' ;;
+      shell) printf '󱆃' ;;
+      secrets) printf '󰠮' ;;
+      agents) printf '󰭹' ;;
+      *) printf '󰘍' ;;
+    esac
+  else
+    case "$name" in
+      bootstrap) printf '[boot]' ;;
+      install) printf '[inst]' ;;
+      deps) printf '[deps]' ;;
+      update) printf '[up]' ;;
+      doctor) printf '[doc]' ;;
+      dry-run) printf '[dry]' ;;
+      version) printf '[ver]' ;;
+      delete) printf '[del]' ;;
+      remove) printf '[rm]' ;;
+      lock) printf '[lock]' ;;
+      update-pins) printf '[pins]' ;;
+      shell) printf '[sh]' ;;
+      secrets) printf '[sec]' ;;
+      agents) printf '[agt]' ;;
+      *) printf '[cmd]' ;;
+    esac
+  fi
 }
 
 ui_colorize() {
@@ -89,6 +146,39 @@ ui_section() {
   ui_line section "$title"
   ui_colorize muted "$(printf '%*s' "$((${#title}+3))" '' | tr ' ' "$rule_char")"
   printf '\n'
+}
+
+ui_command_row() {
+  local command_name="$1"
+  local description="$2"
+  local icon_text command_text description_text padded_command padded_icon
+
+  padded_icon="$(printf '%-6s' "$(ui_cmd_icon "$command_name")")"
+  icon_text="$(ui_colorize "hint" "$padded_icon")"
+  padded_command="$(printf '%-16s' "$command_name")"
+  command_text="$(ui_colorize "info" "$padded_command")"
+  description_text="$(ui_colorize "muted" "$description")"
+  printf '    %s %s %s\n' "$icon_text" "$command_text" "$description_text"
+}
+
+ui_render_help_block() {
+  local line
+  while IFS= read -r line; do
+    case "$line" in
+      Usage:*)
+        printf '%s\n' "$(ui_colorize "section" "$line")"
+        ;;
+      Examples:|Environment\ overrides:|Subcommands:|Global\ options:|Mode\ values:|Aliases:|Getting\ help:|Common\ workflows:|Repo\ root:)
+        printf '%s\n' "$(ui_colorize "info" "$line")"
+        ;;
+      "  oooconf "*|"  OOODNAKOV_"*|"  eval \"\$(oooconf "*)
+        printf '%s\n' "$(ui_colorize "hint" "$line")"
+        ;;
+      *)
+        printf '%s\n' "$line"
+        ;;
+    esac
+  done
 }
 
 # Run a Python script, preferring `uv run` (which uses the pinned .python-version
@@ -624,38 +714,37 @@ print_version() {
 
 usage() {
   ui_section "oooconf"
+  printf '%s\n\n' "Usage: oooconf [global options] <command> [command options]"
+  printf '%s\n' "$(ui_colorize "section" "oooconf — reproducible cross-platform dotfiles manager" )"
+  printf '%s\n' "$(ui_colorize "info" "Global options:" )"
   cat <<EOF
-Usage: oooconf [global options] <command> [command options]
-
-oooconf — reproducible cross-platform dotfiles manager
-Global options:
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
-Commands:
-  Setup:
-    bootstrap             clone/update repo then run install
-    install               apply managed config and optional dependency installs
-    deps                  install optional dependencies only
-    update                pull repo with --ff-only, then re-run install
-  Inspect & Validate:
-    doctor                validate managed symlinks and required commands
-    dry-run               preview install flow without mutating filesystem
-    version               print CLI version and repo root
-  Manage State:
-    delete                remove managed links and restore latest backups
-    remove                remove managed links only (no backup restore)
-    lock                  regenerate dependency lock artifacts from pinned refs
-    update-pins           compare/update pinned refs and refresh lock artifacts
-  Shell:
-    shell                 manage local shell preferences such as forgit aliases
-  Secrets:
-    secrets               sync or validate local secret env files
-  Agents:
-    agents                detect/sync/doctor AGENTS.md shared policy sections
+EOF
+  printf '\n%s\n' "$(ui_colorize "info" "Commands:")"
+  printf '  %s\n' "$(ui_colorize "hint" "Setup:")"
+  ui_command_row "bootstrap" "clone/update repo then run install"
+  ui_command_row "install" "apply managed config and optional dependency installs"
+  ui_command_row "deps" "install optional dependencies only"
+  ui_command_row "update" "pull repo with --ff-only, then re-run install"
+  printf '  %s\n' "$(ui_colorize "hint" "Inspect & Validate:")"
+  ui_command_row "doctor" "validate managed symlinks and required commands"
+  ui_command_row "dry-run" "preview install flow without mutating filesystem"
+  ui_command_row "version" "print CLI version and repo root"
+  printf '  %s\n' "$(ui_colorize "hint" "Manage State:")"
+  ui_command_row "delete" "remove managed links and restore latest backups"
+  ui_command_row "remove" "remove managed links only (no backup restore)"
+  ui_command_row "lock" "regenerate dependency lock artifacts from pinned refs"
+  ui_command_row "update-pins" "compare/update pinned refs and refresh lock artifacts"
+  printf '  %s\n' "$(ui_colorize "hint" "Shell / Secrets / Agents:")"
+  ui_command_row "shell" "manage local shell preferences such as forgit aliases"
+  ui_command_row "secrets" "sync or validate local secret env files"
+  ui_command_row "agents" "detect/sync/doctor AGENTS.md shared policy sections"
+  cat <<EOF
 Aliases:
   check -> doctor
   preview -> dry-run
@@ -688,7 +777,7 @@ command_usage() {
 
   case "$command" in
     bootstrap)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf bootstrap
 
 Clone or update the configured repo checkout, then run the install flow.
@@ -706,7 +795,7 @@ Examples:
 EOF
       ;;
     install)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf install [--dry-run] [--yes-optional]
 
 Apply managed config and optional dependency installation.
@@ -720,7 +809,7 @@ Examples:
 EOF
       ;;
     deps)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf deps [--dry-run] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
@@ -734,7 +823,7 @@ Examples:
 EOF
       ;;
     update)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf update [--dry-run] [--yes-optional]
 
 Pull the repo with --ff-only, then re-run the install flow.
@@ -747,7 +836,7 @@ Examples:
 EOF
       ;;
     doctor)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf doctor
 
 Validate managed symlinks and required commands.
@@ -758,7 +847,7 @@ Examples:
 EOF
       ;;
     dry-run)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf dry-run
 
 Preview the install flow without mutating the filesystem.
@@ -770,7 +859,7 @@ Examples:
 EOF
       ;;
     delete)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf delete
 
 Remove managed links and restore the latest backups when available.
@@ -781,7 +870,7 @@ Examples:
 EOF
       ;;
     remove)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf remove
 
 Remove managed links without restoring backups.
@@ -792,7 +881,7 @@ Examples:
 EOF
       ;;
     lock)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf lock
 
 Regenerate dependency lock artifacts from pinned refs in setup scripts.
@@ -803,7 +892,7 @@ Examples:
 EOF
       ;;
     update-pins)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf update-pins [--apply]
 
 Compare pinned git refs to upstream HEAD and refresh lock artifacts.
@@ -815,7 +904,7 @@ Examples:
 EOF
       ;;
     agents)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf agents <detect|sync|doctor> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
@@ -827,7 +916,7 @@ Subcommands:
 EOF
       ;;
     secrets)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> [options]
 
 Render or validate local secret env files from the tracked template.
@@ -858,7 +947,7 @@ EOF
       handle_shell_command help
       ;;
     version)
-      cat <<'EOF'
+      cat <<'EOF' | ui_render_help_block
 Usage: oooconf version
 
 Print the CLI version (git describe or commit SHA) and resolved repo root.
