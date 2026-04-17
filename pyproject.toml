@@ -18,5 +18,5 @@ line-length = 120
 extend-exclude = ["third_party"]
 
 [tool.ruff.lint]
-select = ["E", "F"]
+select = ["E", "F", "I"]
 ignore = ["E501"]
