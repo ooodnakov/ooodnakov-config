@@ -69,3 +69,11 @@ jobs:
             }
             Write-Host "[ok] Parsed $script"
           }
+
+      - name: PowerShell CLI help smoke checks
+        shell: pwsh
+        run: |
+          ./scripts/ooodnakov.ps1 --help | Out-Null
+          ./scripts/ooodnakov.ps1 help secrets | Out-Null
+          ./scripts/ooodnakov.ps1 help shell | Out-Null
+          Write-Host "[ok] PowerShell oooconf help smoke checks"
