@@ -114,9 +114,10 @@ Changes should normally land in `home/` or `scripts/`, not by replacing active c
 
 Current validation focuses on:
 
-- shell syntax checks
-- `shellcheck`
-- PowerShell parser validation
-- lock artifact reproducibility
+- shell syntax checks on Linux and macOS
+- `shellcheck` on Linux and macOS
+- PowerShell parser validation on Windows
+- lock artifact reproducibility checks
+- cross-platform smoke checks for `oooconf install --dry-run`, `oooconf doctor` (expected failure on a fresh HOME), and `oooconf lock`
 
 When bootstrap or setup behavior changes, these checks should be updated alongside the relevant docs so the repo stays reproducible and explainable.

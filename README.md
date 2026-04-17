@@ -368,9 +368,8 @@ OOODNAKOV_WEZTERM_WORKSPACE=project-x OOODNAKOV_WEZTERM_CWD=$HOME/src/project-x 
 ## CI/CD
 
 - CI runs on pushes to `main` and pull requests
-- Unix scripts are checked with Bash syntax validation and `shellcheck`
-- lock artifacts are validated for reproducibility
-- `scripts/setup.ps1` and `scripts/ooodnakov.ps1` are parser-validated
+- Linux and macOS jobs run Bash syntax validation, `shellcheck`, lockfile reproducibility checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
+- Windows runs PowerShell parser validation plus `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
 - tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases
 
 ## Upstream and Audit References
