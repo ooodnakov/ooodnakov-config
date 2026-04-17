@@ -10,9 +10,15 @@ permissions:
   contents: read
 
 jobs:
-  unix-validation:
-    name: Unix validation
-    runs-on: ubuntu-latest
+  shell-validation:
+    name: Shell validation (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,8 +28,13 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install shellcheck
+      - name: Install shellcheck (Ubuntu)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Install shellcheck (macOS)
+        if: runner.os == 'macOS'
+        run: brew install shellcheck
 
       - name: Shell syntax checks
         run: |
@@ -42,12 +53,31 @@ jobs:
           python3 scripts/generate_dependency_lock.py
           git diff --exit-code deps.lock.json docs/dependency-lock.md
 
+      - name: Oooconf smoke tests (install --dry-run, doctor, lock)
+        run: |
+          bash scripts/ooodnakov.sh install --dry-run --yes-optional
+
+          TEMP_HOME="$(mktemp -d)"
+          set +e
+          HOME="$TEMP_HOME" XDG_CONFIG_HOME="$TEMP_HOME/.config" bash scripts/ooodnakov.sh doctor
+          doctor_status=$?
+          set -e
+          test "$doctor_status" -ne 0
+
+          bash scripts/ooodnakov.sh lock
+          git diff --exit-code deps.lock.json docs/dependency-lock.md
+
   powershell-validation:
-    name: PowerShell validation
+    name: PowerShell validation (windows-latest)
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
       - name: Validate PowerShell syntax
         shell: pwsh
@@ -70,10 +100,39 @@ jobs:
             Write-Host "[ok] Parsed $script"
           }
 
-      - name: PowerShell CLI help smoke checks
+      - name: Oooconf smoke tests (install --dry-run, doctor, lock)
         shell: pwsh
         run: |
-          ./scripts/ooodnakov.ps1 --help | Out-Null
-          ./scripts/ooodnakov.ps1 help secrets | Out-Null
-          ./scripts/ooodnakov.ps1 help shell | Out-Null
-          Write-Host "[ok] PowerShell oooconf help smoke checks"
+          ./scripts/ooodnakov.ps1 install --dry-run --yes-optional
+
+          $tempHome = Join-Path $env:RUNNER_TEMP "oooconf-smoke-home"
+          New-Item -ItemType Directory -Path $tempHome -Force | Out-Null
+
+          $previousHome = $env:HOME
+          $previousXdgConfigHome = $env:XDG_CONFIG_HOME
+          try {
+            $env:HOME = $tempHome
+            $env:XDG_CONFIG_HOME = Join-Path $tempHome ".config"
+
+            $doctorFailed = $false
+            try {
+              ./scripts/ooodnakov.ps1 doctor
+            } catch {
+              $doctorFailed = $true
+              Write-Host "[ok] doctor failed on fresh HOME as expected"
+            }
+
+            if (-not $doctorFailed) {
+              throw "Expected doctor to fail on fresh HOME, but it succeeded."
+            }
+          } finally {
+            $env:HOME = $previousHome
+            if ($null -eq $previousXdgConfigHome) {
+              Remove-Item Env:XDG_CONFIG_HOME -ErrorAction SilentlyContinue
+            } else {
+              $env:XDG_CONFIG_HOME = $previousXdgConfigHome
+            }
+          }
+
+          ./scripts/ooodnakov.ps1 lock
+          git diff --exit-code deps.lock.json docs/dependency-lock.md
