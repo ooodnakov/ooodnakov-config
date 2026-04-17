@@ -6,4 +6,17 @@ requires-python = ">=3.12"
 dependencies = []
 
 [tool.uv]
-# No third-party dependencies needed; stdlib-only scripts.
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.11",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = ["third_party"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]

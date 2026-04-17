@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Read scripts/optional-deps.toml and output in various formats for shell consumption."""
+
 from __future__ import annotations
 
 import sys
@@ -58,6 +59,7 @@ def output_catalog() -> None:
 def output_json() -> None:
     """Print JSON array for PowerShell or other consumers."""
     import json
+
     deps = _parse_toml_simple(TOML_PATH)
     result = []
     for d in deps:

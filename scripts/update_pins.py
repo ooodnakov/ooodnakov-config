@@ -84,9 +84,7 @@ def pin_check_markdown(rows: list[dict[str, str]]) -> str:
         "| --- | --- | --- | --- |",
     ]
     for row in rows:
-        lines.append(
-            f"| `{row['name'].lower()}` | `{row['status']}` | `{row['current']}` | `{row['latest']}` |"
-        )
+        lines.append(f"| `{row['name'].lower()}` | `{row['status']}` | `{row['current']}` | `{row['latest']}` |")
     lines.append("")
     return "\n".join(lines)
 

@@ -80,14 +80,14 @@ Do not treat `third_party/` as active config unless the user explicitly asks to 
 
 The project uses `uv` for Python version and dependency management.
 
-- `pyproject.toml`: Defines project metadata and (currently empty) dependencies.
+- `pyproject.toml`: Defines project metadata, dev tooling, and lint configuration.
 - `.python-version`: Pins the Python version (e.g., 3.12).
-- `uv.lock`: Ensures deterministic environment state.
 - Helper scripts (`scripts/*.sh`, `scripts/*.ps1`) use a `run_python` / `Run-Python` function that prefers `uv run` if available, ensuring they run with the correct Python version and environment.
+- `ruff` is configured in `pyproject.toml` and should be run via `uv run ruff check .`.
 - The virtual environment `.venv/` is ignored by git.
 
 When adding new Python dependencies:
-- Use `uv add <package>` to update `pyproject.toml` and `uv.lock`.
+- Use `uv add <package>` to update `pyproject.toml`.
 - Ensure scripts remain compatible with the pinned Python version.
 
 ## Upstream tracking
@@ -128,6 +128,14 @@ bash -n scripts/setup.sh
 ```
 
 If PowerShell setup changes and `pwsh` is available, validate those scripts too.
+
+After changing Python helper scripts or Python project configuration, validate:
+
+```bash
+uv run ruff check --select I --fix
+uv run ruff check
+uv run ruff format
+```
 
 After changing CLI help output or completions:
 
