@@ -83,7 +83,7 @@ The bootstrap scripts intentionally do not install every package manager package
 - Windows: `git`, `pwsh` if you want PowerShell Core
 - all platforms: `wezterm`, `oh-my-posh`
 
-Fonts are also manual for now. The tracked defaults assume a Nerd Font is installed, with `MesloLGS NF` preferred.
+Fonts are also manual for now. The tracked defaults assume a Nerd Font is installed, with `MesloLGSDZ Nerd Font Mono` preferred.
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.
 
 For Neovim, the Unix setup validates `nvim >= 0.11.0` for LazyVim. On Linux, if the distro package manager only provides an older version, setup installs the pinned official Neovim release tarball into the repo-managed XDG data tree and links `nvim` from there.
