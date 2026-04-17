@@ -68,7 +68,7 @@ return {
    window_decorations = "INTEGRATED_BUTTONS|RESIZE",
    window_background_opacity = 0.8,
    macos_window_background_blur = 30,
-   win32_system_backdrop = 'Acrylic',  
+   -- win32_system_backdrop = 'Acrylic',  
    inactive_pane_hsb = {
       saturation = 1,
       brightness = 1,

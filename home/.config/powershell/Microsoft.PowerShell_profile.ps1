@@ -11,8 +11,34 @@ if (Test-Path $LocalBin) {
     }
 }
 
+$CacheDir = Join-Path $ConfigRoot "cache"
+if (-not (Test-Path $CacheDir)) { New-Item -ItemType Directory -Path $CacheDir -ErrorAction SilentlyContinue }
+
+# Optimized Oh My Posh initialization
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    oh-my-posh init pwsh --config $PromptConfig | Invoke-Expression
+    $ompCache = Join-Path $CacheDir "oh-my-posh.ps1"
+    if (-not (Test-Path $ompCache) -or (Get-Item $PromptConfig).LastWriteTime -gt (Get-Item $ompCache).LastWriteTime) {
+        oh-my-posh init pwsh --config $PromptConfig > $ompCache
+    }
+    . $ompCache
+}
+
+# Optimized zoxide initialization
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+    $zoxideCache = Join-Path $CacheDir "zoxide.ps1"
+    if (-not (Test-Path $zoxideCache)) {
+        zoxide init powershell > $zoxideCache
+    }
+    . $zoxideCache
+}
+
+# Ensure Update-Venv runs on every prompt (handles cd, z, zi, etc.)
+# We do this AFTER oh-my-posh and zoxide have potentially wrapped the prompt
+$oldPrompt = $function:prompt
+function global:prompt {
+    Update-Venv
+    if ($oldPrompt) { & $oldPrompt }
+    else { "PS $($executionContext.SessionState.Path.CurrentLocation)$('>' * ($nestedPromptLevel + 1)) " }
 }
 
 if (Test-Path $SharedEnv) {
@@ -23,15 +49,15 @@ if (Test-Path $LocalEnv) {
     . $LocalEnv
 }
 
-if (Get-Module -ListAvailable -Name posh-git) {
+if ($null -ne (Get-Module -ListAvailable -Name posh-git)) {
     Import-Module posh-git -ErrorAction SilentlyContinue
 }
 
-if (Get-Module -ListAvailable -Name PSFzf) {
+if ($null -ne (Get-Module -ListAvailable -Name PSFzf)) {
     Import-Module PSFzf -ErrorAction SilentlyContinue
 }
 
-if (Get-Module -ListAvailable -Name PSReadLine) {
+if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
     Set-PSReadLineOption -PredictionSource HistoryAndPlugin
     Set-PSReadLineOption -PredictionViewStyle InlineView
@@ -42,7 +68,7 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
 
     Set-Alias oooconf oooconf.ps1 -ErrorAction SilentlyContinue
 
-    if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+    if ($null -ne (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue)) {
         $psFzfArgs = @{
             PSReadlineChordProvider       = 'Ctrl+t'
             PSReadlineChordReverseHistory = 'Ctrl+r'
@@ -50,7 +76,7 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
             GitKeyBindings                = ($env:OOODNAKOV_PSFZF_GIT -ne 'disabled')
         }
 
-        if (Get-Command fd -ErrorAction SilentlyContinue) {
+        if ($null -ne (Get-Command fd -ErrorAction SilentlyContinue)) {
             $psFzfArgs.EnableFd = $true
         }
         Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
@@ -222,3 +248,48 @@ function ipgeo {
     $ip = if ($IpAddress) { $IpAddress } else { (myip).ToString().Trim() }
     Invoke-RestMethod -Uri "http://api.db-ip.com/v2/free/$ip"
 }
+
+# Automatic Python Virtual Environment Activation
+function Update-Venv {
+    $current = Get-Item .
+    $venvPath = $null
+
+    # Search upwards for .venv\Scripts\Activate.ps1
+    while ($current) {
+        $check = Join-Path $current.FullName ".venv\Scripts\Activate.ps1"
+        if (Test-Path $check) {
+            $venvPath = Join-Path $current.FullName ".venv"
+            break
+        }
+        $current = $current.Parent
+    }
+
+    if ($venvPath) {
+        $venvFullName = (Get-Item $venvPath).FullName
+        if ($env:VIRTUAL_ENV -ne $venvFullName) {
+            . "$venvFullName\Scripts\Activate.ps1"
+        }
+    } elseif ($env:VIRTUAL_ENV) {
+        # Deactivate if no .venv is found in the current folder hierarchy
+        if (Get-Command deactivate -ErrorAction SilentlyContinue) {
+            deactivate
+        }
+    }
+}
+
+# Attach to Set-Location
+function Set-Location-With-Venv {
+    # If no arguments provided, default to HOME like standard cd
+    if ($args.Count -eq 0) {
+        Microsoft.PowerShell.Management\Set-Location $HOME
+    } else {
+        Microsoft.PowerShell.Management\Set-Location @args
+    }
+    Update-Venv
+}
+
+Set-Alias cd Set-Location-With-Venv -Option AllScope -Force
+Set-Alias sl Set-Location-With-Venv -Option AllScope -Force
+
+# Initial check
+Update-Venv
