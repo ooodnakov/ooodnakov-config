@@ -117,7 +117,7 @@ Current validation focuses on:
 - shell syntax checks on Linux and macOS
 - `shellcheck` on Linux and macOS
 - PowerShell parser validation on Windows
-- lock artifact reproducibility checks
+- lock artifact reproducibility checks on Linux and macOS
 - cross-platform smoke checks for `oooconf install --dry-run`, `oooconf doctor` (expected failure on a fresh HOME), and `oooconf lock`
 
 When bootstrap or setup behavior changes, these checks should be updated alongside the relevant docs so the repo stays reproducible and explainable.
