@@ -14,7 +14,6 @@ from pathlib import Path
 
 from cli_ui import bullet, section, status
 
-
 DEFAULT_TEMPLATE_RELATIVE_PATH = Path("home/.config/ooodnakov/secrets/env.template")
 DEFAULT_CONFIG_RELATIVE_PATH = Path(".config/ooodnakov")
 DEFAULT_LOCAL_RELATIVE_PATH = Path(".config/ooodnakov/local")
@@ -145,7 +144,7 @@ def parse_args() -> argparse.Namespace:
         help="Override the tracked template path.",
     )
 
-    logout = subparsers.add_parser("logout", help="Lock vault and revoke Bitwarden session.")
+    subparsers.add_parser("logout", help="Lock vault and revoke Bitwarden session.")
 
     add_parser = subparsers.add_parser("add", help="Add a secret entry to the tracked template.")
     add_parser.add_argument("key", help="Environment variable name (e.g. GITHUB_TOKEN).")
@@ -164,7 +163,11 @@ def parse_args() -> argparse.Namespace:
 
     argv = sys.argv[1:]
     normalized_argv, requested_command = normalize_subcommand_argv(argv)
-    if requested_command and requested_command not in SECRETS_SUBCOMMANDS and requested_command not in SECRETS_SUBCOMMAND_ALIASES:
+    if (
+        requested_command
+        and requested_command not in SECRETS_SUBCOMMANDS
+        and requested_command not in SECRETS_SUBCOMMAND_ALIASES
+    ):
         suggestion = suggest_subcommand(requested_command)
         if suggestion:
             parser.error(f"unknown command: {requested_command}\nDid you mean: {suggestion}")
@@ -271,20 +274,16 @@ def parse_bw_reference(reference: str) -> tuple[str, str]:
             "Use bw://item/<item-id>/(password|username|notes|uri|field/<field-name>)."
         )
 
-    remainder = reference[len(prefix):]
+    remainder = reference[len(prefix) :]
     parts = [part for part in remainder.split("/") if part]
     if len(parts) < 2:
-        raise ValueError(
-            f"invalid Bitwarden reference: {reference}. "
-            "Expected bw://item/<item-id>/<selector>."
-        )
+        raise ValueError(f"invalid Bitwarden reference: {reference}. Expected bw://item/<item-id>/<selector>.")
 
     item_id = parts[0]
     if parts[1] == "field":
         if len(parts) < 3:
             raise ValueError(
-                f"invalid Bitwarden field reference: {reference}. "
-                "Expected bw://item/<item-id>/field/<field-name>."
+                f"invalid Bitwarden field reference: {reference}. Expected bw://item/<item-id>/field/<field-name>."
             )
         selector = "field/" + "/".join(parts[2:])
     else:
@@ -325,7 +324,7 @@ def ensure_bw_unlocked(env: dict) -> None:
             ) from exc
 
     raise RuntimeError(
-        "BW_SESSION is not set. Unlock Bitwarden first, for example with `export BW_SESSION=\"$(bw unlock --raw)\"` "
+        'BW_SESSION is not set. Unlock Bitwarden first, for example with `export BW_SESSION="$(bw unlock --raw)"` '
         "or the PowerShell equivalent. "
         "Alternatively, set BW_CLIENTID, BW_CLIENTSECRET, and BW_PASSWORD for auto-unlock."
     )
@@ -365,9 +364,7 @@ def get_bw_status(env: dict | None = None) -> dict:
         stderr = exc.stderr.strip()
         raise RuntimeError(stderr or "`bw status` failed") from exc
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
-            f"`bw status` timed out after {BWH_CLI_TIMEOUT_SECONDS}s"
-        ) from exc
+        raise RuntimeError(f"`bw status` timed out after {BWH_CLI_TIMEOUT_SECONDS}s") from exc
 
     try:
         return json.loads(status_result.stdout)
@@ -391,9 +388,7 @@ def sync_bw_vault(env: dict) -> None:
     except FileNotFoundError as exc:
         raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
-            f"`bw sync` timed out after {BWH_CLI_TIMEOUT_SECONDS}s"
-        ) from exc
+        raise RuntimeError(f"`bw sync` timed out after {BWH_CLI_TIMEOUT_SECONDS}s") from exc
     except subprocess.CalledProcessError as exc:
         stderr = exc.stderr.strip()
         message = stderr or f"`{' '.join(command)}` failed"
@@ -419,9 +414,7 @@ def fetch_all_bw_items() -> list[dict]:
     except FileNotFoundError as exc:
         raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
-            f"timed out fetching Bitwarden items after {BWH_CLI_TIMEOUT_SECONDS}s"
-        ) from exc
+        raise RuntimeError(f"timed out fetching Bitwarden items after {BWH_CLI_TIMEOUT_SECONDS}s") from exc
     except subprocess.CalledProcessError as exc:
         stderr = exc.stderr.strip()
         message = stderr or f"`{' '.join(command)}` failed"
@@ -484,8 +477,7 @@ def read_bw_item(item_id: str, key: str, cache: dict[str, dict] | None = None) -
         raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
-            f"timed out resolving {key} from Bitwarden after {BWH_CLI_TIMEOUT_SECONDS}s "
-            f"(item {item_id})"
+            f"timed out resolving {key} from Bitwarden after {BWH_CLI_TIMEOUT_SECONDS}s (item {item_id})"
         ) from exc
     except subprocess.CalledProcessError as exc:
         stderr = exc.stderr.strip()
@@ -500,9 +492,9 @@ def read_bw_item(item_id: str, key: str, cache: dict[str, dict] | None = None) -
 
 def select_bw_value(item: dict, selector: str, key: str) -> str:
     if selector == "password":
-        value = ((item.get("login") or {}).get("password"))
+        value = (item.get("login") or {}).get("password")
     elif selector == "username":
-        value = ((item.get("login") or {}).get("username"))
+        value = (item.get("login") or {}).get("username")
     elif selector == "notes":
         value = item.get("notes")
     elif selector == "uri":
@@ -606,9 +598,7 @@ def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[t
             cache = build_item_cache(item_ids)
             missing_item_ids = item_ids - set(cache.keys())
             if missing_item_ids:
-                raise RuntimeError(
-                    format_missing_bw_references(missing_item_ids, references_by_item_id)
-                )
+                raise RuntimeError(format_missing_bw_references(missing_item_ids, references_by_item_id))
 
     resolved_entries: list[tuple[str, str]] = []
     total = len(entries)
@@ -967,7 +957,8 @@ def logout_command() -> int:
 
 def add_command(args: argparse.Namespace, repo_root: Path) -> int:
     import re
-    if not re.match(r'^[A-Za-z_][A-Za-z0-9_]*$', args.key):
+
+    if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", args.key):
         status("fail", f"Invalid key name: {args.key}. Use UPPER_SNAKE_CASE letters.")
         return 1
 

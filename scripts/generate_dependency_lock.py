@@ -32,11 +32,13 @@ def parse_setup_pins(text: str) -> list[dict[str, str]]:
         row = entries[name]
         if "repo" not in row or "ref" not in row:
             continue
-        pins.append({
-            "name": name.lower(),
-            "repo": row["repo"],
-            "ref": row["ref"],
-        })
+        pins.append(
+            {
+                "name": name.lower(),
+                "repo": row["repo"],
+                "ref": row["ref"],
+            }
+        )
     return pins
 
 

@@ -87,7 +87,9 @@ def parse_args() -> argparse.Namespace:
 
     sync_parser = subparsers.add_parser("sync", help="Append/update a managed common block in AGENTS.md files.")
     sync_parser.add_argument("--check", action="store_true", help="Validate only; do not write files.")
-    sync_parser.add_argument("--global", dest="global_sync", action="store_true", help="Also sync MCP servers to global agent configs.")
+    sync_parser.add_argument(
+        "--global", dest="global_sync", action="store_true", help="Also sync MCP servers to global agent configs."
+    )
 
     doctor_parser = subparsers.add_parser(
         "doctor", help="Validate AGENTS.md managed block and check common MCP/skills in agent config paths."
@@ -106,7 +108,9 @@ def resolve_repo_root(repo_root: str | None) -> Path:
 
 
 def resolve_config_path(repo_root: Path, config_override: str | None) -> Path:
-    return Path(config_override).expanduser().resolve() if config_override else (repo_root / DEFAULT_CONFIG_PATH).resolve()
+    return (
+        Path(config_override).expanduser().resolve() if config_override else (repo_root / DEFAULT_CONFIG_PATH).resolve()
+    )
 
 
 def load_config(path: Path) -> dict[str, Any]:
@@ -136,7 +140,7 @@ def read_json(repo_root: Path, relative_path: str) -> dict[str, Any]:
 
 def load_common_data(repo_root: Path, config: dict[str, Any], include_local: bool = True) -> dict[str, Any]:
     common_data = read_json(repo_root, config["common_data_file"])
-    
+
     if not include_local:
         return common_data
 
@@ -162,7 +166,7 @@ def load_common_data(repo_root: Path, config: dict[str, Any], include_local: boo
                 common_data["extensions"] = current_exts
         except Exception as exc:
             print(f"warning: failed to load local agent data: {exc}", file=sys.stderr)
-            
+
     return common_data
 
 
@@ -264,7 +268,7 @@ def render_markdown_block(common_text: str, common_data: dict[str, Any]) -> str:
     for name, config in sorted(mcp_servers.items()):
         desc = config.get("description", "No description")
         lines.append(f"- `{name}`: {desc}")
-        
+
     lines.extend(["", "## Common Skills", ""])
     lines.extend([f"- {skill}" for skill in skills_entries])
     lines.extend([MANAGED_END, ""])
@@ -404,7 +408,7 @@ def sync_global_configs(
             # Standard MCP injection (Claude/Gemini format)
             if "mcpServers" not in data:
                 data["mcpServers"] = {}
-            
+
             needs_update = False
             for name, config in mcp_servers.items():
                 if name not in data["mcpServers"]:
@@ -415,7 +419,7 @@ def sync_global_configs(
                     if "env" in config:
                         data["mcpServers"][name]["env"] = config["env"]
                     needs_update = True
-            
+
             if needs_update:
                 changed.append(existing)
                 if not check_only:
@@ -455,7 +459,7 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
         return 1
 
     changed_count, changed_files = sync_files(agent_files, managed_block_repo, check_only)
-    
+
     print_section("AGENTS Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
     print(f"Files scanned: {len(agent_files)}")
@@ -466,7 +470,7 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
         print("Changed repo files:")
         for file_path in changed_files:
             print(f"{icon('bullet')} {file_path}")
-    
+
     if global_sync:
         merged_data = load_common_data(repo_root, config, include_local=True)
         config_targets = parse_agent_targets(config["agent_configs"])
@@ -477,7 +481,7 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
         if g_files:
             for file_path in g_files:
                 print(f"{icon('bullet')} {file_path}")
-    
+
     if not changed_files and (not global_sync or not g_files):
         print("")
         print("All target files are up to date.")

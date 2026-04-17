@@ -6,6 +6,7 @@ tmp/
 
 # uv-managed virtual environment
 .venv/
+uv.lock
 
 # Python cache
 __pycache__/
