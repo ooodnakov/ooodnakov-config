@@ -16,7 +16,6 @@ if platform.is_win then
          args = { msys2_shell, '-defterm', '-here', '-no-start', '-ucrt64', '-shell', 'zsh' },
       },
       { label = 'PowerShell Core', args = { 'pwsh', '-NoLogo' } },
-      { label = 'PowerShell Desktop', args = { 'powershell' } },
       { label = 'Command Prompt', args = { 'cmd' } },
       { label = 'Nushell', args = { 'nu' } },
    }

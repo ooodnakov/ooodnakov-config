@@ -14,8 +14,8 @@ local options = {
 if platform.is_win then
    options.wsl_domains = {
       {
-         name = 'wsl:ubuntu-zsh',
-         distribution = 'Ubuntu',
+         name = 'WSL',
+         distribution = 'Ubuntu-24.04',
          username = 'user',
          default_cwd = '/home/user',
          default_prog = { 'zsh', '-l' },

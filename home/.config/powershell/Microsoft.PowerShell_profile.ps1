@@ -15,6 +15,19 @@ if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     oh-my-posh init pwsh --config $PromptConfig | Invoke-Expression
 }
 
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+    Invoke-Expression (& { (zoxide init powershell | Out-String) })
+}
+
+# Ensure Update-Venv runs on every prompt (handles cd, z, zi, etc.)
+# We do this AFTER oh-my-posh and zoxide have potentially wrapped the prompt
+$oldPrompt = $function:prompt
+function global:prompt {
+    Update-Venv
+    if ($oldPrompt) { & $oldPrompt }
+    else { "PS $($executionContext.SessionState.Path.CurrentLocation)$('>' * ($nestedPromptLevel + 1)) " }
+}
+
 if (Test-Path $SharedEnv) {
     . $SharedEnv
 }
@@ -222,3 +235,48 @@ function ipgeo {
     $ip = if ($IpAddress) { $IpAddress } else { (myip).ToString().Trim() }
     Invoke-RestMethod -Uri "http://api.db-ip.com/v2/free/$ip"
 }
+
+# Automatic Python Virtual Environment Activation
+function Update-Venv {
+    $current = Get-Item .
+    $venvPath = $null
+
+    # Search upwards for .venv\Scripts\Activate.ps1
+    while ($current) {
+        $check = Join-Path $current.FullName ".venv\Scripts\Activate.ps1"
+        if (Test-Path $check) {
+            $venvPath = Join-Path $current.FullName ".venv"
+            break
+        }
+        $current = $current.Parent
+    }
+
+    if ($venvPath) {
+        $venvFullName = (Get-Item $venvPath).FullName
+        if ($env:VIRTUAL_ENV -ne $venvFullName) {
+            . "$venvFullName\Scripts\Activate.ps1"
+        }
+    } elseif ($env:VIRTUAL_ENV) {
+        # Deactivate if no .venv is found in the current folder hierarchy
+        if (Get-Command deactivate -ErrorAction SilentlyContinue) {
+            deactivate
+        }
+    }
+}
+
+# Attach to Set-Location
+function Set-Location-With-Venv {
+    # If no arguments provided, default to HOME like standard cd
+    if ($args.Count -eq 0) {
+        Microsoft.PowerShell.Management\Set-Location $HOME
+    } else {
+        Microsoft.PowerShell.Management\Set-Location @args
+    }
+    Update-Venv
+}
+
+Set-Alias cd Set-Location-With-Venv -Option AllScope -Force
+Set-Alias sl Set-Location-With-Venv -Option AllScope -Force
+
+# Initial check
+Update-Venv
