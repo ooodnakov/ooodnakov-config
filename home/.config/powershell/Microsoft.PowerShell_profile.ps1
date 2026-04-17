@@ -11,12 +11,25 @@ if (Test-Path $LocalBin) {
     }
 }
 
+$CacheDir = Join-Path $ConfigRoot "cache"
+if (-not (Test-Path $CacheDir)) { New-Item -ItemType Directory -Path $CacheDir -ErrorAction SilentlyContinue }
+
+# Optimized Oh My Posh initialization
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    oh-my-posh init pwsh --config $PromptConfig | Invoke-Expression
+    $ompCache = Join-Path $CacheDir "oh-my-posh.ps1"
+    if (-not (Test-Path $ompCache) -or (Get-Item $PromptConfig).LastWriteTime -gt (Get-Item $ompCache).LastWriteTime) {
+        oh-my-posh init pwsh --config $PromptConfig > $ompCache
+    }
+    . $ompCache
 }
 
+# Optimized zoxide initialization
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    Invoke-Expression (& { (zoxide init powershell | Out-String) })
+    $zoxideCache = Join-Path $CacheDir "zoxide.ps1"
+    if (-not (Test-Path $zoxideCache)) {
+        zoxide init powershell > $zoxideCache
+    }
+    . $zoxideCache
 }
 
 # Ensure Update-Venv runs on every prompt (handles cd, z, zi, etc.)
@@ -36,15 +49,15 @@ if (Test-Path $LocalEnv) {
     . $LocalEnv
 }
 
-if (Get-Module -ListAvailable -Name posh-git) {
+if ($null -ne (Get-Module -ListAvailable -Name posh-git)) {
     Import-Module posh-git -ErrorAction SilentlyContinue
 }
 
-if (Get-Module -ListAvailable -Name PSFzf) {
+if ($null -ne (Get-Module -ListAvailable -Name PSFzf)) {
     Import-Module PSFzf -ErrorAction SilentlyContinue
 }
 
-if (Get-Module -ListAvailable -Name PSReadLine) {
+if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
     Set-PSReadLineOption -PredictionSource HistoryAndPlugin
     Set-PSReadLineOption -PredictionViewStyle InlineView
@@ -55,7 +68,7 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
 
     Set-Alias oooconf oooconf.ps1 -ErrorAction SilentlyContinue
 
-    if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+    if ($null -ne (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue)) {
         $psFzfArgs = @{
             PSReadlineChordProvider       = 'Ctrl+t'
             PSReadlineChordReverseHistory = 'Ctrl+r'
@@ -63,7 +76,7 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
             GitKeyBindings                = ($env:OOODNAKOV_PSFZF_GIT -ne 'disabled')
         }
 
-        if (Get-Command fd -ErrorAction SilentlyContinue) {
+        if ($null -ne (Get-Command fd -ErrorAction SilentlyContinue)) {
             $psFzfArgs.EnableFd = $true
         }
         Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
