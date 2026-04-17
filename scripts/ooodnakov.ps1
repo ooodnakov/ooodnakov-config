@@ -16,16 +16,18 @@ $UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
 $AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
 $KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
-$KnownShellSubcommands = @("forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git")
+$KnownShellSubcommands = @("forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
+$KnownShellAutoUvModes = @("enabled", "quiet", "status")
 $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
 $TypoHandlingVar = "OOODNAKOV_TYPO_HANDLING_MODE"
 $PsfzfTabVar = "OOODNAKOV_PSFZF_TAB"
 $PsfzfGitVar = "OOODNAKOV_PSFZF_GIT"
+$AutoUvEnvVar = "AUTO_UV_ENV_QUIET"
 $UiAscii = @{
     section = "=="
     ok = "[ok]"
@@ -97,34 +99,34 @@ function Get-UiIcon {
 function Get-UiCommandIcon {
     param([Parameter(Mandatory = $true)][string]$Name)
     if (Test-UiNerdFont) {
-        return switch ($Name) {
-            "install" { [char]::ConvertFromUtf32(0xF05E0) }
-            "deps" { [char]::ConvertFromUtf32(0xF03D6) }
-            "update" { [char]::ConvertFromUtf32(0xF06B0) }
-            "doctor" { [char]::ConvertFromUtf32(0xF04D9) }
-            "dry-run" { [char]::ConvertFromUtf32(0xF0709) }
-            "version" { [char]::ConvertFromUtf32(0xF0386) }
-            "lock" { [char]::ConvertFromUtf32(0xF033E) }
-            "update-pins" { [char]::ConvertFromUtf32(0xF1962) }
-            "shell" { [char]::ConvertFromUtf32(0xF1183) }
-            "secrets" { [char]::ConvertFromUtf32(0xF082E) }
-            "agents" { [char]::ConvertFromUtf32(0xF0B79) }
-            default { [char]::ConvertFromUtf32(0xF060D) }
+        switch ($Name) {
+            "install" { return [char]::ConvertFromUtf32(0xF05E0) }
+            "deps" { return [char]::ConvertFromUtf32(0xF03D6) }
+            "update" { return [char]::ConvertFromUtf32(0xF06B0) }
+            "doctor" { return [char]::ConvertFromUtf32(0xF04D9) }
+            "dry-run" { return [char]::ConvertFromUtf32(0xF0709) }
+            "version" { return [char]::ConvertFromUtf32(0xF0386) }
+            "lock" { return [char]::ConvertFromUtf32(0xF033E) }
+            "update-pins" { return [char]::ConvertFromUtf32(0xF1962) }
+            "shell" { return [char]::ConvertFromUtf32(0xF1183) }
+            "secrets" { return [char]::ConvertFromUtf32(0xF082E) }
+            "agents" { return [char]::ConvertFromUtf32(0xF0B79) }
+            default { return [char]::ConvertFromUtf32(0xF060D) }
         }
     }
-    return switch ($Name) {
-        "install" { "[inst]" }
-        "deps" { "[deps]" }
-        "update" { "[up]" }
-        "doctor" { "[doc]" }
-        "dry-run" { "[dry]" }
-        "version" { "[ver]" }
-        "lock" { "[lock]" }
-        "update-pins" { "[pins]" }
-        "shell" { "[sh]" }
-        "secrets" { "[sec]" }
-        "agents" { "[agt]" }
-        default { "[cmd]" }
+    switch ($Name) {
+        "install" { return "[inst]" }
+        "deps" { return "[deps]" }
+        "update" { return "[up]" }
+        "doctor" { return "[doc]" }
+        "dry-run" { return "[dry]" }
+        "version" { return "[ver]" }
+        "lock" { return "[lock]" }
+        "update-pins" { return "[pins]" }
+        "shell" { return "[sh]" }
+        "secrets" { return "[sec]" }
+        "agents" { return "[agt]" }
+        default { return "[cmd]" }
     }
 }
 
@@ -162,7 +164,7 @@ function Write-UiSection {
     param([Parameter(Mandatory = $true)][string]$Title)
     $icon = Format-UiText -Text (Get-UiIcon "section") -Role "section" -Bold
     $heading = Format-UiText -Text $Title -Role "section" -Bold
-    $ruleChar = if (Test-UiNerdFont) { [char]0x2500 } else { "-" }
+    $ruleChar = if (Test-UiNerdFont) { [string][char]0x2500 } else { "-" }
     $rule = Format-UiText -Text ($ruleChar * ($Title.Length + 3)) -Role "muted"
     Write-Output "$icon $heading"
     Write-Output $rule
@@ -359,6 +361,43 @@ function Get-PsfzfGitMode {
     return "enabled"
 }
 
+function Get-AutoUvEnvMode {
+    $envPath = Get-LocalEnvPs1Path
+    if (Test-Path -LiteralPath $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match ('^\$env:' + [regex]::Escape($AutoUvEnvVar) + " = 1$")) {
+                return "quiet"
+            }
+        }
+    }
+    return "enabled"
+}
+
+function Set-AutoUvEnvMode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode
+    )
+
+    if ($Mode -notin @("enabled", "quiet")) {
+        throw "Invalid auto-uv-env mode: $Mode`nExpected one of: enabled, quiet"
+    }
+
+    $envZsh = Get-LocalEnvZshPath
+    $envPs1 = Get-LocalEnvPs1Path
+
+    $zshVal = if ($Mode -eq "quiet") { "1" } else { "0" }
+    $ps1Val = if ($Mode -eq "quiet") { "1" } else { "0" }
+
+    Set-LocalOverrideLine -Path $envZsh -VariableName $AutoUvEnvVar -ReplacementLine "export $AutoUvEnvVar=""$zshVal"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $AutoUvEnvVar -ReplacementLine "`$env:$AutoUvEnvVar = $ps1Val"
+
+    Write-UiLine -Role ok -Message "auto-uv-env mode set to $Mode"
+    Write-UiLine -Role info -Message "zsh: $envZsh"
+    Write-UiLine -Role info -Message "pwsh: $envPs1"
+    Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
+}
+
 function Set-ForgitAliasMode {
     param(
         [Parameter(Mandatory = $true)]
@@ -540,6 +579,20 @@ function Invoke-ShellCommand {
                     $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellPsfzfModes
                     Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
                     throw "Unknown shell option: $mode`nExpected one of: enabled, disabled, status"
+                }
+            }
+            return
+        }
+        "auto-uv-env" {
+            $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
+            switch ($mode) {
+                "status" { Write-Output (Get-AutoUvEnvMode) }
+                "enabled" { Set-AutoUvEnvMode -Mode $mode }
+                "quiet" { Set-AutoUvEnvMode -Mode $mode }
+                default {
+                    $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellAutoUvModes
+                    Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
+                    throw "Unknown shell option: $mode`nExpected one of: enabled, quiet, status"
                 }
             }
             return
@@ -891,6 +944,7 @@ Usage: oooconf shell forgit-aliases [plain|forgit|status]
        oooconf shell typo-handling [silent|suggest|help|status]
        oooconf shell psfzf-tab [enabled|disabled|status]
        oooconf shell psfzf-git [enabled|disabled|status]
+       oooconf shell auto-uv-env [enabled|quiet|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
 Forgit alias modes:
@@ -905,6 +959,10 @@ PSFzf options:
   psfzf-tab  enable or disable fzf-based tab completion in PowerShell
   psfzf-git  enable or disable fzf-based git keybindings in PowerShell
   status     show the currently configured mode
+Auto UV environment options:
+  enabled   show activation/deactivation messages for Python venvs
+  quiet     suppress activation/deactivation messages
+  status    show the currently configured mode
 Examples:
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain
@@ -915,6 +973,7 @@ Examples:
   oooconf shell psfzf-tab enabled
   oooconf shell psfzf-tab disabled
   oooconf shell psfzf-git status
+  oooconf shell auto-uv-env quiet
 "@
         }
         "" { Show-Usage }

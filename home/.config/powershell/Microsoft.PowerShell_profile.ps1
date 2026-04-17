@@ -249,31 +249,89 @@ function ipgeo {
     Invoke-RestMethod -Uri "http://api.db-ip.com/v2/free/$ip"
 }
 
-# Automatic Python Virtual Environment Activation
+# Automatic Python Virtual Environment Activation (Port of auto-uv-env features)
 function Update-Venv {
-    $current = Get-Item .
-    $venvPath = $null
+    # 1. Manual Override Protection: If user activated something manually, don't touch it
+    if ($env:VIRTUAL_ENV -and $global:__managed_venv -and $env:VIRTUAL_ENV -ne $global:__managed_venv) {
+        return
+    }
 
-    # Search upwards for .venv\Scripts\Activate.ps1
+    $current = Get-Item .
+    $projectRoot = $null
+    $ignoreFound = $false
+
+    # 2. Recursive Search with .auto-uv-env-ignore support
     while ($current) {
-        $check = Join-Path $current.FullName ".venv\Scripts\Activate.ps1"
-        if (Test-Path $check) {
-            $venvPath = Join-Path $current.FullName ".venv"
+        if (Test-Path (Join-Path $current.FullName ".auto-uv-env-ignore")) {
+            $ignoreFound = $true
+            break
+        }
+        if (Test-Path (Join-Path $current.FullName "pyproject.toml")) {
+            $projectRoot = $current.FullName
             break
         }
         $current = $current.Parent
     }
 
-    if ($venvPath) {
+    if ($projectRoot -and -not $ignoreFound) {
+        $venvPath = Join-Path $projectRoot ".venv"
+        
+        # 3. Auto-Creation: If pyproject.toml exists but .venv doesn't, create it using uv
+        if (-not (Test-Path $venvPath)) {
+            if (Get-Command uv -ErrorAction SilentlyContinue) {
+                Write-Host "🔨 No .venv found. Creating one with uv..." -ForegroundColor Gray
+                & uv venv --quiet
+            } else {
+                return 
+            }
+        }
+
         $venvFullName = (Get-Item $venvPath).FullName
         if ($env:VIRTUAL_ENV -ne $venvFullName) {
-            . "$venvFullName\Scripts\Activate.ps1"
+            # Detect if it's a UV project for the message
+            $isUv = $false
+            $content = Get-Content (Join-Path $projectRoot "pyproject.toml") -Raw -ErrorAction SilentlyContinue
+            if ($content -and ($content -match "\[tool\.uv\]")) { $isUv = $true }
+
+            # Robust version detection
+            $version = "Unknown"
+            $cfg = Join-Path $venvPath "pyvenv.cfg"
+            if (Test-Path $cfg) {
+                $cfgContent = Get-Content $cfg -ErrorAction SilentlyContinue
+                $vLine = $cfgContent | Where-Object { $_ -match "^version(_info)?\s*=" } | Select-Object -First 1
+                if ($vLine -and ($vLine -match "=\s*([\d\.]+)")) { $version = $matches[1] }
+            }
+
+            if ($version -eq "Unknown") {
+                $pyExe = Join-Path $venvPath "Scripts\python.exe"
+                if (Test-Path $pyExe) {
+                    $vInfo = & $pyExe --version 2>&1
+                    if ($vInfo -match "([\d\.]+)") { $version = $matches[1] }
+                }
+            }
+
+            . (Join-Path $venvPath "Scripts\Activate.ps1")
+            $global:__managed_venv = $env:VIRTUAL_ENV
+            $global:__last_venv_was_uv = $isUv
+
+            if ($env:AUTO_UV_ENV_QUIET -ne 1) {
+                if ($isUv) { Write-Host "🚀 UV environment activated (Python $version)" -ForegroundColor Cyan }
+                else { Write-Host "🚀 Environment activated (Python $version)" -ForegroundColor Green }
+            }
         }
-    } elseif ($env:VIRTUAL_ENV) {
-        # Deactivate if no .venv is found in the current folder hierarchy
+    } elseif ($global:__managed_venv -and $env:VIRTUAL_ENV -eq $global:__managed_venv) {
+        # 4. Managed Deactivation: Only deactivate if we were the ones who activated it
+        $wasUv = $global:__last_venv_was_uv
         if (Get-Command deactivate -ErrorAction SilentlyContinue) {
             deactivate
         }
+        
+        if ($env:AUTO_UV_ENV_QUIET -ne 1) {
+            $msg = if ($wasUv) { "⬇️  Deactivated UV environment" } else { "⬇️  Deactivated environment" }
+            Write-Host $msg -ForegroundColor Gray
+        }
+        $global:__managed_venv = $null
+        $global:__last_venv_was_uv = $false
     }
 }
 

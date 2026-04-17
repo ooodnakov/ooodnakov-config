@@ -11,16 +11,18 @@ UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
 AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
 KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins agents secrets shell version check preview upgrade)
-KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling psfzf-tab psfzf-git)
+KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
 KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
 KNOWN_SHELL_PSFZF_MODES=(enabled disabled status)
+KNOWN_SHELL_AUTO_UV_MODES=(enabled quiet status)
 LOCAL_OVERRIDES_START="# --- LOCAL OVERRIDES START ---"
 LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
 FORGIT_ALIAS_VAR="OOODNAKOV_FORGIT_ALIAS_MODE"
 TYPO_HANDLING_VAR="OOODNAKOV_TYPO_HANDLING_MODE"
 PSFZF_TAB_VAR="OOODNAKOV_PSFZF_TAB"
 PSFZF_GIT_VAR="OOODNAKOV_PSFZF_GIT"
+AUTO_UV_ENV_VAR="AUTO_UV_ENV_QUIET"
 
 ui_is_interactive() {
   [ -t 1 ]
@@ -357,6 +359,45 @@ get_psfzf_git_mode() {
   printf 'enabled\n'
 }
 
+get_auto_uv_env_mode() {
+  local env_ps1 mode
+  env_ps1="$(shell_local_env_ps1_path)"
+
+  if [ -f "$env_ps1" ]; then
+    if grep -q "^\$env:${AUTO_UV_ENV_VAR} = 1$" "$env_ps1"; then
+      printf 'quiet\n'
+      return 0
+    fi
+  fi
+  printf 'enabled\n'
+}
+
+set_auto_uv_env_mode() {
+  local mode="$1"
+  local env_zsh env_ps1 val
+
+  case "$mode" in
+    enabled|quiet) ;;
+    *)
+      visible_error "Invalid auto-uv-env mode: $mode"
+      visible_error "Expected one of: enabled, quiet"
+      return 1
+      ;;
+  esac
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  env_ps1="$(shell_local_env_ps1_path)"
+  [ "$mode" = "quiet" ] && val=1 || val=0
+
+  upsert_override_line "$env_zsh" "$AUTO_UV_ENV_VAR" "export $AUTO_UV_ENV_VAR=\"$val\""
+  upsert_override_line "$env_ps1" "$AUTO_UV_ENV_VAR" "\$env:$AUTO_UV_ENV_VAR = $val"
+
+  ui_line ok "auto-uv-env mode set to $mode"
+  ui_line info "zsh: $env_zsh"
+  ui_line info "pwsh: $env_ps1"
+  ui_line hint "Open a new shell session to apply the change."
+}
+
 set_forgit_alias_mode() {
   local mode="$1"
   local env_zsh env_ps1
@@ -501,6 +542,7 @@ Usage:
   oooconf shell typo-handling [silent|suggest|help|status]
   oooconf shell psfzf-tab [enabled|disabled|status]
   oooconf shell psfzf-git [enabled|disabled|status]
+  oooconf shell auto-uv-env [enabled|quiet|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
 
@@ -519,6 +561,11 @@ PSFzf options:
   psfzf-git  enable or disable fzf-based git keybindings in PowerShell
   status     show the currently configured mode
 
+Auto UV environment options:
+  enabled   show activation/deactivation messages for Python venvs
+  quiet     suppress activation/deactivation messages
+  status    show the currently configured mode
+
 Examples:
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain
@@ -529,6 +576,7 @@ Examples:
   oooconf shell psfzf-tab enabled
   oooconf shell psfzf-tab disabled
   oooconf shell psfzf-git status
+  oooconf shell auto-uv-env quiet
 EOF
       ;;
     forgit-aliases)
@@ -586,6 +634,21 @@ EOF
           ;;
         *)
           suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_PSFZF_MODES[@]}")"
+          report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
+          return 1
+          ;;
+      esac
+      ;;
+    auto-uv-env)
+      case "${2:-status}" in
+        status)
+          get_auto_uv_env_mode
+          ;;
+        enabled|quiet)
+          set_auto_uv_env_mode "$2"
+          ;;
+        *)
+          suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_AUTO_UV_MODES[@]}")"
           report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
           return 1
           ;;
