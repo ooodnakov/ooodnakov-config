@@ -28,8 +28,13 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install shellcheck
+      - name: Install shellcheck (Ubuntu)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Install shellcheck (macOS)
+        if: runner.os == 'macOS'
+        run: brew install shellcheck
 
       - name: Shell syntax checks
         run: |
