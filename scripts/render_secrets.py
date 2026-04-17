@@ -958,7 +958,7 @@ def logout_command() -> int:
 def add_command(args: argparse.Namespace, repo_root: Path) -> int:
     import re
 
-    if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", args.key):
+    if not re.match(r"^[A-Z_][A-Z0-9_]*$", args.key):
         status("fail", f"Invalid key name: {args.key}. Use UPPER_SNAKE_CASE letters.")
         return 1
 
