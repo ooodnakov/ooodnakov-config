@@ -30,13 +30,13 @@ ASCII_ICONS = {
     "bullet": "-",
 }
 NERD_FONT_ICONS = {
-    "section": "󰆍",
-    "ok": "󰄬",
-    "warn": "󰀪",
-    "fail": "󰅖",
-    "missing": "󰅖",
+    "section": "▸",
+    "ok": "✓",
+    "warn": "⚠",
+    "fail": "✗",
+    "missing": "✗",
     "outdated": "󰏫",
-    "bullet": "󰘍",
+    "bullet": "•",
 }
 ANSI_RESET = "\033[0m"
 ANSI_BOLD = "\033[1m"
@@ -688,6 +688,7 @@ def cmd_update(config: dict[str, Any], check_only: bool) -> int:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
         )
         assert process.stdout is not None
         for raw_line in process.stdout:
