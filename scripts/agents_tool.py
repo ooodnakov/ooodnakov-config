@@ -830,6 +830,42 @@ def cmd_install(repo_root: Path, config: dict[str, Any], agent_query: str, check
         return 1
 
 
+def get_command_version(command: str) -> str | None:
+    try:
+        # Most agent CLIs support --version
+        result = subprocess.run(
+            [command, "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+    return None
+
+
+def get_runner_bin_dir(runner: str) -> str | None:
+    if runner == "pnpm":
+        try:
+            result = subprocess.run(
+                ["pnpm", "bin", "-g"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                timeout=5,
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except (subprocess.SubprocessError, FileNotFoundError):
+            pass
+    return None
+
+
 def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
     # First, autobuild install scripts
     if not check_only:
@@ -853,6 +889,10 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
             print_status_line("missing", f"{spec.name} ({spec.command}) not found on PATH; skipping.")
             skipped += 1
             continue
+        
+        # Check version before update
+        version_before = get_command_version(spec.command)
+
         try:
             command, runner = resolve_update_command(spec)
         except RuntimeError as exc:
@@ -863,6 +903,8 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
         command_display = shlex.join(command)
         if check_only:
             print_status_line("ok", f"{spec.name} via {runner}")
+            if version_before:
+                print(f"  current version: {version_before}")
             print(f"  command: {command_display}")
             continue
         resolved_runner = shutil.which(command[0])
@@ -870,9 +912,11 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
             print_status_line("fail", f"{spec.name}: required updater '{command[0]}' is not installed.")
             failed += 1
             continue
+        
         command_exec = [resolved_runner, *command[1:]]
-        print_status_line("ok", f"{spec.name} via {runner}")
+        print_status_line("info", f"Updating {spec.name} via {runner}")
         print(f"  command: {command_display}")
+        
         output_lines: list[str] = []
         process = subprocess.Popen(
             command_exec,
@@ -889,7 +933,38 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
                 print(f"  {line}")
         return_code = process.wait()
         if return_code == 0:
-            print_status_line("ok", f"{spec.name} updated via {runner}")
+            version_after = get_command_version(spec.command)
+            runner_bin_dir = get_runner_bin_dir(runner)
+            
+            is_shadowed = False
+            if installed_path and runner_bin_dir:
+                # Normalizing paths for comparison
+                p_installed = Path(installed_path).resolve()
+                p_runner_bin = Path(runner_bin_dir).resolve()
+                if p_runner_bin not in p_installed.parents:
+                    is_shadowed = True
+
+            if version_before and version_after and version_before == version_after:
+                output_str = "\n".join(output_lines)
+                if "Already up to date" not in output_str and "is up to date" not in output_str:
+                    print_status_line("warn", f"{spec.name} version did not change ({version_after}).")
+                    if is_shadowed:
+                        print(f"  {colorize('Note:', 'warn')} active binary '{installed_path}' is SHADOWING the {runner} version.")
+                        print(f"  Expected in: {runner_bin_dir}")
+                else:
+                    if is_shadowed:
+                        print_status_line("warn", f"{spec.name} is up to date in {runner}, but SHADOWED on PATH.")
+                        print(f"  Active: {installed_path}")
+                        print(f"  Try: npm uninstall -g {spec.package} (if installed via npm)")
+                    else:
+                        print_status_line("ok", f"{spec.name} is already up to date ({version_after})")
+            else:
+                if is_shadowed:
+                    print_status_line("warn", f"{spec.name} updated, but still SHADOWED on PATH.")
+                    print(f"  Active version: {version_after}")
+                    print(f"  Active path: {installed_path}")
+                else:
+                    print_status_line("ok", f"{spec.name} updated: {version_before or 'unknown'} -> {version_after or 'unknown'}")
             updated += 1
         else:
             print_status_line("fail", f"{spec.name} update failed via {runner}")
