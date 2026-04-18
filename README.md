@@ -222,7 +222,18 @@ Each install, update, or doctor run also writes logs under:
 
 In interactive terminals, setup can also prompt to install common optional dependencies. The full catalog lives in `scripts/optional-deps.toml`, which both Unix and PowerShell setup scripts read. Each entry defines per-platform install methods (apt, brew, choco, winget, cargo, curl, or custom).
 
-To add or remove an optional dependency, edit the TOML file and run `oooconf lock`. See [`docs/dependency-decisions.md`](docs/dependency-decisions.md) for the full decision matrix.
+### Installing Optional Dependencies
+
+Use `oooconf deps` to install optional tools interactively or specifically:
+
+- `oooconf deps` — Interactive picker (requires `gum`).
+- `oooconf deps --minimal` — Install core minimal setup (git, zsh, uv, oh-my-posh, gum, rg, fd, bat).
+- `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
+- `oooconf deps --dry-run` — Preview without installing.
+
+All metadata is in `scripts/optional-deps.toml` (sole source of truth). Run `oooconf lock` after editing.
+
+See [`docs/dependency-decisions.md`](docs/dependency-decisions.md) for the full decision matrix.
 
 ## Pinned Dependencies
 
