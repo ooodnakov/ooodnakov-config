@@ -382,38 +382,11 @@ optional_dependency_selected() {
 }
 
 optional_dependency_present() {
-  local key="$1"
-
-  case "$key" in
-    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|yazi|ffmpeg|jq|oh-my-posh|wezterm|node|npm|pnpm|fc-cache|cargo|k|python3|rtk)
-      command -v "$key" >/dev/null 2>&1
-      ;;
-    fd)
-      command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1
-      ;;
-    uv)
-      command -v uv >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/uv" ]
-      ;;
-    bw)
-      command -v bw >/dev/null 2>&1 || [ -x "$STATE_HOME/bin/bw" ]
-      ;;
-    dua)
-      command -v dua >/dev/null 2>&1
-      ;;
-    p7zip)
-      command -v 7z >/dev/null 2>&1
-      ;;
-    poppler)
-      command -v pdftotext >/dev/null 2>&1
-      ;;
-    nvim)
-      have_supported_nvim
-      ;;
-    *)
-      return 1
-      ;;
-  esac
+  # Now uses central check_dependency_status (which reads check= from optional-deps.toml)
+  # No more hard-coded list or overrides — sole source of truth is the TOML.
+  check_dependency_status "$1" "$1" >/dev/null 2>&1
 }
+
 
 gum_apt_repo_configured() {
   [ -f /etc/apt/keyrings/charm.gpg ] || return 1
@@ -892,7 +865,11 @@ check_dependency_status() {
     printf "[-] Checking %s...\r" "$log_name" > /dev/tty
   fi
 
-  if command -v "$command_name" >/dev/null 2>&1; then
+  # Use check command from central TOML if available, fallback to command -v
+  local check_cmd
+  check_cmd=$(run_python scripts/read_optional_deps.py "check-command" "$command_name" 2>/dev/null || echo "command -v $command_name")
+
+  if eval "$check_cmd" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
       printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
     elif [ "$DRY_RUN" -ne 1 ] && is_verbose; then

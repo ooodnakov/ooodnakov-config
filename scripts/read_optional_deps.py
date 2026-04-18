@@ -23,6 +23,12 @@ def load_deps() -> dict:
     for raw in data.get("deps", []):
         entry = dict(raw)
         ver = entry.get("ver")
+        # Flatten nested platform tables (linux.manager -> linux.manager) for compatibility
+        for platform in ("linux", "macos", "windows"):
+            if platform in entry and isinstance(entry[platform], dict):
+                for subkey, value in entry[platform].items():
+                    entry[f"{platform}.{subkey}"] = value
+                del entry[platform]  # remove nested to keep flat
         # Replace ${ver} in any URL field (top-level or platform-specific)
         if ver:
             for k, v in list(entry.items()):
@@ -136,6 +142,15 @@ def main() -> int:
         data = load_deps()
         import json
         print(json.dumps(data["managed_tools"], indent=2))
+    elif cmd == "check-command" and len(sys.argv) >= 3:
+        data = load_deps()
+        key = sys.argv[2]
+        for d in data["deps"]:
+            if d.get("key") == key:
+                print(d.get("check", f"command -v {key}"))
+                return 0
+        print(f"command -v {key}")
+        return 0
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         return 1
