@@ -186,9 +186,10 @@ The shared AGENTS policy snippets are configured in:
 
 The setup scripts intentionally do not try to provision a full workstation from bare metal. Core tools should already exist before first install:
 
-- Linux/macOS: `git`, `zsh`
-- Windows: `git`, `pwsh` if PowerShell Core is desired
-- all platforms: `wezterm`, `oh-my-posh`
+| Platform      | Required Tools                                               |
+| ------------- | ------------------------------------------------------------ |
+| Linux / macOS | `git`, `zsh`, `wezterm`, `oh-my-posh`                        |
+| Windows       | `git`, `pwsh` (for PowerShell Core), `wezterm`, `oh-my-posh` |
 
 See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 
@@ -214,41 +215,8 @@ To add or remove an optional dependency, edit the TOML file and run `oooconf loc
 
 The repo aims for deterministic setup by pinning third-party shell dependencies and related tooling.
 
-Unix setup installs pinned copies of:
-
-- `oh-my-zsh`
-- `powerlevel10k`
-- `zsh-autosuggestions`
-- `zsh-syntax-highlighting`
-- `zsh-history-substring-search`
-- `zsh-autocomplete`
-- `fzf-tab`
-- `forgit`
-- `zsh-you-should-use`
-- `auto-uv-env`
-- `nvm`
-- `k`
-- `marker`
-- `todo.txt-cli`
-
-Additional setup behavior:
-
-- `zoxide` is installed via the system package manager when available and initialized as `z`/`zi` in `zsh`
-- `bat` is installed via the system package manager when available as a `cat` alternative with syntax highlighting
-- `delta` is installed via the system package manager when available as a Git diff pager with syntax highlighting
-- `glow` is installed via the system package manager when available as a terminal Markdown reader
-- `gum` is installed via the official Charm package source when needed for the interactive dependency picker, or via the system package manager where available
-- `q` is installed via the upstream natesales APT repo on Debian/Ubuntu, or via the system package manager when available elsewhere
-- `yazi` is available as an optional terminal file manager
-- `ffmpeg`, `jq`, `p7zip`, and `poppler` are available as optional companion tools for richer Yazi previews/plugins
-- `uv` uses Astral's official installer
-- `bw` uses Bitwarden's official native CLI release archive
-- `pnpm` uses a pinned version via `corepack`, or falls back to `npm install --global`
-- `dua-cli` installs from `byron/dua-cli` via `cargo`
-- Linux setup requires `nvim >= 0.11.0` for LazyVim and falls back to a pinned official Neovim tarball if the distro package is too old
-- setup normalizes `oh-my-zsh` permissions on every run so `compaudit` and `compinit` do not reject the install
-
-On Windows, setup can prompt to install common tools with `winget`, `choco`, and the PowerShell Gallery, including WezTerm, Node.js LTS, `oh-my-posh`, `posh-git`, `PSFzf`, `gum`, `ripgrep`, `fd`, `bat`, `delta`, `glow`, `q`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
+See [`docs/dependency-decisions.md`](docs/dependency-decisions.md) for the full list of automated, optional, and manual dependencies and how they are installed per platform.
+See [`docs/dependency-lock.md`](docs/dependency-lock.md) for the exact pinned git revisions used by the setup scripts.
 
 The tracked `oh-my-posh` theme uses its own unified `git` segment in [home/.config/ohmyposh/ooodnakov.omp.json](home/.config/ohmyposh/ooodnakov.omp.json). It provides a clean, single-branch status with detailed working and staging information. The PowerShell profile still imports `posh-git` to provide git command completions, but prompt rendering is handled entirely by Oh My Posh for a consistent look.
 
@@ -300,11 +268,6 @@ Additional local-only files you may create per machine:
 - `~/.config/ooodnakov/local/wezterm.lua`
 
 Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local).
-
-Runtime shell state is intentionally untracked:
-
-- zsh history: `~/.local/state/ooodnakov-config/zsh/`
-- zsh completion dump: `~/.cache/ooodnakov-config/zsh/`
 
 To sync shared secrets across machines, keep Bitwarden references in the tracked template and render local plaintext files on each machine:
 
@@ -389,3 +352,4 @@ Reference docs:
 - troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)
 - import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)
 - third-party tree notes: [`third_party/README.md`](third_party/README.md)
+- contributor instructions and coding rules: [`AGENTS.md`](AGENTS.md)
