@@ -47,7 +47,7 @@ These are offered by `oooconf deps`. Each entry includes the install mechanism a
 | `posh-git` | PowerShell Gallery (Windows) | Native PowerShell Git completions and shell integration |
 | `psfzf` | PowerShell Gallery (Windows) | Native PowerShell fzf integration for history, files, and tab completion |
 | `zoxide` | system package manager | Smart directory jumping |
-| `q` | system package manager (choco on Windows) | Text-as-data CLI |
+| `q` | apt repo on Debian/Ubuntu, AUR via `yay`/`paru` on Arch, choco on Windows | Text-as-data CLI |
 | `eza` | system package manager (choco on Windows) | Modern `ls` aliases |
 | `yazi` | system package manager / winget | Terminal file manager |
 | `ffmpeg` | system package manager / winget | Media preview backend used by Yazi |

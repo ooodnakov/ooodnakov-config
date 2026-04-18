@@ -1335,6 +1335,7 @@ setup_q_apt_repo() {
 
 maybe_install_q() {
   local manager="$1"
+  local aur_helper=""
 
   if check_dependency_status "q" "q"; then
     return 0
@@ -1353,6 +1354,29 @@ maybe_install_q() {
       fi
 
       install_packages apt q
+      if command -v q >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("q: installed")
+      else
+        DEPENDENCY_SUMMARY+=("q: install attempted")
+      fi
+      ;;
+    pacman)
+      if command -v yay >/dev/null 2>&1; then
+        aur_helper="yay"
+      elif command -v paru >/dev/null 2>&1; then
+        aur_helper="paru"
+      else
+        DEPENDENCY_SUMMARY+=("q: missing (Arch install requires yay or paru for AUR package q-dns-git)")
+        return 0
+      fi
+
+      if ! prompt_yes_no "Install q via Arch AUR package q-dns-git using $aur_helper?"; then
+        DEPENDENCY_SUMMARY+=("q: skipped")
+        return 0
+      fi
+
+      run_with_spinner "Installing q from AUR package q-dns-git via $aur_helper" \
+        "$aur_helper" -S --needed --noconfirm q-dns-git
       if command -v q >/dev/null 2>&1; then
         DEPENDENCY_SUMMARY+=("q: installed")
       else
