@@ -19,6 +19,8 @@ except ModuleNotFoundError:  # pragma: no cover
 
 MANAGED_BEGIN = "<!-- oooconf:agents-common:start -->"
 MANAGED_END = "<!-- oooconf:agents-common:end -->"
+RTK_BEGIN = "<!-- oooconf:rtk:start -->"
+RTK_END = "<!-- oooconf:rtk:end -->"
 DEFAULT_CONFIG_PATH = Path("home/.config/ooodnakov/agents/config.json")
 ASCII_ICONS = {
     "section": "==",
@@ -530,6 +532,14 @@ def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
 
 def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_sync: bool) -> int:
     common_text = read_text(repo_root, config["common_text_file"])
+
+    # Strip RTK part if not on Windows
+    if os.name != "nt":
+        if RTK_BEGIN in common_text and RTK_END in common_text:
+            start = common_text.index(RTK_BEGIN)
+            end = common_text.index(RTK_END) + len(RTK_END)
+            common_text = common_text[:start].rstrip() + "\n" + common_text[end:].lstrip()
+
     agent_files = discover_agent_files(repo_root, config["agent_files"])
 
     changed_count = 0

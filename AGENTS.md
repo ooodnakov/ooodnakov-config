@@ -177,223 +177,101 @@ After changing CLI help output or completions:
 <!-- oooconf:agents-common:start -->
 ## oooconf shared agent policy
 
-<!-- context7 -->
-Use Context7 MCP to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service -- even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
+# oooconf Shared Agent Policy
 
-Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+## Core Principles
 
-## Steps
+- **Be precise and minimal** — Make the smallest correct change. Never refactor unrelated code unless asked.
+- **Verify before claiming success** — Always run the relevant build/test/lint commands (prefixed with `rtk`).
+- **Use Context7 for anything technical** — Never rely on training data for libraries, APIs, CLIs, or frameworks.
+- **Prefer modern, idiomatic solutions** — Follow current best practices for the language and ecosystem.
+- **Ask when uncertain** — If requirements are ambiguous, ask for clarification rather than guessing.
+- **Document your reasoning** — Briefly explain *why* you made each change.
 
-1. Always start with `resolve-library-id` using the library name and the user's question, unless the user provides an exact library ID in `/org/project` format
-2. Pick the best match (ID format: `/org/project`) by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score (higher is better). If results don't look right, try alternate names or queries (e.g., "next.js" not "nextjs", or rephrase the question). Use version-specific IDs when the user mentions a version
-3. `query-docs` with the selected library ID and the user's full question (not single words)
-4. Answer using the fetched docs
-<!-- context7 -->
+## Documentation & Research (Context7)
 
+Use Context7 MCP to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones (React, Next.js, Prisma, Express, Tailwind, Django, Spring Boot, etc.).
 
-<!-- grok-mcp -->
-  Use Grok MCP when the task specifically benefits from xAI/Grok capabilities that are exposed as MCP tools: agentic web
-  research, X/Twitter search, code execution, vision, document chat, or Grok image/video generation.
+**Do not use Context7 for**: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
 
-  ## When to use Grok MCP
-  - Use `grok_agent` for multi-tool tasks that may need web search, X search, code execution, files, or images in one
-  request.
-  - Use `web_search` for agentic web research, especially when domain filters, citations, or multi-step search are
-  useful.
-  - Use `x_search` for X/Twitter-specific research, handle filtering, or date-bounded social search.
-  - Use `chat` or `stateful_chat` for plain Grok text generation when Grok itself is the target model.
-  - Use `chat_with_vision` when the user wants Grok to analyze images.
-  - Use `chat_with_files`, `upload_file`, and related file tools when the user wants Grok to read or reason over
-  documents.
-  - Use `generate_image` or `generate_video` only when the user explicitly wants media generation or editing.
+### Steps (always follow this order)
 
-  ## Operating notes
-  - `grok_agent` is the highest-level Grok tool. Enable only the capabilities needed for the task: `use_web_search`,
-  `use_x_search`, and/or `use_code_execution`.
-  - Prefer narrower tools over `grok_agent` when the task is single-purpose.
-  - For local images/files, pass file paths only if the environment exposes them to the MCP server. In some clients this
-  requires a Filesystem MCP server or equivalent file access.
-  - Use `stateful_chat` with `response_id` only when continuing the same Grok conversation across turns is actually
-  useful.
-  - If the user needs citations from Grok web/X research, set `include_inline_citations=true` when supported.
+1. Start with `resolve-library-id` using the library name and the user's full question (unless they already gave an exact `/org/project` ID).
+2. Pick the best match by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score.
+3. Use `query-docs` with the selected library ID and the user's complete question.
+4. Answer using only the freshly fetched documentation.
 
-  ## Tool map
-  - Text chat: `chat`, `stateful_chat`, `retrieve_stateful_response`, `delete_stateful_response`
-  - Vision: `chat_with_vision`
-  - Research: `web_search`, `x_search`, `grok_agent`
-  - Code execution: `code_executor`, or `grok_agent` with `use_code_execution=true`
-  - Files: `upload_file`, `list_files`, `get_file`, `get_file_content`, `delete_file`, `chat_with_files`
-  - Media generation: `generate_image`, `generate_video`
-  - Local session history: `list_chat_sessions`, `get_chat_history`, `clear_chat_history`
-<!-- grok-mcp -->
+**Tip**: Use version-specific IDs when the user mentions a version.
 
-<!-- rtk-instructions v2 -->
-# RTK (Rust Token Killer) - Token-Optimized Commands
+## Advanced Capabilities (Grok MCP)
 
-## Golden Rule
+Use Grok tools when the task benefits from real-time research, code execution, vision, or media generation.
 
-**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
+| Task                              | Recommended Tool                     | Notes |
+|-----------------------------------|--------------------------------------|-------|
+| General research / unknown topics | `web_search` or `grok_agent`         | Start here for most technical questions |
+| X/Twitter research                | `x_search`                           | Use date filters and relevance scoring |
+| Code execution                    | `code_executor` or `grok_agent`      | Enable with `use_code_execution=true` |
+| Image / vision analysis           | `chat_with_vision`                   | Pass local file paths when available |
+| Large document / file review      | `chat_with_files` + `upload_file`    | Best for reviewing codebases or specs |
+| Ongoing conversation              | `stateful_chat`                      | Use only when maintaining context across turns |
+| Simple text generation            | `chat`                               | Default for straightforward requests |
 
-**Important**: Even in command chains with `&&`, use `rtk`:
+**Operating notes**:
+- `grok_agent` is the highest-level tool — only enable the capabilities you actually need.
+- Prefer narrower tools (`web_search`, `code_executor`, etc.) when the task is focused.
+- For citations, set `include_inline_citations=true` when supported.
+
+<!-- oooconf:rtk:start -->
+## Token-Efficient Execution (RTK)
+
+**Golden Rule**: **Always** prefix shell commands with `rtk`. It safely reduces output while preserving exit codes and behavior.
+
+**Why it matters**: Reduces token usage by 60–99% on build, test, and lint output.
+
+### Recommended Patterns
+
 ```bash
-# ❌ Wrong
-git add . && git commit -m "msg" && git push
+# Build & Type Checking
+rtk cargo build / check / clippy
+rtk tsc
+rtk next build
+rtk pnpm build
 
-# ✅ Correct
-rtk git add . && rtk git commit -m "msg" && rtk git push
+# Testing (failures only)
+rtk cargo test
+rtk pytest
+rtk vitest
+rtk playwright test
+rtk jest
+
+# Linting & Formatting
+rtk eslint
+rtk biome
+rtk ruff
+rtk prettier --check
+
+# Git (clean output)
+rtk git status / diff / log
 ```
+Use `rtk <any command>` as a safe passthrough for everything else.
+<!-- oooconf:rtk:end -->
 
-## RTK Commands by Workflow
+## General Workflow Rules
 
-### Build & Compile (80-90% savings)
-```bash
-rtk cargo build         # Cargo build output
-rtk cargo check         # Cargo check output
-rtk cargo clippy        # Clippy warnings grouped by file (80%)
-rtk tsc                 # TypeScript errors grouped by file/code (83%)
-rtk lint                # ESLint/Biome violations grouped (84%)
-rtk prettier --check    # Files needing format only (70%)
-rtk next build          # Next.js build with route metrics (87%)
-```
+- Explore relevant files first (use filesystem MCP or `rtk` commands).
+- Make the minimal viable change.
+- Run `rtk` + relevant test/lint/build commands.
+- Fix any failures before moving on.
+- Summarize changes and reasoning clearly when finished.
 
-### Test (60-99% savings)
-```bash
-rtk cargo test          # Cargo test failures only (90%)
-rtk go test             # Go test failures only (90%)
-rtk jest                # Jest failures only (99.5%)
-rtk vitest              # Vitest failures only (99.5%)
-rtk playwright test     # Playwright failures only (94%)
-rtk pytest              # Python test failures only (90%)
-rtk rake test           # Ruby test failures only (90%)
-rtk rspec               # RSpec test failures only (60%)
-rtk test <cmd>          # Generic test wrapper - failures only
-```
+## Boundaries & Safety 
 
-### Git (59-80% savings)
-```bash
-rtk git status          # Compact status
-rtk git log             # Compact log (works with all git flags)
-rtk git diff            # Compact diff (80%)
-rtk git show            # Compact show (80%)
-rtk git add             # Ultra-compact confirmations (59%)
-rtk git commit          # Ultra-compact confirmations (59%)
-rtk git push            # Ultra-compact confirmations
-rtk git pull            # Ultra-compact confirmations
-rtk git branch          # Compact branch list
-rtk git fetch           # Compact fetch
-rtk git stash           # Compact stash
-rtk git worktree        # Compact worktree
-```
-
-Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
-
-### GitHub (26-87% savings)
-```bash
-rtk gh pr view <num>    # Compact PR view (87%)
-rtk gh pr checks        # Compact PR checks (79%)
-rtk gh run list         # Compact workflow runs (82%)
-rtk gh issue list       # Compact issue list (80%)
-rtk gh api              # Compact API responses (26%)
-```
-
-### JavaScript/TypeScript Tooling (70-90% savings)
-```bash
-rtk pnpm list           # Compact dependency tree (70%)
-rtk pnpm outdated       # Compact outdated packages (80%)
-rtk pnpm install        # Compact install output (90%)
-rtk npm run <script>    # Compact npm script output
-rtk npx <cmd>           # Compact npx command output
-rtk prisma              # Prisma without ASCII art (88%)
-```
-
-### Files & Search (60-75% savings)
-```bash
-rtk ls <path>           # Tree format, compact (65%)
-rtk read <file>         # Code reading with filtering (60%)
-rtk grep <pattern>      # Search grouped by file (75%)
-rtk find <pattern>      # Find grouped by directory (70%)
-```
-
-### Analysis & Debug (70-90% savings)
-```bash
-rtk err <cmd>           # Filter errors only from any command
-rtk log <file>          # Deduplicated logs with counts
-rtk json <file>         # JSON structure without values
-rtk deps                # Dependency overview
-rtk env                 # Environment variables compact
-rtk summary <cmd>       # Smart summary of command output
-rtk diff                # Ultra-compact diffs
-```
-
-### Infrastructure (85% savings)
-```bash
-rtk docker ps           # Compact container list
-rtk docker images       # Compact image list
-rtk docker logs <c>     # Deduplicated logs
-rtk kubectl get         # Compact resource list
-rtk kubectl logs        # Deduplicated pod logs
-```
-
-### Network (65-70% savings)
-```bash
-rtk curl <url>          # Compact HTTP responses (70%)
-rtk wget <url>          # Compact download output (65%)
-```
-
-### Meta Commands
-```bash
-rtk gain                # View token savings statistics
-rtk gain --history      # View command history with savings
-rtk discover            # Analyze Claude Code sessions for missed RTK usage
-rtk proxy <cmd>         # Run command without filtering (for debugging)
-rtk init                # Add RTK instructions to CLAUDE.md
-rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
-```
-
-## Token Savings Overview
-
-| Category | Commands | Typical Savings |
-|----------|----------|-----------------|
-| Tests | vitest, playwright, cargo test | 90-99% |
-| Build | next, tsc, lint, prettier | 70-87% |
-| Git | status, log, diff, add, commit | 59-80% |
-| GitHub | gh pr, gh run, gh issue | 26-87% |
-| Package Managers | pnpm, npm, npx | 70-90% |
-| Files | ls, read, grep, find | 60-75% |
-| Infrastructure | docker, kubectl | 85% |
-| Network | curl, wget | 65-70% |
-
-Overall average: **60-90% token reduction** on common development operations.
-<!-- /rtk-instructions -->
-
-<!-- common -->
-## MCP Management
-
-Managed MCP servers (with a `source` repository) can be synchronized and installed across machines.
-
-```bash
-oooconf agents mcp status  # check status of all MCP servers
-oooconf agents mcp sync    # clone/pull and run install commands for managed MCPs
-```
-
-## Python projects
-If you are working in python project, use `uv` for dependency management and `ruff` for linting.
-
-After changing Python helper scripts or Python project configuration, validate:
-
-```bash
-uv run ruff check --select I --fix
-uv run ruff check
-uv run ruff format
-``` 
-
-## Task Completion and Commits in Git Repositories
-
-- After finishing a requested task, the agent MUST organize, stage, and commit the changes to the current branch.
-- Propose a clear and concise commit message following the existing style (e.g., `feat(scope): ...`, `fix(scope): ...`).
-- Only push to the remote repository if specifically asked by the user or if it is the natural conclusion of the task (e.g., "organize, commit and push").
-
-<!-- /common -->
+- Never commit secrets, tokens, API keys, or machine-specific values.
+- Never perform broad refactors unless explicitly requested.
+- Always respect the existing project structure and conventions.
+- Prefer editing the managed home/ tree over third_party/.
+- When working with this config repo, follow the rules in the root AGENTS.md.
 
 ## Common MCP servers
 <!-- oooconf:mcp-servers:start -->
