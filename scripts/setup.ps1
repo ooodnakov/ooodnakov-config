@@ -23,6 +23,7 @@ $ActivePowerShellProfile = $PROFILE.CurrentUserCurrentHost
 $SshDir = Join-Path $HomeDir ".ssh"
 $InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
 $InstallOptionalMode = if ($env:OOODNAKOV_INSTALL_OPTIONAL) { $env:OOODNAKOV_INSTALL_OPTIONAL } else { "prompt" }
+$VerboseMode = if ($env:OOODNAKOV_VERBOSE) { $env:OOODNAKOV_VERBOSE } else { "0" }
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/backups" }
 $LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/logs" }
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -35,6 +36,9 @@ $script:Failures = [System.Collections.Generic.List[string]]::new()
 $script:LogFile = $null
 $script:LatestLogFile = $null
 $script:TranscriptStarted = $false
+$script:StepTotal = 0
+$script:StepCurrent = 0
+$script:StepActivity = ""
 $ValidSetupCommands = @("install", "update", "doctor", "deps")
 
 # Run a Python script, preferring `uv run` when available.
@@ -168,6 +172,40 @@ function Test-Interactive {
 
             return [Environment]::UserInteractive
         }
+    }
+}
+
+function Test-VerboseMode {
+    return $VerboseMode -match '^(?i:1|true|yes|on|verbose)$'
+}
+
+function Start-StepProgress {
+    param(
+        [Parameter(Mandatory = $true)][int]$Total,
+        [Parameter(Mandatory = $true)][string]$Activity
+    )
+
+    $script:StepTotal = [Math]::Max($Total, 1)
+    $script:StepCurrent = 0
+    $script:StepActivity = $Activity
+}
+
+function Step-Progress {
+    param(
+        [Parameter(Mandatory = $true)][string]$Status
+    )
+
+    $script:StepCurrent++
+    $percent = [Math]::Min([Math]::Floor(($script:StepCurrent * 100) / $script:StepTotal), 100)
+    Write-Output "Step: $Status"
+
+    if (Test-Interactive) {
+        Write-Progress -Activity $script:StepActivity -Status ("[{0}/{1}] {2}" -f $script:StepCurrent, $script:StepTotal, $Status) -PercentComplete $percent
+        if ($script:StepCurrent -ge $script:StepTotal) {
+            Write-Progress -Activity $script:StepActivity -Completed
+        }
+    } else {
+        Write-Output ("[{0}/{1}] {2}" -f $script:StepCurrent, $script:StepTotal, $Status)
     }
 }
 
@@ -599,7 +637,9 @@ function Start-SetupLogging {
         "Failed to start transcript logging at $script:LogFile: $($_.Exception.Message)" | Out-File -FilePath $script:LogFile -Encoding utf8 -Append
     }
 
-    Write-Output "Logging to $script:LogFile"
+    if (Test-VerboseMode) {
+        Write-Output "Logging to $script:LogFile"
+    }
 }
 
 function Stop-SetupLogging {
@@ -628,6 +668,17 @@ function Invoke-ActionWithSpinner {
     if ($DryRun) {
         Write-Output "[dry-run] $Description"
         return $true
+    }
+
+    if (-not (Test-VerboseMode)) {
+        try {
+            & $Action @ArgumentList
+            return $true
+        } catch {
+            Write-Output $_
+            Add-Failure $Description
+            return $false
+        }
     }
 
     $interactive = Test-Interactive
@@ -894,13 +945,17 @@ function New-Symlink {
     }
 
     if (Test-LinkMatches -Source $Source -Target $Target) {
-        Write-Output "linked $Target"
+        if (Test-VerboseMode) {
+            Write-Output "linked $Target"
+        }
         return $true
     }
 
     return (Invoke-Action -Description "Link $Target" -Action {
         New-Item -ItemType SymbolicLink -Path $Target -Target $Source -Force | Out-Null
-        Write-Output "linked $Target"
+        if (Test-VerboseMode) {
+            Write-Output "linked $Target"
+        }
     })
 }
 
@@ -996,7 +1051,7 @@ function Test-DependencyStatus {
         [switch]$IsModule
     )
 
-    if (-not $DryRun) {
+    if (-not $DryRun -and (Test-VerboseMode)) {
         if (Test-Interactive) {
             Write-Host "[-] Checking $SummaryName..." -NoNewline
         }
@@ -1010,7 +1065,7 @@ function Test-DependencyStatus {
     }
 
     if ($isPresent) {
-        if (-not $DryRun) {
+        if (-not $DryRun -and (Test-VerboseMode)) {
             if (Test-Interactive) {
                 Write-Host "`r[ok] $SummaryName is present.             "
             } else {
@@ -1021,7 +1076,7 @@ function Test-DependencyStatus {
         return $true
     }
 
-    if (-not $DryRun -and (Test-Interactive)) {
+    if (-not $DryRun -and (Test-Interactive) -and (Test-VerboseMode)) {
         Write-Host "`r" -NoNewline
     }
     return $false
@@ -1412,7 +1467,9 @@ function Install-DuaIfMissing {
 }
 
 function Install-OptionalDependencies {
-    Write-Output "Dependency check:"
+    if (Test-VerboseMode) {
+        Write-Output "Dependency check:"
+    }
 
     $null = Invoke-SelectedOptionalDependency -Key "wget" -Action { Install-PackageIfMissing -CommandNames @("wget") -WingetId "GNU.Wget" -Description "wget" -SummaryName "wget" }
     $null = Invoke-SelectedOptionalDependency -Key "git" -Action { Install-PackageIfMissing -CommandNames @("git") -WingetId "Git.Git" -Description "Git" -SummaryName "git" }
@@ -1552,14 +1609,18 @@ function Test-Doctor {
 }
 
 function Invoke-Install {
+    Start-StepProgress -Total 5 -Activity "oooconf $Command"
+    Step-Progress -Status "Preparing directories"
     foreach ($dir in @($ConfigHome, $DataHome, $CacheHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir, $OhMyPoshDir, $PowerShellConfigDir)) {
         if (Ensure-Directory -Path $dir) {
             Add-ToolSummary "ensured directory: $dir"
         }
     }
 
+    Step-Progress -Status "Checking/installing optional dependencies"
     Install-OptionalDependencies
 
+    Step-Progress -Status "Linking managed configuration"
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")) {
         Add-ToolSummary "wezterm: linked"
     }
@@ -1614,10 +1675,12 @@ function Invoke-Install {
         Add-ToolSummary "ssh include: ensured"
     }
 
+    Step-Progress -Status "Writing setup summary"
     Write-Summary
     Write-Output ""
     Write-Output "Bootstrap complete."
     Write-Output "If needed, create local overrides in $ConfigHome/ooodnakov/local."
+    Step-Progress -Status "Done"
 }
 
 Start-SetupLogging
@@ -1674,6 +1737,8 @@ try {
             Invoke-Install
         }
         "update" {
+            Start-StepProgress -Total 1 -Activity "oooconf update"
+            Step-Progress -Status "Pulling latest repository changes"
             if ($DryRun) {
                 Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
             } else {
@@ -1690,14 +1755,19 @@ try {
                 break
             }
 
+            Start-StepProgress -Total 3 -Activity "oooconf deps"
+            Step-Progress -Status "Preparing dependency install paths"
             foreach ($dir in @($DataHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir)) {
                 Ensure-Directory -Path $dir | Out-Null
             }
 
+            Step-Progress -Status "Installing selected optional dependencies"
             Install-OptionalDependencies
+            Step-Progress -Status "Writing dependency summary"
             Write-Summary
             Write-Output ""
             Write-Output "Optional dependency install complete."
+            Step-Progress -Status "Done"
         }
     }
 } finally {
