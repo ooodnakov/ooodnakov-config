@@ -65,7 +65,7 @@ return {
 		border_bottom_height = '0cell',
 		border_top_height = '0cell',
 	},
-	window_decorations = "NONE",
+	window_decorations = "INTEGRATED_BUTTONS|RESIZE",
 	window_background_opacity = const_window_background_opacity,
 	macos_window_background_blur = 30,
 	kde_window_background_blur = true,
