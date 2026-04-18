@@ -51,7 +51,7 @@ cd ~/src/ooodnakov-config
 
 This is the recommended path because it lets you inspect the tracked config and setup scripts before they make changes on the machine.
 
-Before first install, the repo-local `oooconf` script is the intended entrypoint. After install, setup links `oooconf` into `~/.local/bin`, so you can run:
+Before first install, the repo-local `oooconf` script is the intended entrypoint. After install, setup links both `oooconf` and short alias `o` into `~/.local/bin`, so you can run:
 
 ```bash
 oooconf install
@@ -59,6 +59,7 @@ oooconf deps
 oooconf update
 oooconf dry-run
 oooconf doctor
+o doctor
 ```
 
 ### Bootstrap shortcut on Unix-like systems
@@ -83,7 +84,7 @@ Set-Location $HOME\src\ooodnakov-config
 .\scripts\ooodnakov.ps1 install
 ```
 
-After setup, `oooconf` is linked into `$HOME\.local\bin`, and the managed PowerShell profile prepends that directory to `PATH`, so the same commands work in new sessions:
+After setup, `oooconf` is linked into `$HOME\.local\bin` (plus short alias wrappers `o.ps1`/`o.cmd`), and the managed PowerShell profile prepends that directory to `PATH`, so the same commands work in new sessions:
 
 ```powershell
 oooconf install
@@ -91,6 +92,7 @@ oooconf deps
 oooconf update
 oooconf dry-run
 oooconf doctor
+o doctor
 ```
 
 During `oooconf install` and `oooconf update`, LazyVim plugin sync runs headlessly with progress-only output. Detailed Neovim plugin logs stay hidden unless the sync fails.
@@ -99,6 +101,7 @@ During `oooconf install` and `oooconf update`, LazyVim plugin sync runs headless
 
 Primary commands:
 
+- `o`: short alias wrapper for `oooconf` with matching completion behavior
 - `oooconf install`: apply managed config and optional dependency installs
 - `oooconf deps`: install optional dependencies only, with a multi-select picker when `gum` is available
 - `oooconf update`: fast-forward pull the repo, then rerun install
@@ -113,6 +116,7 @@ Primary commands:
 - `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
 - `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
 - `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content
+- `oooconf agents update`: update installed agent CLIs using their preferred package manager (npm-based tools are updated via `pnpm`)
 
 The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts will run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`). If `uv` is missing, they fall back to the system `python3`.
 
@@ -126,7 +130,9 @@ Secrets commands:
 - `oooconf secrets status`: check sync state and vault status
 - `oooconf secrets doctor`: validate prerequisites and rendered files
 - `oooconf secrets logout`: lock vault and revoke the Bitwarden session
+- `oooconf shell status`: print all managed shell preference modes
 - `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
+- `oooconf shell auto-uv-env [enabled|quiet|status]`: control Python virtualenv activation message verbosity
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
 The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, `gum`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`), `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`), and the PowerShell Gallery (`posh-git`, `PSFzf`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
@@ -136,6 +142,7 @@ Shell completion:
 
 - **PowerShell**: argument completion is automatically loaded by the managed profile
   - Complete commands: `oooconf <Tab>`
+  - Alias completions also work: `o <Tab>`
   - Complete options: `oooconf install --<Tab>`
   - Complete secrets subcommands: `oooconf secrets <Tab>`
   - Complete shell values: `oooconf secrets unlock --shell <Tab>`
@@ -172,6 +179,7 @@ Agent policy management:
 oooconf agents detect
 oooconf agents sync
 oooconf agents doctor
+oooconf agents update
 ```
 
 The shared AGENTS policy snippets are configured in:
@@ -181,6 +189,7 @@ The shared AGENTS policy snippets are configured in:
 - `home/.config/ooodnakov/agents/common-data.json` (structured MCP + skills data)
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
+`oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all npm-preferred agents through `pnpm add -g <package>@latest`.
 
 ## Prerequisites
 
@@ -216,41 +225,8 @@ To add or remove an optional dependency, edit the TOML file and run `oooconf loc
 
 The repo aims for deterministic setup by pinning third-party shell dependencies and related tooling.
 
-Unix setup installs pinned copies of:
-
-- `oh-my-zsh`
-- `powerlevel10k`
-- `zsh-autosuggestions`
-- `zsh-syntax-highlighting`
-- `zsh-history-substring-search`
-- `zsh-autocomplete`
-- `fzf-tab`
-- `forgit`
-- `zsh-you-should-use`
-- `auto-uv-env`
-- `nvm`
-- `k`
-- `marker`
-- `todo.txt-cli`
-
-Additional setup behavior:
-
-- `zoxide` is installed via the system package manager when available and initialized as `z`/`zi` in `zsh`
-- `bat` is installed via the system package manager when available as a `cat` alternative with syntax highlighting
-- `delta` is installed via the system package manager when available as a Git diff pager with syntax highlighting
-- `glow` is installed via the system package manager when available as a terminal Markdown reader
-- `gum` is installed via the official Charm package source when needed for the interactive dependency picker, or via the system package manager where available
-- `q` is installed via the upstream natesales APT repo on Debian/Ubuntu, or via the system package manager when available elsewhere
-- `yazi` is available as an optional terminal file manager
-- `ffmpeg`, `jq`, `p7zip`, and `poppler` are available as optional companion tools for richer Yazi previews/plugins
-- `uv` uses Astral's official installer
-- `bw` uses Bitwarden's official native CLI release archive
-- `pnpm` uses a pinned version via `corepack`, or falls back to `npm install --global`
-- `dua-cli` installs from `byron/dua-cli` via `cargo`
-- Linux setup requires `nvim >= 0.11.0` for LazyVim and falls back to a pinned official Neovim tarball if the distro package is too old
-- setup normalizes `oh-my-zsh` permissions on every run so `compaudit` and `compinit` do not reject the install
-
-On Windows, setup can prompt to install common tools with `winget`, `choco`, and the PowerShell Gallery, including WezTerm, Node.js LTS, `oh-my-posh`, `posh-git`, `PSFzf`, `gum`, `ripgrep`, `fd`, `bat`, `delta`, `glow`, `q`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`. It also offers to install Chocolatey if needed. `bw` is installed from Bitwarden's official Windows zip into `~/.local/bin`.
+See [`docs/dependency-decisions.md`](docs/dependency-decisions.md) for the full list of automated, optional, and manual dependencies and how they are installed per platform.
+See [`docs/dependency-lock.md`](docs/dependency-lock.md) for the exact pinned git revisions used by the setup scripts.
 
 The tracked `oh-my-posh` theme uses its own unified `git` segment in [home/.config/ohmyposh/ooodnakov.omp.json](home/.config/ohmyposh/ooodnakov.omp.json). It provides a clean, single-branch status with detailed working and staging information. The PowerShell profile still imports `posh-git` to provide git command completions, but prompt rendering is handled entirely by Oh My Posh for a consistent look.
 
@@ -302,11 +278,6 @@ Additional local-only files you may create per machine:
 - `~/.config/ooodnakov/local/wezterm.lua`
 
 Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local).
-
-Runtime shell state is intentionally untracked:
-
-- zsh history: `~/.local/state/ooodnakov-config/zsh/`
-- zsh completion dump: `~/.cache/ooodnakov-config/zsh/`
 
 To sync shared secrets across machines, keep Bitwarden references in the tracked template and render local plaintext files on each machine:
 
@@ -386,8 +357,10 @@ Upstream inspirations:
 Reference docs:
 
 - architecture notes: [`docs/architecture.md`](docs/architecture.md)
+- contributing workflow: [`docs/contributing.md`](docs/contributing.md)
 - reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
 - dependency decisions: [`docs/dependency-decisions.md`](docs/dependency-decisions.md)
 - troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)
 - import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)
 - third-party tree notes: [`third_party/README.md`](third_party/README.md)
+- contributor instructions and coding rules: [`AGENTS.md`](AGENTS.md)

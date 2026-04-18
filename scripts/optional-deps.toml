@@ -10,7 +10,7 @@
 # Platform install (one or more):
 #   linux.manager   - apt, brew, curl, cargo, custom
 #   macos.manager   - brew, curl, cargo, custom
-#   windows.manager - choco, winget, curl, custom
+#   windows.manager - choco, winget, curl, cargo, custom
 #   package         - package name for apt/brew/choco/winget
 #   command         - shell command for curl/custom managers
 #   winget_id       - winget package ID (when different from package)
@@ -430,3 +430,14 @@ macos.package = "lazygit"
 windows.manager = "winget"
 windows.winget_id = "JesseDuffield.lazygit"
 windows.package = "lazygit"
+
+[[deps]]
+key = "rtk"
+display = "rtk"
+description = "token-optimized command proxy for AI CLI workflows"
+linux.manager = "cargo"
+linux.package = "https://github.com/rtk-ai/rtk"
+macos.manager = "cargo"
+macos.package = "https://github.com/rtk-ai/rtk"
+windows.manager = "cargo"
+windows.package = "https://github.com/rtk-ai/rtk"
