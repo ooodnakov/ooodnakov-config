@@ -749,14 +749,14 @@ function Show-Usage {
     Write-Output ""
     Write-Output (Format-UiText -Text "oooconf — reproducible cross-platform dotfiles manager" -Role "section")
     Write-Output (Format-UiText -Text "Global options:" -Role "info")
-@"
+    Write-Output @"
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
-"@ | Write-Output
+"@
     Write-Output ""
     Write-Output (Format-UiText -Text "Commands:" -Role "info")
     Write-Output ("  " + (Format-UiText -Text "Setup:" -Role "hint"))
@@ -774,7 +774,7 @@ function Show-Usage {
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
-    @"
+    Write-Output @"
 Aliases:
   check -> doctor
   preview -> dry-run
@@ -800,7 +800,7 @@ Common workflows:
   oooconf update
 Repo root:
   `$RepoRoot
-"@ | Write-Output
+"@
 }
 
 function Show-CommandUsage {

@@ -87,6 +87,7 @@ function Get-EditDistance {
     }
 
     return $previous[$rightLength]
+
 }
 
 function Get-ClosestSuggestion {
