@@ -70,14 +70,18 @@ function Get-EditDistance {
     for ($i = 1; $i -lt $rows; $i++) {
         for ($j = 1; $j -lt $cols; $j++) {
             $cost = if ($Left[$i - 1] -ceq $Right[$j - 1]) { 0 } else { 1 }
-            $deletion = $dist[$i - 1, $j] + 1
-            $insertion = $dist[$i, $j - 1] + 1
-            $substitution = $dist[$i - 1, $j - 1] + $cost
+            $prevRow = $i - 1
+            $prevCol = $j - 1
+            $deletion = $dist[$prevRow, $j] + 1
+            $insertion = $dist[$i, $prevCol] + 1
+            $substitution = $dist[$prevRow, $prevCol] + $cost
             $dist[$i, $j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
         }
     }
 
-    return $dist[$rows - 1, $cols - 1]
+    $lastRow = $rows - 1
+    $lastCol = $cols - 1
+    return $dist[$lastRow, $lastCol]
 }
 
 function Get-ClosestSuggestion {
