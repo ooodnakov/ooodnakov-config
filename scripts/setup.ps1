@@ -387,6 +387,7 @@ function Get-OptionalDependencyCommandNames {
         "dua" { return @("dua") }
         "k" { return @("k") }
         "lazygit" { return @("lazygit") }
+        "rtk" { return @("rtk") }
         default { return @() }
     }
 }
@@ -1156,13 +1157,13 @@ function Install-PackageIfMissing {
                 return $false
             }
 
-            try {
-                & $cargoCommand install --locked --git $CargoGitUrl
-            } catch {
-                Write-Output $_
-            }
+            Invoke-ActionWithSpinner -Description "Installing $Description via cargo" -Action {
+                param($url, $cmd)
+                & $cmd install --locked --git $url | Out-Null
+            } -ArgumentList $CargoGitUrl, $cargoCommand
 
-            if (Test-AnyCommand -Names $CommandNames) {
+            $installedPath = Join-Path $cargoBinDir "$($CommandNames[0]).exe"
+            if ((Test-AnyCommand -Names $CommandNames) -or (Test-Path $installedPath)) {
                 Add-DependencySummary "${SummaryName}: installed via cargo"
                 return $true
             }

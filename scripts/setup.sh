@@ -767,8 +767,12 @@ maybe_install_dependency() {
       maybe_install_cargo
     fi
     if ! command -v cargo >/dev/null 2>&1; then
-      DEPENDENCY_SUMMARY+=("$command_name: missing (cargo unavailable)")
-      return 0
+      if [ -x "$HOME_DIR/.cargo/bin/cargo" ]; then
+        export PATH="$HOME_DIR/.cargo/bin:$PATH"
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: missing (cargo unavailable)")
+        return 0
+      fi
     fi
     if prompt_yes_no "Install $command_name for $description via cargo?"; then
       run_with_spinner "Installing $command_name from Git via cargo" cargo install --locked --git "$package_name"
