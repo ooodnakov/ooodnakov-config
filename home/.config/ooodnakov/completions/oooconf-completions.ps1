@@ -20,7 +20,7 @@ function Get-OooconfCompletions {
         'logout', 'add', 'remove', 'rm', 'del'
     )
 
-    $OooconfShellSubcommands = @('forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git')
+    $OooconfShellSubcommands = @('status', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')
     $OooconfForgitAliasModes = @('plain', 'forgit', 'status')
     $OooconfTypoHandlingModes = @('silent', 'suggest', 'help', 'status')
     $OooconfPsfzfModes = @('enabled', 'disabled', 'status')
@@ -119,6 +119,7 @@ function Get-OooconfCompletions {
                 'typo-handling'  { $completions = $OooconfTypoHandlingModes }
                 'psfzf-tab'      { $completions = $OooconfPsfzfModes }
                 'psfzf-git'      { $completions = $OooconfPsfzfModes }
+                'auto-uv-env'    { $completions = @('enabled', 'quiet', 'status') }
             }
         }
     }
