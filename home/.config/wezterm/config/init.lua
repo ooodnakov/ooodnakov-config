@@ -30,4 +30,14 @@ function Config:append(new_options)
    return self
 end
 
+---Override existing `Config.options`
+---@param new_options table new options to override
+---@return Config
+function Config:override(new_options)
+   for k, v in pairs(new_options) do
+      self.options[k] = v
+   end
+   return self
+end
+
 return Config

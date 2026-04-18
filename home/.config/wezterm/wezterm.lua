@@ -27,7 +27,7 @@ if handle then
    handle:close()
    local ok, local_override = pcall(dofile, local_override_path)
    if ok and type(local_override) == 'table' then
-      config:append(local_override)
+      config:override(local_override)
    end
 end
 
