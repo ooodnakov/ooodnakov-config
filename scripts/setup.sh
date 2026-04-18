@@ -1691,6 +1691,7 @@ run_doctor() {
   doctor_check_command wezterm
   doctor_check_nvim
   doctor_check_command oooconf
+  doctor_check_command o
   if [ -d "$FONT_TARGET_DIR" ]; then
     echo "[ok] fonts dir: $FONT_TARGET_DIR"
   else
@@ -1919,7 +1920,8 @@ if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
   fi
   link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
   run_cmd mkdir -p "$HOME_DIR/.local/bin"
-link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
+  link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
+  link_file "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o" || true
 
 generate_autogen_completions || true
 

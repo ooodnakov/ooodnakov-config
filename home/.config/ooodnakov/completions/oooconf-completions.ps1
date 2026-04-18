@@ -46,10 +46,10 @@ function Get-OooconfCompletions {
         }
     }
 
-    # Find the main oooconf command position (it might be oooconf, oooconf.ps1, or a path)
+    # Find the main oooconf command position (it might be oooconf/o, .ps1/.cmd variants, or a path)
     $commandIndex = -1
     for ($i = 0; $i -lt $tokens.Length; $i++) {
-        if ($tokens[$i] -match 'oooconf(\.ps1|\.cmd)?$') {
+        if ($tokens[$i] -match '(^|[\\/])(oooconf|o)(\.ps1|\.cmd)?$') {
             $commandIndex = $i
             break
         }
@@ -138,7 +138,7 @@ function Get-OooconfCompletions {
 }
 
 # Register for all possible names
-@('oooconf', 'oooconf.ps1', 'oooconf.cmd') | ForEach-Object {
+@('oooconf', 'oooconf.ps1', 'oooconf.cmd', 'o', 'o.ps1', 'o.cmd') | ForEach-Object {
     Register-ArgumentCompleter -Native -CommandName $_ -ScriptBlock {
         param($wordToComplete, $commandAst, $cursorPosition)
         Get-OooconfCompletions -wordToComplete $wordToComplete -commandAst $commandAst -cursorPosition $cursorPosition

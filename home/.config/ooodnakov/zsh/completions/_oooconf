@@ -1,4 +1,4 @@
-#compdef oooconf
+#compdef oooconf o
 
 local -a oooconf_commands global_opts setup_opts deps_keys update_pins_opts agents_subcommands agents_opts secrets_subcommands shell_subcommands shell_forgit_alias_modes shell_typo_modes
 local command_name secrets_command shell_command

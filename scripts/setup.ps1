@@ -1528,12 +1528,15 @@ function Test-Doctor {
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
 
     Test-DoctorCommand -Name "git"
     Test-DoctorCommand -Name "wezterm"
     Test-DoctorCommand -Name "nvim"
     Test-DoctorCommand -Name "oh-my-posh"
     Test-DoctorCommand -Name "oooconf"
+    Test-DoctorCommand -Name "o"
 
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
@@ -1605,6 +1608,12 @@ function Invoke-Install {
     }
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")) {
         Add-ToolSummary "oooconf.cmd: linked into $LocalBinDir"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")) {
+        Add-ToolSummary "o.ps1: linked into $LocalBinDir"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")) {
+        Add-ToolSummary "o.cmd: linked into $LocalBinDir"
     }
 
     if (Ensure-UserPathContains -PathEntry $LocalBinDir) {

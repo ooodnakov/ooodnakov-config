@@ -106,9 +106,9 @@ That keeps the initial setup auditable while preserving the same install behavio
 The primary entrypoints are:
 
 - repo-local `./home/.config/ooodnakov/bin/oooconf` before first install on Unix
-- `oooconf` after Unix setup links it into `~/.local/bin/oooconf`
+- `oooconf` (and alias `o`) after Unix setup links them into `~/.local/bin/oooconf` and `~/.local/bin/o`
 - `.\scripts\ooodnakov.ps1` before Windows setup
-- `oooconf` after Windows setup links `oooconf.ps1` and `oooconf.cmd` into `~/.local/bin`
+- `oooconf` (and alias `o`) after Windows setup links `oooconf.ps1`/`oooconf.cmd` and `o.ps1`/`o.cmd` into `~/.local/bin`
 
 On Windows, setup also links the tracked PowerShell profile into both `~/.config/powershell/Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path so the managed XDG-style file and the loaded profile stay aligned.
 
@@ -132,7 +132,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 
 ## Phase-3 ergonomics
 
-- `oooconf` command is linked to `~/.local/bin/oooconf` by Unix setup so the unified CLI can be invoked from any directory.
+- `oooconf` command (plus alias `o`) is linked by Unix setup so the unified CLI can be invoked from any directory.
 - `oooconf deps` uses `gum choose --no-limit` when available to provide a terminal multi-select picker for optional dependencies, and it can bootstrap `gum` first when interactive package installation is allowed. In the current picker, use arrow keys to move, `x` to toggle items, and `Enter` to continue.
 - Unix and PowerShell setup runs write per-run logs under `~/.local/state/ooodnakov-config/logs/`, with `setup-latest.log` copied or linked to the latest run for debugging.
 - PowerShell shared environment exports `OOODNAKOV_CONFIG_HOME`, `OOODNAKOV_SHARE_HOME`, `OOODNAKOV_STATE_HOME`, and `OOODNAKOV_CACHE_HOME`, and prepends both `~/.local/bin` and `~/.local/share/ooodnakov-config/bin` when present.
