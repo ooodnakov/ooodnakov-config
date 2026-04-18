@@ -683,11 +683,7 @@ install_optional_dependency_from_catalog() {
 
   description="$(optional_dependency_label "$key")"
   info="$(optional_dependency_install_info "$key" || true)"
-  declared_manager="$(echo "$info" | cut -d'|' -f1)"
-  package_name="$(echo "$info" | cut -d'|' -f2)"
-  command_name="$(echo "$info" | cut -d'|' -f3)"
-  winget_id="$(echo "$info" | cut -d'|' -f4)"
-  choco_id="$(echo "$info" | cut -d'|' -f5)"
+  IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ <<< "$info"
   install_manager="$(resolve_package_manager_for_dependency "$detected_manager" "$declared_manager")"
 
   case "$key" in

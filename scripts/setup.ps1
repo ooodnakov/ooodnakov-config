@@ -1800,7 +1800,9 @@ function Generate-AutogenCompletions {
 
         Invoke-ActionWithSpinner -Description $description -Action {
             param($lineToRun, $targetFile)
-            Invoke-Expression $lineToRun | Set-Content -Path $targetFile -NoNewline
+            $content = @(Invoke-Expression $lineToRun)
+            $normalized = [string]::Join("`n", $content) + "`n"
+            [System.IO.File]::WriteAllText($targetFile, $normalized, (New-Object System.Text.UTF8Encoding $false))
         } -ArgumentList $commandLine, $outputFile
     }
 }
