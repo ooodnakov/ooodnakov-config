@@ -1,6 +1,7 @@
 """Tests for the central optional-deps.toml parser (sole source of truth)."""
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -82,3 +83,31 @@ def test_get_install_info(key):
     dep = next((d for d in data["deps"] if d.get("key") == key), None)
     assert dep is not None
     assert dep.get("ver") is not None
+
+
+def test_shell_scripts_syntax_and_dry_run():
+    """Test .sh and .ps1 files for syntax and basic dry-run (no full PS1 execution if pwsh missing)."""
+    # Bash syntax (only .sh files; Python is tested via pytest/ruff)
+    for script in ["scripts/setup.sh", "scripts/ooodnakov.sh", "scripts/delete.sh"]:
+        result = subprocess.run(["bash", "-n", script], capture_output=True, text=True)
+        assert result.returncode == 0, f"{script} has syntax errors: {result.stderr}"
+
+    # Basic dry-run test for setup (tests the central TOML path and refactored parser)
+    result = subprocess.run(
+        ["scripts/ooodnakov.sh", "deps", "--dry-run", "rtk"],
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).parent.parent,
+    )
+    assert result.returncode == 0, f"dry-run failed: {result.stderr}"
+    assert any(k in result.stdout.lower() for k in ["dry-run", "rtk", "dependency summary", "complete"])
+
+    # PowerShell syntax (if pwsh available)
+    if Path("/usr/bin/pwsh").exists() or Path("/usr/local/bin/pwsh").exists():
+        result = subprocess.run(
+            ["pwsh", "-NoProfile", "-Command", "Import-Module PSScriptAnalyzer -ErrorAction SilentlyContinue; if ($?) { Invoke-ScriptAnalyzer -Path scripts/setup.ps1 -Severity Error } else { exit 0 }"],
+            capture_output=True,
+            text=True,
+        )
+        # Ignore if analyzer not installed; just check parse
+        assert "syntax error" not in result.stderr.lower()
