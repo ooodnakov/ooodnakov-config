@@ -1,23 +1,34 @@
-# Optional dependency catalog.
-# This file is the single source of truth for optional deps.
-# Both Unix and PowerShell setup scripts read from it.
+# Optional dependency catalog — SINGLE SOURCE OF TRUTH.
+# All scripts (setup.sh, setup.ps1, Python helpers, lock generator) read ONLY from here.
+# No hardcoded names, versions, URLs, or overrides allowed elsewhere.
 #
-# Fields:
-#   key          - unique identifier used in `oooconf deps <key>`
-#   display      - human-readable name shown in picker/list
-#   description  - short explanation of purpose
+# Core fields:
+#   key, display, description
+#   ver          - pinned version
+#   url          - download URL (supports ${ver} template)
+#   bin          - binary name
+#   check        - command to verify installation
+#   after        - post-install shell snippet
+#   repo, ref    - for git-pinned tools
+#   manager, package, command, winget_id, choco_id (existing)
 #
-# Platform install (one or more):
-#   linux.manager   - apt, brew, curl, cargo, custom
-#   macos.manager   - brew, curl, cargo, custom
-#   windows.manager - choco, winget, curl, cargo, custom
-#   package         - package name for apt/brew/choco/winget
-#   command         - shell command for curl/custom managers
-#   winget_id       - winget package ID (when different from package)
-#   choco_id        - choco package ID (when different from package)
-#
-# To add a new optional dep, append a [[deps]] block.
-# To remove one, delete its block and run `oooconf lock`.
+# Top-level [managed-tools] holds all git-pinned zsh ecosystem entries.
+# To add a dep: append [[deps]] block. Run `oooconf lock` after changes.
+
+[managed-tools]
+oh-my-zsh = { repo = "https://github.com/ohmyzsh/ohmyzsh.git", ref = "061f773dd356df52a8bccd5e73377c012f97ef14" }
+zsh-autosuggestions = { repo = "https://github.com/zsh-users/zsh-autosuggestions.git", ref = "85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5" }
+zsh-syntax-highlighting = { repo = "https://github.com/zsh-users/zsh-syntax-highlighting.git", ref = "1d85c692615a25fe2293bdd44b34c217d5d2bf04" }
+zsh-history-substring-search = { repo = "https://github.com/zsh-users/zsh-history-substring-search.git", ref = "14c8d2e0ffaee98f2df9850b19944f32546fdea5" }
+zsh-autocomplete = { repo = "https://github.com/marlonrichert/zsh-autocomplete.git", ref = "20f6c34f20270084b21211428afb6d2534aae8e9" }
+fzf-tab = { repo = "https://github.com/Aloxaf/fzf-tab.git", ref = "0983009f8666f11e91a2ee1f88cfdb748d14f656" }
+forgit = { repo = "https://github.com/wfxr/forgit.git", ref = "9280ebbb01cd37b26380a16adb15d08354a9f5ee" }
+you-should-use = { repo = "https://github.com/MichaelAquilina/zsh-you-should-use.git", ref = "ff371d6a11b653e1fa8dda4e61c896c78de26bfa" }
+auto-uv-env = { repo = "https://github.com/ashwch/auto-uv-env.git", ref = "76589a0fe4a3eaba9817b7195b9fc05ef4139289" }
+nvm = { repo = "https://github.com/nvm-sh/nvm.git", ref = "d200a215594bdda07e130117c9d392fff29cba84" }
+k = { repo = "https://github.com/supercrabtree/k.git", ref = "e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e" }
+marker = { repo = "https://github.com/jotyGill/marker.git", ref = "c123085891228e51cfa58d555708bad67ed98f02" }
+todo-txt = { repo = "https://github.com/todotxt/todo.txt-cli.git", ref = "b20f9b45e210129ef020d3ba212d86b9ba9cf70d" }
 
 [[deps]]
 key = "wget"
@@ -303,12 +314,14 @@ windows.package = "uv"
 key = "bw"
 display = "bw"
 description = "Bitwarden CLI via official native archive"
-linux.manager = "custom"
-linux.command = "installed via official archive in setup.sh"
+ver = "1.22.1"
+url = "https://github.com/bitwarden/clients/releases/download/cli-v${ver}/bw-"
+bin = "bw"
+check = "bw --version"
+linux.manager = "download"
 macos.manager = "brew"
 macos.package = "bitwarden-cli"
-windows.manager = "custom"
-windows.command = "installed via official zip in setup.ps1"
+windows.manager = "download"
 
 [[deps]]
 key = "node"
@@ -435,12 +448,13 @@ windows.package = "lazygit"
 key = "rtk"
 display = "rtk"
 description = "token-optimized command proxy for AI CLI workflows"
-linux.manager = "cargo"
-linux.package = "https://github.com/rtk-ai/rtk"
-macos.manager = "cargo"
-macos.package = "https://github.com/rtk-ai/rtk"
-windows.manager = "cargo"
-windows.package = "https://github.com/rtk-ai/rtk"
+ver = "0.37.0"
+url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-${ver}-"
+bin = "rtk"
+check = "rtk --version"
+linux.manager = "download"
+macos.manager = "download"
+windows.manager = "download"
 
 [[deps]]
 key = "fastfetch"

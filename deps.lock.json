@@ -1,9 +1,9 @@
 {
-  "generated_at_utc": "2026-04-15T08:31:07+00:00",
-  "source": "scripts/setup.sh",
+  "generated_at_utc": "2026-04-18T21:55:44+00:00",
+  "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
-      "name": "auto_uv_env",
+      "name": "auto-uv-env",
       "repo": "https://github.com/ashwch/auto-uv-env.git",
       "ref": "76589a0fe4a3eaba9817b7195b9fc05ef4139289"
     },
@@ -13,7 +13,7 @@
       "ref": "9280ebbb01cd37b26380a16adb15d08354a9f5ee"
     },
     {
-      "name": "fzf_tab",
+      "name": "fzf-tab",
       "repo": "https://github.com/Aloxaf/fzf-tab.git",
       "ref": "0983009f8666f11e91a2ee1f88cfdb748d14f656"
     },
@@ -33,44 +33,39 @@
       "ref": "d200a215594bdda07e130117c9d392fff29cba84"
     },
     {
-      "name": "oh_my_zsh",
+      "name": "oh-my-zsh",
       "repo": "https://github.com/ohmyzsh/ohmyzsh.git",
       "ref": "061f773dd356df52a8bccd5e73377c012f97ef14"
     },
     {
-      "name": "p10k",
-      "repo": "https://github.com/romkatv/powerlevel10k.git",
-      "ref": "604f19a9eaa18e76db2e60b8d446d5f879065f90"
-    },
-    {
-      "name": "todo",
+      "name": "todo-txt",
       "repo": "https://github.com/todotxt/todo.txt-cli.git",
       "ref": "b20f9b45e210129ef020d3ba212d86b9ba9cf70d"
     },
     {
-      "name": "you_should_use",
+      "name": "you-should-use",
       "repo": "https://github.com/MichaelAquilina/zsh-you-should-use.git",
       "ref": "ff371d6a11b653e1fa8dda4e61c896c78de26bfa"
     },
     {
-      "name": "zsh_autocomplete",
+      "name": "zsh-autocomplete",
       "repo": "https://github.com/marlonrichert/zsh-autocomplete.git",
       "ref": "20f6c34f20270084b21211428afb6d2534aae8e9"
     },
     {
-      "name": "zsh_autosuggestions",
+      "name": "zsh-autosuggestions",
       "repo": "https://github.com/zsh-users/zsh-autosuggestions.git",
       "ref": "85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5"
     },
     {
-      "name": "zsh_highlighting",
-      "repo": "https://github.com/zsh-users/zsh-syntax-highlighting.git",
-      "ref": "1d85c692615a25fe2293bdd44b34c217d5d2bf04"
-    },
-    {
-      "name": "zsh_history",
+      "name": "zsh-history-substring-search",
       "repo": "https://github.com/zsh-users/zsh-history-substring-search.git",
       "ref": "14c8d2e0ffaee98f2df9850b19944f32546fdea5"
+    },
+    {
+      "name": "zsh-syntax-highlighting",
+      "repo": "https://github.com/zsh-users/zsh-syntax-highlighting.git",
+      "ref": "1d85c692615a25fe2293bdd44b34c217d5d2bf04"
     }
   ]
 }

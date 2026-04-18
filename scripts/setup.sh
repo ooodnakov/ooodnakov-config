@@ -37,39 +37,20 @@ run_python() {
   oooconf_run_python "$REPO_ROOT" "$@"
 }
 
-OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
-OH_MY_ZSH_REF="061f773dd356df52a8bccd5e73377c012f97ef14"
-P10K_REPO="https://github.com/romkatv/powerlevel10k.git"
-P10K_REF="604f19a9eaa18e76db2e60b8d446d5f879065f90"
-ZSH_AUTOSUGGESTIONS_REPO="https://github.com/zsh-users/zsh-autosuggestions.git"
-ZSH_AUTOSUGGESTIONS_REF="85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5"
-ZSH_HIGHLIGHTING_REPO="https://github.com/zsh-users/zsh-syntax-highlighting.git"
-ZSH_HIGHLIGHTING_REF="1d85c692615a25fe2293bdd44b34c217d5d2bf04"
-ZSH_HISTORY_REPO="https://github.com/zsh-users/zsh-history-substring-search.git"
-ZSH_HISTORY_REF="14c8d2e0ffaee98f2df9850b19944f32546fdea5"
-ZSH_AUTOCOMPLETE_REPO="https://github.com/marlonrichert/zsh-autocomplete.git"
-ZSH_AUTOCOMPLETE_REF="20f6c34f20270084b21211428afb6d2534aae8e9"
-FZF_TAB_REPO="https://github.com/Aloxaf/fzf-tab.git"
-FZF_TAB_REF="0983009f8666f11e91a2ee1f88cfdb748d14f656"
-FORGIT_REPO="https://github.com/wfxr/forgit.git"
-FORGIT_REF="9280ebbb01cd37b26380a16adb15d08354a9f5ee"
-YOU_SHOULD_USE_REPO="https://github.com/MichaelAquilina/zsh-you-should-use.git"
-YOU_SHOULD_USE_REF="ff371d6a11b653e1fa8dda4e61c896c78de26bfa"
-AUTO_UV_ENV_REPO="https://github.com/ashwch/auto-uv-env.git"
-AUTO_UV_ENV_REF="76589a0fe4a3eaba9817b7195b9fc05ef4139289"
-NVM_REPO="https://github.com/nvm-sh/nvm.git"
-NVM_REF="d200a215594bdda07e130117c9d392fff29cba84"
-K_REPO="https://github.com/supercrabtree/k.git"
-K_REF="e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e"
-MARKER_REPO="https://github.com/jotyGill/marker.git"
-MARKER_REF="c123085891228e51cfa58d555708bad67ed98f02"
-TODO_REPO="https://github.com/todotxt/todo.txt-cli.git"
-TODO_REF="b20f9b45e210129ef020d3ba212d86b9ba9cf70d"
-NEOVIM_MIN_VERSION="0.11.0"
-NEOVIM_LINUX_VERSION="0.11.5"
-PNPM_VERSION="10.18.3"
-BW_VERSION="1.22.1"
-RTK_VERSION="0.37.0"
+# All pins, versions, and managed tools now live in optional-deps.toml ONLY.
+# These variables are deprecated and will be removed. Use get_managed_tool() instead.
+get_managed_tool() {
+  local name="$1"
+  local field="${2:-ref}"
+  run_python scripts/read_optional_deps.py managed-tools | \
+    python3 -c '
+import sys, json
+data = json.load(sys.stdin)
+name = sys.argv[1]
+field = sys.argv[2]
+print(data.get(name, {}).get(field, ""))
+' "$name" "$field"
+}
 
 is_interactive() {
   case "$INTERACTIVE" in
