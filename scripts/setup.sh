@@ -1052,6 +1052,74 @@ maybe_note_dependency() {
   DEPENDENCY_SUMMARY+=("$command_name: missing (manual install)")
 }
 
+maybe_install_oh_my_posh() {
+  if check_dependency_status "oh-my-posh" "oh-my-posh"; then
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install oh-my-posh via the official install.sh (curl)?"; then
+    DEPENDENCY_SUMMARY+=("oh-my-posh: skipped")
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    if prompt_yes_no "oh-my-posh install needs curl. Install curl first?"; then
+      local manager
+      manager="$(detect_package_manager)"
+      install_packages "$manager" curl
+    else
+      DEPENDENCY_SUMMARY+=("oh-my-posh: missing (requires curl)")
+      return 1
+    fi
+  fi
+
+  run_with_spinner "Installing oh-my-posh" sh -c "curl -s https://ohmyposh.dev/install.sh | bash -s -- -d $HOME_DIR/.local/bin"
+  if command -v oh-my-posh >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/oh-my-posh" ]; then
+    DEPENDENCY_SUMMARY+=("oh-my-posh: installed")
+  else
+    DEPENDENCY_SUMMARY+=("oh-my-posh: install attempted")
+  fi
+}
+
+eza_apt_repo_configured() {
+  [ -f /etc/apt/keyrings/gierens.gpg ] || return 1
+  [ -f /etc/apt/sources.list.d/gierens.list ] || return 1
+  grep -Fq "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" \
+    /etc/apt/sources.list.d/gierens.list 2>/dev/null
+}
+
+setup_eza_apt_repo() {
+  if eza_apt_repo_configured; then
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    if prompt_yes_no "eza Debian/Ubuntu install needs curl. Install curl first?"; then
+      install_packages apt curl
+    else
+      DEPENDENCY_SUMMARY+=("eza: missing (requires curl for Debian/Ubuntu repo setup)")
+      return 1
+    fi
+  fi
+
+  if ! command -v gpg >/dev/null 2>&1; then
+    if prompt_yes_no "eza Debian/Ubuntu install needs gpg. Install gpg first?"; then
+      install_packages apt gnupg
+    else
+      DEPENDENCY_SUMMARY+=("eza: missing (requires gpg for Debian/Ubuntu repo setup)")
+      return 1
+    fi
+  fi
+
+  run_with_spinner "Creating gierens APT keyring directory for eza" sudo mkdir -p /etc/apt/keyrings || return 1
+  run_with_spinner "Installing gierens APT signing key for eza" \
+    sh -c 'curl -fsSL https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg' || return 1
+  run_with_spinner "Adding gierens APT source for eza" \
+    sh -c 'echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null' || return 1
+  APT_UPDATED=0
+  return 0
+}
+
 maybe_install_eza() {
   local manager="$1"
 
@@ -1079,9 +1147,21 @@ maybe_install_eza() {
       fi
       ;;
     apt)
-      DEPENDENCY_SUMMARY+=("eza: manual apt repo setup required")
-      if is_interactive; then
-        echo "eza on Debian/Ubuntu uses an upstream APT repo; skipping automatic apt install." > /dev/tty
+      if ! prompt_yes_no "Install eza modern ls aliases via the gierens Debian/Ubuntu APT repo?"; then
+        DEPENDENCY_SUMMARY+=("eza: skipped")
+        return 0
+      fi
+
+      if ! setup_eza_apt_repo; then
+        DEPENDENCY_SUMMARY+=("eza: install attempted")
+        return 0
+      fi
+
+      install_packages apt eza
+      if command -v eza >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("eza: installed")
+      else
+        DEPENDENCY_SUMMARY+=("eza: install attempted")
       fi
       ;;
     *)
@@ -1866,7 +1946,7 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected jq maybe_install_dependency "$manager" jq jq "JSON parsing helper for yazi plugins"
   install_optional_dependency_if_selected p7zip maybe_install_p7zip "$manager"
   install_optional_dependency_if_selected poppler maybe_install_poppler "$manager"
-  install_optional_dependency_if_selected oh-my-posh maybe_note_dependency oh-my-posh "Oh My Posh prompt (manual install recommended for Linux/macOS)"
+  install_optional_dependency_if_selected oh-my-posh maybe_install_oh_my_posh
   install_optional_dependency_if_selected wezterm maybe_install_wezterm "$manager"
   install_optional_dependency_if_selected uv maybe_install_uv
   install_optional_dependency_if_selected bw maybe_install_bw
