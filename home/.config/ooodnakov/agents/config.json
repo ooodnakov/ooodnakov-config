@@ -13,6 +13,15 @@
     { "name": "Cursor Agent", "command": "cursor-agent" },
     { "name": "OpenCode", "command": "opencode" }
   ],
+  "agent_updates": [
+    { "name": "OpenAI Codex CLI", "command": "codex", "preferred": "npm", "package": "@openai/codex" },
+    { "name": "Claude Code", "command": "claude", "preferred": "npm", "package": "@anthropic-ai/claude-code" },
+    { "name": "Gemini CLI", "command": "gemini", "preferred": "npm", "package": "@google/gemini-cli" },
+    { "name": "Qwen Code", "command": "qwen", "preferred": "npm", "package": "@qwen-code/qwen-code" },
+    { "name": "Cursor Agent", "command": "cursor-agent", "preferred": "npm", "package": "cursor-agent" },
+    { "name": "OpenCode", "command": "opencode", "preferred": "npm", "package": "opencode-ai" },
+    { "name": "Aider", "command": "aider", "preferred": "uv", "package": "aider-chat" }
+  ],
   "agent_configs": [
     {
       "name": "OpenAI Codex CLI",

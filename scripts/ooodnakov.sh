@@ -819,7 +819,7 @@ EOF
   printf '  %s\n' "$(ui_colorize "hint" "Shell / Secrets / Agents:")"
   ui_command_row "shell" "manage local shell preferences such as forgit aliases"
   ui_command_row "secrets" "sync or validate local secret env files"
-  ui_command_row "agents" "detect/sync/doctor AGENTS.md shared policy sections"
+  ui_command_row "agents" "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
   cat <<EOF
 Aliases:
   check -> doctor
@@ -981,7 +981,7 @@ EOF
       ;;
     agents)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf agents <detect|sync|doctor> [options]
+Usage: oooconf agents <detect|sync|doctor|update> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
@@ -989,6 +989,7 @@ Subcommands:
   sync [--check]        append/update shared AGENTS.md managed block
   doctor [--strict-config-paths]
                         verify AGENTS.md managed block and default agent config paths
+  update [--check]      update installed agent CLIs (npm-based tools use pnpm)
 EOF
       ;;
     secrets)

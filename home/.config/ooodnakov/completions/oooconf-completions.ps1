@@ -127,7 +127,7 @@ function Get-OooconfCompletions {
         $completions = @('--dry-run', '--yes-optional') + $OooconfDepsKeys
     }
     elseif ($subcommand -eq 'agents') {
-        $completions = @('detect', 'sync', 'doctor', '--json', '--check', '--strict-config-paths')
+        $completions = @('detect', 'sync', 'doctor', 'update', '--json', '--check', '--strict-config-paths')
     }
     elseif ($subcommand -eq 'update-pins') {
         $completions = @('--apply')

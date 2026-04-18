@@ -770,7 +770,7 @@ function Show-Usage {
     Write-Output ("  " + (Format-UiText -Text "Manage State:" -Role "hint"))
     Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
     Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
-    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor AGENTS.md common policy blocks"
+    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
@@ -900,13 +900,14 @@ Examples:
         }
         "agents" {
             Write-UiHelpBlock @"
-Usage: oooconf agents <detect|sync|doctor> [options]
+Usage: oooconf agents <detect|sync|doctor|update> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
   detect [--json]                detect configured agent CLIs on PATH
   sync [--check]                 append/update shared AGENTS.md managed block
   doctor [--strict-config-paths] verify AGENTS.md managed block and default agent config paths
+  update [--check]               update installed agent CLIs (npm-based tools use pnpm)
 "@
         }
         "secrets" {
