@@ -2,6 +2,9 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
+OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/read_optional_deps.py"
+AUTOGEN_COMPLETIONS_MANIFEST="$REPO_ROOT/scripts/autogen-completions.txt"
 HOME_DIR="${HOME}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME_DIR/.local/share}"
@@ -22,18 +25,15 @@ PACKAGE_MANAGER=""
 APT_UPDATED=0
 LOG_FILE=""
 LOG_LATEST=""
-KNOWN_SETUP_COMMANDS=(install update doctor deps)
+KNOWN_SETUP_COMMANDS=(install update doctor deps completions)
 PROGRESS_TOTAL=0
 PROGRESS_CURRENT=0
 PROGRESS_TITLE=""
 
-# Run a Python script, preferring `uv run` when available.
+source "$PYTHON_LIB"
+
 run_python() {
-  if command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ]; then
-    uv run "$@"
-  else
-    python3 "$@"
-  fi
+  oooconf_run_python "$REPO_ROOT" "$@"
 }
 
 OH_MY_ZSH_REPO="https://github.com/ohmyzsh/ohmyzsh.git"
@@ -120,13 +120,14 @@ progress_step() {
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/setup.sh [install|update|doctor|deps] [--dry-run] [dependency-key...]
+Usage: ./scripts/setup.sh [install|update|doctor|deps|completions] [--dry-run] [dependency-key...]
 
 Commands:
   install   apply managed config and dependencies
   update    git pull this repo, then run install flow
   doctor    validate managed links and required tools
   deps      install optional dependencies only
+  completions  regenerate tracked autogen shell completion files
 
 Options:
   --dry-run print actions without mutating filesystem
@@ -205,7 +206,7 @@ optional_dependency_applicable() {
   local platform
   platform="$(detect_platform)"
   local info
-  info="$(run_python "$REPO_ROOT/scripts/read_optional_deps.py" install-info "$key" "$platform" 2>/dev/null)" || return 1
+  info="$(run_python "$OPTIONAL_DEPS_SCRIPT" install-info "$key" "$platform" 2>/dev/null)" || return 1
   local manager
   manager="$(echo "$info" | cut -d'|' -f1)"
   [ -n "$manager" ] && [ "$manager" != "none" ]
@@ -216,11 +217,11 @@ optional_dependency_catalog() {
   while IFS='|' read -r key label description; do
     optional_dependency_applicable "$key" || continue
     printf '%s|%s|%s\n' "$key" "$label" "$description"
-  done < <(run_python "$REPO_ROOT/scripts/read_optional_deps.py" catalog)
+  done < <(run_python "$OPTIONAL_DEPS_SCRIPT" catalog)
 }
 
 optional_dependency_catalog_all() {
-  run_python "$REPO_ROOT/scripts/read_optional_deps.py" catalog
+  run_python "$OPTIONAL_DEPS_SCRIPT" catalog
 }
 
 optional_dependency_exists() {
@@ -360,6 +361,30 @@ optional_dependency_label() {
 }
 
 selected_optional_key_csv="${OOODNAKOV_SELECTED_OPTIONAL_KEYS:-}"
+
+optional_dependency_install_info() {
+  local key="$1"
+  local platform
+  platform="$(detect_platform)"
+  run_python "$OPTIONAL_DEPS_SCRIPT" install-info "$key" "$platform" 2>/dev/null
+}
+
+resolve_package_manager_for_dependency() {
+  local detected_manager="$1"
+  local declared_manager="$2"
+
+  case "$declared_manager" in
+    apt)
+      case "$detected_manager" in
+        apt|dnf|pacman|zypper) printf '%s\n' "$detected_manager" ;;
+        *) printf '%s\n' "$declared_manager" ;;
+      esac
+      ;;
+    *)
+      printf '%s\n' "$declared_manager"
+      ;;
+  esac
+}
 
 optional_dependency_selected() {
   local key="$1"
@@ -649,6 +674,60 @@ install_optional_dependency_if_selected() {
 
   optional_dependency_selected "$key" || return 0
   "$@"
+}
+
+install_optional_dependency_from_catalog() {
+  local key="$1"
+  local detected_manager="$2"
+  local description info declared_manager package_name command_name winget_id choco_id install_manager
+
+  description="$(optional_dependency_label "$key")"
+  info="$(optional_dependency_install_info "$key" || true)"
+  IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ <<< "$info"
+  install_manager="$(resolve_package_manager_for_dependency "$detected_manager" "$declared_manager")"
+
+  case "$key" in
+    gum) maybe_install_gum "$install_manager" ;;
+    q) maybe_install_q "$install_manager" ;;
+    eza) maybe_install_eza "$install_manager" ;;
+    p7zip) maybe_install_p7zip "$install_manager" ;;
+    poppler) maybe_install_poppler "$install_manager" ;;
+    oh-my-posh) maybe_install_oh_my_posh ;;
+    wezterm) maybe_install_wezterm "$install_manager" ;;
+    uv) maybe_install_uv ;;
+    bw) maybe_install_bw ;;
+    pnpm) maybe_install_pnpm ;;
+    cargo) maybe_install_cargo ;;
+    dua) maybe_install_dua_cli "$install_manager" ;;
+    nvim) maybe_install_neovim "$install_manager" ;;
+    k) maybe_note_dependency k "manual install if you want the standalone k command" ;;
+    rtk) maybe_install_rtk ;;
+    "")
+      return 0
+      ;;
+    *)
+      if [ -z "$command_name" ]; then
+        command_name="$key"
+      fi
+      case "$install_manager" in
+        custom|curl)
+          maybe_note_dependency "$command_name" "$description (manual installer: $install_manager)"
+          ;;
+        winget)
+          maybe_note_dependency "$command_name" "$description (Windows winget package: ${winget_id:-$package_name})"
+          ;;
+        choco)
+          maybe_note_dependency "$command_name" "$description (Windows choco package: ${choco_id:-$package_name})"
+          ;;
+        "")
+          maybe_note_dependency "$command_name" "$description (no package manager declared)"
+          ;;
+        *)
+          maybe_install_dependency "$install_manager" "$command_name" "$package_name" "$description"
+          ;;
+      esac
+      ;;
+  esac
 }
 
 run_with_spinner() {
@@ -1758,38 +1837,25 @@ install_fonts() {
 
 generate_autogen_completions() {
   local target_dir="$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
+  local spec binary description output_file completion_cmd
   [ "$DRY_RUN" -eq 1 ] && { echo "[dry-run] Generating autogen completions in $target_dir"; return 0; }
 
   mkdir -p "$target_dir"
 
-  if command -v rustup >/dev/null 2>&1; then
-    run_with_spinner "Generating rustup completions" sh -c "rustup completions zsh > '$target_dir/_rustup'"
-    run_with_spinner "Generating cargo completions" sh -c "rustup completions zsh cargo > '$target_dir/_cargo'"
+  if [ ! -f "$AUTOGEN_COMPLETIONS_MANIFEST" ]; then
+    TOOL_SUMMARY+=("autogen completions: manifest missing ($AUTOGEN_COMPLETIONS_MANIFEST)")
+    return 1
   fi
 
-  if command -v gum >/dev/null 2>&1; then
-    run_with_spinner "Generating gum completions" sh -c "gum completion zsh > '$target_dir/_gum'"
-  fi
-
-  if command -v bw >/dev/null 2>&1; then
-    run_with_spinner "Generating bw completions" sh -c "bw completion --shell zsh > '$target_dir/_bw'"
-  fi
-
-  if command -v glow >/dev/null 2>&1; then
-    run_with_spinner "Generating glow completions" sh -c "glow completion zsh > '$target_dir/_glow'"
-  fi
-
-  if command -v wezterm >/dev/null 2>&1; then
-    run_with_spinner "Generating wezterm completions" sh -c "wezterm shell-completion --shell zsh > '$target_dir/_wezterm'"
-  fi
-
-  if command -v fd >/dev/null 2>&1; then
-    run_with_spinner "Generating fd completions" sh -c "fd --gen-completions zsh > '$target_dir/_fd'"
-  fi
-
-  if command -v bat >/dev/null 2>&1; then
-    run_with_spinner "Generating bat completions" sh -c "bat --completion zsh > '$target_dir/_bat'"
-  fi
+  while IFS= read -r spec; do
+    case "$spec" in
+      ""|\#*) continue ;;
+    esac
+    IFS='|' read -r binary description output_file completion_cmd <<< "$spec"
+    if command -v "$binary" >/dev/null 2>&1; then
+      run_with_spinner "$description" sh -c "$completion_cmd > '$target_dir/$output_file'"
+    fi
+  done < "$AUTOGEN_COMPLETIONS_MANIFEST"
 }
 
 install_managed_tools() {
@@ -2003,6 +2069,7 @@ maybe_install_cargo() {
 
 install_optional_dependencies() {
   local manager
+  local key label description
   manager="$(detect_package_manager)"
   PACKAGE_MANAGER="$manager"
 
@@ -2012,40 +2079,11 @@ install_optional_dependencies() {
   fi
 
   is_verbose && echo "Dependency check:"
-  install_optional_dependency_if_selected wget maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
-  install_optional_dependency_if_selected git maybe_install_dependency "$manager" git git "Git version control"
-  install_optional_dependency_if_selected zsh maybe_install_dependency "$manager" zsh zsh "default shell support"
-  install_optional_dependency_if_selected direnv maybe_install_dependency "$manager" direnv direnv "direnv shell integration"
-  install_optional_dependency_if_selected fzf maybe_install_dependency "$manager" fzf fzf "fzf shell integration"
-  install_optional_dependency_if_selected bat maybe_install_dependency "$manager" bat bat "cat alternative with syntax highlighting"
-  install_optional_dependency_if_selected delta maybe_install_dependency "$manager" delta git-delta "Git diff pager with syntax highlighting"
-  install_optional_dependency_if_selected glow maybe_install_dependency "$manager" glow glow "terminal Markdown reader"
-  install_optional_dependency_if_selected gum maybe_install_gum "$manager"
-  install_optional_dependency_if_selected rg maybe_install_dependency "$manager" rg ripgrep "ripgrep search tool"
-  install_optional_dependency_if_selected fd maybe_install_dependency "$manager" fd fd-find "fd find alternative"
-  install_optional_dependency_if_selected zoxide maybe_install_dependency "$manager" zoxide zoxide "smart directory jumping with z/zi"
-  install_optional_dependency_if_selected q maybe_install_q "$manager"
-  install_optional_dependency_if_selected eza maybe_install_eza "$manager"
-  install_optional_dependency_if_selected yazi maybe_install_dependency "$manager" yazi yazi "terminal file manager"
-  install_optional_dependency_if_selected ffmpeg maybe_install_dependency "$manager" ffmpeg ffmpeg "media preview backend for yazi"
-  install_optional_dependency_if_selected jq maybe_install_dependency "$manager" jq jq "JSON parsing helper for yazi plugins"
-  install_optional_dependency_if_selected p7zip maybe_install_p7zip "$manager"
-  install_optional_dependency_if_selected poppler maybe_install_poppler "$manager"
-  install_optional_dependency_if_selected oh-my-posh maybe_install_oh_my_posh
-  install_optional_dependency_if_selected wezterm maybe_install_wezterm "$manager"
-  install_optional_dependency_if_selected uv maybe_install_uv
-  install_optional_dependency_if_selected bw maybe_install_bw
-  install_optional_dependency_if_selected node maybe_install_dependency "$manager" node nodejs "Node.js runtime"
-  install_optional_dependency_if_selected npm maybe_install_dependency "$manager" npm npm "Node package manager"
-  install_optional_dependency_if_selected pnpm maybe_install_pnpm
-  install_optional_dependency_if_selected fc-cache maybe_install_dependency "$manager" fc-cache fontconfig "refreshing installed font caches"
-  install_optional_dependency_if_selected cargo maybe_install_cargo
-  install_optional_dependency_if_selected dua maybe_install_dua_cli "$manager"
-  install_optional_dependency_if_selected nvim maybe_install_neovim "$manager"
-  install_optional_dependency_if_selected k maybe_note_dependency k "manual install if you want the standalone k command"
-  install_optional_dependency_if_selected python3 maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
-  install_optional_dependency_if_selected lazygit maybe_install_dependency "$manager" lazygit lazygit "simple terminal UI for git commands"
-  install_optional_dependency_if_selected rtk maybe_install_rtk
+
+  while IFS='|' read -r key label description; do
+    [ -n "$key" ] || continue
+    install_optional_dependency_if_selected "$key" install_optional_dependency_from_catalog "$key" "$manager"
+  done < <(optional_dependency_catalog)
 }
 
 shift || true
@@ -2131,6 +2169,7 @@ case "$COMMAND" in
     fi
     INSTALL_OPTIONAL=always
     ;;
+  completions) ;;
   *)
     echo "Unknown command: $COMMAND" >&2
     suggestion="$(suggest_setup_command "$COMMAND")"
@@ -2143,6 +2182,20 @@ case "$COMMAND" in
 esac
 
 initialize_logging
+if [ "$COMMAND" = "completions" ]; then
+  progress_init 2 "oooconf completions"
+  progress_step "Preparing completion output path"
+  run_cmd mkdir -p "$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
+  progress_step "Generating tracked autogen completions"
+  generate_autogen_completions || true
+  echo
+  echo "Completion generation complete."
+  if [ -n "$LOG_FILE" ]; then
+    echo "Log file: $LOG_FILE"
+  fi
+  exit 0
+fi
+
 if [ "$COMMAND" = "deps" ]; then
   progress_init 3 "oooconf deps"
   progress_step "Preparing dependency install paths"
@@ -2192,9 +2245,18 @@ progress_step "Installing managed tool checkouts"
 install_managed_tools
 
 progress_step "Linking managed config files"
-link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc" || true
-link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh" || true
-link_file "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm" || true
+managed_link_pairs=(
+  "home/.zshrc|$HOME_DIR/.zshrc"
+  "home/.config/zsh|$CONFIG_HOME/zsh"
+  "home/.config/wezterm|$CONFIG_HOME/wezterm"
+  "home/.config/ooodnakov|$CONFIG_HOME/ooodnakov"
+)
+
+for link_pair in "${managed_link_pairs[@]}"; do
+  IFS='|' read -r source_rel target_path <<< "$link_pair"
+  link_file "$REPO_ROOT/$source_rel" "$target_path" || true
+done
+
 if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
   # Sync LazyVim plugins non-interactively
   nvim_cmd=""
@@ -2206,11 +2268,11 @@ if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
       TOOL_SUMMARY+=("nvim: plugin sync failed")
     fi
   fi
-  fi
-  link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
-  run_cmd mkdir -p "$HOME_DIR/.local/bin"
-  link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
-  link_file "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o" || true
+fi
+
+run_cmd mkdir -p "$HOME_DIR/.local/bin"
+link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
+link_file "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o" || true
 
 progress_step "Generating completions and platform integrations"
 generate_autogen_completions || true

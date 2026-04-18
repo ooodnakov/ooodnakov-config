@@ -22,6 +22,8 @@ $DependencyKeys = $filteredKeys
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$OptionalDepsScript = Join-Path $PSScriptRoot "read_optional_deps.py"
+$AutogenCompletionsManifest = Join-Path $PSScriptRoot "autogen-completions.txt"
 $HomeDir = $HOME
 $ConfigHome = Join-Path $HomeDir ".config"
 $DataHome = Join-Path $HomeDir ".local/share"
@@ -53,7 +55,7 @@ $script:TranscriptStarted = $false
 $script:StepTotal = 0
 $script:StepCurrent = 0
 $script:StepActivity = ""
-$ValidSetupCommands = @("install", "update", "doctor", "deps")
+$ValidSetupCommands = @("install", "update", "doctor", "deps", "completions")
 
 # Run a Python script, preferring `uv run` when available.
 function Run-Python {
@@ -135,13 +137,14 @@ function Get-ClosestSuggestion {
 
 function Show-SetupHelp {
     @"
-Usage: setup.ps1 [install|update|doctor|deps] [--dry-run] [dependency-key...]
+Usage: setup.ps1 [install|update|doctor|deps|completions] [--dry-run] [dependency-key...]
 
 Commands:
   install   apply managed config and dependencies
   update    git pull this repo, then run install flow
   doctor    validate managed links and required tools
   deps      install optional dependencies only
+  completions  regenerate tracked autogen shell completion files
 
 Options:
   --dry-run       print actions without mutating filesystem
@@ -277,69 +280,80 @@ function Test-OptionalDependencyApplicable {
     }
 }
 
+function Get-OptionalDependencySpecsFromTomlFallback {
+    $tomlPath = Join-Path $PSScriptRoot "optional-deps.toml"
+    if (-not (Test-Path $tomlPath)) {
+        return @()
+    }
+
+    $entries = @()
+    $current = @{}
+    foreach ($rawLine in (Get-Content -Path $tomlPath -ErrorAction SilentlyContinue)) {
+        $line = $rawLine.Trim()
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
+            continue
+        }
+
+        if ($line -eq "[[deps]]") {
+            if ($current.Count -gt 0) {
+                $entries += ,$current
+            }
+            $current = @{}
+            continue
+        }
+
+        if ($line -notmatch '^\s*([A-Za-z0-9_.-]+)\s*=\s*"(.*)"\s*$') {
+            continue
+        }
+
+        $dottedKey = $matches[1]
+        $value = $matches[2]
+        $current[$dottedKey] = $value
+    }
+    if ($current.Count -gt 0) {
+        $entries += ,$current
+    }
+
+    return @($entries | ForEach-Object {
+        $entry = $_
+        $linux = @{}
+        $macos = @{}
+        $windows = @{}
+
+        foreach ($k in @("manager", "package", "command", "winget_id", "choco_id")) {
+            $linuxKey = "linux.$k"
+            $macosKey = "macos.$k"
+            $windowsKey = "windows.$k"
+            if ($entry.ContainsKey($linuxKey)) { $linux[$k] = $entry[$linuxKey] }
+            if ($entry.ContainsKey($macosKey)) { $macos[$k] = $entry[$macosKey] }
+            if ($entry.ContainsKey($windowsKey)) { $windows[$k] = $entry[$windowsKey] }
+        }
+
+        [pscustomobject]@{
+            Key         = if ($entry.ContainsKey("key")) { $entry["key"] } else { "" }
+            DisplayName = if ($entry.ContainsKey("display")) { $entry["display"] } elseif ($entry.ContainsKey("key")) { $entry["key"] } else { "" }
+            Description = if ($entry.ContainsKey("description")) { $entry["description"] } else { "" }
+            Linux       = if ($linux.Count -gt 0) { $linux } else { $null }
+            Macos       = if ($macos.Count -gt 0) { $macos } else { $null }
+            Windows     = if ($windows.Count -gt 0) { $windows } else { $null }
+        }
+    })
+}
+
 function Get-OptionalDependencySpecs {
     if ($script:OptionalDependencySpecsCache) {
         return $script:OptionalDependencySpecsCache
     }
 
-    $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
     $json = $null
     try {
-        $json = Run-Python -ScriptPath $pythonScript -ScriptArgs @("json") 2>$null
+        $json = Run-Python -ScriptPath $OptionalDepsScript -ScriptArgs @("json") 2>$null
     } catch {
     }
 
     if (-not $json) {
-        # Fallback: hardcoded specs when Python is unavailable
-        $all_specs = @(
-            [pscustomobject]@{ Key = "wget"; DisplayName = "wget"; Description = "download helper"; Linux = @{ manager = "apt"; package = "wget" }; Macos = @{ manager = "brew"; package = "wget" }; Windows = @{ manager = "winget"; winget_id = "GNU.Wget" } }
-            [pscustomobject]@{ Key = "git"; DisplayName = "git"; Description = "Git version control"; Linux = @{ manager = "apt"; package = "git" }; Macos = @{ manager = "brew"; package = "git" }; Windows = @{ manager = "winget"; winget_id = "Git.Git" } }
-            [pscustomobject]@{ Key = "wezterm"; DisplayName = "wezterm"; Description = "WezTerm terminal"; Linux = @{ manager = "apt" }; Macos = @{ manager = "brew"; package = "wezterm" }; Windows = @{ manager = "winget"; winget_id = "wez.wezterm" } }
-            [pscustomobject]@{ Key = "oh-my-posh"; DisplayName = "oh-my-posh"; Description = "Oh My Posh prompt"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "jandedobbeleer/oh-my-posh/oh-my-posh" }; Windows = @{ manager = "winget"; winget_id = "JanDeDobbeleer.OhMyPosh" } }
-            [pscustomobject]@{ Key = "posh-git"; DisplayName = "posh-git"; Description = "PowerShell Git completions and shell integration"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "psfzf"; DisplayName = "PSFzf"; Description = "PowerShell fzf integration for history, files, and tab completion"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "choco"; DisplayName = "choco"; Description = "Chocolatey"; Linux = $null; Macos = $null; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "gsudo"; DisplayName = "gsudo"; Description = "gsudo elevation helper"; Linux = $null; Macos = $null; Windows = @{ manager = "choco"; package = "gsudo" } }
-            [pscustomobject]@{ Key = "rg"; DisplayName = "rg"; Description = "ripgrep search tool"; Linux = @{ manager = "apt"; package = "ripgrep" }; Macos = @{ manager = "brew"; package = "ripgrep" }; Windows = @{ manager = "choco"; package = "ripgrep" } }
-            [pscustomobject]@{ Key = "fd"; DisplayName = "fd"; Description = "fd find alternative"; Linux = @{ manager = "apt"; package = "fd-find" }; Macos = @{ manager = "brew"; package = "fd" }; Windows = @{ manager = "choco"; package = "fd" } }
-            [pscustomobject]@{ Key = "zsh"; DisplayName = "zsh"; Description = "default shell support"; Linux = @{ manager = "apt"; package = "zsh" }; Macos = @{ manager = "brew"; package = "zsh" }; Windows = $null }
-            [pscustomobject]@{ Key = "direnv"; DisplayName = "direnv"; Description = "direnv shell integration"; Linux = @{ manager = "apt"; package = "direnv" }; Macos = @{ manager = "brew"; package = "direnv" }; Windows = @{ manager = "choco"; package = "direnv" } }
-            [pscustomobject]@{ Key = "fzf"; DisplayName = "fzf"; Description = "fzf shell integration"; Linux = @{ manager = "apt"; package = "fzf" }; Macos = @{ manager = "brew"; package = "fzf" }; Windows = @{ manager = "choco"; package = "fzf" } }
-            [pscustomobject]@{ Key = "bat"; DisplayName = "bat"; Description = "cat alternative with syntax highlighting"; Linux = @{ manager = "apt"; package = "bat" }; Macos = @{ manager = "brew"; package = "bat" }; Windows = @{ manager = "choco"; package = "bat" } }
-            [pscustomobject]@{ Key = "delta"; DisplayName = "delta"; Description = "Git diff pager with syntax highlighting"; Linux = @{ manager = "apt"; package = "git-delta" }; Macos = @{ manager = "brew"; package = "git-delta" }; Windows = @{ manager = "choco"; package = "delta" } }
-            [pscustomobject]@{ Key = "glow"; DisplayName = "glow"; Description = "terminal Markdown reader"; Linux = @{ manager = "apt"; package = "glow" }; Macos = @{ manager = "brew"; package = "glow" }; Windows = @{ manager = "choco"; package = "glow" } }
-            [pscustomobject]@{ Key = "gum"; DisplayName = "gum"; Description = "interactive terminal UI toolkit"; Linux = @{ manager = "apt"; package = "gum" }; Macos = @{ manager = "brew"; package = "gum" }; Windows = @{ manager = "winget"; winget_id = "charmbracelet.gum" } }
-            [pscustomobject]@{ Key = "zoxide"; DisplayName = "zoxide"; Description = "smart directory jumping"; Linux = @{ manager = "apt"; package = "zoxide" }; Macos = @{ manager = "brew"; package = "zoxide" }; Windows = @{ manager = "choco"; package = "zoxide" } }
-            [pscustomobject]@{ Key = "q"; DisplayName = "q"; Description = "q text-as-data CLI"; Linux = @{ manager = "apt"; package = "q" }; Macos = @{ manager = "brew"; package = "q" }; Windows = @{ manager = "choco"; package = "q-dns" } }
-            [pscustomobject]@{ Key = "eza"; DisplayName = "eza"; Description = "modern ls aliases"; Linux = @{ manager = "apt"; package = "eza" }; Macos = @{ manager = "brew"; package = "eza" }; Windows = @{ manager = "choco"; package = "eza" } }
-            [pscustomobject]@{ Key = "yazi"; DisplayName = "yazi"; Description = "terminal file manager"; Linux = @{ manager = "apt"; package = "yazi" }; Macos = @{ manager = "brew"; package = "yazi" }; Windows = @{ manager = "winget"; winget_id = "sxyazi.yazi" } }
-            [pscustomobject]@{ Key = "ffmpeg"; DisplayName = "ffmpeg"; Description = "media preview backend for yazi"; Linux = @{ manager = "apt"; package = "ffmpeg" }; Macos = @{ manager = "brew"; package = "ffmpeg" }; Windows = @{ manager = "winget"; winget_id = "Gyan.FFmpeg" } }
-            [pscustomobject]@{ Key = "jq"; DisplayName = "jq"; Description = "JSON parsing helper for yazi plugins"; Linux = @{ manager = "apt"; package = "jq" }; Macos = @{ manager = "brew"; package = "jq" }; Windows = @{ manager = "winget"; winget_id = "jqlang.jq" } }
-            [pscustomobject]@{ Key = "p7zip"; DisplayName = "p7zip"; Description = "archive preview and extraction for yazi"; Linux = @{ manager = "apt"; package = "p7zip-full" }; Macos = @{ manager = "brew"; package = "p7zip" }; Windows = @{ manager = "winget"; winget_id = "7zip.7zip" } }
-            [pscustomobject]@{ Key = "poppler"; DisplayName = "poppler"; Description = "PDF preview support for yazi"; Linux = @{ manager = "apt"; package = "poppler-utils" }; Macos = @{ manager = "brew"; package = "poppler" }; Windows = @{ manager = "winget"; winget_id = "oschwartz10612.Poppler" } }
-            [pscustomobject]@{ Key = "uv"; DisplayName = "uv"; Description = "Python package manager"; Linux = @{ manager = "curl" }; Macos = @{ manager = "brew"; package = "uv" }; Windows = @{ manager = "choco"; package = "uv" } }
-            [pscustomobject]@{ Key = "bw"; DisplayName = "bw"; Description = "Bitwarden CLI"; Linux = @{ manager = "custom" }; Macos = @{ manager = "brew"; package = "bitwarden-cli" }; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "node"; DisplayName = "node"; Description = "Node.js LTS"; Linux = @{ manager = "apt"; package = "nodejs" }; Macos = @{ manager = "brew"; package = "node" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
-            [pscustomobject]@{ Key = "npm"; DisplayName = "npm"; Description = "Node package manager"; Linux = @{ manager = "apt"; package = "npm" }; Macos = @{ manager = "brew"; package = "npm" }; Windows = @{ manager = "winget"; winget_id = "OpenJS.NodeJS.LTS" } }
-            [pscustomobject]@{ Key = "pnpm"; DisplayName = "pnpm"; Description = "pnpm package manager"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "cargo"; DisplayName = "cargo"; Description = "Rust package manager"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "dua"; DisplayName = "dua"; Description = "disk usage analysis"; Linux = @{ manager = "cargo"; package = "dua-cli" }; Macos = @{ manager = "brew"; package = "dua-cli" }; Windows = @{ manager = "cargo"; package = "dua-cli" } }
-            [pscustomobject]@{ Key = "nvim"; DisplayName = "nvim"; Description = "Neovim"; Linux = @{ manager = "apt"; package = "neovim" }; Macos = @{ manager = "brew"; package = "neovim" }; Windows = @{ manager = "winget"; winget_id = "Neovim.Neovim" } }
-            [pscustomobject]@{ Key = "k"; DisplayName = "k"; Description = "standalone k command"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
-            [pscustomobject]@{ Key = "python3"; DisplayName = "python3"; Description = "Python 3 runtime"; Linux = @{ manager = "apt"; package = "python3" }; Macos = @{ manager = "brew"; package = "python" }; Windows = @{ manager = "choco"; package = "python" } }
-            [pscustomobject]@{ Key = "lazygit"; DisplayName = "lazygit"; Description = "simple terminal UI for git commands"; Linux = @{ manager = "brew"; package = "lazygit" }; Macos = @{ manager = "brew"; package = "lazygit" }; Windows = @{ manager = "winget"; winget_id = "JesseDuffield.lazygit" } }
-            [pscustomobject]@{ Key = "rtk"; DisplayName = "rtk"; Description = "token-optimized command proxy for AI CLI workflows"; Linux = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" }; Macos = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" }; Windows = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" } }
-        )
-        $specs = @($all_specs | ForEach-Object {
-            [pscustomobject]@{
-                Key         = $_.Key
-                DisplayName = $_.DisplayName
-                Description = $_.Description
-                Linux       = $_.Linux
-                Macos       = $_.Macos
-                Windows     = $_.Windows
-            }
-        })
+        # Fallback: parse optional-deps.toml directly when Python is unavailable.
+        $specs = @(Get-OptionalDependencySpecsFromTomlFallback)
         $script:OptionalDependencySpecsCache = $specs
         return @($specs | Where-Object { Test-OptionalDependencyApplicable -Spec $_ })
     }
@@ -363,10 +377,9 @@ function Get-OptionalDependencySpecs {
 
 function Get-AllOptionalDependencySpecs {
     # Return all specs including platform-inapplicable ones (for validation).
-    $pythonScript = Join-Path $PSScriptRoot "read-optional-deps.py"
     $json = $null
     try {
-        $json = Run-Python -ScriptPath $pythonScript -ScriptArgs @("json") 2>$null
+        $json = Run-Python -ScriptPath $OptionalDepsScript -ScriptArgs @("json") 2>$null
     } catch {}
     if ($json) {
         $raw = $json | ConvertFrom-Json
@@ -491,6 +504,97 @@ function Invoke-SelectedOptionalDependency {
 
     & $Action
     return $true
+}
+
+function Get-OptionalDependencyPlatformConfig {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Spec
+    )
+
+    $platform = Detect-Platform
+    switch ($platform) {
+        "windows" { return $Spec.Windows }
+        "macos"   { return $Spec.Macos }
+        "linux"   { return $Spec.Linux }
+        default   { return $null }
+    }
+}
+
+function Install-OptionalDependencyFromSpec {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Spec
+    )
+
+    $key = $Spec.Key
+    if (-not (Test-OptionalDependencySelected -Key $key)) {
+        return $false
+    }
+
+    switch ($key) {
+        "choco" { return (Install-Chocolatey) }
+        "posh-git" { return (Install-PoshGitIfMissing) }
+        "psfzf" { return (Install-PSFzfIfMissing) }
+        "bw" { return (Install-BitwardenCliIfMissing) }
+        "pnpm" { return (Install-PnpmIfMissing) }
+        "cargo" { return (Install-CargoIfMissing) }
+        "dua" { return (Install-DuaIfMissing) }
+        "rtk" { return (Install-RtkIfMissing) }
+        "k" {
+            Write-Warning "k is not available on Windows."
+            Add-DependencySummary "k: skipped"
+            return $false
+        }
+        "zsh" {
+            Write-Warning "zsh is not natively supported on Windows; use WSL or a custom build."
+            Add-DependencySummary "zsh: skipped"
+            return $false
+        }
+    }
+
+    $platformConfig = Get-OptionalDependencyPlatformConfig -Spec $Spec
+    if (-not $platformConfig) {
+        Add-DependencySummary "${key}: skipped (not applicable on this platform)"
+        return $false
+    }
+
+    $commandNames = @(Get-OptionalDependencyCommandNames -Key $key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($commandNames.Count -eq 0) {
+        $commandNames = @($key)
+    }
+
+    $summaryName = $key
+    $description = if ($Spec.DisplayName) { [string]$Spec.DisplayName } else { $key }
+    $manager = if ($platformConfig.manager) { [string]$platformConfig.manager } else { "" }
+    $packageName = if ($platformConfig.package) { [string]$platformConfig.package } else { "" }
+    $wingetId = if ($platformConfig.winget_id) { [string]$platformConfig.winget_id } elseif ($manager -eq "winget") { $packageName } else { "" }
+    $chocoId = if ($platformConfig.choco_id) { [string]$platformConfig.choco_id } elseif ($manager -eq "choco") { $packageName } else { "" }
+    $cargoGitUrl = if ($manager -eq "cargo") { $packageName } else { "" }
+
+    switch ($manager) {
+        "custom" {
+            Add-DependencySummary "${summaryName}: skipped (manual installer)"
+            return $false
+        }
+        "curl" {
+            Add-DependencySummary "${summaryName}: skipped (manual curl installer)"
+            return $false
+        }
+        "winget" {
+            return (Install-PackageIfMissing -CommandNames $commandNames -WingetId $wingetId -Description $description -SummaryName $summaryName)
+        }
+        "choco" {
+            return (Install-PackageIfMissing -CommandNames $commandNames -ChocoId $chocoId -Description $description -SummaryName $summaryName)
+        }
+        "cargo" {
+            return (Install-PackageIfMissing -CommandNames $commandNames -CargoGitUrl $cargoGitUrl -Description $description -SummaryName $summaryName)
+        }
+        default {
+            Add-DependencySummary "${summaryName}: skipped (unsupported manager: $manager)"
+            return $false
+        }
+    }
 }
 
 function Ensure-GumForDependencySelector {
@@ -1637,56 +1741,70 @@ function Install-OptionalDependencies {
     if (Test-VerboseMode) {
         Write-Output "Dependency check:"
     }
+    $specs = @(Get-OptionalDependencySpecs)
+    $selectedSpecs = @($specs | Where-Object { Test-OptionalDependencySelected -Key $_.Key })
 
-    $null = Invoke-SelectedOptionalDependency -Key "wget" -Action { Install-PackageIfMissing -CommandNames @("wget") -WingetId "GNU.Wget" -Description "wget" -SummaryName "wget" }
-    $null = Invoke-SelectedOptionalDependency -Key "git" -Action { Install-PackageIfMissing -CommandNames @("git") -WingetId "Git.Git" -Description "Git" -SummaryName "git" }
-    $null = Invoke-SelectedOptionalDependency -Key "wezterm" -Action { Install-PackageIfMissing -CommandNames @("wezterm") -WingetId "wez.wezterm" -Description "WezTerm" -SummaryName "wezterm" }
-    $null = Invoke-SelectedOptionalDependency -Key "zsh" -Action { Write-Warning "zsh is not natively supported on Windows; use WSL or a custom build." }
-    $null = Invoke-SelectedOptionalDependency -Key "nvim" -Action { Install-PackageIfMissing -CommandNames @("nvim") -WingetId "Neovim.Neovim" -Description "Neovim" -SummaryName "nvim" }
-    $null = Invoke-SelectedOptionalDependency -Key "oh-my-posh" -Action { Install-PackageIfMissing -CommandNames @("oh-my-posh") -WingetId "JanDeDobbeleer.OhMyPosh" -Description "oh-my-posh" -SummaryName "oh-my-posh" }
-    $null = Invoke-SelectedOptionalDependency -Key "posh-git" -Action { Install-PoshGitIfMissing }
-    $null = Invoke-SelectedOptionalDependency -Key "psfzf" -Action { Install-PSFzfIfMissing }
-    $null = Invoke-SelectedOptionalDependency -Key "node" -Action { Install-PackageIfMissing -CommandNames @("node") -WingetId "OpenJS.NodeJS.LTS" -Description "Node.js LTS" -SummaryName "node" }
-
-    $needsChocolatey = Test-OptionalDependencySelected -Key "choco"
-    if (-not $needsChocolatey) {
-        foreach ($key in @("gsudo", "rg", "fd", "direnv", "fzf", "bat", "delta", "glow", "q", "eza", "uv", "python3")) {
-            if (Test-OptionalDependencySelected -Key $key) {
-                $needsChocolatey = $true
-                break
-            }
+    $needsChocolatey = $false
+    foreach ($spec in $selectedSpecs) {
+        if ($spec.Key -eq "choco") {
+            $needsChocolatey = $true
+            break
+        }
+        $platformConfig = Get-OptionalDependencyPlatformConfig -Spec $spec
+        if ($platformConfig -and $platformConfig.manager -eq "choco") {
+            $needsChocolatey = $true
+            break
         }
     }
     if ($needsChocolatey) {
         $null = Install-Chocolatey
     }
 
-    $null = Invoke-SelectedOptionalDependency -Key "gsudo" -Action { Install-PackageIfMissing -CommandNames @("gsudo") -ChocoId "gsudo" -Description "gsudo" -SummaryName "gsudo" }
-    $null = Invoke-SelectedOptionalDependency -Key "rg" -Action { Install-PackageIfMissing -CommandNames @("rg") -ChocoId "ripgrep" -Description "ripgrep" -SummaryName "rg" }
-    $null = Invoke-SelectedOptionalDependency -Key "fd" -Action { Install-PackageIfMissing -CommandNames @("fd") -ChocoId "fd" -Description "fd" -SummaryName "fd" }
-    $null = Invoke-SelectedOptionalDependency -Key "direnv" -Action { Install-PackageIfMissing -CommandNames @("direnv") -ChocoId "direnv" -Description "direnv" -SummaryName "direnv" }
-    $null = Invoke-SelectedOptionalDependency -Key "fzf" -Action { Install-PackageIfMissing -CommandNames @("fzf") -ChocoId "fzf" -Description "fzf" -SummaryName "fzf" }
-    $null = Invoke-SelectedOptionalDependency -Key "bat" -Action { Install-PackageIfMissing -CommandNames @("bat") -ChocoId "bat" -Description "bat" -SummaryName "bat" }
-    $null = Invoke-SelectedOptionalDependency -Key "delta" -Action { Install-PackageIfMissing -CommandNames @("delta") -ChocoId "git-delta" -Description "delta" -SummaryName "delta" }
-    $null = Invoke-SelectedOptionalDependency -Key "glow" -Action { Install-PackageIfMissing -CommandNames @("glow") -ChocoId "glow" -Description "glow" -SummaryName "glow" }
-    $null = Invoke-SelectedOptionalDependency -Key "gum" -Action { Install-PackageIfMissing -CommandNames @("gum") -WingetId "charmbracelet.gum" -Description "gum" -SummaryName "gum" }
-    $null = Invoke-SelectedOptionalDependency -Key "zoxide" -Action { Install-PackageIfMissing -CommandNames @("zoxide") -ChocoId "zoxide" -Description "zoxide" -SummaryName "zoxide" }
-    $null = Invoke-SelectedOptionalDependency -Key "q" -Action { Install-PackageIfMissing -CommandNames @("q") -ChocoId "q" -Description "q" -SummaryName "q" }
-    $null = Invoke-SelectedOptionalDependency -Key "eza" -Action { Install-PackageIfMissing -CommandNames @("eza") -ChocoId "eza" -Description "eza" -SummaryName "eza" }
-    $null = Invoke-SelectedOptionalDependency -Key "yazi" -Action { Install-PackageIfMissing -CommandNames @("yazi") -WingetId "sxyazi.yazi" -Description "yazi" -SummaryName "yazi" }
-    $null = Invoke-SelectedOptionalDependency -Key "ffmpeg" -Action { Install-PackageIfMissing -CommandNames @("ffmpeg") -WingetId "Gyan.FFmpeg" -Description "ffmpeg" -SummaryName "ffmpeg" }
-    $null = Invoke-SelectedOptionalDependency -Key "jq" -Action { Install-PackageIfMissing -CommandNames @("jq") -WingetId "jqlang.jq" -Description "jq" -SummaryName "jq" }
-    $null = Invoke-SelectedOptionalDependency -Key "p7zip" -Action { Install-PackageIfMissing -CommandNames @("7z") -WingetId "7zip.7zip" -Description "7-Zip" -SummaryName "p7zip" }
-    $null = Invoke-SelectedOptionalDependency -Key "poppler" -Action { Install-PackageIfMissing -CommandNames @("pdftotext") -WingetId "oschwartz10612.Poppler" -Description "poppler-utils" -SummaryName "poppler" }
-    $null = Invoke-SelectedOptionalDependency -Key "uv" -Action { Install-PackageIfMissing -CommandNames @("uv") -ChocoId "uv" -Description "uv" -SummaryName "uv" }
-    $null = Invoke-SelectedOptionalDependency -Key "python3" -Action { Install-PackageIfMissing -CommandNames @("python3", "python") -ChocoId "python" -Description "Python 3" -SummaryName "python3" }
-    $null = Invoke-SelectedOptionalDependency -Key "bw" -Action { Install-BitwardenCliIfMissing }
-    $null = Invoke-SelectedOptionalDependency -Key "pnpm" -Action { Install-PnpmIfMissing }
-    $null = Invoke-SelectedOptionalDependency -Key "cargo" -Action { Install-CargoIfMissing }
-    $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Install-DuaIfMissing }
-    $null = Invoke-SelectedOptionalDependency -Key "k" -Action { Write-Warning "k is not available on Windows." }
-    $null = Invoke-SelectedOptionalDependency -Key "lazygit" -Action { Install-PackageIfMissing -CommandNames @("lazygit") -WingetId "JesseDuffield.lazygit" -Description "lazygit" -SummaryName "lazygit" }
-    $null = Invoke-SelectedOptionalDependency -Key "rtk" -Action { Install-RtkIfMissing }
+    foreach ($spec in $specs) {
+        $null = Install-OptionalDependencyFromSpec -Spec $spec
+    }
+}
+
+function Generate-AutogenCompletions {
+    $targetDir = Join-Path $RepoRoot "home/.config/ooodnakov/zsh/completions/autogen"
+    if ($DryRun) {
+        Write-Output "[dry-run] Generating autogen completions in $targetDir"
+        return
+    }
+
+    Ensure-Directory -Path $targetDir | Out-Null
+
+    if (-not (Test-Path $AutogenCompletionsManifest)) {
+        Add-ToolSummary "autogen completions: manifest missing ($AutogenCompletionsManifest)"
+        return
+    }
+
+    $completionSpecs = Get-Content -Path $AutogenCompletionsManifest -ErrorAction SilentlyContinue
+    foreach ($line in $completionSpecs) {
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.Trim().StartsWith("#")) {
+            continue
+        }
+
+        $parts = $line -split "\|", 4
+        if ($parts.Count -lt 4) {
+            continue
+        }
+        $commandName = $parts[0].Trim()
+        $description = $parts[1].Trim()
+        $outputFile = Join-Path $targetDir ($parts[2].Trim())
+        $commandLine = $parts[3].Trim()
+
+        if (-not (Get-Command $commandName -ErrorAction SilentlyContinue)) {
+            continue
+        }
+
+        Invoke-ActionWithSpinner -Description $description -Action {
+            param($lineToRun, $targetFile)
+            $content = @(Invoke-Expression $lineToRun)
+            $normalized = [string]::Join("`n", $content) + "`n"
+            [System.IO.File]::WriteAllText($targetFile, $normalized, (New-Object System.Text.UTF8Encoding $false))
+        } -ArgumentList $commandLine, $outputFile
+    }
 }
 
 function Write-Summary {
@@ -1959,6 +2077,16 @@ try {
             Write-Summary
             Write-Output ""
             Write-Output "Optional dependency install complete."
+            Step-Progress -Status "Done"
+        }
+        "completions" {
+            Start-StepProgress -Total 3 -Activity "oooconf completions"
+            Step-Progress -Status "Preparing completion output path"
+            Ensure-Directory -Path (Join-Path $RepoRoot "home/.config/ooodnakov/zsh/completions/autogen") | Out-Null
+            Step-Progress -Status "Generating tracked autogen completions"
+            Generate-AutogenCompletions
+            Write-Output ""
+            Write-Output "Completion generation complete."
             Step-Progress -Status "Done"
         }
     }

@@ -16,7 +16,27 @@ $GenerateLockScript = Join-Path $PSScriptRoot "generate_dependency_lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
 $AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
-$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
+$CommandsFile = Join-Path $PSScriptRoot "oooconf-commands.txt"
+
+function Get-KnownCommands {
+    $fallback = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
+    if (-not (Test-Path $CommandsFile)) {
+        return $fallback
+    }
+
+    $commands = @(
+        Get-Content -Path $CommandsFile -ErrorAction SilentlyContinue |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ -and -not $_.StartsWith("#") }
+    )
+    $commands = @($commands | Where-Object { $_ -ne "bootstrap" })
+    if ($commands.Count -eq 0) {
+        return $fallback
+    }
+    return $commands
+}
+
+$KnownCommands = Get-KnownCommands
 
 $KnownShellSubcommands = @("status", "forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env")
 $KnownShellForgitModes = @("plain", "forgit", "status")
@@ -110,6 +130,7 @@ function Get-UiCommandIcon {
             "version" { return [char]::ConvertFromUtf32(0xF0386) }
             "lock" { return [char]::ConvertFromUtf32(0xF033E) }
             "update-pins" { return [char]::ConvertFromUtf32(0xF1962) }
+            "completions" { return [char]::ConvertFromUtf32(0xF0A6B) }
             "shell" { return [char]::ConvertFromUtf32(0xF1183) }
             "secrets" { return [char]::ConvertFromUtf32(0xF082E) }
             "agents" { return [char]::ConvertFromUtf32(0xF0B79) }
@@ -125,6 +146,7 @@ function Get-UiCommandIcon {
         "version" { return "[ver]" }
         "lock" { return "[lock]" }
         "update-pins" { return "[pins]" }
+        "completions" { return "[comp]" }
         "shell" { return "[sh]" }
         "secrets" { return "[sec]" }
         "agents" { return "[agt]" }
@@ -774,6 +796,7 @@ function Show-Usage {
     Write-UiCommandRow -CommandName "remove" -Description "remove managed links only (no backup restore)"
     Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
     Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
+    Write-UiCommandRow -CommandName "completions" -Description "regenerate tracked autogen shell completions"
     Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
@@ -920,6 +943,19 @@ pinned refs in setup scripts and regenerates lock artifacts.
 Examples:
   oooconf update-pins                  # check for pin drift
   oooconf update-pins --apply          # update pins and regenerate lock
+"@
+        }
+        "completions" {
+            Write-UiHelpBlock @"
+Usage: oooconf completions [--dry-run]
+
+Regenerate tracked autogen zsh completion files in:
+  home/.config/ooodnakov/zsh/completions/autogen
+This does not install dependencies; it only rebuilds completion files
+for tools currently available on PATH.
+Examples:
+  oooconf completions                  # rebuild tracked completion files
+  oooconf completions --dry-run        # preview generation actions
 "@
         }
         "agents" {
@@ -1134,52 +1170,83 @@ if (-not $command) {
     }
 }
 
+function Test-ShouldNormalizeGlobalFlags {
+    param([Parameter(Mandatory = $true)][string]$CommandName)
+    return $CommandName -in @("bootstrap", "install", "deps", "update", "doctor", "completions", "dry-run", "delete", "remove", "lock", "update-pins", "agents")
+}
+
+if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
+    $normalizedRemaining = @()
+    foreach ($arg in $remaining) {
+        switch ($arg) {
+            "-n" { $dryRunRequested = $true }
+            "--dry-run" { $dryRunRequested = $true }
+            "--yes-optional" { $yesOptionalRequested = $true }
+            default { $normalizedRemaining += $arg }
+        }
+    }
+    $remaining = $normalizedRemaining
+}
+
 $env:OOODNAKOV_REPO_ROOT = $RepoRoot
 if ($yesOptionalRequested) {
     $env:OOODNAKOV_INSTALL_OPTIONAL = "always"
 }
 
+function Invoke-SetupCommand {
+    param(
+        [Parameter(Mandatory = $true)][string]$SetupCommand,
+        [switch]$SupportsDryRun,
+        [string[]]$RemainingArgs = @()
+    )
+
+    if ($dryRunRequested) {
+        if (-not $SupportsDryRun) {
+            throw "--dry-run is not supported for $SetupCommand"
+        }
+        & $SetupScript $SetupCommand -DryRun @RemainingArgs
+        return
+    }
+
+    & $SetupScript $SetupCommand @RemainingArgs
+}
+
+function Assert-NoDryRun {
+    param([Parameter(Mandatory = $true)][string]$CommandName)
+    if ($dryRunRequested) {
+        throw "--dry-run is not supported for $CommandName"
+    }
+}
+
+function Invoke-DeleteCommand {
+    param(
+        [Parameter(Mandatory = $true)][string]$CommandName,
+        [Parameter(Mandatory = $true)][string]$DeleteMode,
+        [string[]]$RemainingArgs = @()
+    )
+    Assert-NoDryRun -CommandName $CommandName
+    $env:OOODNAKOV_REPO_ROOT = $RepoRoot
+    & $DeleteScript $DeleteMode @RemainingArgs
+}
+
 switch ($command) {
     "install" {
-        if ($dryRunRequested) {
-            & $SetupScript install -DryRun @remaining
-        } else {
-            & $SetupScript install @remaining
-        }
+        Invoke-SetupCommand -SetupCommand "install" -SupportsDryRun -RemainingArgs $remaining
     }
     "deps" {
-        if ($dryRunRequested) {
-            & $SetupScript deps -DryRun @remaining
-        } else {
-            & $SetupScript deps @remaining
-        }
+        Invoke-SetupCommand -SetupCommand "deps" -SupportsDryRun -RemainingArgs $remaining
     }
     "update" {
-        if ($dryRunRequested) {
-            & $SetupScript update -DryRun @remaining
-        } else {
-            & $SetupScript update @remaining
-        }
+        Invoke-SetupCommand -SetupCommand "update" -SupportsDryRun -RemainingArgs $remaining
     }
     "delete" {
-        if ($dryRunRequested) {
-            throw "--dry-run is not supported for delete"
-        }
-        $env:OOODNAKOV_REPO_ROOT = $RepoRoot
-        & $DeleteScript "restore" @remaining
+        Invoke-DeleteCommand -CommandName "delete" -DeleteMode "restore" -RemainingArgs $remaining
     }
     "remove" {
-        if ($dryRunRequested) {
-            throw "--dry-run is not supported for remove"
-        }
-        $env:OOODNAKOV_REPO_ROOT = $RepoRoot
-        & $DeleteScript "remove" @remaining
+        Invoke-DeleteCommand -CommandName "remove" -DeleteMode "remove" -RemainingArgs $remaining
     }
     "doctor" {
-        if ($dryRunRequested) {
-            throw "--dry-run is not supported for doctor"
-        }
-        & $SetupScript doctor @remaining
+        Invoke-SetupCommand -SetupCommand "doctor" -RemainingArgs $remaining
     }
     "dry-run" {
         if ($dryRunRequested) {
@@ -1188,16 +1255,15 @@ switch ($command) {
         & $SetupScript install -DryRun @remaining
     }
     "lock" {
-        if ($dryRunRequested) {
-            throw "--dry-run is not supported for lock"
-        }
+        Assert-NoDryRun -CommandName "lock"
         Run-Python -ScriptPath $GenerateLockScript -ScriptArgs $remaining
     }
     "update-pins" {
-        if ($dryRunRequested) {
-            throw "--dry-run is not supported for update-pins"
-        }
+        Assert-NoDryRun -CommandName "update-pins"
         Run-Python -ScriptPath $UpdatePinsScript -ScriptArgs $remaining
+    }
+    "completions" {
+        Invoke-SetupCommand -SetupCommand "completions" -SupportsDryRun -RemainingArgs $remaining
     }
     "secrets" {
         Run-Python -ScriptPath $RenderSecretsScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
@@ -1206,9 +1272,7 @@ switch ($command) {
         Invoke-ShellCommand -ShellArgs $remaining
     }
     "agents" {
-        if ($dryRunRequested) {
-            throw "--dry-run is not supported for agents"
-        }
+        Assert-NoDryRun -CommandName "agents"
         if ($remaining.Count -eq 0 -or $remaining[0] -in @("-h", "--help", "help")) {
             Show-CommandUsage "agents"
             exit 0

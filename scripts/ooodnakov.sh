@@ -3,6 +3,7 @@ set -euo pipefail
 
 DEFAULT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_ROOT="${OOODNAKOV_REPO_ROOT:-$DEFAULT_REPO_ROOT}"
+PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
 SETUP="$REPO_ROOT/scripts/setup.sh"
 DELETE="$REPO_ROOT/scripts/delete.sh"
 BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
@@ -10,7 +11,8 @@ GEN_LOCK="$REPO_ROOT/scripts/generate_dependency_lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
 AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
-KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins agents secrets shell version check preview upgrade)
+COMMANDS_FILE="$REPO_ROOT/scripts/oooconf-commands.txt"
+KNOWN_COMMANDS=()
 KNOWN_SHELL_SUBCOMMANDS=(status forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
 KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
@@ -23,6 +25,27 @@ TYPO_HANDLING_VAR="OOODNAKOV_TYPO_HANDLING_MODE"
 PSFZF_TAB_VAR="OOODNAKOV_PSFZF_TAB"
 PSFZF_GIT_VAR="OOODNAKOV_PSFZF_GIT"
 AUTO_UV_ENV_VAR="AUTO_UV_ENV_QUIET"
+
+load_known_commands() {
+  local fallback_commands=(bootstrap install deps update doctor dry-run delete remove lock update-pins completions agents secrets shell version check preview upgrade)
+  local line
+
+  KNOWN_COMMANDS=()
+  if [ -f "$COMMANDS_FILE" ]; then
+    while IFS= read -r line; do
+      case "$line" in
+        ""|\#*) continue ;;
+      esac
+      KNOWN_COMMANDS+=("$line")
+    done < "$COMMANDS_FILE"
+  fi
+
+  if [ "${#KNOWN_COMMANDS[@]}" -eq 0 ]; then
+    KNOWN_COMMANDS=("${fallback_commands[@]}")
+  fi
+}
+
+load_known_commands
 
 ui_is_interactive() {
   [ -t 1 ]
@@ -84,6 +107,7 @@ ui_cmd_icon() {
       remove) printf '󱈸' ;;
       lock) printf '󰌾' ;;
       update-pins) printf '󱥂' ;;
+      completions) printf '󰩫' ;;
       shell) printf '󱆃' ;;
       secrets) printf '󰠮' ;;
       agents) printf '󰭹' ;;
@@ -102,6 +126,7 @@ ui_cmd_icon() {
       remove) printf '[rm]' ;;
       lock) printf '[lock]' ;;
       update-pins) printf '[pins]' ;;
+      completions) printf '[comp]' ;;
       shell) printf '[sh]' ;;
       secrets) printf '[sec]' ;;
       agents) printf '[agt]' ;;
@@ -183,14 +208,10 @@ ui_render_help_block() {
   done
 }
 
-# Run a Python script, preferring `uv run` (which uses the pinned .python-version
-# and .venv) when uv is available, falling back to plain python3.
+source "$PYTHON_LIB"
+
 run_python() {
-  if command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ]; then
-    uv run "$@"
-  else
-    python3 "$@"
-  fi
+  oooconf_run_python "$REPO_ROOT" "$@"
 }
 
 visible_error() {
@@ -816,6 +837,7 @@ EOF
   ui_command_row "remove" "remove managed links only (no backup restore)"
   ui_command_row "lock" "regenerate dependency lock artifacts from pinned refs"
   ui_command_row "update-pins" "compare/update pinned refs and refresh lock artifacts"
+  ui_command_row "completions" "regenerate tracked autogen shell completions"
   printf '  %s\n' "$(ui_colorize "hint" "Shell / Secrets / Agents:")"
   ui_command_row "shell" "manage local shell preferences such as forgit aliases"
   ui_command_row "secrets" "sync or validate local secret env files"
@@ -979,6 +1001,19 @@ Examples:
   oooconf update-pins --apply          # update pins and regenerate lock
 EOF
       ;;
+    completions)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf completions [--dry-run]
+
+Regenerate tracked autogen zsh completion files in:
+  home/.config/ooodnakov/zsh/completions/autogen
+This does not install dependencies; it only rebuilds completion files
+for tools currently available on PATH.
+Examples:
+  oooconf completions                  # rebuild tracked completion files
+  oooconf completions --dry-run        # preview generation actions
+EOF
+      ;;
     agents)
       cat <<'EOF' | ui_render_help_block
 Usage: oooconf agents <detect|sync|doctor|update> [options]
@@ -1125,61 +1160,95 @@ if [ -z "$command" ]; then
   fi
 fi
 
-case "$command" in
-  bootstrap)
-    if [ "$dry_run_requested" -eq 1 ]; then
-      echo "--dry-run is not supported for bootstrap" >&2
+should_normalize_global_flags() {
+  case "$1" in
+    bootstrap|install|deps|update|doctor|completions|dry-run|delete|remove|lock|update-pins|agents)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+if should_normalize_global_flags "$command"; then
+  normalized_args=()
+  for arg in "$@"; do
+    case "$arg" in
+      -n|--dry-run)
+        dry_run_requested=1
+        ;;
+      --yes-optional)
+        yes_optional_requested=1
+        ;;
+      *)
+        normalized_args+=("$arg")
+        ;;
+    esac
+  done
+  set -- "${normalized_args[@]}"
+fi
+
+exec_setup_command() {
+  local setup_command="$1"
+  local supports_dry_run="$2"
+  shift 2
+
+  require_repo_script "$SETUP"
+  if [ "$dry_run_requested" -eq 1 ]; then
+    if [ "$supports_dry_run" -ne 1 ]; then
+      echo "--dry-run is not supported for $setup_command" >&2
       exit 1
     fi
+    if [ "$yes_optional_requested" -eq 1 ]; then
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" "$setup_command" --dry-run "$@"
+    fi
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" "$setup_command" --dry-run "$@"
+  fi
+
+  if [ "$yes_optional_requested" -eq 1 ]; then
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" "$setup_command" "$@"
+  fi
+  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" "$setup_command" "$@"
+}
+
+require_no_dry_run() {
+  local command_name="$1"
+  if [ "$dry_run_requested" -eq 1 ]; then
+    echo "--dry-run is not supported for $command_name" >&2
+    exit 1
+  fi
+}
+
+exec_delete_command() {
+  local command_name="$1"
+  local delete_mode="$2"
+  shift 2
+  require_no_dry_run "$command_name"
+  require_repo_script "$DELETE"
+  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$DELETE" "$delete_mode" "$@"
+}
+
+case "$command" in
+  bootstrap)
+    require_no_dry_run bootstrap
     require_repo_script "$BOOTSTRAP"
     exec "$BOOTSTRAP" "$@"
     ;;
   install)
-    require_repo_script "$SETUP"
-    if [ "$dry_run_requested" -eq 1 ]; then
-      if [ "$yes_optional_requested" -eq 1 ]; then
-        exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" install --dry-run "$@"
-      fi
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" install --dry-run "$@"
-    fi
-    if [ "$yes_optional_requested" -eq 1 ]; then
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" install "$@"
-    fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" install "$@"
+    exec_setup_command install 1 "$@"
     ;;
   deps)
-    require_repo_script "$SETUP"
-    if [ "$dry_run_requested" -eq 1 ]; then
-      if [ "$yes_optional_requested" -eq 1 ]; then
-        exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" deps --dry-run "$@"
-      fi
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" deps --dry-run "$@"
-    fi
-    if [ "$yes_optional_requested" -eq 1 ]; then
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" deps "$@"
-    fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" deps "$@"
+    exec_setup_command deps 1 "$@"
     ;;
   update)
-    require_repo_script "$SETUP"
-    if [ "$dry_run_requested" -eq 1 ]; then
-      if [ "$yes_optional_requested" -eq 1 ]; then
-        exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" update --dry-run "$@"
-      fi
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" update --dry-run "$@"
-    fi
-    if [ "$yes_optional_requested" -eq 1 ]; then
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" update "$@"
-    fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" update "$@"
+    exec_setup_command update 1 "$@"
     ;;
   doctor)
-    if [ "$dry_run_requested" -eq 1 ]; then
-      echo "--dry-run is not supported for doctor" >&2
-      exit 1
-    fi
-    require_repo_script "$SETUP"
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" doctor "$@"
+    exec_setup_command doctor 0 "$@"
+    ;;
+  completions)
+    exec_setup_command completions 1 "$@"
     ;;
   dry-run)
     if [ "$dry_run_requested" -eq 1 ]; then
@@ -1190,42 +1259,23 @@ case "$command" in
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" install --dry-run "$@"
     ;;
   delete)
-    if [ "$dry_run_requested" -eq 1 ]; then
-      echo "--dry-run is not supported for delete" >&2
-      exit 1
-    fi
-    require_repo_script "$DELETE"
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$DELETE" restore "$@"
+    exec_delete_command delete restore "$@"
     ;;
   remove)
-    if [ "$dry_run_requested" -eq 1 ]; then
-      echo "--dry-run is not supported for remove" >&2
-      exit 1
-    fi
-    require_repo_script "$DELETE"
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$DELETE" remove "$@"
+    exec_delete_command remove remove "$@"
     ;;
   lock)
-    if [ "$dry_run_requested" -eq 1 ]; then
-      echo "--dry-run is not supported for lock" >&2
-      exit 1
-    fi
+    require_no_dry_run lock
     OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$GEN_LOCK" "$@"
     exit $?
     ;;
   update-pins)
-    if [ "$dry_run_requested" -eq 1 ]; then
-      echo "--dry-run is not supported for update-pins" >&2
-      exit 1
-    fi
+    require_no_dry_run update-pins
     require_repo_script "$UPDATE_PINS"
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" "$@"
     ;;
   agents)
-    if [ "$dry_run_requested" -eq 1 ]; then
-      echo "--dry-run is not supported for agents" >&2
-      exit 1
-    fi
+    require_no_dry_run agents
     if ! command -v python3 >/dev/null 2>&1; then
       echo "python3 is required for agents command." >&2
       exit 1

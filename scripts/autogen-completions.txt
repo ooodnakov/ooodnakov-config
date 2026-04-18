@@ -1,0 +1,8 @@
+rustup|Generating rustup completions|_rustup|rustup completions zsh
+rustup|Generating cargo completions|_cargo|rustup completions zsh cargo
+gum|Generating gum completions|_gum|gum completion zsh
+bw|Generating bw completions|_bw|bw completion --shell zsh
+glow|Generating glow completions|_glow|glow completion zsh
+wezterm|Generating wezterm completions|_wezterm|wezterm shell-completion --shell zsh
+fd|Generating fd completions|_fd|fd --gen-completions zsh
+bat|Generating bat completions|_bat|bat --completion zsh
