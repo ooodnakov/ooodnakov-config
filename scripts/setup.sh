@@ -99,12 +99,13 @@ progress_init() {
 progress_step() {
   local description="$1"
   PROGRESS_CURRENT=$((PROGRESS_CURRENT + 1))
-  printf 'Step: %s\n' "$description"
 
   if ! is_interactive; then
     printf '[%s/%s] %s\n' "$PROGRESS_CURRENT" "$PROGRESS_TOTAL" "$description"
     return 0
   fi
+
+  printf 'Step: %s\n' "$description"
 
   local width=24 filled=0 empty=0 percent=0 bar
   if [ "$PROGRESS_TOTAL" -gt 0 ]; then
@@ -660,9 +661,7 @@ run_with_spinner() {
   if ! is_verbose; then
     local logfile status
     if is_interactive; then
-      printf "[-] %s...\n" "$label" > /dev/tty
-    else
-      printf "[-] %s...\n" "$label"
+      printf "[-] %s..." "$label" > /dev/tty
     fi
     logfile="$(mktemp)"
     (
@@ -671,7 +670,7 @@ run_with_spinner() {
     status=$?
     if [ $status -ne 0 ]; then
       if is_interactive; then
-        printf "[failed] %s\n" "$label" > /dev/tty
+        printf "\r[failed] %s\n" "$label" > /dev/tty
       else
         printf "[failed] %s\n" "$label" >&2
       fi
@@ -679,7 +678,7 @@ run_with_spinner() {
       FAILURES+=("$label")
     else
       if is_interactive; then
-        printf "[ok] %s\n" "$label" > /dev/tty
+        printf "\r[ok] %s\n" "$label" > /dev/tty
       else
         printf "[ok] %s\n" "$label"
       fi
@@ -855,7 +854,7 @@ maybe_install_dependency() {
         DEPENDENCY_SUMMARY+=("$command_name: install attempted")
       fi
     else
-      echo "skipping $command_name" >&2
+      is_verbose && echo "skipping $command_name" >&2
       DEPENDENCY_SUMMARY+=("$command_name: skipped")
     fi
     return 0
@@ -877,7 +876,7 @@ maybe_install_dependency() {
       DEPENDENCY_SUMMARY+=("$command_name: install attempted")
     fi
   else
-    echo "skipping $package_name" >&2
+    is_verbose && echo "skipping $package_name" >&2
     DEPENDENCY_SUMMARY+=("$command_name: skipped")
   fi
 }
@@ -1014,7 +1013,7 @@ maybe_install_neovim() {
         return 0
       fi
     else
-      echo "skipping neovim package" >&2
+      is_verbose && echo "skipping neovim package" >&2
     fi
   fi
 
@@ -1266,7 +1265,7 @@ maybe_install_uv() {
   fi
 
   if ! prompt_yes_no "Install uv for Python package manager (official installer)?"; then
-    echo "skipping uv" >&2
+    is_verbose && echo "skipping uv" >&2
     DEPENDENCY_SUMMARY+=("uv: skipped")
     return 0
   fi
@@ -1315,7 +1314,7 @@ maybe_install_bw() {
   fi
 
   if ! prompt_yes_no "Install Bitwarden CLI from the official native executable archive?"; then
-    echo "skipping bw" >&2
+    is_verbose && echo "skipping bw" >&2
     DEPENDENCY_SUMMARY+=("bw: skipped")
     return 0
   fi
@@ -1384,7 +1383,7 @@ maybe_install_dua_cli() {
   fi
 
   if ! prompt_yes_no "Install dua-cli for disk usage analysis from byron/dua-cli via cargo?"; then
-    echo "skipping dua-cli" >&2
+    is_verbose && echo "skipping dua-cli" >&2
     DEPENDENCY_SUMMARY+=("dua: skipped")
     return 0
   fi
@@ -1415,7 +1414,7 @@ maybe_install_pnpm() {
   fi
 
   if ! prompt_yes_no "Install pnpm package manager?"; then
-    echo "skipping pnpm" >&2
+    is_verbose && echo "skipping pnpm" >&2
     DEPENDENCY_SUMMARY+=("pnpm: skipped")
     return 0
   fi
@@ -1717,14 +1716,19 @@ print_summary() {
   echo
   echo "Dependency summary:"
   for item in "${DEPENDENCY_SUMMARY[@]}"; do
+    if ! is_verbose && [[ "$item" == *": present" || "$item" == *": skipped" ]]; then
+      continue
+    fi
     echo "  - $item"
   done
 
   echo "Managed tools:"
   for item in "${TOOL_SUMMARY[@]}"; do
+    if ! is_verbose && [[ "$item" == *": linked" || "$item" == *": synced" || "$item" == "ensured directory: "* || "$item" == *": linked into "* || "$item" == *": permissions normalized" || "$item" == *": install.py succeeded" ]]; then
+       continue
+    fi
     echo "  - $item"
   done
-
   if [ "${#FAILURES[@]}" -gt 0 ]; then
     echo "Failures:"
     for item in "${FAILURES[@]}"; do
@@ -1734,7 +1738,7 @@ print_summary() {
 }
 
 update_repo() {
-  run_cmd git -C "$REPO_ROOT" pull --ff-only
+  run_with_spinner "Pulling latest repository changes" git -C "$REPO_ROOT" pull --ff-only
 }
 
 doctor_check_link() {
@@ -1811,7 +1815,7 @@ maybe_install_cargo() {
   fi
 
   if ! prompt_yes_no "Install Rust and cargo via rustup (official installer)?"; then
-    echo "skipping cargo" >&2
+    is_verbose && echo "skipping cargo" >&2
     DEPENDENCY_SUMMARY+=("cargo: skipped")
     return 0
   fi
@@ -1917,7 +1921,7 @@ fi
 
 case "$COMMAND" in
   install) ;;
-  update) update_repo ;;
+  update) ;;
   doctor) run_doctor; exit $? ;;
   deps)
     if [ -z "$selected_optional_key_csv" ] && is_interactive; then
@@ -1998,7 +2002,8 @@ fi
 
 run_cmd mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
 if [ "$COMMAND" = "update" ]; then
-  progress_step "Pulled latest repository changes"
+  progress_step "Pulling latest repository changes"
+  update_repo
 fi
 progress_step "Prepared local state directories"
 

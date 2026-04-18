@@ -218,9 +218,9 @@ function Step-Progress {
 
     $script:StepCurrent++
     $percent = [Math]::Min([Math]::Floor(($script:StepCurrent * 100) / $script:StepTotal), 100)
-    Write-Output "Step: $Status"
 
     if (Test-Interactive) {
+        Write-Output "Step: $Status"
         Write-Progress -Activity $script:StepActivity -Status ("[{0}/{1}] {2}" -f $script:StepCurrent, $script:StepTotal, $Status) -PercentComplete $percent
         if ($script:StepCurrent -ge $script:StepTotal) {
             Write-Progress -Activity $script:StepActivity -Completed
@@ -695,9 +695,7 @@ function Invoke-ActionWithSpinner {
 
     if (-not (Test-VerboseMode)) {
         if (Test-Interactive) {
-            Write-Host "[-] $Description..."
-        } else {
-            Write-Output "[-] $Description..."
+            Write-Host -NoNewline "[-] $Description..."
         }
 
         $stdoutLog = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-{0}.stdout.log" -f ([guid]::NewGuid().ToString("N")))
@@ -706,12 +704,17 @@ function Invoke-ActionWithSpinner {
         try {
             & $Action @ArgumentList > $stdoutLog 2> $stderrLog
             if (Test-Interactive) {
-                Write-Host "[ok] $Description"
+                Write-Host ("`r[ok] $Description")
             } else {
                 Write-Output "[ok] $Description"
             }
             return $true
         } catch {
+            if (Test-Interactive) {
+                Write-Host ("`r[failed] $Description")
+            } else {
+                Write-Output "[failed] $Description"
+            }
             if (Test-Path $stdoutLog) {
                 Get-Content -LiteralPath $stdoutLog -ErrorAction SilentlyContinue | Write-Output
             }
@@ -1586,7 +1589,7 @@ function Install-OptionalDependencies {
         }
     }
     if ($needsChocolatey) {
-        Install-Chocolatey
+        $null = Install-Chocolatey
     }
 
     $null = Invoke-SelectedOptionalDependency -Key "gsudo" -Action { Install-PackageIfMissing -CommandNames @("gsudo") -ChocoId "gsudo" -Description "gsudo" -SummaryName "gsudo" }
@@ -1620,12 +1623,19 @@ function Install-OptionalDependencies {
 function Write-Summary {
     Write-Output ""
     Write-Output "Dependency summary:"
+    $verbose = Test-VerboseMode
     foreach ($item in $script:DependencySummary) {
+        if (-not $verbose -and ($item -match ": present$" -or $item -match ": skipped$")) {
+            continue
+        }
         Write-Output "  - $item"
     }
 
     Write-Output "Managed setup:"
     foreach ($item in $script:ToolSummary) {
+        if (-not $verbose -and ($item -match ": linked$" -or $item -match ": linked into " -or $item -match "^ensured directory: " -or $item -match ": plugins synced$")) {
+            continue
+        }
         Write-Output "  - $item"
     }
 
@@ -1853,7 +1863,9 @@ try {
             if ($DryRun) {
                 Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
             } else {
-                git -C $RepoRoot pull --ff-only
+                Invoke-ActionWithSpinner -Description "Pulling repository" -Action {
+                    git -C $RepoRoot pull --ff-only
+                }
             }
             Invoke-Install -ContinueProgress
         }
