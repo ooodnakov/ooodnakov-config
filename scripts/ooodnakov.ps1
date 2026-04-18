@@ -830,23 +830,13 @@ picker is shown (using gum if available).
 All dependency metadata (including versions, URLs, and install methods) lives exclusively in scripts/optional-deps.toml.
 
   oooconf deps                         # interactive picker (when gum available)
-  oooconf deps <key...>                # specific tools (see optional-deps.toml for keys)
+  oooconf deps key1 key2                # specific tools (see optional-deps.toml for keys)
   oooconf deps --dry-run               # preview only
 
 "@
         }
         "update" {
-            Write-UiHelpBlock @"
-Usage: oooconf update [--dry-run] [--yes-optional]
-
-Pull the repo with --ff-only, then re-run the install flow.
-Use this to update your config to the latest tracked state. It performs
-a fast-forward pull only, failing if local changes would prevent it.
-Examples:
-  oooconf update                       # pull and reinstall
-  oooconf update --yes-optional        # also install missing dependencies
-  oooconf update --dry-run             # preview pull and install
-"@
+            Write-Output "See README.md for oooconf update usage"
         }
         "doctor" {
             Write-UiHelpBlock @"
@@ -974,10 +964,14 @@ Usage: oooconf version
 
 Print the CLI version (git describe or commit SHA) and resolved repo root.
 
-Examples:
   oooconf version                      # show version and repo path
 "@
         }
+        default {
+            Write-Host "Unknown command: $command"
+        }
+    }
+}
         "shell" {
             Write-UiHelpBlock @"
 Usage: oooconf shell status
@@ -1203,9 +1197,9 @@ switch ($command) {
     "install" {
         Invoke-SetupCommand -SetupCommand "install" -SupportsDryRun -RemainingArgs $remaining
     }
-    "deps" {
-        Invoke-SetupCommand -SetupCommand "deps" -SupportsDryRun -RemainingArgs $remaining
-    }
+        "deps" {
+            Write-Output "See README.md for oooconf deps usage (includes --minimal for core tools)"
+        }
     "update" {
         Invoke-SetupCommand -SetupCommand "update" -SupportsDryRun -RemainingArgs $remaining
     }

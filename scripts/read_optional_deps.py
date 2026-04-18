@@ -43,6 +43,7 @@ def load_deps() -> dict:
         "deps": deps,
         "managed_tools": data.get("managed-tools", {}),
         "defaults": defaults,
+        "minimal": data.get("minimal", {}),
     }
 
 
@@ -138,6 +139,10 @@ def main() -> int:
         data = load_deps()
         for d in data["deps"]:
             print(d.get("key", ""))
+    elif cmd == "minimal":
+        data = load_deps()
+        minimal = data.get("minimal", {}).get("keys", [])
+        print(" ".join(minimal))
     elif cmd == "managed-tools":
         data = load_deps()
         import json

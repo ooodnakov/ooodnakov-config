@@ -38,8 +38,7 @@ bin_dir = "~/.local/bin"
 tools_dir = "~/.local/share/ooodnakov-config/tools"
 
 [minimal]
-# Core tools required for basic dotfiles functionality and productivity
-# Run `oooconf deps --minimal` to install these first
+# Core tools for basic dotfiles functionality and productivity
 keys = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
 
 [[deps]]
@@ -394,18 +393,30 @@ windows.winget_id = "JesseDuffield.lazygit"
 windows.package = "lazygit"
 
 [[deps]]
-key = "rtk"
-display = "rtk"
-description = "token-optimized command proxy for AI CLI workflows"
-ver = "0.37.0"
-url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-${ver}-"
-bin = "rtk"
-check = "rtk --version"
+key = "uv"
+display = "uv"
+description = "Python package manager via official installer"
+check = "uv --version"
+linux.manager = "curl"
+linux.command = "curl -LsSf https://astral.sh/uv/install.sh | sh"
+macos.manager = "brew"
+macos.package = "uv"
+windows.manager = "choco"
+windows.package = "uv"
+
+[[deps]]
+key = "bw"
+display = "bw"
+description = "Bitwarden CLI via official native archive"
+ver = "1.22.1"
+url = "https://github.com/bitwarden/clients/releases/download/cli-v${ver}/bw-"
+bin = "bw"
+check = "bw --version"
 linux.manager = "download"
-linux.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-${ver}-x86_64-unknown-linux-musl.tar.gz"
-macos.manager = "download"
-macos.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-${ver}-aarch64-apple-darwin.tar.gz"
+macos.manager = "brew"
+macos.package = "bitwarden-cli"
 windows.manager = "download"
+
 windows.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-x86_64-pc-windows-msvc.zip"
 
 [[deps]]

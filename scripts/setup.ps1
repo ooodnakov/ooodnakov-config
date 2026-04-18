@@ -1242,8 +1242,8 @@ function Test-DependencyStatus {
     }
 
     if ($isPresent) {
-        if (-not $DryRun -and (Test-VerboseMode)) {
-            if (Test-Interactive) {
+        if (-not $DryRun) {
+            if (Test-Interactive -and (Test-VerboseMode)) {
                 Write-Host "`r[ok] $SummaryName is present.             "
             } else {
                 Write-Output "[ok] $SummaryName is present."
@@ -2046,6 +2046,13 @@ Start-SetupLogging
 try {
     $allPresent = $false
     $requestedDependencyKeys = @($DependencyKeys | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+
+    # Handle --minimal flag
+    if ($requestedDependencyKeys -contains "--minimal") {
+        $minimalKeys = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("minimal")
+        $requestedDependencyKeys = @($minimalKeys -split ' ' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        Write-Information "Installing minimal setup: $($requestedDependencyKeys -join ', ')" -InformationAction Continue
+    }
 
     if ($requestedDependencyKeys.Count -gt 0) {
         # Validate against ALL specs (including platform-inapplicable ones)

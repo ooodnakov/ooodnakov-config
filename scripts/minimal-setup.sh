@@ -10,7 +10,7 @@ OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/read_optional_deps.py"
 echo "=== ooodnakov minimal setup ==="
 echo "Reading core tools from optional-deps.toml [minimal] section..."
 
-MINIMAL_KEYS=$(uv run "$OPTIONAL_DEPS_SCRIPT" minimal-keys)
+MINIMAL_KEYS=$(uv run "$OPTIONAL_DEPS_SCRIPT" minimal)
 
 if [ -z "$MINIMAL_KEYS" ]; then
   echo "No minimal keys defined. Check [minimal] in optional-deps.toml."
