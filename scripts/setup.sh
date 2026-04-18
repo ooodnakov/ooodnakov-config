@@ -669,6 +669,33 @@ choose_optional_dependencies_with_gum() {
   printf '%s\n' "${selected_keys[*]}"
 }
 
+maybe_install_fastfetch() {
+  local manager="$1"
+
+  if check_dependency_status "fastfetch" "fastfetch"; then
+    return 0
+  fi
+
+  case "$manager" in
+    apt)
+      if apt_package_available "fastfetch"; then
+        maybe_install_dependency apt fastfetch fastfetch "system information tool"
+      elif command -v brew >/dev/null 2>&1; then
+        if prompt_yes_no "fastfetch not found in APT. Install via Homebrew instead?"; then
+          maybe_install_dependency brew fastfetch fastfetch "system information tool"
+        else
+          DEPENDENCY_SUMMARY+=("fastfetch: skipped (APT package unavailable and brew install declined)")
+        fi
+      else
+        DEPENDENCY_SUMMARY+=("fastfetch: missing (APT package unavailable and brew not found)")
+      fi
+      ;;
+    *)
+      maybe_install_dependency "$manager" fastfetch fastfetch "system information tool"
+      ;;
+  esac
+}
+
 install_optional_dependency_if_selected() {
   local key="$1"
   shift
@@ -703,6 +730,7 @@ install_optional_dependency_from_catalog() {
     nvim) maybe_install_neovim "$install_manager" ;;
     k) maybe_note_dependency k "manual install if you want the standalone k command" ;;
     rtk) maybe_install_rtk ;;
+    fastfetch) maybe_install_fastfetch "$install_manager" ;;
     "")
       return 0
       ;;

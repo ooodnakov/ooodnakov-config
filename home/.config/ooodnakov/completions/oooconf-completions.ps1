@@ -91,7 +91,8 @@ function Get-OooconfCompletions {
         'k',
         'python3',
         'lazygit',
-        'rtk'
+        'rtk',
+        'fastfetch'
     )
 
     # Simple AST parsing to find the command and subcommands
