@@ -1,7 +1,8 @@
-import urllib.request
-import tarfile
 import os
 import subprocess
+import tarfile
+import urllib.request
+
 
 def download_pwsh():
     if os.path.exists("/tmp/pwsh_dir/pwsh"):

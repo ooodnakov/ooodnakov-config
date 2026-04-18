@@ -916,7 +916,7 @@ Dependency keys match those defined in deps.lock.json. Common keys include:
 bat, delta, eza, fd, fzf, gum, glow, rg, yazi, ffmpeg, jq, p7zip, poppler, zoxide, and others.
 Examples:
   oooconf deps                         # interactive picker (when gum available)
-  oooconf deps bat delta fd ripgrep    # install specific tools
+  oooconf deps <key...>                # specific tools (see optional-deps.toml for keys)
   oooconf deps --dry-run               # preview installation
 EOF
       ;;

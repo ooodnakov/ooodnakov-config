@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-04-18T21:55:44+00:00",
+  "generated_at_utc": "2026-04-18T22:10:13+00:00",
   "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
@@ -36,6 +36,11 @@
       "name": "oh-my-zsh",
       "repo": "https://github.com/ohmyzsh/ohmyzsh.git",
       "ref": "061f773dd356df52a8bccd5e73377c012f97ef14"
+    },
+    {
+      "name": "powerlevel10k",
+      "repo": "https://github.com/romkatv/powerlevel10k.git",
+      "ref": "604f19a9eaa18e76db2e60b8d446d5f879065f90"
     },
     {
       "name": "todo-txt",

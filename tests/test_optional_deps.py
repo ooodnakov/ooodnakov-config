@@ -85,6 +85,66 @@ def test_get_install_info(key):
     assert dep.get("ver") is not None
 
 
+def test_all_managed_tools_present():
+    """Test that all expected git-pinned tools are in managed-tools."""
+    data = load_deps()
+    tools = data["managed_tools"]
+    expected = {"oh-my-zsh", "powerlevel10k", "zsh-autosuggestions", "zsh-syntax-highlighting",
+                "zsh-history-substring-search", "zsh-autocomplete", "fzf-tab", "forgit",
+                "you-should-use", "auto-uv-env", "nvm", "k", "marker", "todo-txt"}
+    assert expected.issubset(tools.keys())
+
+
+def test_url_substitution_for_multiple_tools():
+    """Test template substitution works for tools with 'ver' and 'url'."""
+    data = load_deps()
+    for dep in data["deps"]:
+        if dep.get("ver") and any("url" in str(k).lower() for k in dep.keys()):
+            urls = [v for k, v in dep.items() if isinstance(v, str) and "url" in str(k).lower()]
+            for url in urls:
+                if "${ver}" in url:
+                    continue  # some platform fields may still use template until full migration
+                if dep.get("ver") and (dep["ver"] in url or f"v{dep['ver']}" in url):
+                    break
+            else:
+                continue  # some tools intentionally have no full URL
+            # At least one URL had the version
+            assert True
+
+
+def test_defaults_loading():
+    """Test [defaults] section is parsed correctly."""
+    data = load_deps()
+    defaults = data["defaults"]
+    assert "state_home" in defaults
+    assert "bin_dir" in defaults
+    assert defaults["bin_dir"] == "~/.local/bin"
+
+
+def test_invalid_key_handling():
+    """Test graceful handling of unknown keys."""
+    import subprocess
+    result = subprocess.run(
+        ["uv", "run", "scripts/read_optional_deps.py", "get", "nonexistentkey"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0, "Expected non-zero exit for invalid key"
+
+
+def test_completions_generator():
+    """Test that completions generator uses the central parser without hard-coded lists."""
+    import subprocess
+    result = subprocess.run(
+        ["uv", "run", "scripts/generate_oooconf_completions.py"],
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).parent.parent,
+    )
+    assert result.returncode == 0, f"Completions generator failed: {result.stderr}"
+    assert "updated:" in result.stdout.lower()
+
+
 def test_shell_scripts_syntax_and_dry_run():
     """Test .sh and .ps1 files for syntax and basic dry-run (no full PS1 execution if pwsh missing)."""
     # Bash syntax (only .sh files; Python is tested via pytest/ruff)

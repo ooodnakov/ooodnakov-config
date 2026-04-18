@@ -2,7 +2,7 @@
 
 Generated from `scripts/setup.sh` pinned dependency refs.
 
-Generated at (UTC): `2026-04-18T21:55:44+00:00`
+Generated at (UTC): `2026-04-18T22:10:13+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
@@ -13,6 +13,7 @@ Generated at (UTC): `2026-04-18T21:55:44+00:00`
 | `marker` | `https://github.com/jotyGill/marker.git` | `c123085891228e51cfa58d555708bad67ed98f02` |
 | `nvm` | `https://github.com/nvm-sh/nvm.git` | `d200a215594bdda07e130117c9d392fff29cba84` |
 | `oh-my-zsh` | `https://github.com/ohmyzsh/ohmyzsh.git` | `061f773dd356df52a8bccd5e73377c012f97ef14` |
+| `powerlevel10k` | `https://github.com/romkatv/powerlevel10k.git` | `604f19a9eaa18e76db2e60b8d446d5f879065f90` |
 | `todo-txt` | `https://github.com/todotxt/todo.txt-cli.git` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` |
 | `you-should-use` | `https://github.com/MichaelAquilina/zsh-you-should-use.git` | `ff371d6a11b653e1fa8dda4e61c896c78de26bfa` |
 | `zsh-autocomplete` | `https://github.com/marlonrichert/zsh-autocomplete.git` | `20f6c34f20270084b21211428afb6d2534aae8e9` |

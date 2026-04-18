@@ -14,22 +14,29 @@ TOML_PATH = REPO_ROOT / "scripts" / "optional-deps.toml"
 
 
 def load_deps() -> dict:
-    """Proper TOML parser. Returns dict with 'deps' list and 'managed_tools'."""
+    """Proper TOML parser + template substitution (${ver} → actual version)."""
     with open(TOML_PATH, "rb") as f:
         data = tomllib.load(f)
-    # Convert [[deps]] to list of dicts with flattened platform keys for compatibility
+
+    defaults = data.get("defaults", {})
     deps = []
-    for d in data.get("deps", []):
-        entry = dict(d)  # copy
-        # Support short new fields
+    for raw in data.get("deps", []):
+        entry = dict(raw)
+        ver = entry.get("ver")
+        # Replace ${ver} in any URL field (top-level or platform-specific)
+        if ver:
+            for k, v in list(entry.items()):
+                if isinstance(v, str) and ("url" in k.lower() or k == "url"):
+                    entry[k] = v.replace("${ver}", ver)
         for k in ("ver", "url", "bin", "check", "after", "repo", "ref"):
-            if k in d:
-                entry[k] = d[k]
+            if k in raw:
+                entry[k] = raw[k]
         deps.append(entry)
+
     return {
         "deps": deps,
         "managed_tools": data.get("managed-tools", {}),
-        "defaults": data.get("defaults", {}),
+        "defaults": defaults,
     }
 
 

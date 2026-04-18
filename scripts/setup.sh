@@ -1163,7 +1163,10 @@ maybe_install_rtk() {
     fi
   fi
 
-  local os arch target_url tmp_dir
+  local os arch target_url tmp_dir rtk_ver
+  rtk_ver=$(get_managed_tool rtk ver)
+  [ -z "$rtk_ver" ] && rtk_ver="0.37.0"
+
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
   arch="$(uname -m)"
 
@@ -1174,19 +1177,19 @@ maybe_install_rtk() {
   esac
 
   case "$os" in
-    linux) target_url="https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${arch}-unknown-linux-musl.tar.gz" ;;
-    darwin) target_url="https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${arch}-apple-darwin.tar.gz" ;;
+    linux) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-${arch}-unknown-linux-musl.tar.gz" ;;
+    darwin) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-${arch}-apple-darwin.tar.gz" ;;
     *) DEPENDENCY_SUMMARY+=("rtk: unsupported OS $os"); return 1 ;;
   esac
 
   tmp_dir="$(mktemp -d)"
-  run_with_spinner "Downloading and extracting rtk v${RTK_VERSION}" sh -c "curl -fsSL '$target_url' | tar -xz -C '$tmp_dir'"
+  run_with_spinner "Downloading and extracting rtk v${rtk_ver}" sh -c "curl -fsSL '$target_url' | tar -xz -C '$tmp_dir'"
   
   if [ -f "$tmp_dir/rtk" ]; then
     run_cmd mkdir -p "$HOME_DIR/.local/bin"
     run_cmd cp "$tmp_dir/rtk" "$HOME_DIR/.local/bin/rtk"
     run_cmd chmod +x "$HOME_DIR/.local/bin/rtk"
-    DEPENDENCY_SUMMARY+=("rtk: installed v${RTK_VERSION}")
+    DEPENDENCY_SUMMARY+=("rtk: installed v${rtk_ver}")
   else
     # Fallback to cargo if direct download failed
     if command -v cargo >/dev/null 2>&1; then
@@ -1591,9 +1594,11 @@ maybe_install_bw() {
     fi
   fi
 
-  release_url="https://github.com/bitwarden/cli/releases/download/v${BW_VERSION}/bw-linux-${BW_VERSION}.zip"
-  archive_path="${TMPDIR:-/tmp}/bw-linux-${BW_VERSION}.zip"
-  install_root="$STATE_HOME/tools/bitwarden-cli/v${BW_VERSION}"
+  local bw_ver=$(get_managed_tool bw ver)
+  [ -z "$bw_ver" ] && bw_ver="1.22.1"
+  release_url="https://github.com/bitwarden/cli/releases/download/v${bw_ver}/bw-linux-${bw_ver}.zip"
+  archive_path="${TMPDIR:-/tmp}/bw-linux-${bw_ver}.zip"
+  install_root="$STATE_HOME/tools/bitwarden-cli/v${bw_ver}"
   bin_dir="$STATE_HOME/bin"
   extracted_binary="$install_root/bw"
   target_binary="$bin_dir/bw"
@@ -1621,7 +1626,7 @@ maybe_install_bw() {
   }
 
   if command -v bw >/dev/null 2>&1 || [ -x "$target_binary" ]; then
-    DEPENDENCY_SUMMARY+=("bw: installed official v$BW_VERSION")
+    DEPENDENCY_SUMMARY+=("bw: installed official v${bw_ver}")
   else
     DEPENDENCY_SUMMARY+=("bw: install attempted")
   fi
@@ -1677,14 +1682,17 @@ maybe_install_pnpm() {
   export PATH="$PNPM_HOME:$PATH"
   run_cmd mkdir -p "$PNPM_HOME"
 
+  local pnpm_ver=$(get_managed_tool pnpm ver)
+  [ -z "$pnpm_ver" ] && pnpm_ver="10.18.3"
+
   if command -v corepack >/dev/null 2>&1; then
-    run_with_spinner "Enabling pnpm@$PNPM_VERSION via corepack" \
+    run_with_spinner "Enabling pnpm@$pnpm_ver via corepack" \
       corepack enable --install-directory "$PNPM_HOME" pnpm
-    run_with_spinner "Preparing pnpm@$PNPM_VERSION via corepack" \
-      corepack prepare "pnpm@$PNPM_VERSION" --activate
+    run_with_spinner "Preparing pnpm@$pnpm_ver via corepack" \
+      corepack prepare "pnpm@$pnpm_ver" --activate
   elif command -v npm >/dev/null 2>&1; then
-    run_with_spinner "Installing pnpm@$PNPM_VERSION via npm" \
-      npm install --global "pnpm@$PNPM_VERSION" --prefix "$PNPM_HOME"
+    run_with_spinner "Installing pnpm@$pnpm_ver via npm" \
+      npm install --global "pnpm@$pnpm_ver" --prefix "$PNPM_HOME"
     if [ -x "$PNPM_HOME/bin/pnpm" ]; then
       run_cmd ln -sfn "$PNPM_HOME/bin/pnpm" "$PNPM_HOME/pnpm"
     fi
@@ -1884,12 +1892,51 @@ generate_oooconf_completions() {
 }
 
 install_managed_tools() {
+  # All pins now pulled from optional-deps.toml via get_managed_tool (sole source of truth)
+  local ohmyzsh_repo=$(get_managed_tool oh-my-zsh repo)
+  local ohmyzsh_ref=$(get_managed_tool oh-my-zsh ref)
+  local p10k_repo=$(get_managed_tool powerlevel10k repo)
+  local p10k_ref=$(get_managed_tool powerlevel10k ref)
+  local nvm_repo=$(get_managed_tool nvm repo)
+  local nvm_ref=$(get_managed_tool nvm ref)
+  local k_repo=$(get_managed_tool k repo)
+  local k_ref=$(get_managed_tool k ref)
+  local marker_repo=$(get_managed_tool marker repo)
+  local marker_ref=$(get_managed_tool marker ref)
+  local todo_repo=$(get_managed_tool todo-txt repo)
+  local todo_ref=$(get_managed_tool todo-txt ref)
+  local autosuggestions_repo=$(get_managed_tool zsh-autosuggestions repo)
+  local autosuggestions_ref=$(get_managed_tool zsh-autosuggestions ref)
+  local highlighting_repo=$(get_managed_tool zsh-syntax-highlighting repo)
+  local highlighting_ref=$(get_managed_tool zsh-syntax-highlighting ref)
+  local history_repo=$(get_managed_tool zsh-history-substring-search repo)
+  local history_ref=$(get_managed_tool zsh-history-substring-search ref)
+  local autocomplete_repo=$(get_managed_tool zsh-autocomplete repo)
+  local autocomplete_ref=$(get_managed_tool zsh-autocomplete ref)
+  local fzftab_repo=$(get_managed_tool fzf-tab repo)
+  local fzftab_ref=$(get_managed_tool fzf-tab ref)
+  local forgit_repo=$(get_managed_tool forgit repo)
+  local forgit_ref=$(get_managed_tool forgit ref)
+  local youshoulduse_repo=$(get_managed_tool you-should-use repo)
+  local youshoulduse_ref=$(get_managed_tool you-should-use ref)
+  local autouv_repo=$(get_managed_tool auto-uv-env repo)
+  local autouv_ref=$(get_managed_tool auto-uv-env ref)
+
   local bin_dir="$STATE_HOME/bin"
 
-  sync_repo "$NVM_REPO" "$NVM_REF" "$HOME_DIR/.nvm" && TOOL_SUMMARY+=("nvm: synced") || TOOL_SUMMARY+=("nvm: failed")
-  sync_repo "$K_REPO" "$K_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/k" && TOOL_SUMMARY+=("k: synced") || TOOL_SUMMARY+=("k: failed")
-  sync_repo "$MARKER_REPO" "$MARKER_REF" "$STATE_HOME/marker" && TOOL_SUMMARY+=("marker: synced") || TOOL_SUMMARY+=("marker: failed")
-  sync_repo "$TODO_REPO" "$TODO_REF" "$STATE_HOME/todo" && TOOL_SUMMARY+=("todo.txt-cli: synced") || TOOL_SUMMARY+=("todo.txt-cli: failed")
+  sync_repo "$ohmyzsh_repo" "$ohmyzsh_ref" "$STATE_HOME/oh-my-zsh" && TOOL_SUMMARY+=("oh-my-zsh: synced") || TOOL_SUMMARY+=("oh-my-zsh: failed")
+  sync_repo "$p10k_repo" "$p10k_ref" "$STATE_HOME/powerlevel10k" && TOOL_SUMMARY+=("powerlevel10k: synced") || TOOL_SUMMARY+=("powerlevel10k: failed")
+  sync_repo "$nvm_repo" "$nvm_ref" "$HOME_DIR/.nvm" && TOOL_SUMMARY+=("nvm: synced") || TOOL_SUMMARY+=("nvm: failed")
+  sync_repo "$k_repo" "$k_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/k" && TOOL_SUMMARY+=("k: synced") || TOOL_SUMMARY+=("k: failed")
+  sync_repo "$marker_repo" "$marker_ref" "$STATE_HOME/marker" && TOOL_SUMMARY+=("marker: synced") || TOOL_SUMMARY+=("marker: failed")
+  sync_repo "$todo_repo" "$todo_ref" "$STATE_HOME/todo" && TOOL_SUMMARY+=("todo.txt-cli: synced") || TOOL_SUMMARY+=("todo.txt-cli: failed")
+  sync_repo "$autosuggestions_repo" "$autosuggestions_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" && TOOL_SUMMARY+=("zsh-autosuggestions: synced") || TOOL_SUMMARY+=("zsh-autosuggestions: failed")
+  sync_repo "$highlighting_repo" "$highlighting_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" && TOOL_SUMMARY+=("zsh-syntax-highlighting: synced") || TOOL_SUMMARY+=("zsh-syntax-highlighting: failed")
+  sync_repo "$history_repo" "$history_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" && TOOL_SUMMARY+=("zsh-history-substring-search: synced") || TOOL_SUMMARY+=("zsh-history-substring-search: failed")
+  sync_repo "$autocomplete_repo" "$autocomplete_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" && TOOL_SUMMARY+=("zsh-autocomplete: synced") || TOOL_SUMMARY+=("zsh-autocomplete: failed")
+  sync_repo "$fzftab_repo" "$fzftab_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" && TOOL_SUMMARY+=("fzf-tab: synced") || TOOL_SUMMARY+=("fzf-tab: failed")
+  sync_repo "$forgit_repo" "$forgit_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/forgit" && TOOL_SUMMARY+=("forgit: synced") || TOOL_SUMMARY+=("forgit: failed")
+  sync_repo "$youshoulduse_repo" "$youshoulduse_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" && TOOL_SUMMARY+=("you-should-use: synced") || TOOL_SUMMARY+=("you-should-use: failed")
 
   run_cmd mkdir -p "$bin_dir"
   run_cmd ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh" && TOOL_SUMMARY+=("todo.sh: linked into $bin_dir") || TOOL_SUMMARY+=("todo.sh: link failed")
@@ -1930,7 +1977,9 @@ install_auto_uv_env() {
     fi
   fi
 
-  sync_repo "$AUTO_UV_ENV_REPO" "$AUTO_UV_ENV_REF" "$source_dir" || {
+  local autouv_repo=$(get_managed_tool auto-uv-env repo)
+  local autouv_ref=$(get_managed_tool auto-uv-env ref)
+  sync_repo "$autouv_repo" "$autouv_ref" "$source_dir" || {
     TOOL_SUMMARY+=("auto-uv-env: failed")
     return 1
   }
@@ -2256,15 +2305,7 @@ progress_step "Checking/installing optional dependencies"
 install_optional_dependencies
 
 progress_step "Syncing shell framework repositories"
-sync_repo "$OH_MY_ZSH_REPO" "$OH_MY_ZSH_REF" "$STATE_HOME/oh-my-zsh" || TOOL_SUMMARY+=("oh-my-zsh: failed")
-sync_repo "$P10K_REPO" "$P10K_REF" "$STATE_HOME/powerlevel10k" || TOOL_SUMMARY+=("powerlevel10k: failed")
-sync_repo "$ZSH_AUTOSUGGESTIONS_REPO" "$ZSH_AUTOSUGGESTIONS_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" || TOOL_SUMMARY+=("zsh-autosuggestions: failed")
-sync_repo "$ZSH_HIGHLIGHTING_REPO" "$ZSH_HIGHLIGHTING_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" || TOOL_SUMMARY+=("zsh-syntax-highlighting: failed")
-sync_repo "$ZSH_HISTORY_REPO" "$ZSH_HISTORY_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" || TOOL_SUMMARY+=("zsh-history-substring-search: failed")
-sync_repo "$ZSH_AUTOCOMPLETE_REPO" "$ZSH_AUTOCOMPLETE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" || TOOL_SUMMARY+=("zsh-autocomplete: failed")
-sync_repo "$FZF_TAB_REPO" "$FZF_TAB_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" || TOOL_SUMMARY+=("fzf-tab: failed")
-sync_repo "$FORGIT_REPO" "$FORGIT_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/forgit" || TOOL_SUMMARY+=("forgit: failed")
-sync_repo "$YOU_SHOULD_USE_REPO" "$YOU_SHOULD_USE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" || TOOL_SUMMARY+=("you-should-use: failed")
+install_managed_tools
 install_auto_uv_env
 ensure_oh_my_zsh_permissions || true
 
