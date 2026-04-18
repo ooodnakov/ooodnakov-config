@@ -359,6 +359,19 @@ windows.winget_id = "Neovim.Neovim"
 windows.package = "nvim"
 
 [[deps]]
+key = "tree-sitter"
+display = "tree-sitter"
+description = "Tree-sitter CLI for parser development and highlighting"
+check = "tree-sitter --version"
+linux.manager = "cargo"
+linux.package = "tree-sitter-cli"
+macos.manager = "brew"
+macos.package = "tree-sitter"
+windows.manager = "winget"
+windows.winget_id = "tree-sitter.tree-sitter"
+windows.package = "tree-sitter"
+
+[[deps]]
 key = "k"
 display = "k"
 description = "standalone k command"
