@@ -1,61 +1,73 @@
 {
   "mcp_servers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
-      "description": "local repository and home config trees"
-    },
-    "git": {
-      "command": "uv",
-      "args": ["run", "mcp-server-git"],
-      "description": "commit history, diff summaries, and branch status"
-    },
-    "shell": {
-      "command": "python3",
-      "args": ["scripts/agents_tool.py", "shell-mcp"],
-      "description": "deterministic local inspection commands (rg, fd, git, python3)"
-    },
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"],
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
       "description": "headless browser automation and web testing"
     },
     "windows-mcp": {
       "command": "uvx",
-      "args": ["windows-mcp"],
+      "args": [
+        "windows-mcp"
+      ],
       "description": "Windows system inspection and automation (processes, windows, registry)"
     },
     "context7": {
       "command": "npx",
-      "args": ["-y", "@context7/mcp-server"],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "$CONTEXT7_API_KEY"
+      ],
       "description": "documentation search and code examples for thousands of libraries"
     },
     "github": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
       "description": "GitHub API access (repositories, issues, PRs)"
     },
     "godot": {
-      "source": "https://github.com/ooodnakov/godot-mcp",
+      "source": "https://github.com/Coding-Solo/godot-mcp",
       "command": "node",
-      "args": ["{mcp_dir}/build/index.js"],
+      "args": [
+        "{mcp_dir}/build/index.js"
+      ],
       "install": "npm install && npm run build",
       "description": "Godot engine editor interaction"
     },
     "gemini-webapi": {
-      "source": "https://github.com/ooodnakov/gemini-webapi-mcp",
+      "source": "https://github.com/AndyShaman/gemini-webapi-mcp",
       "command": "uv",
-      "args": ["--directory", "{mcp_dir}", "run", "gemini-webapi-mcp"],
+      "args": [
+        "--directory",
+        "{mcp_dir}",
+        "run",
+        "gemini-webapi-mcp"
+      ],
       "env": {
-        "GEMINI_COOKIE_PATH": "~/.gemini/.cookies"
+        "GEMINI_PSIDTS": "$GEMINI_PSIDTS",
+        "GEMINI_PSID": "$GEMINI_PSID"
       },
       "install": "uv sync",
       "description": "Unofficial Gemini Web API access"
     },
     "grok_mcp": {
-      "source": "https://github.com/ooodnakov/Grok-MCP",
+      "source": "https://github.com/merterbak/Grok-MCP",
       "command": "uv",
-      "args": ["--directory", "{mcp_dir}", "run", "python", "main.py"],
+      "args": [
+        "--directory",
+        "{mcp_dir}",
+        "run",
+        "python",
+        "main.py"
+      ],
       "install": "uv sync",
       "description": "xAI Grok API access"
     }

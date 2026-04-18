@@ -3,6 +3,7 @@ Thumbs.db
 .nvimlog
 .local/
 tmp/
+.vscode
 
 # uv-managed virtual environment
 .venv/
@@ -31,6 +32,7 @@ home/.config/zsh/.zcompdump*
 #ai
 .codex
 .qwen
+.gemini
 
 
 home/.config/ooodnakov/local/bw-session
