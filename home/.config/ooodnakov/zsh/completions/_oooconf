@@ -300,7 +300,7 @@ case "$command_name" in
         _describe -t options 'oooconf secrets status option' '--template:override the tracked template path:_files'
         ;;
       login)
-        _describe -t options 'oooconf secrets login option' '--server:Bitwarden or Vaultwarden server URL:'
+        _describe -t options 'oooconf secrets login option' '--server:Bitwarden or Vaultwarden server URL:' '--method:login method:(auto password apikey)' '--client-id:Bitwarden API key client ID:' '--client-secret:Bitwarden API key client secret:'
         ;;
       unlock)
         _describe -t options 'oooconf secrets unlock option' '--shell:shell syntax to emit:(sh zsh bash pwsh)' '--raw:print only the unlocked session token'

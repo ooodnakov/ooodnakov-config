@@ -123,7 +123,7 @@ The helper scripts use `uv` for Python version and dependency management. If `uv
 
 Secrets commands:
 
-- `oooconf secrets login`: configure Bitwarden/Vaultwarden server and start login
+- `oooconf secrets login`: configure Bitwarden/Vaultwarden server, choose login method, and start login
 - `oooconf secrets unlock --shell zsh`: print shell code to export `BW_SESSION`
 - `oooconf secrets sync`: render local secret env files from the tracked template, creating missing `env.zsh`/`env.ps1`
 - `oooconf secrets sync --dry-run`: preview rendered files without writing
@@ -284,7 +284,7 @@ Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local).
 
 To sync shared secrets across machines, keep Bitwarden references in the tracked template and render local plaintext files on each machine:
 
-- `oooconf secrets login`
+- `oooconf secrets login` (prompts for login type)
 - `eval "$(oooconf secrets unlock --shell zsh)"`
 - `oooconf secrets sync`
 - `oooconf secrets sync --dry-run`
@@ -302,6 +302,8 @@ Typical Unix flow:
 ```bash
 oooconf install
 oooconf secrets login
+# or explicitly:
+oooconf secrets login --method apikey
 eval "$(oooconf secrets unlock --shell zsh)"
 oooconf secrets sync
 ```
@@ -311,6 +313,8 @@ Typical PowerShell flow:
 ```powershell
 oooconf install
 oooconf secrets login
+# or explicitly:
+oooconf secrets login --method apikey
 oooconf secrets unlock --shell pwsh | Invoke-Expression
 oooconf secrets sync
 ```

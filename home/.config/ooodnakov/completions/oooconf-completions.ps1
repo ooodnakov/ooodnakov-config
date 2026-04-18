@@ -157,7 +157,7 @@ function Get-OooconfCompletions {
                     'sync'   { $completions = @('--dry-run', '--force', '--template', '--backend') }
                     'list'   { $completions = @('--resolved', '--template', '--backend') }
                     'ls'     { $completions = @('--resolved', '--template', '--backend') }
-                    'login'  { $completions = @('--server') }
+                    'login'  { $completions = @('--server', '--method', '--client-id', '--client-secret') }
                     default  { $completions = @('--template') }
                 }
             }

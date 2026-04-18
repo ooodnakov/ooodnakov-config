@@ -1034,7 +1034,8 @@ Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> 
 Render or validate local secret env files from the tracked template.
 Examples:
   oooconf secrets                      # show current sync/session status
-  oooconf secrets login
+  oooconf secrets login                # choose login method interactively
+  oooconf secrets login --method apikey
   oooconf secrets unlock               # prompt for password and save session
   oooconf secrets unlock 'your-password'
   eval "$(oooconf secrets unlock --shell zsh)"

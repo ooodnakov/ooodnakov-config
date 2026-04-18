@@ -102,6 +102,20 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_BW_SERVER,
         help="Bitwarden or Vaultwarden server URL.",
     )
+    login.add_argument(
+        "--method",
+        choices=("auto", "password", "apikey"),
+        default="auto",
+        help="Login method. auto prompts in interactive terminals.",
+    )
+    login.add_argument(
+        "--client-id",
+        help="Bitwarden API key client ID (BW_CLIENTID).",
+    )
+    login.add_argument(
+        "--client-secret",
+        help="Bitwarden API key client secret (BW_CLIENTSECRET).",
+    )
 
     unlock = subparsers.add_parser("unlock", help="Unlock Bitwarden and print or persist BW_SESSION.")
     unlock.add_argument(
@@ -750,14 +764,78 @@ def login_command(args: argparse.Namespace) -> int:
     if config_result.returncode != 0:
         return config_result.returncode
 
+    interactive = sys.stdin.isatty() and sys.stdout.isatty()
     env = os.environ.copy()
-    if env.get("BW_CLIENTID") and env.get("BW_CLIENTSECRET"):
-        status("info", "Detected BW_CLIENTID and BW_CLIENTSECRET. Attempting API key login...")
+    method = args.method
+
+    if method == "auto":
+        if interactive:
+            method = prompt_login_method(
+                default_method="apikey" if env.get("BW_CLIENTID") and env.get("BW_CLIENTSECRET") else "password"
+            )
+            status("info", f"Selected login method: {method}")
+        else:
+            method = "apikey" if env.get("BW_CLIENTID") and env.get("BW_CLIENTSECRET") else "password"
+
+    if method == "apikey":
+        client_id = args.client_id or env.get("BW_CLIENTID")
+        client_secret = args.client_secret or env.get("BW_CLIENTSECRET")
+
+        if not client_id and interactive:
+            client_id = input("Bitwarden client ID (BW_CLIENTID): ").strip()
+        if not client_secret and interactive:
+            client_secret = getpass.getpass("Bitwarden client secret (BW_CLIENTSECRET): ").strip()
+
+        if not client_id or not client_secret:
+            status(
+                "fail",
+                "API key login requires BW_CLIENTID and BW_CLIENTSECRET. "
+                "Provide --client-id/--client-secret or export both env vars.",
+            )
+            return 1
+
+        env["BW_CLIENTID"] = client_id
+        env["BW_CLIENTSECRET"] = client_secret
+        status("info", "Attempting Bitwarden API key login...")
         login_result = subprocess.run(["bw", "login", "--apikey"], env=env, text=True)
     else:
+        status("info", "Attempting Bitwarden email/password login...")
         login_result = subprocess.run(["bw", "login"], text=True)
 
     return login_result.returncode
+
+
+def prompt_login_method(default_method: str) -> str:
+    options = {
+        "1": "password",
+        "2": "apikey",
+        "password": "password",
+        "email": "password",
+        "email-password": "password",
+        "apikey": "apikey",
+        "api": "apikey",
+        "clientid": "apikey",
+        "client-id": "apikey",
+    }
+    default_choice = "2" if default_method == "apikey" else "1"
+
+    print("Choose Bitwarden login method:")
+    print("  1) email/password")
+    print("  2) clientid/clientsecret (API key)")
+
+    while True:
+        try:
+            raw = input(f"Method [1/2] (default {default_choice}): ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("", file=sys.stderr)
+            return default_method
+
+        if not raw:
+            return default_method
+        method = options.get(raw)
+        if method:
+            return method
+        status("warn", "Invalid selection. Enter 1 or 2.")
 
 
 def unlock_command(args: argparse.Namespace) -> int:

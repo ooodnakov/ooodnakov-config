@@ -94,7 +94,7 @@ Tracked secret references belong in:
 
 The design rule is simple: if a value is secret, internal, machine-only, or not safe across Linux, Windows, and macOS, it belongs in a local override instead of tracked base config.
 
-`oooconf secrets login` configures the CLI against the intended Bitwarden-compatible server. `oooconf secrets unlock` prints shell code that exports `BW_SESSION` in the caller's shell, and `oooconf secrets sync` then resolves the tracked template into local plaintext env files for Zsh and PowerShell. The initial backend is `Bitwarden CLI` with `bw://item/<item-id>/...` references, which keeps the source of truth outside git while preserving reproducible local file locations.
+`oooconf secrets login` configures the CLI against the intended Bitwarden-compatible server and supports both email/password and API key (`BW_CLIENTID`/`BW_CLIENTSECRET`) flows. `oooconf secrets unlock` prints shell code that exports `BW_SESSION` in the caller's shell, and `oooconf secrets sync` then resolves the tracked template into local plaintext env files for Zsh and PowerShell. The initial backend is `Bitwarden CLI` with `bw://item/<item-id>/...` references, which keeps the source of truth outside git while preserving reproducible local file locations.
 
 ## Runtime State
 

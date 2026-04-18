@@ -369,7 +369,9 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("        _describe -t options 'oooconf secrets status option' '--template:override the tracked template path:_files'")
     lines.append("        ;;")
     lines.append("      login)")
-    lines.append("        _describe -t options 'oooconf secrets login option' '--server:Bitwarden or Vaultwarden server URL:'")
+    lines.append(
+        "        _describe -t options 'oooconf secrets login option' '--server:Bitwarden or Vaultwarden server URL:' '--method:login method:(auto password apikey)' '--client-id:Bitwarden API key client ID:' '--client-secret:Bitwarden API key client secret:'"
+    )
     lines.append("        ;;")
     lines.append("      unlock)")
     lines.append("        _describe -t options 'oooconf secrets unlock option' '--shell:shell syntax to emit:(sh zsh bash pwsh)' '--raw:print only the unlocked session token'")
@@ -499,7 +501,7 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("                    'sync'   { $completions = @('--dry-run', '--force', '--template', '--backend') }")
     lines.append("                    'list'   { $completions = @('--resolved', '--template', '--backend') }")
     lines.append("                    'ls'     { $completions = @('--resolved', '--template', '--backend') }")
-    lines.append("                    'login'  { $completions = @('--server') }")
+    lines.append("                    'login'  { $completions = @('--server', '--method', '--client-id', '--client-secret') }")
     lines.append("                    default  { $completions = @('--template') }")
     lines.append("                }")
     lines.append("            }")
