@@ -491,11 +491,11 @@ set_psfzf_git_mode() {
 }
 
 print_shell_status() {
-  printf 'forgit-aliases: %s\n' "$(get_forgit_alias_mode)"
-  printf 'typo-handling: %s\n' "$(get_typo_handling_mode)"
-  printf 'psfzf-tab: %s\n' "$(get_psfzf_tab_mode)"
-  printf 'psfzf-git: %s\n' "$(get_psfzf_git_mode)"
-  printf 'auto-uv-env: %s\n' "$(get_auto_uv_env_mode)"
+  ui_line info "forgit-aliases: $(get_forgit_alias_mode)"
+  ui_line info "typo-handling: $(get_typo_handling_mode)"
+  ui_line info "psfzf-tab: $(get_psfzf_tab_mode)"
+  ui_line info "psfzf-git: $(get_psfzf_git_mode)"
+  ui_line info "auto-uv-env: $(get_auto_uv_env_mode)"
 }
 
 print_help_for_scope() {

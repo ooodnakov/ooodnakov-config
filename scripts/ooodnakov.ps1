@@ -479,11 +479,11 @@ function Set-PsfzfGitMode {
 }
 
 function Show-ShellStatus {
-    Write-Output "forgit-aliases: $(Get-ForgitAliasMode)"
-    Write-Output "typo-handling: $(Get-TypoHandlingMode)"
-    Write-Output "psfzf-tab: $(Get-PsfzfTabMode)"
-    Write-Output "psfzf-git: $(Get-PsfzfGitMode)"
-    Write-Output "auto-uv-env: $(Get-AutoUvEnvMode)"
+    Write-UiLine -Role info -Message "forgit-aliases: $(Get-ForgitAliasMode)"
+    Write-UiLine -Role info -Message "typo-handling: $(Get-TypoHandlingMode)"
+    Write-UiLine -Role info -Message "psfzf-tab: $(Get-PsfzfTabMode)"
+    Write-UiLine -Role info -Message "psfzf-git: $(Get-PsfzfGitMode)"
+    Write-UiLine -Role info -Message "auto-uv-env: $(Get-AutoUvEnvMode)"
 }
 
 function Write-UnknownCommandMessage {
