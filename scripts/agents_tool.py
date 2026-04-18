@@ -1001,11 +1001,11 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
     # Mapping of agent commands to rtk init flags
     # rtk supports: claude (default), cursor, gemini, opencode, codex
     agent_map = {
-        "claude": ["--agent", "claude"],
-        "gemini": ["--gemini"],
+        "claude": ["--auto-patch", "--agent", "claude"],
+        "gemini": ["--auto-patch", "--gemini"],
         "codex": ["--codex"],
-        "opencode": ["--opencode"],
-        "cursor-agent": ["--agent", "cursor"],
+        "opencode": ["--auto-patch", "--opencode"],
+        "cursor-agent": ["--auto-patch", "--agent", "cursor"],
     }
 
     attempted = 0
@@ -1015,7 +1015,7 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
     for agent_cmd, flags in agent_map.items():
         if agent_cmd in installed_agents:
             attempted += 1
-            cmd = ["rtk", "init", "--global", "--auto-patch", *flags]
+            cmd = ["rtk", "init", "--global", *flags]
             cmd_display = shlex.join(cmd)
             print_status_line("info", f"Initializing RTK for {agent_cmd}")
             print(f"  command: {cmd_display}")
