@@ -16,7 +16,7 @@ $UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
 $AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
 $KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
-$KnownShellSubcommands = @("forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env")
+$KnownShellSubcommands = @("status", "forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
@@ -478,6 +478,14 @@ function Set-PsfzfGitMode {
     Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
 }
 
+function Show-ShellStatus {
+    Write-UiLine -Role info -Message "forgit-aliases: $(Get-ForgitAliasMode)"
+    Write-UiLine -Role info -Message "typo-handling: $(Get-TypoHandlingMode)"
+    Write-UiLine -Role info -Message "psfzf-tab: $(Get-PsfzfTabMode)"
+    Write-UiLine -Role info -Message "psfzf-git: $(Get-PsfzfGitMode)"
+    Write-UiLine -Role info -Message "auto-uv-env: $(Get-AutoUvEnvMode)"
+}
+
 function Write-UnknownCommandMessage {
     param(
         [Parameter(Mandatory = $true)]
@@ -526,6 +534,7 @@ function Invoke-ShellCommand {
         "help" { Show-CommandUsage "shell"; return }
         "-h" { Show-CommandUsage "shell"; return }
         "--help" { Show-CommandUsage "shell"; return }
+        "status" { Show-ShellStatus; return }
         "forgit-aliases" {
             $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
             switch ($mode) {
@@ -761,7 +770,7 @@ function Show-Usage {
     Write-Output ("  " + (Format-UiText -Text "Manage State:" -Role "hint"))
     Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
     Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
-    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor AGENTS.md common policy blocks"
+    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
@@ -891,13 +900,14 @@ Examples:
         }
         "agents" {
             Write-UiHelpBlock @"
-Usage: oooconf agents <detect|sync|doctor> [options]
+Usage: oooconf agents <detect|sync|doctor|update> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
   detect [--json]                detect configured agent CLIs on PATH
   sync [--check]                 append/update shared AGENTS.md managed block
   doctor [--strict-config-paths] verify AGENTS.md managed block and default agent config paths
+  update [--check]               update installed agent CLIs (npm-based tools use pnpm)
 "@
         }
         "secrets" {
@@ -940,7 +950,8 @@ Examples:
         }
         "shell" {
             Write-UiHelpBlock @"
-Usage: oooconf shell forgit-aliases [plain|forgit|status]
+Usage: oooconf shell status
+       oooconf shell forgit-aliases [plain|forgit|status]
        oooconf shell typo-handling [silent|suggest|help|status]
        oooconf shell psfzf-tab [enabled|disabled|status]
        oooconf shell psfzf-git [enabled|disabled|status]
@@ -964,6 +975,7 @@ Auto UV environment options:
   quiet     suppress activation/deactivation messages
   status    show the currently configured mode
 Examples:
+  oooconf shell status
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain
   oooconf shell forgit-aliases forgit

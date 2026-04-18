@@ -17,7 +17,7 @@
 
 ## Missing tools after install
 
-- **`oooconf` not found** — the setup script links it into `~/.local/bin/oooconf` (Unix) or `~/.local/bin/oooconf.ps1` / `oooconf.cmd` (Windows). Ensure that directory is on your `PATH`. New shell sessions pick it up automatically.
+- **`oooconf` (or `o`) not found** — setup links `oooconf` and alias `o` into `~/.local/bin` (Unix: `oooconf`, `o`; Windows: `oooconf.ps1`, `oooconf.cmd`, `o.ps1`, `o.cmd`). Ensure that directory is on your `PATH`. New shell sessions pick it up automatically.
 - **Optional dependency not installed** — run `oooconf deps` to see the interactive picker (requires `gum`). Without `gum`, a text prompt lists available keys you can type explicitly: `oooconf deps bat delta glow`.
 - **A tool is listed as "install attempted" but not present** — the installer respects your consent prompt. Re-run `oooconf deps <key>` to retry, or install the tool manually.
 

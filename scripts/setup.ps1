@@ -23,6 +23,7 @@ $ActivePowerShellProfile = $PROFILE.CurrentUserCurrentHost
 $SshDir = Join-Path $HomeDir ".ssh"
 $InteractiveMode = if ($env:OOODNAKOV_INTERACTIVE) { $env:OOODNAKOV_INTERACTIVE } else { "auto" }
 $InstallOptionalMode = if ($env:OOODNAKOV_INSTALL_OPTIONAL) { $env:OOODNAKOV_INSTALL_OPTIONAL } else { "prompt" }
+$VerboseMode = if ($env:OOODNAKOV_VERBOSE) { $env:OOODNAKOV_VERBOSE } else { "0" }
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/backups" }
 $LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/logs" }
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -35,6 +36,9 @@ $script:Failures = [System.Collections.Generic.List[string]]::new()
 $script:LogFile = $null
 $script:LatestLogFile = $null
 $script:TranscriptStarted = $false
+$script:StepTotal = 0
+$script:StepCurrent = 0
+$script:StepActivity = ""
 $ValidSetupCommands = @("install", "update", "doctor", "deps")
 
 # Run a Python script, preferring `uv run` when available.
@@ -70,14 +74,18 @@ function Get-EditDistance {
     for ($i = 1; $i -lt $rows; $i++) {
         for ($j = 1; $j -lt $cols; $j++) {
             $cost = if ($Left[$i - 1] -ceq $Right[$j - 1]) { 0 } else { 1 }
-            $deletion = $dist[$i - 1, $j] + 1
-            $insertion = $dist[$i, $j - 1] + 1
-            $substitution = $dist[$i - 1, $j - 1] + $cost
+            $prevRow = $i - 1
+            $prevCol = $j - 1
+            $deletion = $dist[$prevRow, $j] + 1
+            $insertion = $dist[$i, $prevCol] + 1
+            $substitution = $dist[$prevRow, $prevCol] + $cost
             $dist[$i, $j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
         }
     }
 
-    return $dist[$rows - 1, $cols - 1]
+    $lastRow = $rows - 1
+    $lastCol = $cols - 1
+    return $dist[$lastRow, $lastCol]
 }
 
 function Get-ClosestSuggestion {
@@ -168,6 +176,40 @@ function Test-Interactive {
 
             return [Environment]::UserInteractive
         }
+    }
+}
+
+function Test-VerboseMode {
+    return $VerboseMode -match '^(?i:1|true|yes|on|verbose)$'
+}
+
+function Start-StepProgress {
+    param(
+        [Parameter(Mandatory = $true)][int]$Total,
+        [Parameter(Mandatory = $true)][string]$Activity
+    )
+
+    $script:StepTotal = [Math]::Max($Total, 1)
+    $script:StepCurrent = 0
+    $script:StepActivity = $Activity
+}
+
+function Step-Progress {
+    param(
+        [Parameter(Mandatory = $true)][string]$Status
+    )
+
+    $script:StepCurrent++
+    $percent = [Math]::Min([Math]::Floor(($script:StepCurrent * 100) / $script:StepTotal), 100)
+    Write-Output "Step: $Status"
+
+    if (Test-Interactive) {
+        Write-Progress -Activity $script:StepActivity -Status ("[{0}/{1}] {2}" -f $script:StepCurrent, $script:StepTotal, $Status) -PercentComplete $percent
+        if ($script:StepCurrent -ge $script:StepTotal) {
+            Write-Progress -Activity $script:StepActivity -Completed
+        }
+    } else {
+        Write-Output ("[{0}/{1}] {2}" -f $script:StepCurrent, $script:StepTotal, $Status)
     }
 }
 
@@ -268,6 +310,7 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "k"; DisplayName = "k"; Description = "standalone k command"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "python3"; DisplayName = "python3"; Description = "Python 3 runtime"; Linux = @{ manager = "apt"; package = "python3" }; Macos = @{ manager = "brew"; package = "python" }; Windows = @{ manager = "choco"; package = "python" } }
             [pscustomobject]@{ Key = "lazygit"; DisplayName = "lazygit"; Description = "simple terminal UI for git commands"; Linux = @{ manager = "brew"; package = "lazygit" }; Macos = @{ manager = "brew"; package = "lazygit" }; Windows = @{ manager = "winget"; winget_id = "JesseDuffield.lazygit" } }
+            [pscustomobject]@{ Key = "rtk"; DisplayName = "rtk"; Description = "token-optimized command proxy for AI CLI workflows"; Linux = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" }; Macos = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" }; Windows = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" } }
         )
         $specs = @($all_specs | ForEach-Object {
             [pscustomobject]@{
@@ -386,6 +429,7 @@ function Get-OptionalDependencyCommandNames {
         "dua" { return @("dua") }
         "k" { return @("k") }
         "lazygit" { return @("lazygit") }
+        "rtk" { return @("rtk") }
         default { return @() }
     }
 }
@@ -599,7 +643,9 @@ function Start-SetupLogging {
         "Failed to start transcript logging at $script:LogFile: $($_.Exception.Message)" | Out-File -FilePath $script:LogFile -Encoding utf8 -Append
     }
 
-    Write-Output "Logging to $script:LogFile"
+    if (Test-VerboseMode) {
+        Write-Output "Logging to $script:LogFile"
+    }
 }
 
 function Stop-SetupLogging {
@@ -628,6 +674,40 @@ function Invoke-ActionWithSpinner {
     if ($DryRun) {
         Write-Output "[dry-run] $Description"
         return $true
+    }
+
+    if (-not (Test-VerboseMode)) {
+        if (Test-Interactive) {
+            Write-Host "[-] $Description..."
+        } else {
+            Write-Output "[-] $Description..."
+        }
+
+        $stdoutLog = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-{0}.stdout.log" -f ([guid]::NewGuid().ToString("N")))
+        $stderrLog = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-{0}.stderr.log" -f ([guid]::NewGuid().ToString("N")))
+
+        try {
+            & $Action @ArgumentList > $stdoutLog 2> $stderrLog
+            if (Test-Interactive) {
+                Write-Host "[ok] $Description"
+            } else {
+                Write-Output "[ok] $Description"
+            }
+            return $true
+        } catch {
+            if (Test-Path $stdoutLog) {
+                Get-Content -LiteralPath $stdoutLog -ErrorAction SilentlyContinue | Write-Output
+            }
+            if (Test-Path $stderrLog) {
+                Get-Content -LiteralPath $stderrLog -ErrorAction SilentlyContinue | Write-Output
+            }
+            Write-Output $_
+            Add-Failure $Description
+            return $false
+        } finally {
+            if (Test-Path $stdoutLog) { Remove-Item -LiteralPath $stdoutLog -Force -ErrorAction SilentlyContinue }
+            if (Test-Path $stderrLog) { Remove-Item -LiteralPath $stderrLog -Force -ErrorAction SilentlyContinue }
+        }
     }
 
     $interactive = Test-Interactive
@@ -894,13 +974,17 @@ function New-Symlink {
     }
 
     if (Test-LinkMatches -Source $Source -Target $Target) {
-        Write-Output "linked $Target"
+        if (Test-VerboseMode) {
+            Write-Output "linked $Target"
+        }
         return $true
     }
 
     return (Invoke-Action -Description "Link $Target" -Action {
         New-Item -ItemType SymbolicLink -Path $Target -Target $Source -Force | Out-Null
-        Write-Output "linked $Target"
+        if (Test-VerboseMode) {
+            Write-Output "linked $Target"
+        }
     })
 }
 
@@ -996,7 +1080,7 @@ function Test-DependencyStatus {
         [switch]$IsModule
     )
 
-    if (-not $DryRun) {
+    if (-not $DryRun -and (Test-VerboseMode)) {
         if (Test-Interactive) {
             Write-Host "[-] Checking $SummaryName..." -NoNewline
         }
@@ -1010,7 +1094,7 @@ function Test-DependencyStatus {
     }
 
     if ($isPresent) {
-        if (-not $DryRun) {
+        if (-not $DryRun -and (Test-VerboseMode)) {
             if (Test-Interactive) {
                 Write-Host "`r[ok] $SummaryName is present.             "
             } else {
@@ -1021,7 +1105,7 @@ function Test-DependencyStatus {
         return $true
     }
 
-    if (-not $DryRun -and (Test-Interactive)) {
+    if (-not $DryRun -and (Test-Interactive) -and (Test-VerboseMode)) {
         Write-Host "`r" -NoNewline
     }
     return $false
@@ -1065,6 +1149,7 @@ function Install-PackageIfMissing {
         [string[]]$CommandNames,
         [string]$WingetId,
         [string]$ChocoId,
+        [string]$CargoGitUrl,
         [Parameter(Mandatory = $true)]
         [string]$Description,
         [Parameter(Mandatory = $true)]
@@ -1118,6 +1203,54 @@ function Install-PackageIfMissing {
             }
 
             Add-DependencySummary "${SummaryName}: install attempted via choco"
+            return $false
+        }
+
+        Add-DependencySummary "${SummaryName}: skipped"
+        return $false
+    }
+
+    if ($CargoGitUrl) {
+        if (-not (Install-CargoIfMissing)) {
+            Add-DependencySummary "${SummaryName}: missing (cargo unavailable)"
+            return $false
+        }
+
+        if (Confirm-Install "Install $Description via cargo?") {
+            $cargoBinDir = Join-Path $HomeDir ".cargo/bin"
+            $cargoExe = Join-Path $cargoBinDir "cargo.exe"
+            if (($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ }) -notcontains $cargoBinDir) {
+                $env:PATH = "$cargoBinDir$([IO.Path]::PathSeparator)$env:PATH"
+            }
+
+            $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
+            if (-not $cargoCommand -and (Test-Path $cargoExe)) {
+                $cargoCommand = $cargoExe
+            }
+
+            if (-not $cargoCommand) {
+                Add-DependencySummary "${SummaryName}: missing (cargo unavailable)"
+                return $false
+            }
+
+            if ($DryRun) {
+                Write-Output "[dry-run] cargo install --locked --git $CargoGitUrl"
+                Add-DependencySummary "${SummaryName}: install preview via cargo"
+                return $false
+            }
+
+            Invoke-ActionWithSpinner -Description "Installing $Description via cargo" -Action {
+                param($url, $cmd)
+                & $cmd install --locked --git $url | Out-Null
+            } -ArgumentList $CargoGitUrl, $cargoCommand
+
+            $installedPath = Join-Path $cargoBinDir "$($CommandNames[0]).exe"
+            if ((Test-AnyCommand -Names $CommandNames) -or (Test-Path $installedPath)) {
+                Add-DependencySummary "${SummaryName}: installed via cargo"
+                return $true
+            }
+
+            Add-DependencySummary "${SummaryName}: install attempted via cargo"
             return $false
         }
 
@@ -1412,7 +1545,9 @@ function Install-DuaIfMissing {
 }
 
 function Install-OptionalDependencies {
-    Write-Output "Dependency check:"
+    if (Test-VerboseMode) {
+        Write-Output "Dependency check:"
+    }
 
     $null = Invoke-SelectedOptionalDependency -Key "wget" -Action { Install-PackageIfMissing -CommandNames @("wget") -WingetId "GNU.Wget" -Description "wget" -SummaryName "wget" }
     $null = Invoke-SelectedOptionalDependency -Key "git" -Action { Install-PackageIfMissing -CommandNames @("git") -WingetId "Git.Git" -Description "Git" -SummaryName "git" }
@@ -1462,6 +1597,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Install-DuaIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "k" -Action { Write-Warning "k is not available on Windows." }
     $null = Invoke-SelectedOptionalDependency -Key "lazygit" -Action { Install-PackageIfMissing -CommandNames @("lazygit") -WingetId "JesseDuffield.lazygit" -Description "lazygit" -SummaryName "lazygit" }
+    $null = Invoke-SelectedOptionalDependency -Key "rtk" -Action { Install-PackageIfMissing -CommandNames @("rtk") -CargoGitUrl "https://github.com/rtk-ai/rtk" -Description "rtk" -SummaryName "rtk" }
 }
 
 function Write-Summary {
@@ -1528,12 +1664,15 @@ function Test-Doctor {
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
 
     Test-DoctorCommand -Name "git"
     Test-DoctorCommand -Name "wezterm"
     Test-DoctorCommand -Name "nvim"
     Test-DoctorCommand -Name "oh-my-posh"
     Test-DoctorCommand -Name "oooconf"
+    Test-DoctorCommand -Name "o"
 
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
@@ -1552,14 +1691,24 @@ function Test-Doctor {
 }
 
 function Invoke-Install {
+    param(
+        [switch]$ContinueProgress
+    )
+
+    if (-not $ContinueProgress) {
+        Start-StepProgress -Total 5 -Activity "oooconf $Command"
+    }
+    Step-Progress -Status "Preparing directories"
     foreach ($dir in @($ConfigHome, $DataHome, $CacheHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir, $OhMyPoshDir, $PowerShellConfigDir)) {
         if (Ensure-Directory -Path $dir) {
             Add-ToolSummary "ensured directory: $dir"
         }
     }
 
+    Step-Progress -Status "Checking/installing optional dependencies"
     Install-OptionalDependencies
 
+    Step-Progress -Status "Linking managed configuration"
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")) {
         Add-ToolSummary "wezterm: linked"
     }
@@ -1606,6 +1755,12 @@ function Invoke-Install {
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")) {
         Add-ToolSummary "oooconf.cmd: linked into $LocalBinDir"
     }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")) {
+        Add-ToolSummary "o.ps1: linked into $LocalBinDir"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")) {
+        Add-ToolSummary "o.cmd: linked into $LocalBinDir"
+    }
 
     if (Ensure-UserPathContains -PathEntry $LocalBinDir) {
         Add-ToolSummary "user PATH: ensured $LocalBinDir"
@@ -1614,10 +1769,12 @@ function Invoke-Install {
         Add-ToolSummary "ssh include: ensured"
     }
 
+    Step-Progress -Status "Writing setup summary"
     Write-Summary
     Write-Output ""
     Write-Output "Bootstrap complete."
     Write-Output "If needed, create local overrides in $ConfigHome/ooodnakov/local."
+    Step-Progress -Status "Done"
 }
 
 Start-SetupLogging
@@ -1674,12 +1831,14 @@ try {
             Invoke-Install
         }
         "update" {
+            Start-StepProgress -Total 6 -Activity "oooconf update"
+            Step-Progress -Status "Pulling latest repository changes"
             if ($DryRun) {
                 Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
             } else {
                 git -C $RepoRoot pull --ff-only
             }
-            Invoke-Install
+            Invoke-Install -ContinueProgress
         }
         "doctor" {
             Test-Doctor
@@ -1690,14 +1849,19 @@ try {
                 break
             }
 
+            Start-StepProgress -Total 4 -Activity "oooconf deps"
+            Step-Progress -Status "Preparing dependency install paths"
             foreach ($dir in @($DataHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir)) {
                 Ensure-Directory -Path $dir | Out-Null
             }
 
+            Step-Progress -Status "Installing selected optional dependencies"
             Install-OptionalDependencies
+            Step-Progress -Status "Writing dependency summary"
             Write-Summary
             Write-Output ""
             Write-Output "Optional dependency install complete."
+            Step-Progress -Status "Done"
         }
     }
 } finally {

@@ -20,7 +20,7 @@ function Get-OooconfCompletions {
         'logout', 'add', 'remove', 'rm', 'del'
     )
 
-    $OooconfShellSubcommands = @('forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git')
+    $OooconfShellSubcommands = @('status', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')
     $OooconfForgitAliasModes = @('plain', 'forgit', 'status')
     $OooconfTypoHandlingModes = @('silent', 'suggest', 'help', 'status')
     $OooconfPsfzfModes = @('enabled', 'disabled', 'status')
@@ -46,10 +46,10 @@ function Get-OooconfCompletions {
         }
     }
 
-    # Find the main oooconf command position (it might be oooconf, oooconf.ps1, or a path)
+    # Find the main oooconf command position (it might be oooconf/o, .ps1/.cmd variants, or a path)
     $commandIndex = -1
     for ($i = 0; $i -lt $tokens.Length; $i++) {
-        if ($tokens[$i] -match 'oooconf(\.ps1|\.cmd)?$') {
+        if ($tokens[$i] -match '(^|[\\/])(oooconf|o)(\.ps1|\.cmd)?$') {
             $commandIndex = $i
             break
         }
@@ -119,6 +119,7 @@ function Get-OooconfCompletions {
                 'typo-handling'  { $completions = $OooconfTypoHandlingModes }
                 'psfzf-tab'      { $completions = $OooconfPsfzfModes }
                 'psfzf-git'      { $completions = $OooconfPsfzfModes }
+                'auto-uv-env'    { $completions = @('enabled', 'quiet', 'status') }
             }
         }
     }
@@ -126,7 +127,7 @@ function Get-OooconfCompletions {
         $completions = @('--dry-run', '--yes-optional') + $OooconfDepsKeys
     }
     elseif ($subcommand -eq 'agents') {
-        $completions = @('detect', 'sync', 'doctor', '--json', '--check', '--strict-config-paths')
+        $completions = @('detect', 'sync', 'doctor', 'update', '--json', '--check', '--strict-config-paths')
     }
     elseif ($subcommand -eq 'update-pins') {
         $completions = @('--apply')
@@ -138,7 +139,7 @@ function Get-OooconfCompletions {
 }
 
 # Register for all possible names
-@('oooconf', 'oooconf.ps1', 'oooconf.cmd') | ForEach-Object {
+@('oooconf', 'oooconf.ps1', 'oooconf.cmd', 'o', 'o.ps1', 'o.cmd') | ForEach-Object {
     Register-ArgumentCompleter -Native -CommandName $_ -ScriptBlock {
         param($wordToComplete, $commandAst, $cursorPosition)
         Get-OooconfCompletions -wordToComplete $wordToComplete -commandAst $commandAst -cursorPosition $cursorPosition

@@ -4,7 +4,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,6 +74,14 @@ class DoctorConfigResult:
     parse_error: str = ""
 
 
+@dataclass(frozen=True)
+class AgentUpdateSpec:
+    name: str
+    command: str
+    preferred: str
+    package: str
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="oooconf agents",
@@ -98,6 +108,15 @@ def parse_args() -> argparse.Namespace:
         "--strict-config-paths",
         action="store_true",
         help="Fail if no default config path exists for an agent target.",
+    )
+    update_parser = subparsers.add_parser(
+        "update",
+        help="Update installed agent CLIs with their preferred package manager (npm routes through pnpm).",
+    )
+    update_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Print planned update commands without executing them.",
     )
 
     return parser.parse_args()
@@ -200,6 +219,18 @@ def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
             )
         )
     return targets
+
+
+def parse_agent_update_specs(raw: list[dict[str, str]]) -> list[AgentUpdateSpec]:
+    return [
+        AgentUpdateSpec(
+            name=entry["name"],
+            command=entry["command"],
+            preferred=entry.get("preferred", ""),
+            package=entry.get("package", ""),
+        )
+        for entry in raw
+    ]
 
 
 def supports_nerd_font_output() -> bool:
@@ -575,6 +606,84 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
     return 1 if failed else 0
 
 
+def resolve_update_command(spec: AgentUpdateSpec) -> tuple[list[str], str]:
+    preferred = spec.preferred.strip().lower()
+    package = spec.package.strip() or spec.command
+    if preferred in {"npm", "pnpm"}:
+        return ["pnpm", "add", "-g", f"{package}@latest"], "pnpm"
+    if preferred == "uv":
+        return ["uv", "tool", "install", "--upgrade", package], "uv"
+    if preferred == "pipx":
+        return ["pipx", "upgrade", package], "pipx"
+    raise RuntimeError(f"unsupported preferred update manager: {spec.preferred!r}")
+
+
+def cmd_update(config: dict[str, Any], check_only: bool) -> int:
+    specs = parse_agent_update_specs(config.get("agent_updates", []))
+    if not specs:
+        print("No agent_updates configured.", file=sys.stderr)
+        return 1
+
+    print_section("Agent CLI Updates")
+    print(f"Mode: {'check' if check_only else 'update'}")
+
+    attempted = 0
+    failed = 0
+    skipped = 0
+    updated = 0
+    for spec in specs:
+        installed_path = shutil.which(spec.command)
+        if not installed_path:
+            print_status_line("missing", f"{spec.name} ({spec.command}) not found on PATH; skipping.")
+            skipped += 1
+            continue
+        try:
+            command, runner = resolve_update_command(spec)
+        except RuntimeError as exc:
+            print_status_line("fail", f"{spec.name}: {exc}")
+            failed += 1
+            continue
+        attempted += 1
+        command_display = shlex.join(command)
+        if check_only:
+            print_status_line("ok", f"{spec.name} via {runner}")
+            print(f"  command: {command_display}")
+            continue
+        resolved_runner = shutil.which(command[0])
+        if not resolved_runner:
+            print_status_line("fail", f"{spec.name}: required updater '{command[0]}' is not installed.")
+            failed += 1
+            continue
+        command_exec = [resolved_runner, *command[1:]]
+        print_status_line("ok", f"{spec.name} via {runner}")
+        print(f"  command: {command_display}")
+        output_lines: list[str] = []
+        process = subprocess.Popen(
+            command_exec,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        assert process.stdout is not None
+        for raw_line in process.stdout:
+            line = raw_line.rstrip()
+            output_lines.append(line)
+            if line:
+                print(f"  {line}")
+        return_code = process.wait()
+        if return_code == 0:
+            print_status_line("ok", f"{spec.name} updated via {runner}")
+            updated += 1
+        else:
+            print_status_line("fail", f"{spec.name} update failed via {runner}")
+            if output_lines:
+                print("  (combined stdout/stderr shown above)")
+            failed += 1
+    print("")
+    print(f"Summary: updated {updated}/{attempted} attempted; skipped {skipped} missing; failed {failed}.")
+    return 1 if failed else 0
+
+
 if __name__ == "__main__":
     args = parse_args()
     root = resolve_repo_root(args.repo_root)
@@ -591,4 +700,6 @@ if __name__ == "__main__":
         raise SystemExit(cmd_sync(root, cfg, check_only=args.check, global_sync=args.global_sync))
     if args.command == "doctor":
         raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths))
+    if args.command == "update":
+        raise SystemExit(cmd_update(cfg, check_only=args.check))
     raise SystemExit(1)

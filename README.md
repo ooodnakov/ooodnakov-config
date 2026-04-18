@@ -51,7 +51,7 @@ cd ~/src/ooodnakov-config
 
 This is the recommended path because it lets you inspect the tracked config and setup scripts before they make changes on the machine.
 
-Before first install, the repo-local `oooconf` script is the intended entrypoint. After install, setup links `oooconf` into `~/.local/bin`, so you can run:
+Before first install, the repo-local `oooconf` script is the intended entrypoint. After install, setup links both `oooconf` and short alias `o` into `~/.local/bin`, so you can run:
 
 ```bash
 oooconf install
@@ -59,6 +59,7 @@ oooconf deps
 oooconf update
 oooconf dry-run
 oooconf doctor
+o doctor
 ```
 
 ### Bootstrap shortcut on Unix-like systems
@@ -83,7 +84,7 @@ Set-Location $HOME\src\ooodnakov-config
 .\scripts\ooodnakov.ps1 install
 ```
 
-After setup, `oooconf` is linked into `$HOME\.local\bin`, and the managed PowerShell profile prepends that directory to `PATH`, so the same commands work in new sessions:
+After setup, `oooconf` is linked into `$HOME\.local\bin` (plus short alias wrappers `o.ps1`/`o.cmd`), and the managed PowerShell profile prepends that directory to `PATH`, so the same commands work in new sessions:
 
 ```powershell
 oooconf install
@@ -91,6 +92,7 @@ oooconf deps
 oooconf update
 oooconf dry-run
 oooconf doctor
+o doctor
 ```
 
 During `oooconf install` and `oooconf update`, LazyVim plugin sync runs headlessly with progress-only output. Detailed Neovim plugin logs stay hidden unless the sync fails.
@@ -99,6 +101,7 @@ During `oooconf install` and `oooconf update`, LazyVim plugin sync runs headless
 
 Primary commands:
 
+- `o`: short alias wrapper for `oooconf` with matching completion behavior
 - `oooconf install`: apply managed config and optional dependency installs
 - `oooconf deps`: install optional dependencies only, with a multi-select picker when `gum` is available
 - `oooconf update`: fast-forward pull the repo, then rerun install
@@ -113,6 +116,7 @@ Primary commands:
 - `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
 - `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
 - `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content
+- `oooconf agents update`: update installed agent CLIs using their preferred package manager (npm-based tools are updated via `pnpm`)
 
 The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts will run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`). If `uv` is missing, they fall back to the system `python3`.
 
@@ -126,7 +130,9 @@ Secrets commands:
 - `oooconf secrets status`: check sync state and vault status
 - `oooconf secrets doctor`: validate prerequisites and rendered files
 - `oooconf secrets logout`: lock vault and revoke the Bitwarden session
+- `oooconf shell status`: print all managed shell preference modes
 - `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
+- `oooconf shell auto-uv-env [enabled|quiet|status]`: control Python virtualenv activation message verbosity
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
 The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, `gum`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`), `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`), and the PowerShell Gallery (`posh-git`, `PSFzf`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
@@ -136,6 +142,7 @@ Shell completion:
 
 - **PowerShell**: argument completion is automatically loaded by the managed profile
   - Complete commands: `oooconf <Tab>`
+  - Alias completions also work: `o <Tab>`
   - Complete options: `oooconf install --<Tab>`
   - Complete secrets subcommands: `oooconf secrets <Tab>`
   - Complete shell values: `oooconf secrets unlock --shell <Tab>`
@@ -172,6 +179,7 @@ Agent policy management:
 oooconf agents detect
 oooconf agents sync
 oooconf agents doctor
+oooconf agents update
 ```
 
 The shared AGENTS policy snippets are configured in:
@@ -181,6 +189,7 @@ The shared AGENTS policy snippets are configured in:
 - `home/.config/ooodnakov/agents/common-data.json` (structured MCP + skills data)
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
+`oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all npm-preferred agents through `pnpm add -g <package>@latest`.
 
 ## Prerequisites
 
@@ -347,6 +356,7 @@ Upstream inspirations:
 Reference docs:
 
 - architecture notes: [`docs/architecture.md`](docs/architecture.md)
+- contributing workflow: [`docs/contributing.md`](docs/contributing.md)
 - reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
 - dependency decisions: [`docs/dependency-decisions.md`](docs/dependency-decisions.md)
 - troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)

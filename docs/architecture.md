@@ -23,14 +23,14 @@ The repo uses a symlink-first install model.
 On Unix-like systems:
 
 - `scripts/setup.sh` links tracked files from `home/` into XDG and home-directory targets
-- `home/.config/ooodnakov/bin/oooconf` is linked into `~/.local/bin/oooconf`
+- `home/.config/ooodnakov/bin/oooconf` is linked into `~/.local/bin/oooconf` and `home/.config/ooodnakov/bin/o` into `~/.local/bin/o`
 - replaced files are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`
 - logs are written to `~/.local/state/ooodnakov-config/logs/`
 
 On Windows:
 
 - `scripts/setup.ps1` creates the corresponding managed links
-- `oooconf.ps1` and `oooconf.cmd` are linked into `$HOME\.local\bin`
+- `oooconf.ps1`/`oooconf.cmd` and short wrappers `o.ps1`/`o.cmd` are linked into `$HOME\.local\bin`
 - backups and logs live under `$HOME\.local\state\ooodnakov-config\`
 
 The install flow is intentionally idempotent. Re-running `oooconf install` should converge the machine back to the tracked state without duplicating managed artifacts.
@@ -42,7 +42,7 @@ There are two phase-1 entrypoints before install:
 - Unix: `./home/.config/ooodnakov/bin/oooconf`
 - Windows: `.\scripts\ooodnakov.ps1`
 
-After install, the unified `oooconf` command is available from `~/.local/bin` on both platforms.
+After install, the unified `oooconf` command and short alias `o` are available from `~/.local/bin` on both platforms.
 
 Primary commands:
 

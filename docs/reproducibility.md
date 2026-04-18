@@ -89,6 +89,40 @@ For a new machine or any time you want to inspect changes first, prefer:
 
 That keeps the initial setup auditable while preserving the same install behavior.
 
-## CLI Surface
+## Unified CLI and validation
 
-See [`architecture.md`](architecture.md) for details on the `oooconf` command layout, phases, validation, and ergonomics.
+The primary entrypoints are:
+
+- repo-local `./home/.config/ooodnakov/bin/oooconf` before first install on Unix
+- `oooconf` (and alias `o`) after Unix setup links them into `~/.local/bin/oooconf` and `~/.local/bin/o`
+- `.\scripts\ooodnakov.ps1` before Windows setup
+- `oooconf` (and alias `o`) after Windows setup links `oooconf.ps1`/`oooconf.cmd` and `o.ps1`/`o.cmd` into `~/.local/bin`
+
+On Windows, setup also links the tracked PowerShell profile into both `~/.config/powershell/Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path so the managed XDG-style file and the loaded profile stay aligned.
+
+Phase-1 setup ergonomics are implemented with:
+
+- `dry-run` command to preview setup actions without mutation
+- `doctor` command to validate managed links and key tool presence after install
+- `deps` command to install optional dependencies separately from the full config-linking flow
+
+Phase-2 dependency audit ergonomics are implemented with:
+
+- `oooconf lock` (or `.\scripts\ooodnakov.ps1 lock`) to regenerate lock artifacts from pinned refs
+- `oooconf update-pins` to compare pinned refs with remote HEAD and append an audit summary
+- `oooconf update-pins --apply` to update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
+- `oooconf agents detect` to detect configured AI coding agent CLIs available on `PATH`
+- `oooconf agents sync` to update managed shared AGENTS.md policy sections from tracked snippets
+- `oooconf agents doctor` to verify AGENTS.md managed sections and check common MCP/skills markers in default agent config paths
+- `oooconf agents update` to update installed agent CLIs; npm-preferred agents are updated through `pnpm`
+- `oooconf agents doctor --strict-config-paths` to fail when expected agent default config files are missing
+- `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic. Helper scripts use `uv run` if `uv` is available to ensure they run with the pinned Python version and a consistent environment. If `uv` is not present, they fall back to the system `python3`.
+
+
+## Phase-3 ergonomics
+
+- `oooconf` command (plus alias `o`) is linked by Unix setup so the unified CLI can be invoked from any directory.
+- `oooconf deps` uses `gum choose --no-limit` when available to provide a terminal multi-select picker for optional dependencies, and it can bootstrap `gum` first when interactive package installation is allowed. In the current picker, use arrow keys to move, `x` to toggle items, and `Enter` to continue.
+- Unix and PowerShell setup runs write per-run logs under `~/.local/state/ooodnakov-config/logs/`, with `setup-latest.log` copied or linked to the latest run for debugging.
+- PowerShell shared environment exports `OOODNAKOV_CONFIG_HOME`, `OOODNAKOV_SHARE_HOME`, `OOODNAKOV_STATE_HOME`, and `OOODNAKOV_CACHE_HOME`, and prepends both `~/.local/bin` and `~/.local/share/ooodnakov-config/bin` when present.
+- WezTerm startup supports `OOODNAKOV_WEZTERM_WORKSPACE` and `OOODNAKOV_WEZTERM_CWD` for project-scoped startup defaults without editing tracked config.
