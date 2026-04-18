@@ -43,9 +43,26 @@ $VerboseMode = if ($env:OOODNAKOV_VERBOSE) { $env:OOODNAKOV_VERBOSE } else { "0"
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/backups" }
 $LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/logs" }
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$PnpmVersion = "10.18.3"
-$BwVersion = "1.22.1"
-$RtkVersion = "0.37.0"
+
+# All versions/pins now live in optional-deps.toml ONLY (sole source of truth).
+# These variables are removed. Use Get-DepInfo or Get-ManagedTool instead.
+function Get-ManagedTool {
+    param([string]$Name, [string]$Field = "ref")
+    $json = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("managed-tools") | ConvertFrom-Json
+    if ($json.PSObject.Properties.Name -contains $Name) {
+        $json.$Name.$Field
+    } else {
+        ""
+    }
+}
+
+function Get-DepInfo {
+    param([string]$Key)
+    # Returns hashtable with ver, url, bin, check, etc.
+    $json = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("json") | ConvertFrom-Json
+    $dep = $json | Where-Object { $_.key -eq $Key } | Select-Object -First 1
+    if ($dep) { $dep } else { @{} }
+}
 
 $script:DependencySummary = [System.Collections.Generic.List[string]]::new()
 $script:ToolSummary = [System.Collections.Generic.List[string]]::new()
@@ -334,6 +351,11 @@ function Get-OptionalDependencySpecsFromTomlFallback {
             Key         = if ($entry.ContainsKey("key")) { $entry["key"] } else { "" }
             DisplayName = if ($entry.ContainsKey("display")) { $entry["display"] } elseif ($entry.ContainsKey("key")) { $entry["key"] } else { "" }
             Description = if ($entry.ContainsKey("description")) { $entry["description"] } else { "" }
+            Ver         = if ($entry.ContainsKey("ver")) { $entry["ver"] } else { "" }
+            Url         = if ($entry.ContainsKey("url")) { $entry["url"] } else { "" }
+            Bin         = if ($entry.ContainsKey("bin")) { $entry["bin"] } else { "" }
+            Check       = if ($entry.ContainsKey("check")) { $entry["check"] } else { "" }
+            After       = if ($entry.ContainsKey("after")) { $entry["after"] } else { "" }
             Linux       = if ($linux.Count -gt 0) { $linux } else { $null }
             Macos       = if ($macos.Count -gt 0) { $macos } else { $null }
             Windows     = if ($windows.Count -gt 0) { $windows } else { $null }
@@ -1408,30 +1430,33 @@ function Install-PnpmIfMissing {
         $env:PATH = "$pnpmHome$([IO.Path]::PathSeparator)$env:PATH"
     }
 
+    $pnpmVer = (Get-DepInfo "pnpm").ver
+    if (-not $pnpmVer) { $pnpmVer = "10.18.3" }  # fallback only during transition
+
     if (Get-Command corepack -ErrorAction SilentlyContinue) {
         if ($DryRun) {
             Write-Output "[dry-run] corepack enable --install-directory $pnpmHome pnpm"
-            Write-Output "[dry-run] corepack prepare pnpm@$PnpmVersion --activate"
+            Write-Output "[dry-run] corepack prepare pnpm@$pnpmVer --activate"
             Add-DependencySummary "pnpm: install preview via corepack"
             return $false
         }
 
-        Invoke-ActionWithSpinner -Description "Installing pnpm@$PnpmVersion via corepack" -Action {
+        Invoke-ActionWithSpinner -Description "Installing pnpm@$pnpmVer via corepack" -Action {
             param($homeDir, $version)
             corepack enable --install-directory $homeDir pnpm | Out-Null
             corepack prepare "pnpm@$version" --activate | Out-Null
-        } -ArgumentList $pnpmHome, $PnpmVersion
+        } -ArgumentList $pnpmHome, $pnpmVer
     } elseif (Get-Command npm -ErrorAction SilentlyContinue) {
         if ($DryRun) {
-            Write-Output "[dry-run] npm install --global pnpm@$PnpmVersion --prefix $pnpmHome"
+            Write-Output "[dry-run] npm install --global pnpm@$pnpmVer --prefix $pnpmHome"
             Add-DependencySummary "pnpm: install preview via npm"
             return $false
         }
 
-        Invoke-ActionWithSpinner -Description "Installing pnpm@$PnpmVersion via npm" -Action {
+        Invoke-ActionWithSpinner -Description "Installing pnpm@$pnpmVer via npm" -Action {
             param($homeDir, $version)
             npm install --global "pnpm@$version" --prefix $homeDir | Out-Null
-        } -ArgumentList $pnpmHome, $PnpmVersion
+        } -ArgumentList $pnpmHome, $pnpmVer
     } else {
         Add-DependencySummary "pnpm: missing (requires corepack or npm)"
         return $false
@@ -1534,9 +1559,11 @@ function Install-RtkIfMissing {
         return $false
     }
 
-    $installRoot = Join-Path $ShareHome "tools/rtk/v$RtkVersion"
-    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "rtk-windows-$RtkVersion.zip"
-    $releaseUrl = "https://github.com/rtk-ai/rtk/releases/download/v$RtkVersion/rtk-x86_64-pc-windows-msvc.zip"
+    $rtkInfo = Get-DepInfo "rtk"
+    $rtkVer = if ($rtkInfo.ver) { $rtkInfo.ver } else { "0.37.0" }
+    $installRoot = Join-Path $ShareHome "tools/rtk/v$rtkVer"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "rtk-windows-$rtkVer.zip"
+    $releaseUrl = "https://github.com/rtk-ai/rtk/releases/download/v$rtkVer/rtk-x86_64-pc-windows-msvc.zip"
     $sourceBinary = Join-Path $installRoot "rtk.exe"
     $targetBinary = Join-Path $LocalBinDir "rtk.exe"
 
@@ -1581,12 +1608,12 @@ function Install-RtkIfMissing {
     }
 
     if (Get-Command rtk -ErrorAction SilentlyContinue -CommandType Application) {
-        Add-DependencySummary "rtk: installed official v$RtkVersion"
+        Add-DependencySummary "rtk: installed official v$rtkVer"
         return $true
     }
 
     if (Test-Path $targetBinary) {
-        Add-DependencySummary "rtk: installed official v$RtkVersion"
+        Add-DependencySummary "rtk: installed official v$rtkVer"
         return $true
     }
 
@@ -1602,9 +1629,11 @@ function Install-BitwardenCliIfMissing {
         return $false
     }
 
-    $installRoot = Join-Path $ShareHome "tools/bitwarden-cli/v$BwVersion"
-    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "bw-windows-$BwVersion.zip"
-    $releaseUrl = "https://github.com/bitwarden/cli/releases/download/v$BwVersion/bw-windows-$BwVersion.zip"
+    $bwInfo = Get-DepInfo "bw"
+    $bwVer = if ($bwInfo.ver) { $bwInfo.ver } else { "1.22.1" }
+    $installRoot = Join-Path $ShareHome "tools/bitwarden-cli/v$bwVer"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "bw-windows-$bwVer.zip"
+    $releaseUrl = "https://github.com/bitwarden/cli/releases/download/v$bwVer/bw-windows-$bwVer.zip"
     $sourceBinary = Join-Path $installRoot "bw.exe"
     $targetBinary = Join-Path $LocalBinDir "bw.exe"
 
@@ -1635,12 +1664,12 @@ function Install-BitwardenCliIfMissing {
     }
 
     if (Get-Command bw -ErrorAction SilentlyContinue -CommandType Application) {
-        Add-DependencySummary "bw: installed official v$BwVersion"
+        Add-DependencySummary "bw: installed official v$bwVer"
         return $true
     }
 
     if (Test-Path $targetBinary) {
-        Add-DependencySummary "bw: installed official v$BwVersion"
+        Add-DependencySummary "bw: installed official v$bwVer"
         return $true
     }
 

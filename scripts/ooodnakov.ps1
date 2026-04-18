@@ -821,44 +821,15 @@ Common workflows:
   # Apply config and install dependencies:
   oooconf install
   oooconf deps
-  # Check if everything is set up correctly:
-  oooconf doctor
-  # Update to latest config:
-  oooconf update
-Repo root:
-  `$RepoRoot
-"@
-}
 
-function Show-CommandUsage {
-    param(
-        [string]$CommandName
-    )
-
-    $CommandName = Resolve-CommandAlias -CommandName $CommandName
-    Write-UiSection "oooconf $CommandName"
-    switch ($CommandName) {
-        "install" {
-            Write-UiHelpBlock @"
-Usage: oooconf install [--dry-run] [--yes-optional]
-
-Apply managed config and optional dependency installation.
-Creates symlinks from tracked config in home/ to their target locations,
-backing up any replaced files. Optionally installs dependencies when
-allowed.
-Examples:
-  oooconf install                      # interactive dependency prompts
-  oooconf install --yes-optional       # auto-accept all optional installs
-  oooconf install --dry-run            # preview without making changes
-"@
-        }
-        "deps" {
-            Write-UiHelpBlock @"
 Usage: oooconf deps [--dry-run] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
-gum-based multi-select picker is used when available.
-Dependency keys match those defined in deps.lock.json. Common keys include:
+picker is shown (using gum if available).
+
+All dependency metadata lives in scripts/optional-deps.toml (sole source of truth).
+Common keys include:
+
 bat, delta, eza, fd, fzf, gum, glow, rg, yazi, ffmpeg, jq, p7zip, poppler, zoxide, and others.
 Examples:
   oooconf deps                         # interactive picker (when gum available)
