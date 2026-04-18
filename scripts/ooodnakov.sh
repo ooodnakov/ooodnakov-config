@@ -27,7 +27,7 @@ PSFZF_GIT_VAR="OOODNAKOV_PSFZF_GIT"
 AUTO_UV_ENV_VAR="AUTO_UV_ENV_QUIET"
 
 load_known_commands() {
-  local fallback_commands=(bootstrap install deps update doctor dry-run delete remove lock update-pins completions agents secrets shell version check preview upgrade)
+  local fallback_commands=(bootstrap install deps update doctor dry-run delete remove lock update-pins completions agents secrets shell version check preview upgrade minimal)
   local line
 
   KNOWN_COMMANDS=()
@@ -1163,7 +1163,7 @@ fi
 
 should_normalize_global_flags() {
   case "$1" in
-    bootstrap|install|deps|update|doctor|completions|dry-run|delete|remove|lock|update-pins|agents)
+    bootstrap|install|deps|update|doctor|completions|dry-run|delete|remove|lock|update-pins|agents|minimal)
       return 0
       ;;
     *)
@@ -1241,7 +1241,11 @@ case "$command" in
     ;;
   deps)
     exec_setup_command deps 1 "$@"
-    ;;
+  ;;
+  minimal)
+    exec "$REPO_ROOT/scripts/minimal-setup.sh"
+  ;;
+
   update)
     exec_setup_command update 1 "$@"
     ;;

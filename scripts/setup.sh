@@ -13,6 +13,7 @@ STATE_HOME="$DATA_HOME/ooodnakov-config"
 FONT_TARGET_DIR="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
 COMMAND="${1:-install}"
 DRY_RUN=0
+MINIMAL=0
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
 LOG_ROOT="${OOODNAKOV_LOG_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/logs}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
@@ -102,7 +103,7 @@ progress_step() {
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/setup.sh [install|update|doctor|deps|completions] [--dry-run] [dependency-key...]
+Usage: ./scripts/setup.sh [install|update|doctor|deps|completions] [--dry-run] [--minimal] [dependency-key...]
 
 Commands:
   install   apply managed config and dependencies
@@ -870,10 +871,12 @@ check_dependency_status() {
   check_cmd=$(run_python scripts/read_optional_deps.py "check-command" "$command_name" 2>/dev/null || echo "command -v $command_name")
 
   if eval "$check_cmd" >/dev/null 2>&1; then
-    if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
-      printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
-    elif [ "$DRY_RUN" -ne 1 ] && is_verbose; then
-      printf "[ok] %s is present.\n" "$log_name"
+    if [ "$DRY_RUN" -ne 1 ]; then
+      if is_interactive && is_verbose; then
+        printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
+      else
+        printf "[ok] %s is present.\n" "$log_name"
+      fi
     fi
     DEPENDENCY_SUMMARY+=("$log_name: present")
     return 0
@@ -2143,6 +2146,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --yes-optional) INSTALL_OPTIONAL=always ;;
+    --minimal) MINIMAL=1 ;;
     -h|--help) usage; exit 0 ;;
     --*)
       echo "unknown option: $1" >&2
@@ -2156,18 +2160,14 @@ while [ "$#" -gt 0 ]; do
         if [ -n "$suggestion" ]; then
           echo "Did you mean: $suggestion" >&2
         fi
-        usage >&2
         exit 1
-      fi
-      if ! optional_dependency_applicable "$1" 2>/dev/null; then
-        _deps_platform="$(detect_platform)"
-        echo "Note: $1 is not applicable on $_deps_platform; skipping." >&2
       fi
       cli_selected_optional_keys+=("$1")
       ;;
   esac
   shift
 done
+
 
 if [ "${#cli_selected_optional_keys[@]}" -gt 0 ]; then
   selected_optional_key_csv="$(IFS=,; printf '%s' "${cli_selected_optional_keys[*]}")"
@@ -2178,6 +2178,9 @@ case "$COMMAND" in
   update) ;;
   doctor) run_doctor; exit $? ;;
   deps)
+    if [ "$MINIMAL" = 1 ]; then
+      selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal-keys" | tr ' ' ',')
+    fi
     if [ -z "$selected_optional_key_csv" ] && is_interactive; then
       if selected_optional_key_csv="$(choose_optional_dependencies_with_gum)"; then
         :
@@ -2220,17 +2223,16 @@ case "$COMMAND" in
     fi
     INSTALL_OPTIONAL=always
     ;;
+  minimal)
+    "$REPO_ROOT/scripts/minimal-setup.sh"
+    ;;
   completions) ;;
   *)
-    echo "Unknown command: $COMMAND" >&2
-    suggestion="$(suggest_setup_command "$COMMAND")"
-    if [ -n "$suggestion" ]; then
-      echo "Did you mean: $suggestion" >&2
-    fi
     usage >&2
     exit 1
     ;;
 esac
+
 
 initialize_logging
 if [ "$COMMAND" = "completions" ]; then

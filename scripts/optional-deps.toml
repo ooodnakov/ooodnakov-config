@@ -37,6 +37,11 @@ state_home = "~/.local/state/ooodnakov-config"
 bin_dir = "~/.local/bin"
 tools_dir = "~/.local/share/ooodnakov-config/tools"
 
+[minimal]
+# Core tools required for basic dotfiles functionality and productivity
+# Run `oooconf deps --minimal` to install these first
+keys = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
+
 [[deps]]
 key = "wget"
 display = "wget"
