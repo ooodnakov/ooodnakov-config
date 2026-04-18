@@ -62,27 +62,12 @@ function Remove-ManagedLink {
         [string]$Target
     )
 
-    if (Test-Path -Path $Target -PathType Leaf) {
+    if (Test-Path -Path $Target) {
         $item = Get-Item -Path $Target -ErrorAction SilentlyContinue
         if ($item.LinkType) {
             $currentTarget = $item.Target
             # Compare paths taking into account directory separators
-            $currentNormalized = $currentTarget -replace '\\', '/'
-            $sourceNormalized = $Source -replace '\\', '/'
-
-            if ($currentNormalized -eq $sourceNormalized) {
-                Remove-Item -Path $Target -Force
-                Write-UiLine -Role ok -Message "removed $Target"
-            }
-        }
-    } elseif (Test-Path -Path $Target -PathType Container) {
-        $item = Get-Item -Path $Target -ErrorAction SilentlyContinue
-        if ($item.LinkType) {
-            $currentTarget = $item.Target
-            $currentNormalized = $currentTarget -replace '\\', '/'
-            $sourceNormalized = $Source -replace '\\', '/'
-
-            if ($currentNormalized -eq $sourceNormalized) {
+            if (($currentTarget -replace '\\', '/') -eq ($Source -replace '\\', '/')) {
                 Remove-Item -Path $Target -Force
                 Write-UiLine -Role ok -Message "removed $Target"
             }
@@ -110,7 +95,7 @@ function Get-LatestBackup {
         return $null
     }
 
-    $backups = Get-ChildItem -Path $backupDir -Filter "$targetName.*" -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+    $backups = Get-ChildItem -Path $backupDir -Filter "$targetName.*" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
     if ($backups.Count -gt 0) {
         return $backups[0].FullName
     }
@@ -140,22 +125,30 @@ function Remove-FontDir {
     }
 }
 
-Remove-ManagedLink -Source (Join-Path (Join-Path $RepoRoot "home") ".zshrc") -Target (Join-Path $HomeDir ".zshrc")
-Remove-ManagedLink -Source (Join-Path (Join-Path (Join-Path $RepoRoot "home") ".config") "zsh") -Target (Join-Path $ConfigHome "zsh")
-Remove-ManagedLink -Source (Join-Path (Join-Path (Join-Path $RepoRoot "home") ".config") "wezterm") -Target (Join-Path $ConfigHome "wezterm")
-Remove-ManagedLink -Source (Join-Path (Join-Path (Join-Path $RepoRoot "home") ".config") "ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
-Remove-ManagedLink -Source (Join-Path (Join-Path (Join-Path (Join-Path $RepoRoot "home") ".config") "ohmyposh") "ooodnakov.omp.json") -Target (Join-Path (Join-Path $ConfigHome "ohmyposh") "ooodnakov.omp.json")
-Remove-ManagedLink -Source (Join-Path (Join-Path (Join-Path (Join-Path $RepoRoot "home") ".config") "powershell") "Microsoft.PowerShell_profile.ps1") -Target (Join-Path (Join-Path $ConfigHome "powershell") "Microsoft.PowerShell_profile.ps1")
+$LocalBinDir = Join-Path $HomeDir ".local/bin"
+$ActivePowerShellProfile = $PROFILE.CurrentUserCurrentHost
+
+# Remove managed links
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $ConfigHome "ohmyposh/ooodnakov.omp.json")
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $ConfigHome "powershell/Microsoft.PowerShell_profile.ps1")
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
 
 Remove-FontDir
 
 if ($Mode -eq "restore") {
-    Restore-Backup -Target (Join-Path $HomeDir ".zshrc")
-    Restore-Backup -Target (Join-Path $ConfigHome "zsh")
     Restore-Backup -Target (Join-Path $ConfigHome "wezterm")
+    Restore-Backup -Target (Join-Path $ConfigHome "lazygit")
+    Restore-Backup -Target (Join-Path $ConfigHome "nvim")
     Restore-Backup -Target (Join-Path $ConfigHome "ooodnakov")
-    Restore-Backup -Target (Join-Path (Join-Path $ConfigHome "ohmyposh") "ooodnakov.omp.json")
-    Restore-Backup -Target (Join-Path (Join-Path $ConfigHome "powershell") "Microsoft.PowerShell_profile.ps1")
+    Restore-Backup -Target (Join-Path $ConfigHome "ohmyposh/ooodnakov.omp.json")
+    Restore-Backup -Target (Join-Path $ConfigHome "powershell/Microsoft.PowerShell_profile.ps1")
+    Restore-Backup -Target $ActivePowerShellProfile
 }
 
 Write-Output ""
