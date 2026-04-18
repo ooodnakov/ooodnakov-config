@@ -186,9 +186,11 @@ The shared AGENTS policy snippets are configured in:
 
 The setup scripts intentionally do not try to provision a full workstation from bare metal. Core tools should already exist before first install:
 
-- Linux/macOS: `git`, `zsh`
-- Windows: `git`, `pwsh` if PowerShell Core is desired
-- all platforms: `wezterm`, `oh-my-posh`
+| Platform | Required System Tools | Core Terminal Tools |
+|----------|-----------------------|---------------------|
+| **Linux** | `git`, `zsh` | `wezterm`, `oh-my-posh` |
+| **macOS** | `git`, `zsh` | `wezterm`, `oh-my-posh` |
+| **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
 
 See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 
