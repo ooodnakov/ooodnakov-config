@@ -116,6 +116,7 @@ Primary commands:
 - `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
 - `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
 - `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content
+- `oooconf agents update`: update installed agent CLIs using their preferred package manager (npm-based tools are updated via `pnpm`)
 
 The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts will run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`). If `uv` is missing, they fall back to the system `python3`.
 
@@ -176,6 +177,7 @@ Agent policy management:
 oooconf agents detect
 oooconf agents sync
 oooconf agents doctor
+oooconf agents update
 ```
 
 The shared AGENTS policy snippets are configured in:
@@ -185,6 +187,7 @@ The shared AGENTS policy snippets are configured in:
 - `home/.config/ooodnakov/agents/common-data.json` (structured MCP + skills data)
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
+`oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all npm-preferred agents through `pnpm add -g <package>@latest`.
 
 ## Prerequisites
 
