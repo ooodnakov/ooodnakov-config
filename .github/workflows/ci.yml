@@ -53,6 +53,16 @@ jobs:
           python3 scripts/generate_dependency_lock.py
           git diff --exit-code deps.lock.json docs/dependency-lock.md
 
+      - name: Managed Neovim/WezTerm config smoke checks
+        run: |
+          python3 -m json.tool home/.config/nvim/lazy-lock.json > /dev/null
+          python3 -m json.tool home/.config/nvim/lazyvim.json > /dev/null
+
+          test -f home/.config/nvim/init.lua
+          test -f home/.config/nvim/lua/config/lazy.lua
+          test -f home/.config/wezterm/wezterm.lua
+          test -f home/.config/wezterm/config/init.lua
+
       - name: Oooconf smoke tests (install --dry-run, doctor, lock)
         run: |
           bash scripts/ooodnakov.sh install --dry-run --yes-optional
@@ -98,6 +108,26 @@ jobs:
               throw "PowerShell parse failed: $script"
             }
             Write-Host "[ok] Parsed $script"
+          }
+
+      - name: Managed Neovim/WezTerm config smoke checks
+        shell: pwsh
+        run: |
+          Get-Content "home/.config/nvim/lazy-lock.json" -Raw | ConvertFrom-Json | Out-Null
+          Get-Content "home/.config/nvim/lazyvim.json" -Raw | ConvertFrom-Json | Out-Null
+
+          $requiredFiles = @(
+            "home/.config/nvim/init.lua",
+            "home/.config/nvim/lua/config/lazy.lua",
+            "home/.config/wezterm/wezterm.lua",
+            "home/.config/wezterm/config/init.lua"
+          )
+
+          foreach ($path in $requiredFiles) {
+            if (-not (Test-Path $path -PathType Leaf)) {
+              throw "Missing required managed config file: $path"
+            }
+            Write-Host "[ok] Found $path"
           }
 
       - name: Oooconf smoke tests (install --dry-run, doctor, lock)
