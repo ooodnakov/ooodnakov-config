@@ -6,7 +6,7 @@ function Get-OooconfCompletions {
 
     $OooconfCommands = @(
         'bootstrap', 'install', 'deps', 'update', 'upgrade', 'doctor', 'check',
-        'dry-run', 'preview', 'delete', 'remove', 'lock', 'update-pins',
+        'dry-run', 'preview', 'delete', 'remove', 'lock', 'update-pins', 'completions',
         'agents', 'shell', 'secrets', 'help', 'version'
     )
 

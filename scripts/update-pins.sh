@@ -2,6 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
 SCRIPT="$REPO_ROOT/scripts/update_pins.py"
 
 ui_is_interactive() {
@@ -24,13 +25,10 @@ ui_line() {
   fi
 }
 
-# Run a Python script, preferring `uv run` when available.
+source "$PYTHON_LIB"
+
 run_python() {
-  if command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ]; then
-    uv run "$@"
-  else
-    python3 "$@"
-  fi
+  oooconf_run_python "$REPO_ROOT" "$@"
 }
 
 usage() {

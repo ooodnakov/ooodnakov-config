@@ -21,6 +21,12 @@
 - **Optional dependency not installed** — run `oooconf deps` to see the interactive picker (requires `gum`). Without `gum`, a text prompt lists available keys you can type explicitly: `oooconf deps bat delta glow`.
 - **A tool is listed as "install attempted" but not present** — the installer respects your consent prompt. Re-run `oooconf deps <key>` to retry, or install the tool manually.
 
+## Completion generation issues
+
+- **Autogen completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview) to regenerate tracked files under `home/.config/ooodnakov/zsh/completions/autogen`.
+- **A specific tool completion is missing** — the generator only emits entries for binaries currently on `PATH`; install the tool first, then re-run `oooconf completions`.
+- **Manifest parse errors** — verify `scripts/autogen-completions.txt` lines keep the `binary|description|output|command` format.
+
 ## Stale or broken symlinks
 
 Managed config is linked into `~/.config`. If something is misbehaving:

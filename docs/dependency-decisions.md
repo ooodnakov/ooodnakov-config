@@ -81,8 +81,12 @@ These are **not** offered by the bootstrap. Install them manually before or afte
 ## Adding a New Optional Dependency
 
 1. Append a `[[deps]]` block to `scripts/optional-deps.toml` with the key, display name, description, and per-platform install info (`linux.manager`, `macos.manager`, `windows.manager`, plus `package`, `command`, `winget_id`, or `choco_id` as needed).
-2. Add a presence check to `optional_dependency_present()` in `scripts/setup.sh`.
-3. Add the install path to the platform-specific install function in `setup.ps1` if it has Windows-specific behavior (winget/choco IDs).
+2. Add/adjust presence checks:
+   - `optional_dependency_present()` in `scripts/setup.sh`
+   - `Get-OptionalDependencyCommandNames` / `Test-OptionalDependencyPresent` in `scripts/setup.ps1`
+3. Add custom installer handling only when needed:
+   - `install_optional_dependency_from_catalog()` in `scripts/setup.sh`
+   - `Install-OptionalDependencyFromSpec` in `scripts/setup.ps1`
 4. Run `oooconf lock` to regenerate lock artifacts.
 5. Document the decision in this file under the appropriate table.
 
