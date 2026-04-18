@@ -111,3 +111,8 @@ def test_shell_scripts_syntax_and_dry_run():
         )
         # Ignore if analyzer not installed; just check parse
         assert "syntax error" not in result.stderr.lower()
+
+    # Run dedicated shell test script (covers .sh dry-run, managed_tool helper, .ps1 fallback)
+    result = subprocess.run(["bash", "tests/test_shell.sh"], capture_output=True, text=True, cwd=Path(__file__).parent.parent)
+    assert result.returncode == 0, f"shell test failed: {result.stderr}"
+    assert "All shell tests passed" in result.stdout
