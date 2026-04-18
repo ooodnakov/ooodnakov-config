@@ -15,9 +15,9 @@ When adding, updating, or removing dependencies, you must regenerate the lock ar
 
 1. Use the helper script to regenerate the lock artifacts (`deps.lock.json` and `docs/dependency-lock.md`).
    ```bash
-   uv run scripts/generate-dependency-lock.py
+   oooconf lock
    ```
-2. For interactive dependency updates, you can use `oooconf deps` or `oooconf lock`.
+2. For interactive dependency updates, you can use `oooconf deps`.
 
 ## Validations After Shell or Bootstrap Changes
 
