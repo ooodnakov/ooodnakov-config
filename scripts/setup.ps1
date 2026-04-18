@@ -42,6 +42,7 @@ $LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $PnpmVersion = "10.18.3"
 $BwVersion = "1.22.1"
+$RtkVersion = "0.37.0"
 
 $script:DependencySummary = [System.Collections.Generic.List[string]]::new()
 $script:ToolSummary = [System.Collections.Generic.List[string]]::new()
@@ -1420,6 +1421,74 @@ function Install-PSFzfIfMissing {
     return $false
 }
 
+function Install-RtkIfMissing {
+    if (Test-DependencyStatus -CommandName "rtk" -SummaryName "rtk") { return $true }
+
+    if (-not (Confirm-Install "Install rtk token-optimized AI CLI proxy from the official native executable archive?")) {
+        Add-DependencySummary "rtk: skipped"
+        return $false
+    }
+
+    $installRoot = Join-Path $ShareHome "tools/rtk/v$RtkVersion"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "rtk-windows-$RtkVersion.zip"
+    $releaseUrl = "https://github.com/rtk-ai/rtk/releases/download/v$RtkVersion/rtk-x86_64-pc-windows-msvc.zip"
+    $sourceBinary = Join-Path $installRoot "rtk.exe"
+    $targetBinary = Join-Path $LocalBinDir "rtk.exe"
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Download $releaseUrl"
+        Write-Output "[dry-run] Expand-Archive $archivePath -> $installRoot"
+        Write-Output "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Add-DependencySummary "rtk: install preview via official archive"
+        return $false
+    }
+
+    try {
+        if (-not (Ensure-Directory -Path $installRoot)) {
+            Add-DependencySummary "rtk: install attempted"
+            return $false
+        }
+
+        if (-not (Test-Path $sourceBinary)) {
+            Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
+            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
+        }
+
+        Copy-Item -Path $sourceBinary -Destination $targetBinary -Force
+    } catch {
+        Write-Output $_
+        # Fallback to cargo if zip download/extract failed
+        $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
+        if ($cargoCommand) {
+            Invoke-ActionWithSpinner -Description "Installing rtk via cargo (fallback)" -Action {
+                param($cmd)
+                & $cmd install --git https://github.com/rtk-ai/rtk | Out-Null
+            } -ArgumentList $cargoCommand
+            if (Get-Command rtk -ErrorAction SilentlyContinue) {
+                Add-DependencySummary "rtk: installed (via cargo fallback)"
+                return $true
+            }
+        }
+        Add-DependencySummary "rtk: install attempted"
+        return $false
+    } finally {
+        if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
+    }
+
+    if (Get-Command rtk -ErrorAction SilentlyContinue -CommandType Application) {
+        Add-DependencySummary "rtk: installed official v$RtkVersion"
+        return $true
+    }
+
+    if (Test-Path $targetBinary) {
+        Add-DependencySummary "rtk: installed official v$RtkVersion"
+        return $true
+    }
+
+    Add-DependencySummary "rtk: install attempted"
+    return $false
+}
+
 function Install-BitwardenCliIfMissing {
     if (Test-DependencyStatus -CommandName "bw" -SummaryName "bw") { return $true }
 
@@ -1617,7 +1686,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Install-DuaIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "k" -Action { Write-Warning "k is not available on Windows." }
     $null = Invoke-SelectedOptionalDependency -Key "lazygit" -Action { Install-PackageIfMissing -CommandNames @("lazygit") -WingetId "JesseDuffield.lazygit" -Description "lazygit" -SummaryName "lazygit" }
-    $null = Invoke-SelectedOptionalDependency -Key "rtk" -Action { Install-PackageIfMissing -CommandNames @("rtk") -CargoGitUrl "https://github.com/rtk-ai/rtk" -Description "rtk" -SummaryName "rtk" }
+    $null = Invoke-SelectedOptionalDependency -Key "rtk" -Action { Install-RtkIfMissing }
 }
 
 function Write-Summary {

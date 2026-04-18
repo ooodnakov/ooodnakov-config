@@ -68,6 +68,7 @@ NEOVIM_MIN_VERSION="0.11.0"
 NEOVIM_LINUX_VERSION="0.11.5"
 PNPM_VERSION="10.18.3"
 BW_VERSION="1.22.1"
+RTK_VERSION="0.37.0"
 
 is_interactive() {
   case "$INTERACTIVE" in
@@ -1052,6 +1053,45 @@ maybe_note_dependency() {
   DEPENDENCY_SUMMARY+=("$command_name: missing (manual install)")
 }
 
+maybe_install_rtk() {
+  if check_dependency_status "rtk" "rtk"; then
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install rtk token-optimized AI CLI proxy via the official installer (curl)?"; then
+    DEPENDENCY_SUMMARY+=("rtk: skipped")
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    if prompt_yes_no "rtk install needs curl. Install curl first?"; then
+      local manager
+      manager="$(detect_package_manager)"
+      install_packages "$manager" curl
+    else
+      DEPENDENCY_SUMMARY+=("rtk: missing (requires curl)")
+      return 1
+    fi
+  fi
+
+  # The official installer puts the binary in ~/.local/bin by default or allows specifying it.
+  # We'll use the official curl pipeline which detects OS/arch and downloads the right binary.
+  run_with_spinner "Installing rtk" sh -c "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/main/install.sh | sh"
+  if command -v rtk >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/rtk" ]; then
+    DEPENDENCY_SUMMARY+=("rtk: installed")
+  else
+    # Fallback to cargo if curl install failed for some reason, but warning about the lockfile
+    if command -v cargo >/dev/null 2>&1; then
+       run_with_spinner "Installing rtk via cargo (fallback)" cargo install --git https://github.com/rtk-ai/rtk
+       if command -v rtk >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/rtk" ]; then
+         DEPENDENCY_SUMMARY+=("rtk: installed (via cargo fallback)")
+         return 0
+       fi
+    fi
+    DEPENDENCY_SUMMARY+=("rtk: install attempted")
+  fi
+}
+
 maybe_install_oh_my_posh() {
   if check_dependency_status "oh-my-posh" "oh-my-posh"; then
     return 0
@@ -1960,7 +2000,7 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected k maybe_note_dependency k "manual install if you want the standalone k command"
   install_optional_dependency_if_selected python3 maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
   install_optional_dependency_if_selected lazygit maybe_install_dependency "$manager" lazygit lazygit "simple terminal UI for git commands"
-  install_optional_dependency_if_selected rtk maybe_install_dependency cargo rtk https://github.com/rtk-ai/rtk "token-optimized AI CLI command proxy"
+  install_optional_dependency_if_selected rtk maybe_install_rtk
 }
 
 shift || true
