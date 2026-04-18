@@ -30,6 +30,7 @@ This file tracks deliberate follow-up work for the repo. It is ordered by impact
 
 - [x] Audit feature parity between Unix `oooconf` and PowerShell `oooconf`:
   - Unix supports `bootstrap` — PowerShell does not
+
   - Gap documented in architecture and troubleshooting docs
 - [ ] Validate Windows path handling and symlink behavior on a fresh machine setup
 - [ ] Add at least one macOS validation path before claiming active support there (currently deferred — no macOS-specific code exists)

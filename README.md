@@ -195,10 +195,12 @@ The shared AGENTS policy snippets are configured in:
 
 The setup scripts intentionally do not try to provision a full workstation from bare metal. Core tools should already exist before first install:
 
-| Platform      | Required Tools                                               |
-| ------------- | ------------------------------------------------------------ |
-| Linux / macOS | `git`, `zsh`, `wezterm`, `oh-my-posh`                        |
-| Windows       | `git`, `pwsh` (for PowerShell Core), `wezterm`, `oh-my-posh` |
+| Platform | Required System Tools | Core Terminal Tools |
+|----------|-----------------------|---------------------|
+| **Linux** | `git`, `zsh` | `wezterm`, `oh-my-posh` |
+| **macOS** | `git`, `zsh` | `wezterm`, `oh-my-posh` |
+| **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
+
 
 See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 
@@ -363,3 +365,16 @@ Reference docs:
 - import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)
 - third-party tree notes: [`third_party/README.md`](third_party/README.md)
 - contributor instructions and coding rules: [`AGENTS.md`](AGENTS.md)
+
+## Development
+
+If you'd like to make changes to the configuration, testing your changes against the codebase is recommended.
+You can use `pre-commit` to ensure code is formatted properly and passes linting checks before committing.
+
+Install `pre-commit` and run it locally:
+```bash
+uv tool install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+

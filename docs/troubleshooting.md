@@ -2,8 +2,8 @@
 
 ## Bootstrap fails on a fresh machine
 
-1. **Verify prerequisites** — the bootstrap trusts only `git` and a POSIX shell (bash or zsh) on Linux/macOS, or PowerShell on Windows. Install them first:
-   - **Linux (Debian/Ubuntu):** `sudo apt install -y git bash zsh`
+1. **Verify prerequisites** — the bootstrap assumes core tools are present. See the [Prerequisites table in the README](../README.md#prerequisites) and ensure they are installed first.
+   - **Linux (Debian/Ubuntu):** `sudo apt install -y git zsh`
    - **Windows:** install PowerShell 7+ and Git, then run from `pwsh`
 2. **Clone first, run after** — avoid `curl | bash` pipelines. Clone the repo, inspect `scripts/setup.sh` (or `setup.ps1`), then run the entrypoint directly:
 

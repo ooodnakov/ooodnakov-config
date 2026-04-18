@@ -1,0 +1,33 @@
+repos:
+  - repo: local
+    hooks:
+      - id: shell-syntax
+        name: Shell syntax checks (bash -n)
+        entry: bash -n
+        language: system
+        types: [shell]
+        files: ^(scripts/(setup|ooodnakov|delete|update-pins)\.sh|bootstrap\.sh)$
+
+      - id: shellcheck
+        name: Shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
+        files: ^(scripts/(setup|ooodnakov|delete|update-pins)\.sh|bootstrap\.sh)$
+
+      - id: lockfile-reproducibility
+        name: Lockfile reproducibility
+        entry: bash -c 'python3 scripts/generate_dependency_lock.py && git diff --exit-code deps.lock.json docs/dependency-lock.md'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^third_party/
+      - id: end-of-file-fixer
+        exclude: ^third_party/
+      - id: check-yaml
+        exclude: ^third_party/

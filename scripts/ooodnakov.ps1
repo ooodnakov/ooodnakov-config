@@ -17,6 +17,7 @@ $UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
 $AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
 $KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
+
 $KnownShellSubcommands = @("status", "forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
@@ -655,8 +656,8 @@ function Get-EditDistance {
             $rightChar = $Right.Substring($j - 1, 1)
             $cost = if ($leftChar -ceq $rightChar) { 0 } else { 1 }
             $deletion = $previous[$j] + 1
-            $insertion = $current[$j - 1] + 1
-            $substitution = $previous[$j - 1] + $cost
+            $insertion = $current[($j - 1)] + 1
+            $substitution = $previous[($j - 1)] + $cost
             $current[$j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
         }
 
@@ -750,14 +751,14 @@ function Show-Usage {
     Write-Output ""
     Write-Output (Format-UiText -Text "oooconf — reproducible cross-platform dotfiles manager" -Role "section")
     Write-Output (Format-UiText -Text "Global options:" -Role "info")
-@"
+    Write-Output @"
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
-"@ | Write-Output
+"@
     Write-Output ""
     Write-Output (Format-UiText -Text "Commands:" -Role "info")
     Write-Output ("  " + (Format-UiText -Text "Setup:" -Role "hint"))
@@ -777,7 +778,7 @@ function Show-Usage {
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
-    @"
+    Write-Output @"
 Aliases:
   check -> doctor
   preview -> dry-run
@@ -803,7 +804,7 @@ Common workflows:
   oooconf update
 Repo root:
   `$RepoRoot
-"@ | Write-Output
+"@
 }
 
 function Show-CommandUsage {

@@ -73,32 +73,34 @@ function Get-EditDistance {
         [string]$Right
     )
 
-    $rows = $Left.Length + 1
-    $cols = $Right.Length + 1
-    $dist = New-Object 'int[,]' $rows, $cols
+    $Left = [string]$Left
+    $Right = [string]$Right
 
-    for ($i = 0; $i -lt $rows; $i++) {
-        $dist[$i, 0] = $i
-    }
-    for ($j = 0; $j -lt $cols; $j++) {
-        $dist[0, $j] = $j
+    $rightLength = $Right.Length
+    $previous = New-Object int[] ($rightLength + 1)
+    for ($j = 0; $j -le $rightLength; $j++) {
+        $previous[$j] = $j
     }
 
-    for ($i = 1; $i -lt $rows; $i++) {
-        for ($j = 1; $j -lt $cols; $j++) {
-            $cost = if ([string]$Left[($i - 1)] -ceq [string]$Right[($j - 1)]) { 0 } else { 1 }
-            $prevRow = $i - 1
-            $prevCol = $j - 1
-            $deletion = $dist[$prevRow, $j] + 1
-            $insertion = $dist[$i, $prevCol] + 1
-            $substitution = $dist[$prevRow, $prevCol] + $cost
-            $dist[$i, $j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
+    for ($i = 1; $i -le $Left.Length; $i++) {
+        $current = New-Object int[] ($rightLength + 1)
+        $current[0] = $i
+        $leftChar = $Left.Substring($i - 1, 1)
+
+        for ($j = 1; $j -le $rightLength; $j++) {
+            $rightChar = $Right.Substring($j - 1, 1)
+            $cost = if ($leftChar -ceq $rightChar) { 0 } else { 1 }
+            $deletion = $previous[$j] + 1
+            $insertion = $current[$j - 1] + 1
+            $substitution = $previous[$j - 1] + $cost
+            $current[$j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
         }
+
+        $previous = $current
     }
 
-    $lastRow = $rows - 1
-    $lastCol = $cols - 1
-    return $dist[$lastRow, $lastCol]
+    return $previous[$rightLength]
+
 }
 
 function Get-ClosestSuggestion {

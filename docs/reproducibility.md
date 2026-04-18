@@ -65,11 +65,7 @@ Use local override files for anything that changes by host:
 
 ## Manual prerequisites
 
-The bootstrap scripts intentionally do not install every package manager package for you. They assume the machine already has:
-
-- Linux/macOS: `git`, `zsh`
-- Windows: `git`, `pwsh` if you want PowerShell Core
-- all platforms: `wezterm`, `oh-my-posh`
+The bootstrap scripts intentionally do not install every package manager package for you. See the [Prerequisites table in the README](../README.md#prerequisites) for the required bare-metal tools per platform.
 
 Fonts are also manual for now. The tracked defaults assume a Nerd Font is installed, with `MesloLGSDZ Nerd Font Mono` preferred.
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.

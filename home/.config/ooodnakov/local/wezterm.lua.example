@@ -2,4 +2,3 @@ return {
   -- Example:
   -- default_prog = { "zsh", "-l" },
 }
-

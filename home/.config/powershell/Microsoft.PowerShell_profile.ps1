@@ -275,14 +275,14 @@ function Update-Venv {
 
     if ($projectRoot -and -not $ignoreFound) {
         $venvPath = Join-Path $projectRoot ".venv"
-        
+
         # 3. Auto-Creation: If pyproject.toml exists but .venv doesn't, create it using uv
         if (-not (Test-Path $venvPath)) {
             if (Get-Command uv -ErrorAction SilentlyContinue) {
                 Write-Host "🔨 No .venv found. Creating one with uv..." -ForegroundColor Gray
                 & uv venv --quiet
             } else {
-                return 
+                return
             }
         }
 
@@ -325,7 +325,7 @@ function Update-Venv {
         if (Get-Command deactivate -ErrorAction SilentlyContinue) {
             deactivate
         }
-        
+
         if ($env:AUTO_UV_ENV_QUIET -ne 1) {
             $msg = if ($wasUv) { "⬇️  Deactivated UV environment" } else { "⬇️  Deactivated environment" }
             Write-Host $msg -ForegroundColor Gray

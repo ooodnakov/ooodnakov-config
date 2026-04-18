@@ -119,6 +119,14 @@ def parse_args() -> argparse.Namespace:
         help="Print planned update commands without executing them.",
     )
 
+    skills_parser = subparsers.add_parser(
+        "skills",
+        help="Manage agent skills and extensions across different agent ecosystems.",
+    )
+    skills_subparsers = skills_parser.add_subparsers(dest="subcommand", required=True)
+    skills_sync_parser = skills_subparsers.add_parser("sync", help="Synchronize configured skill_specs across agents.")
+    skills_sync_parser.add_argument("--check", action="store_true", help="Print planned skill installs without executing.")
+
     return parser.parse_args()
 
 
@@ -195,12 +203,8 @@ def discover_agent_files(repo_root: Path, configured_files: list[str]) -> list[P
         candidate = (repo_root / rel).resolve()
         if candidate.exists() and candidate.is_file():
             discovered.add(candidate)
-    for path in repo_root.rglob("AGENTS.md"):
-        rel_path = path.resolve().relative_to(repo_root)
-        if any(part in {".git", "third_party"} for part in rel_path.parts):
-            continue
-        discovered.add(path.resolve())
-    return sorted(discovered)
+    return sorted(list(discovered))
+
 
 
 def parse_agent_clis(raw: list[dict[str, str]]) -> list[AgentCli]:
@@ -294,15 +298,16 @@ def render_markdown_block(common_text: str, common_data: dict[str, Any]) -> str:
         common_text.rstrip(),
         "",
         "## Common MCP servers",
-        "",
+        "<!-- oooconf:mcp-servers:start -->",
     ]
     for name, config in sorted(mcp_servers.items()):
         desc = config.get("description", "No description")
         lines.append(f"- `{name}`: {desc}")
+    lines.append("<!-- oooconf:mcp-servers:end -->")
 
-    lines.extend(["", "## Common Skills", ""])
+    lines.extend(["", "## Common Skills", "<!-- oooconf:skills:start -->"])
     lines.extend([f"- {skill}" for skill in skills_entries])
-    lines.extend([MANAGED_END, ""])
+    lines.extend(["<!-- oooconf:skills:end -->", MANAGED_END, ""])
     return "\n".join(lines)
 
 
@@ -422,16 +427,32 @@ def inspect_agent_configs(
 
 
 def sync_global_configs(
-    targets: list[AgentConfigTarget], common_data: dict[str, Any], check_only: bool
+    targets: list[AgentConfigTarget], common_data: dict[str, Any], managed_block: str, check_only: bool
 ) -> tuple[int, list[Path]]:
     changed: list[Path] = []
-    mcp_servers = common_data.get("mcp_servers", {})
-    if not mcp_servers:
-        return 0, []
 
     for target in targets:
         existing = existing_default_path(target.default_paths)
-        if existing is None or target.format != "json":
+        if existing is None:
+            continue
+
+        if target.format == "markdown":
+            try:
+                current = existing.read_text(encoding="utf-8")
+                updated = upsert_managed_block(current, managed_block)
+                if updated != current:
+                    changed.append(existing)
+                    if not check_only:
+                        existing.write_text(updated, encoding="utf-8")
+            except Exception as exc:
+                print(f"warning: failed to sync global markdown {existing}: {exc}", file=sys.stderr)
+            continue
+
+        if target.format != "json":
+            continue
+
+        mcp_servers = common_data.get("mcp_servers", {})
+        if not mcp_servers:
             continue
 
         try:
@@ -443,9 +464,11 @@ def sync_global_configs(
             needs_update = False
             for name, config in mcp_servers.items():
                 if name not in data["mcpServers"]:
+                    if "command" not in config:
+                        continue
                     data["mcpServers"][name] = {
                         "command": config["command"],
-                        "args": config["args"],
+                        "args": config.get("args", []),
                     }
                     if "env" in config:
                         data["mcpServers"][name]["env"] = config["env"]
@@ -481,15 +504,14 @@ def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
 
 def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_sync: bool) -> int:
     common_text = read_text(repo_root, config["common_text_file"])
-    repo_data = load_common_data(repo_root, config, include_local=False)
-    managed_block_repo = render_markdown_block(common_text, repo_data)
     agent_files = discover_agent_files(repo_root, config["agent_files"])
 
-    if not agent_files:
-        print("No AGENTS.md files found from configured locations/discovery.", file=sys.stderr)
-        return 1
-
-    changed_count, changed_files = sync_files(agent_files, managed_block_repo, check_only)
+    changed_count = 0
+    changed_files = []
+    if agent_files:
+        repo_data = load_common_data(repo_root, config, include_local=False)
+        managed_block_repo = render_markdown_block(common_text, repo_data)
+        changed_count, changed_files = sync_files(agent_files, managed_block_repo, check_only)
 
     print_section("AGENTS Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
@@ -502,10 +524,13 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
         for file_path in changed_files:
             print(f"{icon('bullet')} {file_path}")
 
+    g_count = 0
+    g_files = []
     if global_sync:
         merged_data = load_common_data(repo_root, config, include_local=True)
+        managed_block_global = render_markdown_block(common_text, merged_data)
         config_targets = parse_agent_targets(config["agent_configs"])
-        g_count, g_files = sync_global_configs(config_targets, merged_data, check_only)
+        g_count, g_files = sync_global_configs(config_targets, merged_data, managed_block_global, check_only)
         print("")
         print(f"Global configs scanned: {len(config_targets)}")
         print(f"Global configs needing updates: {g_count}")
@@ -517,7 +542,7 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
         print("")
         print("All target files are up to date.")
 
-    return 1 if check_only and (changed_count > 0) else 0
+    return 1 if check_only and (changed_count > 0 or (global_sync and g_count > 0)) else 0
 
 
 def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> int:
@@ -684,6 +709,77 @@ def cmd_update(config: dict[str, Any], check_only: bool) -> int:
     return 1 if failed else 0
 
 
+def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+    common_data = load_common_data(repo_root, config, include_local=True)
+    skill_specs = common_data.get("skill_specs", [])
+    if not skill_specs:
+        print("No skill_specs configured.", file=sys.stderr)
+        return 0
+
+    print_section("Agent Skills Sync")
+    print(f"Mode: {'check' if check_only else 'sync'}")
+
+    attempted = 0
+    failed = 0
+    skipped = 0
+    synced = 0
+
+    for spec in skill_specs:
+        name = spec.get("name", "unknown")
+        agent_key = spec.get("agent", "").lower()
+        source = spec.get("source", "")
+        if not agent_key or not source:
+            print_status_line("fail", f"Invalid skill spec: {name} (missing agent or source)")
+            failed += 1
+            continue
+
+        agent_cli = next((a for a in parse_agent_clis(config["agent_clis"]) if a.command == agent_key or a.name.lower() == agent_key), None)
+        if not agent_cli:
+             # Try direct command match
+             agent_cli = AgentCli(name=agent_key.capitalize(), command=agent_key)
+
+        installed_path = shutil.which(agent_cli.command)
+        if not installed_path:
+            print_status_line("missing", f"{agent_cli.name} ({agent_cli.command}) not found; skipping skill {name}.")
+            skipped += 1
+            continue
+
+        command: list[str] = []
+        if agent_cli.command == "gemini":
+            command = ["gemini", "skills", "install", source]
+        elif agent_cli.command == "claude":
+            # Claude Code uses /plugin install in-session, but for CLI automation we might need another way or just skip
+            # If there's no CLI flag for plugins, we skip for now.
+            print_status_line("warn", f"Automated plugin install for {agent_cli.name} not yet supported; skip {name}.")
+            skipped += 1
+            continue
+        else:
+            print_status_line("warn", f"Skill sync for {agent_cli.name} not yet implemented; skip {name}.")
+            skipped += 1
+            continue
+
+        attempted += 1
+        command_display = shlex.join(command)
+        if check_only:
+            print_status_line("ok", f"Plan: {name} for {agent_cli.name}")
+            print(f"  command: {command_display}")
+            continue
+
+        print_status_line("ok", f"Syncing {name} for {agent_cli.name}...")
+        print(f"  command: {command_display}")
+        try:
+            subprocess.run(command, check=True, shell=os.name == "nt")
+            print_status_line("ok", f"Successfully synced {name}")
+            synced += 1
+        except subprocess.CalledProcessError as exc:
+            print_status_line("fail", f"Failed to sync {name}: {exc}")
+            failed += 1
+
+    print("")
+    print(f"Summary: synced {synced}/{attempted} attempted; skipped {skipped}; failed {failed}.")
+    return 1 if failed else 0
+
+
 if __name__ == "__main__":
     args = parse_args()
     root = resolve_repo_root(args.repo_root)
@@ -702,4 +798,7 @@ if __name__ == "__main__":
         raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths))
     if args.command == "update":
         raise SystemExit(cmd_update(cfg, check_only=args.check))
+    if args.command == "skills":
+        if args.subcommand == "sync":
+            raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check))
     raise SystemExit(1)
