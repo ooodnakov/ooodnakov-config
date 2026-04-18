@@ -33,3 +33,5 @@ home/.config/zsh/.zcompdump*
 
 
 home/.config/ooodnakov/local/bw-session
+pwsh_dir/
+pwsh.tar.gz
