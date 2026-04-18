@@ -961,6 +961,13 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
     for agent_cmd, flags in agent_map.items():
         if agent_cmd in installed_agents:
             attempted += 1
+
+            # Claude/Cursor hooks are not yet supported on Windows via RTK
+            if os.name == "nt" and agent_cmd in {"claude", "cursor-agent"}:
+                print_status_line("warn", f"RTK hook-based init for {agent_cmd} is not supported on Windows. Use local '--claude-md' if needed.")
+                skipped += 1
+                continue
+
             cmd = ["rtk", "init", "--global", "--auto-patch", *flags]
             cmd_display = shlex.join(cmd)
             print_status_line("info", f"Initializing RTK for {agent_cmd}")
