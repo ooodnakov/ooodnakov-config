@@ -6,11 +6,13 @@
    - **Linux (Debian/Ubuntu):** `sudo apt install -y git bash zsh`
    - **Windows:** install PowerShell 7+ and Git, then run from `pwsh`
 2. **Clone first, run after** — avoid `curl | bash` pipelines. Clone the repo, inspect `scripts/setup.sh` (or `setup.ps1`), then run the entrypoint directly:
+
    ```bash
    git clone https://github.com/ooodnakov/ooodnakov-config.git "$HOME/src/ooodnakov-config"
    cd ooodnakov-config
    ./home/.config/ooodnakov/bin/oooconf install
    ```
+
 3. **Check the log** — on first run, setup writes a log file under `~/.local/state/ooodnakov-config/logs/`. The latest run is symlinked as `setup-latest.log`.
 
 ## Missing tools after install
@@ -27,10 +29,10 @@ Managed config is linked into `~/.config`. If something is misbehaving:
 # Check all managed links and key commands
 oooconf doctor
 
-# Remove all managed links without restoring backups
+# Remove all managed links without restoring backups (Unix only)
 oooconf remove
 
-# Remove managed links and restore the latest backups
+# Remove managed links and restore the latest backups (Unix only)
 oooconf delete
 
 # Re-apply from the repo
@@ -43,19 +45,21 @@ Individual link issues show up in `oooconf doctor` as `[missing]` entries. The b
 
 Two places can introduce machine-specific env vars:
 
-| File | Source | Overwritten by `oooconf secrets sync`? |
-|------|--------|----------------------------------------|
+| File                                | Source                 | Overwritten by `oooconf secrets sync`?                                |
+| ----------------------------------- | ---------------------- | --------------------------------------------------------------------- |
 | `~/.config/ooodnakov/local/env.zsh` | rendered from template | **No** — the `# --- LOCAL OVERRIDES START/END ---` block is preserved |
-| `~/.config/ooodnakov/local/env.ps1` | rendered from template | **No** — same LOCAL OVERRIDES block |
+| `~/.config/ooodnakov/local/env.ps1` | rendered from template | **No** — same LOCAL OVERRIDES block                                   |
 
 **If your local value disappears after `oooconf secrets sync`:**
 Make sure it sits between the `START` and `END` markers. Lines outside that block are overwritten on every sync.
 
 **If sync fails with `BW_SESSION is not set`:**
 You need an active Bitwarden session. Either:
+
 ```bash
 eval "$(oooconf secrets unlock --shell zsh)"
 ```
+
 Or set `BW_CLIENTID`, `BW_CLIENTSECRET`, and `BW_PASSWORD` in your local env — the sync will auto-unlock using those credentials.
 
 **If a secret resolves to the wrong value:**
@@ -63,11 +67,11 @@ Check the template entry at `home/.config/ooodnakov/secrets/env.template`. The `
 
 ## Secrets sync errors
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `BW_SESSION is not set` | Vault not unlocked in this shell | Run `oooconf secrets unlock` and eval/source the output |
-| `Bitwarden CLI (bw) is not installed` | `bw` missing from PATH | Run `oooconf deps bw` or install manually |
-| `failed to resolve KEY from Bitwarden` | Item ID invalid or vault locked | Verify the item ID in the template, then unlock |
-| `Template not found` | Repo root resolved incorrectly | Pass `--repo-root /path/to/repo` explicitly |
+| Symptom                                | Cause                            | Fix                                                     |
+| -------------------------------------- | -------------------------------- | ------------------------------------------------------- |
+| `BW_SESSION is not set`                | Vault not unlocked in this shell | Run `oooconf secrets unlock` and eval/source the output |
+| `Bitwarden CLI (bw) is not installed`  | `bw` missing from PATH           | Run `oooconf deps bw` or install manually               |
+| `failed to resolve KEY from Bitwarden` | Item ID invalid or vault locked  | Verify the item ID in the template, then unlock         |
+| `Template not found`                   | Repo root resolved incorrectly   | Pass `--repo-root /path/to/repo` explicitly             |
 
 Run `oooconf secrets doctor` for a full prerequisite check.
