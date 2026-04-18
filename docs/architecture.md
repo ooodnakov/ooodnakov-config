@@ -48,11 +48,15 @@ Primary commands:
 
 - `install`: apply managed config and optional dependency installs
 - `update`: fast-forward the repo and rerun install
+- `deps`: interactive picker to install optional dependencies
 - `dry-run`: preview planned changes without mutating the system
 - `doctor`: validate managed links and key tools
-- `delete` and `remove`: remove managed links, optionally restoring backups
+- `delete` and `remove`: remove managed links, optionally restoring backups *(Unix only)*
 - `lock`: regenerate dependency lock artifacts
 - `update-pins`: audit pinned refs against upstream and optionally apply updates
+- `secrets`: sync and manage local environment secrets using Bitwarden
+- `agents`: detect and sync shared AI coding agent policy sections
+- `shell`: launch configured subshells or manage shell integrations
 
 ## Dependency Model
 

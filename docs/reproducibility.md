@@ -28,24 +28,12 @@ Ignored files:
 
 ## Dependency policy
 
-`zsh` dependencies are not copied into the repo. They are installed into `~/.local/share/ooodnakov-config` on Unix-like systems at pinned commits:
+`zsh` dependencies and other third-party utilities are intentionally not committed into the repo.
 
-- `oh-my-zsh`
-- `powerlevel10k`
-- `zsh-autosuggestions`
-- `zsh-syntax-highlighting`
-- `zsh-history-substring-search`
-- `zsh-autocomplete`
-- `fzf-tab`
-- `forgit`
-- `zsh-you-should-use`
-- `auto-uv-env`
+See [`dependency-decisions.md`](dependency-decisions.md) for the full list of automated, optional, and manual dependencies and how they are installed per platform.
+See [`dependency-lock.md`](dependency-lock.md) for the exact pinned git revisions used by the setup scripts.
 
 This keeps the repo small while still making bootstrap deterministic.
-`auto-uv-env` is installed in a user-local layout that mirrors its upstream bin/share model without touching global system directories: a pinned source checkout lives under `~/.local/share/ooodnakov-config/src/auto-uv-env`, the executable is linked into `~/.local/share/ooodnakov-config/bin/auto-uv-env`, and the shell integration files are installed into `~/.local/share/ooodnakov-config/auto-uv-env`.
-`zoxide` is treated as an optional system package rather than a pinned repo checkout; when present, the tracked `zsh` config initializes it as `z` and `zi` so it replaces the older `z` plugin without changing the interactive command.
-The Unix setup also normalizes permissions for the installed `oh-my-zsh` tree on every run, keeping directories at `755` and regular files at `644` so `compaudit` accepts the completion paths.
-For optional tooling, `bat` is installed via the system package manager when available as a `cat` alternative with syntax highlighting, `delta` is installed via the system package manager when available as a Git diff pager with syntax highlighting, `glow` is installed via the system package manager when available as a terminal Markdown reader, `gum` is installed from Charm's official package sources when needed for the interactive dependency picker, `q` is installed via the upstream natesales APT repo on Debian/Ubuntu and via the system package manager when available elsewhere, `uv` is installed via Astral's official installer, `bw` is installed from Bitwarden's pinned official native CLI archive, and `dua-cli` is installed from `https://github.com/byron/dua-cli` via `cargo`, avoiding distro-specific package naming drift.
 
 Shell runtime state is kept outside the tracked config tree:
 
