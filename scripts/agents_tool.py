@@ -610,20 +610,11 @@ def resolve_update_command(spec: AgentUpdateSpec) -> tuple[list[str], str]:
     preferred = spec.preferred.strip().lower()
     package = spec.package.strip() or spec.command
     if preferred in {"npm", "pnpm"}:
-        pnpm = shutil.which("pnpm")
-        if not pnpm:
-            raise RuntimeError("pnpm is required for npm/pnpm-based agent updates.")
-        return [pnpm, "add", "-g", f"{package}@latest"], "pnpm"
+        return ["pnpm", "add", "-g", f"{package}@latest"], "pnpm"
     if preferred == "uv":
-        uv = shutil.which("uv")
-        if not uv:
-            raise RuntimeError("uv is required for uv-based agent updates.")
-        return [uv, "tool", "install", "--upgrade", package], "uv"
+        return ["uv", "tool", "install", "--upgrade", package], "uv"
     if preferred == "pipx":
-        pipx = shutil.which("pipx")
-        if not pipx:
-            raise RuntimeError("pipx is required for pipx-based agent updates.")
-        return [pipx, "upgrade", package], "pipx"
+        return ["pipx", "upgrade", package], "pipx"
     raise RuntimeError(f"unsupported preferred update manager: {spec.preferred!r}")
 
 
@@ -658,14 +649,35 @@ def cmd_update(config: dict[str, Any], check_only: bool) -> int:
             print_status_line("ok", f"{spec.name} via {runner}")
             print(f"  command: {command_display}")
             continue
-        result = subprocess.run(command, check=False, capture_output=True, text=True)
-        if result.returncode == 0:
+        resolved_runner = shutil.which(command[0])
+        if not resolved_runner:
+            print_status_line("fail", f"{spec.name}: required updater '{command[0]}' is not installed.")
+            failed += 1
+            continue
+        command_exec = [resolved_runner, *command[1:]]
+        print_status_line("ok", f"{spec.name} via {runner}")
+        print(f"  command: {command_display}")
+        output_lines: list[str] = []
+        process = subprocess.Popen(
+            command_exec,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        assert process.stdout is not None
+        for raw_line in process.stdout:
+            line = raw_line.rstrip()
+            output_lines.append(line)
+            if line:
+                print(f"  {line}")
+        return_code = process.wait()
+        if return_code == 0:
             print_status_line("ok", f"{spec.name} updated via {runner}")
             updated += 1
         else:
             print_status_line("fail", f"{spec.name} update failed via {runner}")
-            if result.stderr.strip():
-                print(f"  stderr: {result.stderr.strip()}")
+            if output_lines:
+                print("  (combined stdout/stderr shown above)")
             failed += 1
     print("")
     print(f"Summary: updated {updated}/{attempted} attempted; skipped {skipped} missing; failed {failed}.")
