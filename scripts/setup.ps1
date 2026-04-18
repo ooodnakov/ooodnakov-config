@@ -1251,14 +1251,14 @@ function Install-PackageIfMissing {
             }
 
             if ($DryRun) {
-                Write-Output "[dry-run] cargo install --locked --git $CargoGitUrl"
+                Write-Output "[dry-run] cargo install --git $CargoGitUrl"
                 Add-DependencySummary "${SummaryName}: install preview via cargo"
                 return $false
             }
 
             Invoke-ActionWithSpinner -Description "Installing $Description via cargo" -Action {
                 param($url, $cmd)
-                & $cmd install --locked --git $url | Out-Null
+                & $cmd install --git $url | Out-Null
             } -ArgumentList $CargoGitUrl, $cargoCommand
 
             $installedPath = Join-Path $cargoBinDir "$($CommandNames[0]).exe"
@@ -1541,13 +1541,13 @@ function Install-DuaIfMissing {
     }
 
     if ($DryRun) {
-        Write-Output "[dry-run] cargo install --locked --git $duaRepoUrl dua-cli"
+        Write-Output "[dry-run] cargo install --git $duaRepoUrl dua-cli"
         Add-DependencySummary "dua: install preview via cargo"
         return $false
     }
 
     try {
-        & $cargoCommand install --locked --git $duaRepoUrl dua-cli
+        & $cargoCommand install --git $duaRepoUrl dua-cli
     } catch {
         Write-Output $_
     }

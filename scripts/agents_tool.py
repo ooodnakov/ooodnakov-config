@@ -224,17 +224,19 @@ def load_common_data(repo_root: Path, config: dict[str, Any], include_local: boo
     return common_data
 
 
-def discover_agent_files(repo_root: Path, configured_files: list[str]) -> list[Path]:
+def discover_agent_files(repo_root: Path, configured_files: list[str], include_missing: bool = False) -> list[Path]:
     discovered: set[Path] = set()
     for rel in configured_files:
         candidate = (repo_root / rel).resolve()
         if candidate.exists() and candidate.is_file():
             discovered.add(candidate)
+        elif include_missing and candidate.parent.exists():
+            discovered.add(candidate)
     return sorted(list(discovered))
 
 
-
 def parse_agent_clis(raw: list[dict[str, str]]) -> list[AgentCli]:
+
     return [AgentCli(name=entry["name"], command=entry["command"]) for entry in raw]
 
 
@@ -349,6 +351,13 @@ def upsert_managed_block(existing: str, managed_block: str) -> str:
 def sync_files(agent_files: list[Path], managed_block: str, check_only: bool) -> tuple[int, list[Path]]:
     changed: list[Path] = []
     for path in agent_files:
+        if not path.exists():
+            changed.append(path)
+            if not check_only:
+                # For new files, the managed block is the entire content
+                path.write_text(managed_block, encoding="utf-8")
+            continue
+
         current = path.read_text(encoding="utf-8")
         updated = upsert_managed_block(current, managed_block)
         if updated != current:
@@ -381,7 +390,7 @@ def existing_default_path(paths: list[str]) -> Path | None:
     return None
 
 
-def check_common_entries(content: str, common_data: dict[str, Any]) -> tuple[list[str], list[str]]:
+def check_common_entries(content: str, common_data: dict[str, Any], fmt: str) -> tuple[list[str], list[str]]:
     lowered = content.lower()
     missing_mcp: list[str] = []
     missing_skills: list[str] = []
@@ -391,14 +400,16 @@ def check_common_entries(content: str, common_data: dict[str, Any]) -> tuple[lis
         if name.lower() not in lowered:
             missing_mcp.append(name)
 
-    for skill in common_data.get("skills", []):
-        # lightweight fuzzy check: require at least one distinct token for each skill phrase
-        tokens = [token for token in skill.lower().replace("(", " ").replace(")", " ").split() if len(token) >= 5]
-        if not tokens:
-            if skill.lower() not in lowered:
+    # Skills are only expected in Markdown instruction files, not JSON/TOML configs
+    if fmt == "markdown":
+        for skill in common_data.get("skills", []):
+            # lightweight fuzzy check: require at least one distinct token for each skill phrase
+            tokens = [token for token in skill.lower().replace("(", " ").replace(")", " ").split() if len(token) >= 5]
+            if not tokens:
+                if skill.lower() not in lowered:
+                    missing_skills.append(skill)
+            elif not any(token in lowered for token in tokens):
                 missing_skills.append(skill)
-        elif not any(token in lowered for token in tokens):
-            missing_skills.append(skill)
 
     return missing_mcp, missing_skills
 
@@ -437,7 +448,7 @@ def inspect_agent_configs(
             has_failures = True
             continue
 
-        missing_mcp, missing_skills = check_common_entries(search_space, common_data)
+        missing_mcp, missing_skills = check_common_entries(search_space, common_data, target.format)
         if missing_mcp or missing_skills:
             has_failures = True
 
@@ -454,17 +465,32 @@ def inspect_agent_configs(
 
 
 def sync_global_configs(
-    targets: list[AgentConfigTarget], common_data: dict[str, Any], managed_block: str, check_only: bool
+    repo_root: Path, targets: list[AgentConfigTarget], common_data: dict[str, Any], managed_block: str, check_only: bool
 ) -> tuple[int, list[Path]]:
     changed: list[Path] = []
 
     for target in targets:
         existing = existing_default_path(target.default_paths)
+
+        if existing is None and target.format == "markdown":
+            # If no file exists, try to create the first path if its parent exists
+            for p in target.default_paths:
+                candidate = Path(p).expanduser()
+                if candidate.parent.exists():
+                    existing = candidate
+                    break
+
         if existing is None:
             continue
 
         if target.format == "markdown":
             try:
+                if not existing.exists():
+                    changed.append(existing)
+                    if not check_only:
+                        existing.write_text(managed_block, encoding="utf-8")
+                    continue
+
                 current = existing.read_text(encoding="utf-8")
                 updated = upsert_managed_block(current, managed_block)
                 if updated != current:
@@ -475,39 +501,96 @@ def sync_global_configs(
                 print(f"warning: failed to sync global markdown {existing}: {exc}", file=sys.stderr)
             continue
 
-        if target.format != "json":
+        if target.format == "toml":
+            try:
+                current = existing.read_text(encoding="utf-8")
+                updated = current
+                needs_update = False
+                mcp_servers = common_data.get("mcp_servers", {})
+                for name, config in mcp_servers.items():
+                    # Check for [mcp_servers.name] or [mcp_servers."name"]
+                    if f"[mcp_servers.{name}]" not in updated and f'[mcp_servers."{name}"]' not in updated:
+                        if "command" not in config:
+                            continue
+                        
+                        mcp_dir = resolve_mcp_path(repo_root, name)
+                        command = expand_mcp_vars(config["command"], mcp_dir, repo_root)
+                        args = [expand_mcp_vars(arg, mcp_dir, repo_root) for arg in config.get("args", [])]
+                        
+                        # Basic TOML injection (appending to end of file)
+                        block = f"\n[mcp_servers.{name}]\ncommand = {json.dumps(command)}\nargs = {json.dumps(args)}\n"
+                        if "env" in config:
+                            block += f"[mcp_servers.{name}.env]\n"
+                            for k, v in config["env"].items():
+                                val = expand_mcp_vars(v, mcp_dir, repo_root) if isinstance(v, str) else v
+                                block += f"{k} = {json.dumps(val)}\n"
+                        
+                        updated += block
+                        needs_update = True
+                
+                if needs_update:
+                    changed.append(existing)
+                    if not check_only:
+                        existing.write_text(updated, encoding="utf-8")
+            except Exception as exc:
+                print(f"warning: failed to sync global toml {existing}: {exc}", file=sys.stderr)
             continue
 
-        mcp_servers = common_data.get("mcp_servers", {})
-        if not mcp_servers:
+        if target.format != "json":
             continue
 
         try:
             data = json.loads(existing.read_text(encoding="utf-8"))
-            # Standard MCP injection (Claude/Gemini format)
-            if "mcpServers" not in data:
-                data["mcpServers"] = {}
-
             needs_update = False
-            for name, config in mcp_servers.items():
-                if name not in data["mcpServers"]:
-                    if "command" not in config:
-                        continue
 
-                    mcp_dir = resolve_mcp_path(repo_root, name)
-                    command = expand_mcp_vars(config["command"], mcp_dir, repo_root)
-                    args = [expand_mcp_vars(arg, mcp_dir, repo_root) for arg in config.get("args", [])]
+            # Standard MCP injection (Claude/Gemini format)
+            mcp_servers = common_data.get("mcp_servers", {})
+            if mcp_servers:
+                if "mcpServers" not in data:
+                    data["mcpServers"] = {}
 
-                    data["mcpServers"][name] = {
-                        "command": command,
-                        "args": args,
-                    }
-                    if "env" in config:
-                        env = {
-                            k: expand_mcp_vars(v, mcp_dir, repo_root) if isinstance(v, str) else v
-                            for k, v in config["env"].items()
+                for name, config in mcp_servers.items():
+                    if name not in data["mcpServers"]:
+                        if "command" not in config:
+                            continue
+
+                        mcp_dir = resolve_mcp_path(repo_root, name)
+                        command = expand_mcp_vars(config["command"], mcp_dir, repo_root)
+                        args = [expand_mcp_vars(arg, mcp_dir, repo_root) for arg in config.get("args", [])]
+
+                        data["mcpServers"][name] = {
+                            "command": command,
+                            "args": args,
                         }
-                        data["mcpServers"][name]["env"] = env
+                        if "env" in config:
+                            env = {
+                                k: expand_mcp_vars(v, mcp_dir, repo_root) if isinstance(v, str) else v
+                                for k, v in config["env"].items()
+                            }
+                            data["mcpServers"][name]["env"] = env
+                        needs_update = True
+
+            # Gemini-specific context config sync
+            if target.name == "Gemini CLI":
+                if "context" not in data:
+                    data["context"] = {}
+                    needs_update = True
+                
+                required_files = ["AGENTS.md", "GEMINI.md"]
+                current_files = data["context"].get("fileName", [])
+                
+                if not isinstance(current_files, list):
+                    current_files = [current_files] if current_files else []
+                
+                updated_files = list(current_files)
+                file_needs_update = False
+                for f in required_files:
+                    if f not in updated_files:
+                        updated_files.append(f)
+                        file_needs_update = True
+                
+                if file_needs_update:
+                    data["context"]["fileName"] = updated_files
                     needs_update = True
 
             if needs_update:
@@ -538,7 +621,7 @@ def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
     return 0
 
 
-def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_sync: bool) -> int:
+def get_platform_common_text(repo_root: Path, config: dict[str, Any]) -> str:
     common_text = read_text(repo_root, config["common_text_file"])
 
     # Strip RTK part if not on Windows
@@ -547,26 +630,14 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
             start = common_text.index(RTK_BEGIN)
             end = common_text.index(RTK_END) + len(RTK_END)
             common_text = common_text[:start].rstrip() + "\n" + common_text[end:].lstrip()
+    return common_text
 
-    agent_files = discover_agent_files(repo_root, config["agent_files"])
 
-    changed_count = 0
-    changed_files = []
-    if agent_files:
-        repo_data = load_common_data(repo_root, config, include_local=False)
-        managed_block_repo = render_markdown_block(common_text, repo_data)
-        changed_count, changed_files = sync_files(agent_files, managed_block_repo, check_only)
+def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_sync: bool) -> int:
+    common_text = get_platform_common_text(repo_root, config)
 
     print_section("AGENTS Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
-    print(f"Files scanned: {len(agent_files)}")
-    print(f"Repo files needing updates: {changed_count}")
-
-    if changed_files:
-        print("")
-        print("Changed repo files:")
-        for file_path in changed_files:
-            print(f"{icon('bullet')} {file_path}")
 
     g_count = 0
     g_files = []
@@ -574,54 +645,35 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
         merged_data = load_common_data(repo_root, config, include_local=True)
         managed_block_global = render_markdown_block(common_text, merged_data)
         config_targets = parse_agent_targets(config["agent_configs"])
-        g_count, g_files = sync_global_configs(config_targets, merged_data, managed_block_global, check_only)
-        print("")
+        g_count, g_files = sync_global_configs(repo_root, config_targets, merged_data, managed_block_global, check_only)
         print(f"Global configs scanned: {len(config_targets)}")
         print(f"Global configs needing updates: {g_count}")
         if g_files:
             for file_path in g_files:
                 print(f"{icon('bullet')} {file_path}")
+    else:
+        print("Repo-specific sync is disabled. Use --global to sync global agent configs.")
 
-    if not changed_files and (not global_sync or not g_files):
+    if global_sync and g_count == 0:
         print("")
         print("All target files are up to date.")
 
-    return 1 if check_only and (changed_count > 0 or (global_sync and g_count > 0)) else 0
+    return 1 if check_only and global_sync and g_count > 0 else 0
 
 
 def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> int:
-    common_text = read_text(repo_root, config["common_text_file"])
-    common_data = load_common_data(repo_root, config)
-    managed_block = render_markdown_block(common_text, common_data)
-    agent_files = discover_agent_files(repo_root, config["agent_files"])
+    common_text = get_platform_common_text(repo_root, config)
+    # merged_data for global agent configs (includes local overrides)
+    merged_data = load_common_data(repo_root, config, include_local=True)
+
     config_targets = parse_agent_targets(config["agent_configs"])
-    config_results, config_failures = inspect_agent_configs(config_targets, common_data)
+    config_results, config_failures = inspect_agent_configs(config_targets, merged_data)
     rows = detect_clis(parse_agent_clis(config["agent_clis"]))
 
     failed = False
-    outdated_agent_files: list[Path] = []
-    if not agent_files:
-        failed = True
-    else:
-        for path in agent_files:
-            text = path.read_text(encoding="utf-8")
-            if upsert_managed_block(text, managed_block) != text:
-                outdated_agent_files.append(path)
-                failed = True
 
     print_section("AGENTS Doctor")
 
-    print("AGENTS.md Files")
-    print("---------------")
-    if not agent_files:
-        print_status_line("fail", "No AGENTS.md files found from configured locations/discovery.")
-    elif outdated_agent_files:
-        for path in outdated_agent_files:
-            print_status_line("outdated", f"Managed block needs update: {path}")
-    else:
-        print_status_line("ok", f"Managed blocks are current in {len(agent_files)} file(s).")
-
-    print("")
     print("Agent Configs")
     print("-------------")
     for result in config_results:
@@ -664,8 +716,6 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
     strict_note = "strict config paths enabled" if strict_paths else "missing config paths are warnings"
     print(
         "Summary: "
-        f"{len(agent_files)} AGENTS.md file(s), "
-        f"{len(outdated_agent_files)} outdated, "
         f"{len(installed_clis)}/{len(rows)} CLIs installed, "
         f"{strict_note}."
     )

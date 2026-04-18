@@ -52,7 +52,7 @@
     {
       "name": "Gemini Global Instructions",
       "format": "markdown",
-      "default_paths": ["~/.gemini/gemini.md"]
+      "default_paths": ["~/.gemini/AGENTS.md"]
     },
     {
       "name": "Aider",

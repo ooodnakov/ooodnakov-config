@@ -848,7 +848,7 @@ maybe_install_dependency() {
       fi
     fi
     if prompt_yes_no "Install $command_name for $description via cargo?"; then
-      run_with_spinner "Installing $command_name from Git via cargo" cargo install --locked --git "$package_name"
+      run_with_spinner "Installing $command_name from Git via cargo" cargo install --git "$package_name"
       if command -v "$command_name" >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/$command_name" ]; then
         DEPENDENCY_SUMMARY+=("$command_name: installed")
       else
@@ -1398,7 +1398,7 @@ maybe_install_dua_cli() {
     return 0
   fi
 
-  run_with_spinner "Installing dua-cli from GitHub via cargo" cargo install --locked --git "$repo_url" dua-cli
+  run_with_spinner "Installing dua-cli from GitHub via cargo" cargo install --git "$repo_url" dua-cli
   if command -v dua >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/dua" ]; then
     DEPENDENCY_SUMMARY+=("dua: installed")
   else
