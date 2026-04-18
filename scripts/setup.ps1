@@ -671,13 +671,36 @@ function Invoke-ActionWithSpinner {
     }
 
     if (-not (Test-VerboseMode)) {
+        if (Test-Interactive) {
+            Write-Host "[-] $Description..."
+        } else {
+            Write-Output "[-] $Description..."
+        }
+
+        $stdoutLog = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-{0}.stdout.log" -f ([guid]::NewGuid().ToString("N")))
+        $stderrLog = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-{0}.stderr.log" -f ([guid]::NewGuid().ToString("N")))
+
         try {
-            & $Action @ArgumentList
+            & $Action @ArgumentList > $stdoutLog 2> $stderrLog
+            if (Test-Interactive) {
+                Write-Host "[ok] $Description"
+            } else {
+                Write-Output "[ok] $Description"
+            }
             return $true
         } catch {
+            if (Test-Path $stdoutLog) {
+                Get-Content -LiteralPath $stdoutLog -ErrorAction SilentlyContinue | Write-Output
+            }
+            if (Test-Path $stderrLog) {
+                Get-Content -LiteralPath $stderrLog -ErrorAction SilentlyContinue | Write-Output
+            }
             Write-Output $_
             Add-Failure $Description
             return $false
+        } finally {
+            if (Test-Path $stdoutLog) { Remove-Item -LiteralPath $stdoutLog -Force -ErrorAction SilentlyContinue }
+            if (Test-Path $stderrLog) { Remove-Item -LiteralPath $stderrLog -Force -ErrorAction SilentlyContinue }
         }
     }
 
@@ -1609,7 +1632,13 @@ function Test-Doctor {
 }
 
 function Invoke-Install {
-    Start-StepProgress -Total 5 -Activity "oooconf $Command"
+    param(
+        [switch]$ContinueProgress
+    )
+
+    if (-not $ContinueProgress) {
+        Start-StepProgress -Total 5 -Activity "oooconf $Command"
+    }
     Step-Progress -Status "Preparing directories"
     foreach ($dir in @($ConfigHome, $DataHome, $CacheHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir, $OhMyPoshDir, $PowerShellConfigDir)) {
         if (Ensure-Directory -Path $dir) {
@@ -1737,14 +1766,14 @@ try {
             Invoke-Install
         }
         "update" {
-            Start-StepProgress -Total 1 -Activity "oooconf update"
+            Start-StepProgress -Total 6 -Activity "oooconf update"
             Step-Progress -Status "Pulling latest repository changes"
             if ($DryRun) {
                 Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
             } else {
                 git -C $RepoRoot pull --ff-only
             }
-            Invoke-Install
+            Invoke-Install -ContinueProgress
         }
         "doctor" {
             Test-Doctor
@@ -1755,7 +1784,7 @@ try {
                 break
             }
 
-            Start-StepProgress -Total 3 -Activity "oooconf deps"
+            Start-StepProgress -Total 4 -Activity "oooconf deps"
             Step-Progress -Status "Preparing dependency install paths"
             foreach ($dir in @($DataHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir)) {
                 Ensure-Directory -Path $dir | Out-Null

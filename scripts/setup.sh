@@ -79,8 +79,8 @@ is_interactive() {
 }
 
 is_verbose() {
-  case "${VERBOSE,,}" in
-    1|true|yes|on|verbose) return 0 ;;
+  case "$VERBOSE" in
+    1|[Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn]|[Vv][Ee][Rr][Bb][Oo][Ss][Ee]) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -90,7 +90,7 @@ progress_init() {
   PROGRESS_CURRENT=0
   PROGRESS_TITLE="$2"
   if is_interactive; then
-    printf "\n"
+    printf "\n%s\n" "$PROGRESS_TITLE"
   else
     echo "$PROGRESS_TITLE"
   fi
@@ -113,7 +113,7 @@ progress_step() {
   fi
   empty=$((width - filled))
   bar="$(printf '%*s' "$filled" '' | tr ' ' '█')$(printf '%*s' "$empty" '' | tr ' ' '░')"
-  printf '\r[%s] %3d%% (%d/%d) %s\n' "$bar" "$percent" "$PROGRESS_CURRENT" "$PROGRESS_TOTAL" "$description" > /dev/tty
+  printf '\r[%s] %3d%% (%d/%d) %s' "$bar" "$percent" "$PROGRESS_CURRENT" "$PROGRESS_TOTAL" "$description" > /dev/tty
 }
 
 usage() {
@@ -659,15 +659,30 @@ run_with_spinner() {
 
   if ! is_verbose; then
     local logfile status
+    if is_interactive; then
+      printf "[-] %s...\n" "$label" > /dev/tty
+    else
+      printf "[-] %s...\n" "$label"
+    fi
     logfile="$(mktemp)"
     (
       "$@"
     ) >"$logfile" 2>&1
     status=$?
     if [ $status -ne 0 ]; then
-      printf "[failed] %s\n" "$label" >&2
+      if is_interactive; then
+        printf "[failed] %s\n" "$label" > /dev/tty
+      else
+        printf "[failed] %s\n" "$label" >&2
+      fi
       cat "$logfile" >&2
       FAILURES+=("$label")
+    else
+      if is_interactive; then
+        printf "[ok] %s\n" "$label" > /dev/tty
+      else
+        printf "[ok] %s\n" "$label"
+      fi
     fi
     rm -f "$logfile"
     return $status
