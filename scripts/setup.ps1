@@ -24,6 +24,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $OptionalDepsScript = Join-Path $PSScriptRoot "read_optional_deps.py"
 $AutogenCompletionsManifest = Join-Path $PSScriptRoot "autogen-completions.txt"
+$OooconfCompletionsGenerator = Join-Path $PSScriptRoot "generate_oooconf_completions.py"
 $HomeDir = $HOME
 $ConfigHome = Join-Path $HomeDir ".config"
 $DataHome = Join-Path $HomeDir ".local/share"
@@ -144,7 +145,7 @@ Commands:
   update    git pull this repo, then run install flow
   doctor    validate managed links and required tools
   deps      install optional dependencies only
-  completions  regenerate tracked autogen shell completion files
+  completions  regenerate tracked shell completion files (autogen + oooconf)
 
 Options:
   --dry-run       print actions without mutating filesystem
@@ -1807,6 +1808,23 @@ function Generate-AutogenCompletions {
     }
 }
 
+function Generate-OooconfCompletions {
+    if ($DryRun) {
+        Write-Output "[dry-run] Generating oooconf command completions"
+        return
+    }
+
+    if (-not (Test-Path $OooconfCompletionsGenerator)) {
+        Add-ToolSummary "oooconf completions: generator missing ($OooconfCompletionsGenerator)"
+        return
+    }
+
+    Invoke-ActionWithSpinner -Description "Generating oooconf command completions" -Action {
+        param($scriptPath)
+        $null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()
+    } -ArgumentList $OooconfCompletionsGenerator
+}
+
 function Write-Summary {
     Write-Output ""
     Write-Output "Dependency summary:"
@@ -1910,7 +1928,7 @@ function Invoke-Install {
     )
 
     if (-not $ContinueProgress) {
-        Start-StepProgress -Total 5 -Activity "oooconf $Command"
+        Start-StepProgress -Total 6 -Activity "oooconf $Command"
     }
     Step-Progress -Status "Preparing directories"
     foreach ($dir in @($ConfigHome, $DataHome, $CacheHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir, $OhMyPoshDir, $PowerShellConfigDir)) {
@@ -1983,6 +2001,10 @@ function Invoke-Install {
         Add-ToolSummary "ssh include: ensured"
     }
 
+    Step-Progress -Status "Generating completions and platform integrations"
+    Generate-AutogenCompletions
+    Generate-OooconfCompletions
+
     Step-Progress -Status "Writing setup summary"
     Write-Summary
     Write-Output ""
@@ -2045,7 +2067,7 @@ try {
             Invoke-Install
         }
         "update" {
-            Start-StepProgress -Total 6 -Activity "oooconf update"
+            Start-StepProgress -Total 7 -Activity "oooconf update"
             Step-Progress -Status "Pulling latest repository changes"
             if ($DryRun) {
                 Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
@@ -2080,11 +2102,13 @@ try {
             Step-Progress -Status "Done"
         }
         "completions" {
-            Start-StepProgress -Total 3 -Activity "oooconf completions"
+            Start-StepProgress -Total 4 -Activity "oooconf completions"
             Step-Progress -Status "Preparing completion output path"
             Ensure-Directory -Path (Join-Path $RepoRoot "home/.config/ooodnakov/zsh/completions/autogen") | Out-Null
             Step-Progress -Status "Generating tracked autogen completions"
             Generate-AutogenCompletions
+            Step-Progress -Status "Generating oooconf command completions"
+            Generate-OooconfCompletions
             Write-Output ""
             Write-Output "Completion generation complete."
             Step-Progress -Status "Done"

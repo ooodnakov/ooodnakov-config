@@ -101,7 +101,7 @@ Phase-1 setup ergonomics are implemented with:
 - `dry-run` command to preview setup actions without mutation
 - `doctor` command to validate managed links and key tool presence after install
 - `deps` command to install optional dependencies separately from the full config-linking flow
-- `completions` command to regenerate tracked autogen zsh completion files
+- `completions` command to regenerate tracked completion files (autogen zsh + oooconf command completions)
 
 Phase-2 dependency audit ergonomics are implemented with:
 
@@ -115,6 +115,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 - `oooconf agents doctor --strict-config-paths` to fail when expected agent default config files are missing
 - `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic. Helper scripts use `uv run` if `uv` is available to ensure they run with the pinned Python version and a consistent environment. If `uv` is not present, they fall back to the system `python3`.
 - autogen completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.
+- `oooconf` command completions are generated from tracked command/dependency catalogs by `scripts/generate_oooconf_completions.py`.
 
 
 ## Phase-3 ergonomics

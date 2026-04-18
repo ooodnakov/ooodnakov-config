@@ -5,9 +5,25 @@ function Get-OooconfCompletions {
     param($wordToComplete, $commandAst, $cursorPosition)
 
     $OooconfCommands = @(
-        'bootstrap', 'install', 'deps', 'update', 'upgrade', 'doctor', 'check',
-        'dry-run', 'preview', 'delete', 'remove', 'lock', 'update-pins', 'completions',
-        'agents', 'shell', 'secrets', 'help', 'version'
+        'bootstrap',
+        'install',
+        'deps',
+        'update',
+        'doctor',
+        'dry-run',
+        'delete',
+        'remove',
+        'lock',
+        'update-pins',
+        'completions',
+        'agents',
+        'secrets',
+        'shell',
+        'version',
+        'check',
+        'preview',
+        'upgrade',
+        'help'
     )
 
     $OooconfGlobalOptions = @(
@@ -16,8 +32,18 @@ function Get-OooconfCompletions {
     )
 
     $OooconfSecretsSubcommands = @(
-        'sync', 'doctor', 'list', 'ls', 'status', 'login', 'unlock',
-        'logout', 'add', 'remove', 'rm', 'del'
+        'login',
+        'unlock',
+        'sync',
+        'doctor',
+        'list',
+        'ls',
+        'status',
+        'logout',
+        'add',
+        'remove',
+        'rm',
+        'del'
     )
 
     $OooconfShellSubcommands = @('status', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')
@@ -27,11 +53,45 @@ function Get-OooconfCompletions {
     $ShellValues = @('zsh', 'pwsh', 'bash', 'fish')
 
     $OooconfDepsKeys = @(
-        'wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco',
-        'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow',
-        'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler',
-        'uv', 'bw', 'node', 'npm', 'pnpm', 'autoconf', 'fc-cache', 'cargo',
-        'dua', 'nvim', 'k', 'python3'
+        'wget',
+        'git',
+        'wezterm',
+        'oh-my-posh',
+        'posh-git',
+        'psfzf',
+        'choco',
+        'gsudo',
+        'rg',
+        'fd',
+        'zsh',
+        'direnv',
+        'fzf',
+        'bat',
+        'delta',
+        'glow',
+        'gum',
+        'zoxide',
+        'q',
+        'eza',
+        'yazi',
+        'ffmpeg',
+        'jq',
+        'p7zip',
+        'poppler',
+        'uv',
+        'bw',
+        'node',
+        'npm',
+        'pnpm',
+        'autoconf',
+        'fc-cache',
+        'cargo',
+        'dua',
+        'nvim',
+        'k',
+        'python3',
+        'lazygit',
+        'rtk'
     )
 
     # Simple AST parsing to find the command and subcommands
@@ -131,6 +191,9 @@ function Get-OooconfCompletions {
     }
     elseif ($subcommand -eq 'update-pins') {
         $completions = @('--apply')
+    }
+    elseif ($subcommand -eq 'completions') {
+        $completions = @('--dry-run')
     }
 
     return $completions | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {

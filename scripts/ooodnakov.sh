@@ -837,7 +837,7 @@ EOF
   ui_command_row "remove" "remove managed links only (no backup restore)"
   ui_command_row "lock" "regenerate dependency lock artifacts from pinned refs"
   ui_command_row "update-pins" "compare/update pinned refs and refresh lock artifacts"
-  ui_command_row "completions" "regenerate tracked autogen shell completions"
+  ui_command_row "completions" "regenerate tracked shell completions (autogen + oooconf)"
   printf '  %s\n' "$(ui_colorize "hint" "Shell / Secrets / Agents:")"
   ui_command_row "shell" "manage local shell preferences such as forgit aliases"
   ui_command_row "secrets" "sync or validate local secret env files"
@@ -1005,10 +1005,10 @@ EOF
       cat <<'EOF' | ui_render_help_block
 Usage: oooconf completions [--dry-run]
 
-Regenerate tracked autogen zsh completion files in:
-  home/.config/ooodnakov/zsh/completions/autogen
-This does not install dependencies; it only rebuilds completion files
-for tools currently available on PATH.
+Regenerate tracked shell completion files:
+  - autogen zsh completions under home/.config/ooodnakov/zsh/completions/autogen
+  - oooconf command completions for zsh and PowerShell
+This does not install dependencies; it only rebuilds completion files.
 Examples:
   oooconf completions                  # rebuild tracked completion files
   oooconf completions --dry-run        # preview generation actions

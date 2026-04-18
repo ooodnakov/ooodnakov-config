@@ -5,6 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
 OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/read_optional_deps.py"
 AUTOGEN_COMPLETIONS_MANIFEST="$REPO_ROOT/scripts/autogen-completions.txt"
+OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/generate_oooconf_completions.py"
 HOME_DIR="${HOME}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME_DIR/.local/share}"
@@ -127,7 +128,7 @@ Commands:
   update    git pull this repo, then run install flow
   doctor    validate managed links and required tools
   deps      install optional dependencies only
-  completions  regenerate tracked autogen shell completion files
+  completions  regenerate tracked shell completion files (autogen + oooconf)
 
 Options:
   --dry-run print actions without mutating filesystem
@@ -1858,6 +1859,21 @@ generate_autogen_completions() {
   done < "$AUTOGEN_COMPLETIONS_MANIFEST"
 }
 
+generate_oooconf_completions() {
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Generating oooconf command completions"
+    return 0
+  fi
+
+  if [ ! -f "$OOOCONF_COMPLETIONS_GENERATOR" ]; then
+    TOOL_SUMMARY+=("oooconf completions: generator missing ($OOOCONF_COMPLETIONS_GENERATOR)")
+    return 1
+  fi
+
+  run_with_spinner "Generating oooconf command completions" \
+    run_python "$OOOCONF_COMPLETIONS_GENERATOR"
+}
+
 install_managed_tools() {
   local bin_dir="$STATE_HOME/bin"
 
@@ -2183,11 +2199,13 @@ esac
 
 initialize_logging
 if [ "$COMMAND" = "completions" ]; then
-  progress_init 2 "oooconf completions"
+  progress_init 3 "oooconf completions"
   progress_step "Preparing completion output path"
   run_cmd mkdir -p "$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
   progress_step "Generating tracked autogen completions"
   generate_autogen_completions || true
+  progress_step "Generating oooconf command completions"
+  generate_oooconf_completions || true
   echo
   echo "Completion generation complete."
   if [ -n "$LOG_FILE" ]; then
@@ -2276,6 +2294,7 @@ link_file "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o" || 
 
 progress_step "Generating completions and platform integrations"
 generate_autogen_completions || true
+generate_oooconf_completions || true
 
 run_cmd mkdir -p "$CONFIG_HOME/ohmyposh" "$CONFIG_HOME/powershell"
 link_file "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json" || true

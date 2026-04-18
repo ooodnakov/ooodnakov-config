@@ -23,7 +23,7 @@
 
 ## Completion generation issues
 
-- **Autogen completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview) to regenerate tracked files under `home/.config/ooodnakov/zsh/completions/autogen`.
+- **Completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview). This regenerates tracked files under `home/.config/ooodnakov/zsh/completions/autogen` and refreshes `oooconf` command completion scripts.
 - **A specific tool completion is missing** — the generator only emits entries for binaries currently on `PATH`; install the tool first, then re-run `oooconf completions`.
 - **Manifest parse errors** — verify `scripts/autogen-completions.txt` lines keep the `binary|description|output|command` format.
 

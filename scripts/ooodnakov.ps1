@@ -796,7 +796,7 @@ function Show-Usage {
     Write-UiCommandRow -CommandName "remove" -Description "remove managed links only (no backup restore)"
     Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
     Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
-    Write-UiCommandRow -CommandName "completions" -Description "regenerate tracked autogen shell completions"
+    Write-UiCommandRow -CommandName "completions" -Description "regenerate tracked shell completions (autogen + oooconf)"
     Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
@@ -949,10 +949,10 @@ Examples:
             Write-UiHelpBlock @"
 Usage: oooconf completions [--dry-run]
 
-Regenerate tracked autogen zsh completion files in:
-  home/.config/ooodnakov/zsh/completions/autogen
-This does not install dependencies; it only rebuilds completion files
-for tools currently available on PATH.
+Regenerate tracked shell completion files:
+  - autogen zsh completions under home/.config/ooodnakov/zsh/completions/autogen
+  - oooconf command completions for zsh and PowerShell
+This does not install dependencies; it only rebuilds completion files.
 Examples:
   oooconf completions                  # rebuild tracked completion files
   oooconf completions --dry-run        # preview generation actions

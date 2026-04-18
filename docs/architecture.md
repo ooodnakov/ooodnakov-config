@@ -49,7 +49,7 @@ Primary commands:
 - `install`: apply managed config and optional dependency installs
 - `update`: fast-forward the repo and rerun install
 - `deps`: interactive picker to install optional dependencies
-- `completions`: regenerate tracked autogen zsh completions from the shared manifest
+- `completions`: regenerate tracked autogen zsh completions from the shared manifest and regenerate `oooconf` command completions
 - `dry-run`: preview planned changes without mutating the system
 - `doctor`: validate managed links and key tools
 - `delete` and `remove`: remove managed links, optionally restoring backups *(Unix only)*
