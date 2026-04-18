@@ -104,8 +104,8 @@ Primary commands:
 - `oooconf update`: fast-forward pull the repo, then rerun install
 - `oooconf dry-run`: preview setup actions without changing the system
 - `oooconf doctor`: validate managed links and key tools
-- `oooconf delete`: remove managed links and restore latest backups when available (Unix only)
-- `oooconf remove`: remove managed links without restoring backups (Unix only)
+- `oooconf delete`: remove managed links and restore latest backups when available
+- `oooconf remove`: remove managed links without restoring backups
 - `oooconf bootstrap`: clone/update repo then run install (Unix only)
 - `oooconf lock`: regenerate dependency lock artifacts
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts

@@ -28,8 +28,8 @@ This file tracks deliberate follow-up work for the repo. It is ordered by impact
 
 ## Cross-Platform
 
-- [ ] Audit feature parity between Unix `oooconf` and PowerShell `oooconf`:
-  - Unix supports `bootstrap`, `delete`, `remove` — PowerShell does not
+- [x] Audit feature parity between Unix `oooconf` and PowerShell `oooconf`:
+  - Unix supports `bootstrap` — PowerShell does not
   - Document or close the gap
 - [ ] Validate Windows path handling and symlink behavior on a fresh machine setup
 - [ ] Add at least one macOS validation path before claiming active support there (currently deferred — no macOS-specific code exists)

@@ -11,11 +11,12 @@ $RepoRoot = if ($env:OOODNAKOV_REPO_ROOT) {
     (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 }
 $SetupScript = Join-Path $PSScriptRoot "setup.ps1"
+$DeleteScript = Join-Path $PSScriptRoot "delete.ps1"
 $GenerateLockScript = Join-Path $PSScriptRoot "generate_dependency_lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
 $AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
-$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "lock", "update-pins", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
+$KnownCommands = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
 $KnownShellSubcommands = @("forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
@@ -759,6 +760,8 @@ function Show-Usage {
     Write-UiCommandRow -CommandName "dry-run" -Description "preview install flow without mutating filesystem"
     Write-UiCommandRow -CommandName "version" -Description "print CLI version and repo root"
     Write-Output ("  " + (Format-UiText -Text "Manage State:" -Role "hint"))
+    Write-UiCommandRow -CommandName "delete" -Description "remove managed links and restore latest backups"
+    Write-UiCommandRow -CommandName "remove" -Description "remove managed links only (no backup restore)"
     Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
     Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
     Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor AGENTS.md common policy blocks"
@@ -771,7 +774,7 @@ Aliases:
   preview -> dry-run
   upgrade -> update
 Note:
-  bootstrap, delete, and remove are Unix-only in this wrapper.
+  bootstrap is Unix-only in this wrapper.
   On Windows, run `scripts/setup.ps1 install` for initial setup.
 Getting help:
   oooconf --help                     show this message
@@ -864,6 +867,26 @@ what dependencies would be installed, without making any changes.
 Examples:
   oooconf dry-run                      # preview install
   oooconf --yes-optional dry-run       # preview with dependency installs
+"@
+        }
+        "delete" {
+            Write-UiHelpBlock @"
+Usage: oooconf delete
+
+Remove managed links and restore the latest backups when available.
+Examples:
+  oooconf delete                       # restore from backups
+"@
+        }
+        "remove" {
+            Write-UiHelpBlock @"
+Usage: oooconf remove
+
+Remove managed links without restoring backups.
+Use this when you want to cleanly remove the managed config without
+putting previous files back in place.
+Examples:
+  oooconf remove                       # clean removal
 "@
         }
         "lock" {
@@ -1124,6 +1147,20 @@ switch ($command) {
         } else {
             & $SetupScript update @remaining
         }
+    }
+    "delete" {
+        if ($dryRunRequested) {
+            throw "--dry-run is not supported for delete"
+        }
+        $env:OOODNAKOV_REPO_ROOT = $RepoRoot
+        & $DeleteScript "restore" @remaining
+    }
+    "remove" {
+        if ($dryRunRequested) {
+            throw "--dry-run is not supported for remove"
+        }
+        $env:OOODNAKOV_REPO_ROOT = $RepoRoot
+        & $DeleteScript "remove" @remaining
     }
     "doctor" {
         if ($dryRunRequested) {

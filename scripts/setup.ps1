@@ -69,15 +69,15 @@ function Get-EditDistance {
 
     for ($i = 1; $i -lt $rows; $i++) {
         for ($j = 1; $j -lt $cols; $j++) {
-            $cost = if ($Left[$i - 1] -ceq $Right[$j - 1]) { 0 } else { 1 }
-            $deletion = $dist[$i - 1, $j] + 1
-            $insertion = $dist[$i, $j - 1] + 1
-            $substitution = $dist[$i - 1, $j - 1] + $cost
+            $cost = if ([string]$Left[($i - 1)] -ceq [string]$Right[($j - 1)]) { 0 } else { 1 }
+            $deletion = $dist[($i - 1), $j] + 1
+            $insertion = $dist[$i, ($j - 1)] + 1
+            $substitution = $dist[($i - 1), ($j - 1)] + $cost
             $dist[$i, $j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
         }
     }
 
-    return $dist[$rows - 1, $cols - 1]
+    return $dist[($rows - 1), ($cols - 1)]
 }
 
 function Get-ClosestSuggestion {
@@ -92,7 +92,9 @@ function Get-ClosestSuggestion {
     $bestDistance = [int]::MaxValue
 
     foreach ($candidate in $Candidates) {
-        $distance = Get-EditDistance -Left $InputText -Right $candidate
+        $candidateText = [string]$candidate
+        if ([string]::IsNullOrWhiteSpace($candidateText)) { continue }
+        $distance = Get-EditDistance -Left $InputText -Right $candidateText
         if ($distance -lt $bestDistance) {
             $bestDistance = $distance
             $bestCandidate = $candidate
