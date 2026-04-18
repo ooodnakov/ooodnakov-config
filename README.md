@@ -51,7 +51,7 @@ cd ~/src/ooodnakov-config
 
 This is the recommended path because it lets you inspect the tracked config and setup scripts before they make changes on the machine.
 
-Before first install, the repo-local `oooconf` script is the intended entrypoint. After install, setup links `oooconf` into `~/.local/bin`, so you can run:
+Before first install, the repo-local `oooconf` script is the intended entrypoint. After install, setup links both `oooconf` and short alias `o` into `~/.local/bin`, so you can run:
 
 ```bash
 oooconf install
@@ -59,6 +59,7 @@ oooconf deps
 oooconf update
 oooconf dry-run
 oooconf doctor
+o doctor
 ```
 
 ### Bootstrap shortcut on Unix-like systems
@@ -83,7 +84,7 @@ Set-Location $HOME\src\ooodnakov-config
 .\scripts\ooodnakov.ps1 install
 ```
 
-After setup, `oooconf` is linked into `$HOME\.local\bin`, and the managed PowerShell profile prepends that directory to `PATH`, so the same commands work in new sessions:
+After setup, `oooconf` is linked into `$HOME\.local\bin` (plus short alias wrappers `o.ps1`/`o.cmd`), and the managed PowerShell profile prepends that directory to `PATH`, so the same commands work in new sessions:
 
 ```powershell
 oooconf install
@@ -91,6 +92,7 @@ oooconf deps
 oooconf update
 oooconf dry-run
 oooconf doctor
+o doctor
 ```
 
 During `oooconf install` and `oooconf update`, LazyVim plugin sync runs headlessly with progress-only output. Detailed Neovim plugin logs stay hidden unless the sync fails.
@@ -99,6 +101,7 @@ During `oooconf install` and `oooconf update`, LazyVim plugin sync runs headless
 
 Primary commands:
 
+- `o`: short alias wrapper for `oooconf` with matching completion behavior
 - `oooconf install`: apply managed config and optional dependency installs
 - `oooconf deps`: install optional dependencies only, with a multi-select picker when `gum` is available
 - `oooconf update`: fast-forward pull the repo, then rerun install
@@ -136,6 +139,7 @@ Shell completion:
 
 - **PowerShell**: argument completion is automatically loaded by the managed profile
   - Complete commands: `oooconf <Tab>`
+  - Alias completions also work: `o <Tab>`
   - Complete options: `oooconf install --<Tab>`
   - Complete secrets subcommands: `oooconf secrets <Tab>`
   - Complete shell values: `oooconf secrets unlock --shell <Tab>`
