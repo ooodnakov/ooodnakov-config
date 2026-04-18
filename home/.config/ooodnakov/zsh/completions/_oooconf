@@ -80,6 +80,8 @@ deps_keys=(
   'python3:Python runtime and helper scripts'
   'lazygit:simple terminal UI for git commands'
   'rtk:token-optimized command proxy for AI CLI workflows'
+  'uv:Python package manager via official installer'
+  'bw:Bitwarden CLI via official native archive'
   'fastfetch:system information tool'
 )
 

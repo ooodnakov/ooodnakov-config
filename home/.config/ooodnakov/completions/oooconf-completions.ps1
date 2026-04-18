@@ -86,6 +86,8 @@ function Get-OooconfCompletions {
         'python3',
         'lazygit',
         'rtk',
+        'uv',
+        'bw',
         'fastfetch'
     )
 
