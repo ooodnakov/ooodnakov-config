@@ -268,6 +268,7 @@ function Get-OptionalDependencySpecs {
             [pscustomobject]@{ Key = "k"; DisplayName = "k"; Description = "standalone k command"; Linux = @{ manager = "custom" }; Macos = @{ manager = "custom" }; Windows = @{ manager = "custom" } }
             [pscustomobject]@{ Key = "python3"; DisplayName = "python3"; Description = "Python 3 runtime"; Linux = @{ manager = "apt"; package = "python3" }; Macos = @{ manager = "brew"; package = "python" }; Windows = @{ manager = "choco"; package = "python" } }
             [pscustomobject]@{ Key = "lazygit"; DisplayName = "lazygit"; Description = "simple terminal UI for git commands"; Linux = @{ manager = "brew"; package = "lazygit" }; Macos = @{ manager = "brew"; package = "lazygit" }; Windows = @{ manager = "winget"; winget_id = "JesseDuffield.lazygit" } }
+            [pscustomobject]@{ Key = "rtk"; DisplayName = "rtk"; Description = "token-optimized command proxy for AI CLI workflows"; Linux = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" }; Macos = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" }; Windows = @{ manager = "cargo"; package = "https://github.com/rtk-ai/rtk" } }
         )
         $specs = @($all_specs | ForEach-Object {
             [pscustomobject]@{
@@ -1065,6 +1066,7 @@ function Install-PackageIfMissing {
         [string[]]$CommandNames,
         [string]$WingetId,
         [string]$ChocoId,
+        [string]$CargoGitUrl,
         [Parameter(Mandatory = $true)]
         [string]$Description,
         [Parameter(Mandatory = $true)]
@@ -1118,6 +1120,54 @@ function Install-PackageIfMissing {
             }
 
             Add-DependencySummary "${SummaryName}: install attempted via choco"
+            return $false
+        }
+
+        Add-DependencySummary "${SummaryName}: skipped"
+        return $false
+    }
+
+    if ($CargoGitUrl) {
+        if (-not (Install-CargoIfMissing)) {
+            Add-DependencySummary "${SummaryName}: missing (cargo unavailable)"
+            return $false
+        }
+
+        if (Confirm-Install "Install $Description via cargo?") {
+            $cargoBinDir = Join-Path $HomeDir ".cargo/bin"
+            $cargoExe = Join-Path $cargoBinDir "cargo.exe"
+            if (($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ }) -notcontains $cargoBinDir) {
+                $env:PATH = "$cargoBinDir$([IO.Path]::PathSeparator)$env:PATH"
+            }
+
+            $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
+            if (-not $cargoCommand -and (Test-Path $cargoExe)) {
+                $cargoCommand = $cargoExe
+            }
+
+            if (-not $cargoCommand) {
+                Add-DependencySummary "${SummaryName}: missing (cargo unavailable)"
+                return $false
+            }
+
+            if ($DryRun) {
+                Write-Output "[dry-run] cargo install --locked --git $CargoGitUrl"
+                Add-DependencySummary "${SummaryName}: install preview via cargo"
+                return $false
+            }
+
+            try {
+                & $cargoCommand install --locked --git $CargoGitUrl
+            } catch {
+                Write-Output $_
+            }
+
+            if (Test-AnyCommand -Names $CommandNames) {
+                Add-DependencySummary "${SummaryName}: installed via cargo"
+                return $true
+            }
+
+            Add-DependencySummary "${SummaryName}: install attempted via cargo"
             return $false
         }
 
@@ -1462,6 +1512,7 @@ function Install-OptionalDependencies {
     $null = Invoke-SelectedOptionalDependency -Key "dua" -Action { Install-DuaIfMissing }
     $null = Invoke-SelectedOptionalDependency -Key "k" -Action { Write-Warning "k is not available on Windows." }
     $null = Invoke-SelectedOptionalDependency -Key "lazygit" -Action { Install-PackageIfMissing -CommandNames @("lazygit") -WingetId "JesseDuffield.lazygit" -Description "lazygit" -SummaryName "lazygit" }
+    $null = Invoke-SelectedOptionalDependency -Key "rtk" -Action { Install-PackageIfMissing -CommandNames @("rtk") -CargoGitUrl "https://github.com/rtk-ai/rtk" -Description "rtk" -SummaryName "rtk" }
 }
 
 function Write-Summary {
