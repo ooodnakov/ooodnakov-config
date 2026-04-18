@@ -16,6 +16,7 @@ home/.config/ooodnakov/local/*.zsh
 home/.config/ooodnakov/local/*.ps1
 home/.config/ooodnakov/local/*.lua
 home/.config/ooodnakov/local/*.ssh
+home/.config/ooodnakov/local/agents/data.json
 home/.config/ooodnakov/cache/*
 home/.config/nvim/.neoconf.json
 home/.config/zsh/.zsh_history
@@ -33,3 +34,5 @@ home/.config/zsh/.zcompdump*
 
 
 home/.config/ooodnakov/local/bw-session
+pwsh_dir/
+pwsh.tar.gz

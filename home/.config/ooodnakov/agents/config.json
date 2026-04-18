@@ -1,7 +1,5 @@
 {
-  "agent_files": [
-    "AGENTS.md"
-  ],
+  "agent_files": [],
   "common_text_file": "home/.config/ooodnakov/agents/common-text.md",
   "common_data_file": "home/.config/ooodnakov/agents/common-data.json",
   "agent_clis": [
@@ -13,6 +11,15 @@
     { "name": "Cursor Agent", "command": "cursor-agent" },
     { "name": "OpenCode", "command": "opencode" }
   ],
+  "agent_updates": [
+    { "name": "OpenAI Codex CLI", "command": "codex", "preferred": "npm", "package": "@openai/codex" },
+    { "name": "Claude Code", "command": "claude", "preferred": "npm", "package": "@anthropic-ai/claude-code" },
+    { "name": "Gemini CLI", "command": "gemini", "preferred": "npm", "package": "@google/gemini-cli" },
+    { "name": "Qwen Code", "command": "qwen", "preferred": "npm", "package": "@qwen-code/qwen-code" },
+    { "name": "Cursor Agent", "command": "cursor-agent", "preferred": "npm", "package": "cursor-agent" },
+    { "name": "OpenCode", "command": "opencode", "preferred": "npm", "package": "opencode-ai" },
+    { "name": "Aider", "command": "aider", "preferred": "uv", "package": "aider-chat" }
+  ],
   "agent_configs": [
     {
       "name": "OpenAI Codex CLI",
@@ -21,16 +28,31 @@
       "docs_url": "https://github.com/openai/codex"
     },
     {
+      "name": "Codex Global Instructions",
+      "format": "markdown",
+      "default_paths": ["~/.codex/AGENTS.md"]
+    },
+    {
       "name": "Claude Code",
       "format": "json",
       "default_paths": ["~/.claude/settings.json"],
       "docs_url": "https://docs.anthropic.com/en/docs/claude-code"
     },
     {
+      "name": "Claude Global Instructions",
+      "format": "markdown",
+      "default_paths": ["~/.claude/CLAUDE.md"]
+    },
+    {
       "name": "Gemini CLI",
       "format": "json",
       "default_paths": ["~/.gemini/settings.json"],
       "docs_url": "https://github.com/google-gemini/gemini-cli"
+    },
+    {
+      "name": "Gemini Global Instructions",
+      "format": "markdown",
+      "default_paths": ["~/.gemini/gemini.md"]
     },
     {
       "name": "Aider",
@@ -43,6 +65,11 @@
       "format": "json",
       "default_paths": ["~/.config/opencode/opencode.json"],
       "docs_url": "https://opencode.ai/docs"
+    },
+    {
+      "name": "OpenCode Global Instructions",
+      "format": "markdown",
+      "default_paths": ["~/.config/opencode/AGENTS.md"]
     }
   ]
 }

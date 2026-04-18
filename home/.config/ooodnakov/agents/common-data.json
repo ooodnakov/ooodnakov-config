@@ -14,11 +14,48 @@
       "command": "python3",
       "args": ["scripts/agents_tool.py", "shell-mcp"],
       "description": "deterministic local inspection commands (rg, fd, git, python3)"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "description": "headless browser automation and web testing"
+    },
+    "windows-mcp": {
+      "command": "uvx",
+      "args": ["windows-mcp"],
+      "description": "Windows system inspection and automation (processes, windows, registry)"
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp-server"],
+      "description": "documentation search and code examples for thousands of libraries"
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "description": "GitHub API access (repositories, issues, PRs)"
     }
   },
   "skills": [
     "Dotfiles portability review (Linux + Windows + macOS safety)",
     "Shell bootstrap audit (idempotency and dry-run behavior)",
-    "Secrets hygiene review (template references vs local plaintext files)"
+    "Secrets hygiene review (template references vs local plaintext files)",
+    "Full-control sandbox management (system-level Danger Mode)",
+    "Manual approval flow orchestration (safety-first review policy)",
+    "Cross-agent MCP server bridging (Codex + Claude + Gemini compatibility)"
+  ],
+  "skill_specs": [
+    {
+      "name": "skill-creator",
+      "agent": "gemini",
+      "source": "https://github.com/google-gemini/gemini-cli/tree/main/packages/cli/bundle/builtin/skill-creator",
+      "description": "Expert guidance for creating new Gemini CLI skills"
+    },
+    {
+      "name": "grok-mcp",
+      "agent": "gemini",
+      "source": "https://github.com/ooodnakov/Grok-MCP",
+      "description": "xAI Grok API integration and search capabilities"
+    }
   ]
 }

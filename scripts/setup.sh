@@ -14,6 +14,7 @@ LOG_ROOT="${OOODNAKOV_LOG_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/logs}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 INSTALL_OPTIONAL="${OOODNAKOV_INSTALL_OPTIONAL:-prompt}"
+VERBOSE="${OOODNAKOV_VERBOSE:-0}"
 DEPENDENCY_SUMMARY=()
 TOOL_SUMMARY=()
 FAILURES=()
@@ -22,6 +23,9 @@ APT_UPDATED=0
 LOG_FILE=""
 LOG_LATEST=""
 KNOWN_SETUP_COMMANDS=(install update doctor deps)
+PROGRESS_TOTAL=0
+PROGRESS_CURRENT=0
+PROGRESS_TITLE=""
 
 # Run a Python script, preferring `uv run` when available.
 run_python() {
@@ -74,6 +78,44 @@ is_interactive() {
   esac
 }
 
+is_verbose() {
+  case "$VERBOSE" in
+    1|[Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn]|[Vv][Ee][Rr][Bb][Oo][Ss][Ee]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+progress_init() {
+  PROGRESS_TOTAL="$1"
+  PROGRESS_CURRENT=0
+  PROGRESS_TITLE="$2"
+  if is_interactive; then
+    printf "\n%s\n" "$PROGRESS_TITLE"
+  else
+    echo "$PROGRESS_TITLE"
+  fi
+}
+
+progress_step() {
+  local description="$1"
+  PROGRESS_CURRENT=$((PROGRESS_CURRENT + 1))
+  printf 'Step: %s\n' "$description"
+
+  if ! is_interactive; then
+    printf '[%s/%s] %s\n' "$PROGRESS_CURRENT" "$PROGRESS_TOTAL" "$description"
+    return 0
+  fi
+
+  local width=24 filled=0 empty=0 percent=0 bar
+  if [ "$PROGRESS_TOTAL" -gt 0 ]; then
+    percent=$((PROGRESS_CURRENT * 100 / PROGRESS_TOTAL))
+    filled=$((PROGRESS_CURRENT * width / PROGRESS_TOTAL))
+  fi
+  empty=$((width - filled))
+  bar="$(printf '%*s' "$filled" '' | tr ' ' '█')$(printf '%*s' "$empty" '' | tr ' ' '░')"
+  printf '\r[%s] %3d%% (%d/%d) %s' "$bar" "$percent" "$PROGRESS_CURRENT" "$PROGRESS_TOTAL" "$description" > /dev/tty
+}
+
 usage() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [install|update|doctor|deps] [--dry-run] [dependency-key...]
@@ -113,7 +155,7 @@ initialize_logging() {
   fi
 
   ln -sfn "$LOG_FILE" "$LOG_LATEST" 2>/dev/null || cp -f "$LOG_FILE" "$LOG_LATEST"
-  echo "Logging to $LOG_FILE"
+  is_verbose && echo "Logging to $LOG_FILE"
 }
 
 run_cmd() {
@@ -334,7 +376,7 @@ optional_dependency_present() {
   local key="$1"
 
   case "$key" in
-    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|yazi|ffmpeg|jq|oh-my-posh|wezterm|node|npm|pnpm|fc-cache|cargo|k|python3)
+    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|yazi|ffmpeg|jq|oh-my-posh|wezterm|node|npm|pnpm|fc-cache|cargo|k|python3|rtk)
       command -v "$key" >/dev/null 2>&1
       ;;
     fd)
@@ -615,6 +657,37 @@ run_with_spinner() {
     return 0
   fi
 
+  if ! is_verbose; then
+    local logfile status
+    if is_interactive; then
+      printf "[-] %s...\n" "$label" > /dev/tty
+    else
+      printf "[-] %s...\n" "$label"
+    fi
+    logfile="$(mktemp)"
+    (
+      "$@"
+    ) >"$logfile" 2>&1
+    status=$?
+    if [ $status -ne 0 ]; then
+      if is_interactive; then
+        printf "[failed] %s\n" "$label" > /dev/tty
+      else
+        printf "[failed] %s\n" "$label" >&2
+      fi
+      cat "$logfile" >&2
+      FAILURES+=("$label")
+    else
+      if is_interactive; then
+        printf "[ok] %s\n" "$label" > /dev/tty
+      else
+        printf "[ok] %s\n" "$label"
+      fi
+    fi
+    rm -f "$logfile"
+    return $status
+  fi
+
   # Print the intent immediately so the user knows what we are starting,
   # especially helpful if is_interactive is false or sudo prompts.
   printf "[-] %s..." "$label"
@@ -726,21 +799,21 @@ check_dependency_status() {
   local command_name="$1"
   local log_name="${2:-$1}"
 
-  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
     printf "[-] Checking %s...\r" "$log_name" > /dev/tty
   fi
 
   if command -v "$command_name" >/dev/null 2>&1; then
-    if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+    if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
       printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
-    else
+    elif [ "$DRY_RUN" -ne 1 ] && is_verbose; then
       printf "[ok] %s is present.\n" "$log_name"
     fi
     DEPENDENCY_SUMMARY+=("$log_name: present")
     return 0
   fi
 
-  if [ "$DRY_RUN" -ne 1 ] && is_interactive; then
+  if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
     printf "\r" > /dev/tty
   fi
   return 1
@@ -760,6 +833,32 @@ maybe_install_dependency() {
     echo "missing optional dependency: $command_name ($description)" >&2
     DEPENDENCY_SUMMARY+=("$command_name: missing (no supported package manager)")
     return 1
+  fi
+
+  if [ "$manager" = "cargo" ]; then
+    if ! command -v cargo >/dev/null 2>&1; then
+      maybe_install_cargo
+    fi
+    if ! command -v cargo >/dev/null 2>&1; then
+      if [ -x "$HOME_DIR/.cargo/bin/cargo" ]; then
+        export PATH="$HOME_DIR/.cargo/bin:$PATH"
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: missing (cargo unavailable)")
+        return 0
+      fi
+    fi
+    if prompt_yes_no "Install $command_name for $description via cargo?"; then
+      run_with_spinner "Installing $command_name from Git via cargo" cargo install --locked --git "$package_name"
+      if command -v "$command_name" >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/$command_name" ]; then
+        DEPENDENCY_SUMMARY+=("$command_name: installed")
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: install attempted")
+      fi
+    else
+      echo "skipping $command_name" >&2
+      DEPENDENCY_SUMMARY+=("$command_name: skipped")
+    fi
+    return 0
   fi
 
   if [ "$manager" = "apt" ] && ! apt_package_available "$package_name"; then
@@ -1691,6 +1790,7 @@ run_doctor() {
   doctor_check_command wezterm
   doctor_check_nvim
   doctor_check_command oooconf
+  doctor_check_command o
   if [ -d "$FONT_TARGET_DIR" ]; then
     echo "[ok] fonts dir: $FONT_TARGET_DIR"
   else
@@ -1738,11 +1838,11 @@ install_optional_dependencies() {
   PACKAGE_MANAGER="$manager"
 
   if [ "$manager" != "none" ] && [ "$manager" != "brew" ] && is_interactive; then
-    printf "Refreshing sudo credentials before dependency installation...\n" > /dev/tty
+    is_verbose && printf "Refreshing sudo credentials before dependency installation...\n" > /dev/tty
     sudo -v || return 1
   fi
 
-  echo "Dependency check:"
+  is_verbose && echo "Dependency check:"
   install_optional_dependency_if_selected wget maybe_install_dependency "$manager" wget wget "downloading auxiliary assets and parity with ezsh tooling"
   install_optional_dependency_if_selected git maybe_install_dependency "$manager" git git "Git version control"
   install_optional_dependency_if_selected zsh maybe_install_dependency "$manager" zsh zsh "default shell support"
@@ -1776,6 +1876,7 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected k maybe_note_dependency k "manual install if you want the standalone k command"
   install_optional_dependency_if_selected python3 maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
   install_optional_dependency_if_selected lazygit maybe_install_dependency "$manager" lazygit lazygit "simple terminal UI for git commands"
+  install_optional_dependency_if_selected rtk maybe_install_dependency cargo rtk https://github.com/rtk-ai/rtk "token-optimized AI CLI command proxy"
 }
 
 shift || true
@@ -1874,8 +1975,12 @@ esac
 
 initialize_logging
 if [ "$COMMAND" = "deps" ]; then
+  progress_init 3 "oooconf deps"
+  progress_step "Preparing dependency install paths"
   run_cmd mkdir -p "$DATA_HOME" "$STATE_HOME" "$HOME_DIR/.local/bin"
+  progress_step "Installing selected optional dependencies"
   install_optional_dependencies
+  progress_step "Rendering dependency summary"
   print_summary
   echo
   echo "Optional dependency install complete."
@@ -1885,10 +1990,22 @@ if [ "$COMMAND" = "deps" ]; then
   exit 0
 fi
 
-run_cmd mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
+if [ "$COMMAND" = "update" ]; then
+  progress_init 8 "oooconf update"
+else
+  progress_init 7 "oooconf install"
+fi
 
+run_cmd mkdir -p "$CONFIG_HOME" "$DATA_HOME" "$STATE_HOME"
+if [ "$COMMAND" = "update" ]; then
+  progress_step "Pulled latest repository changes"
+fi
+progress_step "Prepared local state directories"
+
+progress_step "Checking/installing optional dependencies"
 install_optional_dependencies
 
+progress_step "Syncing shell framework repositories"
 sync_repo "$OH_MY_ZSH_REPO" "$OH_MY_ZSH_REF" "$STATE_HOME/oh-my-zsh" || TOOL_SUMMARY+=("oh-my-zsh: failed")
 sync_repo "$P10K_REPO" "$P10K_REF" "$STATE_HOME/powerlevel10k" || TOOL_SUMMARY+=("powerlevel10k: failed")
 sync_repo "$ZSH_AUTOSUGGESTIONS_REPO" "$ZSH_AUTOSUGGESTIONS_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" || TOOL_SUMMARY+=("zsh-autosuggestions: failed")
@@ -1900,8 +2017,11 @@ sync_repo "$FORGIT_REPO" "$FORGIT_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/for
 sync_repo "$YOU_SHOULD_USE_REPO" "$YOU_SHOULD_USE_REF" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" || TOOL_SUMMARY+=("you-should-use: failed")
 install_auto_uv_env
 ensure_oh_my_zsh_permissions || true
+
+progress_step "Installing managed tool checkouts"
 install_managed_tools
 
+progress_step "Linking managed config files"
 link_file "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc" || true
 link_file "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh" || true
 link_file "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm" || true
@@ -1919,8 +2039,10 @@ if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
   fi
   link_file "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov" || true
   run_cmd mkdir -p "$HOME_DIR/.local/bin"
-link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
+  link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
+  link_file "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o" || true
 
+progress_step "Generating completions and platform integrations"
 generate_autogen_completions || true
 
 run_cmd mkdir -p "$CONFIG_HOME/ohmyposh" "$CONFIG_HOME/powershell"
@@ -1930,6 +2052,7 @@ link_file "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" 
 ensure_ssh_include || true
 install_fonts
 
+progress_step "Finalizing setup and summary"
 if is_interactive && [ -f "$HOME_DIR/.zshrc" ]; then
   # This only updates the current setup process; it cannot mutate the parent shell session.
   # shellcheck disable=SC1090,SC1091
