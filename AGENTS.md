@@ -225,7 +225,7 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
   - Files: `upload_file`, `list_files`, `get_file`, `get_file_content`, `delete_file`, `chat_with_files`
   - Media generation: `generate_image`, `generate_video`
   - Local session history: `list_chat_sessions`, `get_chat_history`, `clear_chat_history`
-  <!-- grok-mcp -->
+<!-- grok-mcp -->
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands

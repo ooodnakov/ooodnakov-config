@@ -27,6 +27,7 @@ ASCII_ICONS = {
     "fail": "[fail]",
     "missing": "[missing]",
     "outdated": "[outdated]",
+    "info": "[info]",
     "bullet": "-",
 }
 NERD_FONT_ICONS = {
@@ -36,6 +37,7 @@ NERD_FONT_ICONS = {
     "fail": "✗",
     "missing": "✗",
     "outdated": "󰏫",
+    "info": "ℹ",
     "bullet": "•",
 }
 ANSI_RESET = "\033[0m"
@@ -47,6 +49,7 @@ ANSI_COLORS = {
     "fail": "\033[38;5;203m",
     "missing": "\033[38;5;203m",
     "outdated": "\033[38;5;215m",
+    "info": "\033[38;5;117m",
     "muted": "\033[38;5;245m",
 }
 
