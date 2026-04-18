@@ -376,7 +376,7 @@ optional_dependency_present() {
   local key="$1"
 
   case "$key" in
-    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|yazi|ffmpeg|jq|oh-my-posh|wezterm|node|npm|pnpm|fc-cache|cargo|k|python3)
+    wget|git|rg|zsh|direnv|fzf|bat|delta|glow|gum|zoxide|q|eza|yazi|ffmpeg|jq|oh-my-posh|wezterm|node|npm|pnpm|fc-cache|cargo|k|python3|rtk)
       command -v "$key" >/dev/null 2>&1
       ;;
     fd)
@@ -833,6 +833,32 @@ maybe_install_dependency() {
     echo "missing optional dependency: $command_name ($description)" >&2
     DEPENDENCY_SUMMARY+=("$command_name: missing (no supported package manager)")
     return 1
+  fi
+
+  if [ "$manager" = "cargo" ]; then
+    if ! command -v cargo >/dev/null 2>&1; then
+      maybe_install_cargo
+    fi
+    if ! command -v cargo >/dev/null 2>&1; then
+      if [ -x "$HOME_DIR/.cargo/bin/cargo" ]; then
+        export PATH="$HOME_DIR/.cargo/bin:$PATH"
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: missing (cargo unavailable)")
+        return 0
+      fi
+    fi
+    if prompt_yes_no "Install $command_name for $description via cargo?"; then
+      run_with_spinner "Installing $command_name from Git via cargo" cargo install --locked --git "$package_name"
+      if command -v "$command_name" >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/$command_name" ]; then
+        DEPENDENCY_SUMMARY+=("$command_name: installed")
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: install attempted")
+      fi
+    else
+      echo "skipping $command_name" >&2
+      DEPENDENCY_SUMMARY+=("$command_name: skipped")
+    fi
+    return 0
   fi
 
   if [ "$manager" = "apt" ] && ! apt_package_available "$package_name"; then
@@ -1850,6 +1876,7 @@ install_optional_dependencies() {
   install_optional_dependency_if_selected k maybe_note_dependency k "manual install if you want the standalone k command"
   install_optional_dependency_if_selected python3 maybe_install_dependency "$manager" python3 python3 "Python runtime and helper scripts"
   install_optional_dependency_if_selected lazygit maybe_install_dependency "$manager" lazygit lazygit "simple terminal UI for git commands"
+  install_optional_dependency_if_selected rtk maybe_install_dependency cargo rtk https://github.com/rtk-ai/rtk "token-optimized AI CLI command proxy"
 }
 
 shift || true
