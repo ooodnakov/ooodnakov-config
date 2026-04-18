@@ -117,6 +117,7 @@ When structure or setup behavior changes, update the relevant docs:
 - `docs/troubleshooting.md`
 - `docs/dependency-decisions.md`
 - `docs/architecture.md`
+- `docs/contributing.md`
 - `third_party/README.md`
 
 ## Validation
