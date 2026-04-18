@@ -11,7 +11,7 @@ UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
 AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
 KNOWN_COMMANDS=(bootstrap install deps update doctor dry-run delete remove lock update-pins agents secrets shell version check preview upgrade)
-KNOWN_SHELL_SUBCOMMANDS=(forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
+KNOWN_SHELL_SUBCOMMANDS=(status forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
 KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
 KNOWN_SHELL_PSFZF_MODES=(enabled disabled status)
@@ -490,6 +490,14 @@ set_psfzf_git_mode() {
   ui_line hint "Open a new shell session to apply the change."
 }
 
+print_shell_status() {
+  printf 'forgit-aliases: %s\n' "$(get_forgit_alias_mode)"
+  printf 'typo-handling: %s\n' "$(get_typo_handling_mode)"
+  printf 'psfzf-tab: %s\n' "$(get_psfzf_tab_mode)"
+  printf 'psfzf-git: %s\n' "$(get_psfzf_git_mode)"
+  printf 'auto-uv-env: %s\n' "$(get_auto_uv_env_mode)"
+}
+
 print_help_for_scope() {
   local scope="${1:-main}"
 
@@ -538,6 +546,7 @@ handle_shell_command() {
     ""|-h|--help|help)
       cat <<'EOF'
 Usage:
+  oooconf shell status
   oooconf shell forgit-aliases [plain|forgit|status]
   oooconf shell typo-handling [silent|suggest|help|status]
   oooconf shell psfzf-tab [enabled|disabled|status]
@@ -567,6 +576,7 @@ Auto UV environment options:
   status    show the currently configured mode
 
 Examples:
+  oooconf shell status
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain
   oooconf shell forgit-aliases forgit
@@ -578,6 +588,9 @@ Examples:
   oooconf shell psfzf-git status
   oooconf shell auto-uv-env quiet
 EOF
+      ;;
+    status)
+      print_shell_status
       ;;
     forgit-aliases)
       case "${2:-status}" in

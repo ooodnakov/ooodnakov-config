@@ -129,6 +129,7 @@ Secrets commands:
 - `oooconf secrets status`: check sync state and vault status
 - `oooconf secrets doctor`: validate prerequisites and rendered files
 - `oooconf secrets logout`: lock vault and revoke the Bitwarden session
+- `oooconf shell status`: print all managed shell preference modes
 - `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
