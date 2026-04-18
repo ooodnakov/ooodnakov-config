@@ -1058,38 +1058,59 @@ maybe_install_rtk() {
     return 0
   fi
 
-  if ! prompt_yes_no "Install rtk token-optimized AI CLI proxy via the official installer (curl)?"; then
+  if ! prompt_yes_no "Install rtk token-optimized AI CLI proxy from the official release (direct download)?"; then
     DEPENDENCY_SUMMARY+=("rtk: skipped")
     return 0
   fi
 
-  if ! command -v curl >/dev/null 2>&1; then
-    if prompt_yes_no "rtk install needs curl. Install curl first?"; then
+  if ! command -v curl >/dev/null 2>&1 || ! command -v tar >/dev/null 2>&1; then
+    if prompt_yes_no "rtk install needs curl and tar. Install them first?"; then
       local manager
       manager="$(detect_package_manager)"
-      install_packages "$manager" curl
+      install_packages "$manager" curl tar
     else
-      DEPENDENCY_SUMMARY+=("rtk: missing (requires curl)")
+      DEPENDENCY_SUMMARY+=("rtk: missing (requires curl and tar)")
       return 1
     fi
   fi
 
-  # The official installer puts the binary in ~/.local/bin by default or allows specifying it.
-  # We'll use the official curl pipeline which detects OS/arch and downloads the right binary.
-  run_with_spinner "Installing rtk" sh -c "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/main/install.sh | sh"
-  if command -v rtk >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/rtk" ]; then
-    DEPENDENCY_SUMMARY+=("rtk: installed")
+  local os arch target_url tmp_dir
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  arch="$(uname -m)"
+
+  case "$arch" in
+    x86_64) arch="x86_64" ;;
+    aarch64|arm64) arch="aarch64" ;;
+    *) DEPENDENCY_SUMMARY+=("rtk: unsupported architecture $arch"); return 1 ;;
+  esac
+
+  case "$os" in
+    linux) target_url="https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${arch}-unknown-linux-musl.tar.gz" ;;
+    darwin) target_url="https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${arch}-apple-darwin.tar.gz" ;;
+    *) DEPENDENCY_SUMMARY+=("rtk: unsupported OS $os"); return 1 ;;
+  esac
+
+  tmp_dir="$(mktemp -d)"
+  run_with_spinner "Downloading and extracting rtk v${RTK_VERSION}" sh -c "curl -fsSL '$target_url' | tar -xz -C '$tmp_dir'"
+  
+  if [ -f "$tmp_dir/rtk" ]; then
+    run_cmd mkdir -p "$HOME_DIR/.local/bin"
+    run_cmd cp "$tmp_dir/rtk" "$HOME_DIR/.local/bin/rtk"
+    run_cmd chmod +x "$HOME_DIR/.local/bin/rtk"
+    DEPENDENCY_SUMMARY+=("rtk: installed v${RTK_VERSION}")
   else
-    # Fallback to cargo if curl install failed for some reason, but warning about the lockfile
+    # Fallback to cargo if direct download failed
     if command -v cargo >/dev/null 2>&1; then
        run_with_spinner "Installing rtk via cargo (fallback)" cargo install --git https://github.com/rtk-ai/rtk
        if command -v rtk >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/rtk" ]; then
          DEPENDENCY_SUMMARY+=("rtk: installed (via cargo fallback)")
+         rm -rf "$tmp_dir"
          return 0
        fi
     fi
     DEPENDENCY_SUMMARY+=("rtk: install attempted")
   fi
+  rm -rf "$tmp_dir"
 }
 
 maybe_install_oh_my_posh() {
