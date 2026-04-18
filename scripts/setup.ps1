@@ -1261,7 +1261,7 @@ function Install-PackageIfMissing {
 
             Invoke-ActionWithSpinner -Description "Installing $Description via cargo" -Action {
                 param($url, $cmd)
-                & $cmd install --git $url | Out-Null
+                & $cmd install --locked --git $url | Out-Null
             } -ArgumentList $CargoGitUrl, $cargoCommand
 
             $installedPath = Join-Path $cargoBinDir "$($CommandNames[0]).exe"
@@ -1550,7 +1550,7 @@ function Install-DuaIfMissing {
     }
 
     try {
-        & $cargoCommand install --git $duaRepoUrl dua-cli
+        & $cargoCommand install --locked --git $duaRepoUrl dua-cli
     } catch {
         Write-Output $_
     }
