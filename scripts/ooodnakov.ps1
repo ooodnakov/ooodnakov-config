@@ -827,14 +827,12 @@ Usage: oooconf deps [--dry-run] [dependency-key...]
 Install optional dependencies only. Without dependency keys, an interactive
 picker is shown (using gum if available).
 
-All dependency metadata lives in scripts/optional-deps.toml (sole source of truth).
-Common keys include:
+All dependency metadata (including versions, URLs, and install methods) lives exclusively in scripts/optional-deps.toml.
 
-bat, delta, eza, fd, fzf, gum, glow, rg, yazi, ffmpeg, jq, p7zip, poppler, zoxide, and others.
-Examples:
   oooconf deps                         # interactive picker (when gum available)
-  oooconf deps bat delta fd ripgrep    # install specific tools
-  oooconf deps --dry-run               # preview installation
+  oooconf deps <key...>                # specific tools (see optional-deps.toml for keys)
+  oooconf deps --dry-run               # preview only
+
 "@
         }
         "update" {

@@ -136,7 +136,7 @@ Secrets commands:
 - `oooconf shell auto-uv-env [enabled|quiet|status]`: control Python virtualenv activation message verbosity
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
-The PowerShell setup can also prompt to install missing core tools with `winget` (like WezTerm, Node.js LTS, `git`, `nvim`, `oh-my-posh`, `gum`, `yazi`, `ffmpeg`, `jq`, `7zip`, and `poppler`), `choco` (like `gsudo`, `ripgrep`, `fd`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `q`, `eza`, `uv`, and `python`), and the PowerShell Gallery (`posh-git`, `PSFzf`). It also offers to install `pnpm`, preferring `corepack` and falling back to `npm`. If Chocolatey is missing, setup will offer to install it. Replaced files are now also preserved by moving them into timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, corepack/npm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 Shell completion:
@@ -172,7 +172,7 @@ oooconf deps
 # without gum: text prompt lists available keys, type to select
 oooconf deps
 # explicit keys (no prompt)
-oooconf deps bat delta glow
+oooconf deps <key>
 ```
 
 Agent policy management:
