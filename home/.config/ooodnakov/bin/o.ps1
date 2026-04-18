@@ -9,5 +9,15 @@ if (-not (Test-Path $OooconfWrapper)) {
     throw "Unable to locate oooconf wrapper at $OooconfWrapper"
 }
 
+$global:LASTEXITCODE = $null
 & $OooconfWrapper @args
-exit $LASTEXITCODE
+
+if ($null -ne $LASTEXITCODE) {
+    exit $LASTEXITCODE
+}
+
+if ($?) {
+    exit 0
+}
+
+exit 1

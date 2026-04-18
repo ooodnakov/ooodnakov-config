@@ -49,7 +49,7 @@ function Get-OooconfCompletions {
     # Find the main oooconf command position (it might be oooconf/o, .ps1/.cmd variants, or a path)
     $commandIndex = -1
     for ($i = 0; $i -lt $tokens.Length; $i++) {
-        if ($tokens[$i] -match '(oooconf|o)(\.ps1|\.cmd)?$') {
+        if ($tokens[$i] -match '(^|[\\/])(oooconf|o)(\.ps1|\.cmd)?$') {
             $commandIndex = $i
             break
         }
