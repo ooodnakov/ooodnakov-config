@@ -121,9 +121,17 @@ def parse_args() -> argparse.Namespace:
     mcp_subparsers = mcp_parser.add_subparsers(dest="subcommand", required=True)
     mcp_sync_parser = mcp_subparsers.add_parser("sync", help="Synchronize (clone/pull/install) managed MCP servers.")
     mcp_sync_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
-    mcp_status_parser = mcp_subparsers.add_parser("status", help="Show status of managed MCP servers.")
+    mcp_status_parser = subparsers.add_parser("status", help="Show status of managed MCP servers.")
+
+    rtk_parser = subparsers.add_parser(
+        "rtk", help="Manage RTK (Rust Token Killer) integration."
+    )
+    rtk_subparsers = rtk_parser.add_subparsers(dest="subcommand", required=True)
+    rtk_init_parser = rtk_subparsers.add_parser("init", help="Run 'rtk init --global' for all detected agents.")
+    rtk_init_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
 
     update_parser = subparsers.add_parser(
+
         "update",
         help="Update installed agent CLIs with their preferred package manager (npm routes through pnpm).",
     )
@@ -921,6 +929,60 @@ def cmd_mcp_status(repo_root: Path, config: dict[str, Any]) -> int:
     return 0
 
 
+def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+    if not shutil.which("rtk"):
+        print_status_line("fail", "rtk command not found. Install it first (e.g., via 'oooconf deps rtk').")
+        return 1
+
+    rows = detect_clis(parse_agent_clis(config["agent_clis"]))
+    installed_agents = {row["command"] for row in rows if row["installed"]}
+
+    if not installed_agents:
+        print("No agents detected; nothing to initialize.")
+        return 0
+
+    print_section("RTK Init")
+    print(f"Mode: {'check' if check_only else 'init'}")
+
+    # Mapping of agent commands to rtk init flags
+    # rtk supports: claude (default), cursor, gemini, opencode, codex
+    agent_map = {
+        "claude": ["--agent", "claude"],
+        "gemini": ["--gemini"],
+        "codex": ["--codex"],
+        "opencode": ["--opencode"],
+        "cursor-agent": ["--agent", "cursor"],
+    }
+
+    attempted = 0
+    synced = 0
+    failed = 0
+
+    for agent_cmd, flags in agent_map.items():
+        if agent_cmd in installed_agents:
+            attempted += 1
+            cmd = ["rtk", "init", "--global", "--auto-patch", *flags]
+            cmd_display = shlex.join(cmd)
+            print_status_line("info", f"Initializing RTK for {agent_cmd}")
+            print(f"  command: {cmd_display}")
+
+            if check_only:
+                synced += 1
+                continue
+
+            try:
+                subprocess.run(cmd, check=True, shell=os.name == "nt")
+                print_status_line("ok", f"Successfully initialized {agent_cmd}")
+                synced += 1
+            except subprocess.CalledProcessError as exc:
+                print_status_line("fail", f"Failed to initialize {agent_cmd}: {exc}")
+                failed += 1
+
+    print("")
+    print(f"Summary: initialized RTK for {synced}/{attempted} detected agents; failed {failed}.")
+    return 1 if failed else 0
+
+
 if __name__ == "__main__":
     args = parse_args()
     root = resolve_repo_root(args.repo_root)
@@ -942,6 +1004,9 @@ if __name__ == "__main__":
             raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check))
         if args.subcommand == "status":
             raise SystemExit(cmd_mcp_status(root, cfg))
+    if args.command == "rtk":
+        if args.subcommand == "init":
+            raise SystemExit(cmd_rtk_init(root, cfg, check_only=args.check))
     if args.command == "update":
         raise SystemExit(cmd_update(cfg, check_only=args.check))
     if args.command == "skills":
