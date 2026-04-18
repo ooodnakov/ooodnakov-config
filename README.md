@@ -389,3 +389,15 @@ Reference docs:
 - troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)
 - import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)
 - third-party tree notes: [`third_party/README.md`](third_party/README.md)
+
+## Development
+
+If you'd like to make changes to the configuration, testing your changes against the codebase is recommended.
+You can use `pre-commit` to ensure code is formatted properly and passes linting checks before committing.
+
+Install `pre-commit` and run it locally:
+```bash
+uv tool install pre-commit
+pre-commit install
+pre-commit run --all-files
+```

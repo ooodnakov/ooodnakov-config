@@ -4,9 +4,9 @@ if type compdef &>/dev/null; then
   _pnpm_completion () {
     local -a pnpm_completions
     local out
-    
+
     out=$(COMP_CWORD="$((CURRENT-1))" COMP_LINE="$BUFFER" COMP_POINT="$CURSOR" SHELL=zsh pnpm completion-server -- "${words[@]}" 2>/dev/null)
-    
+
     if [[ -z "$out" ]]; then
       return 0
     fi
@@ -18,7 +18,7 @@ if type compdef &>/dev/null; then
 
     # Split by line and convert tabs to colons for _describe
     pnpm_completions=("${(@f)${out//$'\t'/:}}")
-    
+
     if (( ${#pnpm_completions} > 0 )); then
       _describe 'pnpm commands' pnpm_completions
     fi

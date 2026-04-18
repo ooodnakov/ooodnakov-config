@@ -1498,7 +1498,7 @@ generate_autogen_completions() {
   [ "$DRY_RUN" -eq 1 ] && { echo "[dry-run] Generating autogen completions in $target_dir"; return 0; }
 
   mkdir -p "$target_dir"
-  
+
   if command -v rustup >/dev/null 2>&1; then
     run_with_spinner "Generating rustup completions" sh -c "rustup completions zsh > '$target_dir/_rustup'"
     run_with_spinner "Generating cargo completions" sh -c "rustup completions zsh cargo > '$target_dir/_cargo'"
