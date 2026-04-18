@@ -749,7 +749,7 @@ function Show-Usage {
     Write-UiSection "oooconf"
     Write-Output "Usage: oooconf [global options] <command> [command options]"
     Write-Output ""
-    Write-Output (Format-UiText -Text "oooconf — reproducible cross-platform dotfiles manager" -Role "section")
+    Write-Output (Format-UiText -Text "oooconf - reproducible cross-platform dotfiles manager" -Role "section")
     Write-Output (Format-UiText -Text "Global options:" -Role "info")
     Write-Output @"
   -C, --repo-root PATH  run against a specific repo checkout

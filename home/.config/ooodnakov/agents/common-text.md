@@ -46,7 +46,7 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
   - Files: `upload_file`, `list_files`, `get_file`, `get_file_content`, `delete_file`, `chat_with_files`
   - Media generation: `generate_image`, `generate_video`
   - Local session history: `list_chat_sessions`, `get_chat_history`, `clear_chat_history`
-  <!-- grok-mcp -->
+<!-- grok-mcp -->
 
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
@@ -188,8 +188,17 @@ Overall average: **60-90% token reduction** on common development operations.
 <!-- /rtk-instructions -->
 
 <!-- common -->
+## MCP Management
+
+Managed MCP servers (with a `source` repository) can be synchronized and installed across machines.
+
+```bash
+oooconf agents mcp status  # check status of all MCP servers
+oooconf agents mcp sync    # clone/pull and run install commands for managed MCPs
+```
+
 ## Python projects
-Use `uv` for dependency management and `ruff` for linting.
+If you are working in python project, use `uv` for dependency management and `ruff` for linting.
 
 After changing Python helper scripts or Python project configuration, validate:
 

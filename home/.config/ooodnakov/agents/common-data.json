@@ -34,6 +34,33 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
       "description": "GitHub API access (repositories, issues, PRs)"
+    },
+    "godot": {
+      "source": "https://github.com/ooodnakov/godot-mcp",
+      "command": "node",
+      "args": ["{mcp_dir}/build/index.js"],
+      "install": "npm install && npm run build",
+      "description": "Godot engine editor interaction"
+    },
+    "gemini-webapi": {
+      "source": "https://github.com/ooodnakov/gemini-webapi-mcp",
+      "command": "uv",
+      "args": ["--directory", "{mcp_dir}", "run", "gemini-webapi-mcp"],
+      "env": {
+        "GEMINI_COOKIE_PATH": "~/.gemini/.cookies"
+      },
+      "install": "uv sync",
+      "description": "Unofficial Gemini Web API access"
+    },
+    "grok_mcp": {
+      "source": "https://github.com/ooodnakov/Grok-MCP",
+      "command": "uv",
+      "args": ["--directory", "{mcp_dir}", "run", "python", "main.py"],
+      "env": {
+        "XAI_API_KEY": "REPLACE_ME"
+      },
+      "install": "uv sync",
+      "description": "xAI Grok API access"
     }
   },
   "skills": [

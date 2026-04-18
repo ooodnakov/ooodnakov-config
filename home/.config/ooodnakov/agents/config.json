@@ -1,5 +1,5 @@
 {
-  "agent_files": [],
+  "agent_files": ["AGENTS.md"],
   "common_text_file": "home/.config/ooodnakov/agents/common-text.md",
   "common_data_file": "home/.config/ooodnakov/agents/common-data.json",
   "agent_clis": [

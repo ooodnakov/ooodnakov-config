@@ -109,6 +109,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fail if no default config path exists for an agent target.",
     )
+
+    mcp_parser = subparsers.add_parser(
+        "mcp", help="Manage Model Context Protocol (MCP) servers."
+    )
+    mcp_subparsers = mcp_parser.add_subparsers(dest="subcommand", required=True)
+    mcp_sync_parser = mcp_subparsers.add_parser("sync", help="Synchronize (clone/pull/install) managed MCP servers.")
+    mcp_sync_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
+    mcp_status_parser = mcp_subparsers.add_parser("status", help="Show status of managed MCP servers.")
+
     update_parser = subparsers.add_parser(
         "update",
         help="Update installed agent CLIs with their preferred package manager (npm routes through pnpm).",
@@ -184,7 +193,12 @@ def load_common_data(repo_root: Path, config: dict[str, Any], include_local: boo
                         current_skills.append(skill)
                 common_data["skills"] = current_skills
             if "mcp_servers" in local_data:
-                common_data.setdefault("mcp_servers", {}).update(local_data["mcp_servers"])
+                local_mcps = local_data["mcp_servers"]
+                for name, local_cfg in local_mcps.items():
+                    if name in common_data.get("mcp_servers", {}):
+                        common_data["mcp_servers"][name].update(local_cfg)
+                    else:
+                        common_data.setdefault("mcp_servers", {})[name] = local_cfg
             if "extensions" in local_data:
                 current_exts = common_data.get("extensions", [])
                 for ext in local_data["extensions"]:
@@ -314,7 +328,7 @@ def render_markdown_block(common_text: str, common_data: dict[str, Any]) -> str:
 def upsert_managed_block(existing: str, managed_block: str) -> str:
     if MANAGED_BEGIN in existing and MANAGED_END in existing:
         start = existing.index(MANAGED_BEGIN)
-        end = existing.index(MANAGED_END) + len(MANAGED_END)
+        end = existing.rindex(MANAGED_END) + len(MANAGED_END)
         return existing[:start].rstrip() + "\n\n" + managed_block + existing[end:].lstrip("\n")
     return existing.rstrip() + "\n\n" + managed_block
 
@@ -466,12 +480,21 @@ def sync_global_configs(
                 if name not in data["mcpServers"]:
                     if "command" not in config:
                         continue
+
+                    mcp_dir = resolve_mcp_path(repo_root, name)
+                    command = expand_mcp_vars(config["command"], mcp_dir, repo_root)
+                    args = [expand_mcp_vars(arg, mcp_dir, repo_root) for arg in config.get("args", [])]
+
                     data["mcpServers"][name] = {
-                        "command": config["command"],
-                        "args": config.get("args", []),
+                        "command": command,
+                        "args": args,
                     }
                     if "env" in config:
-                        data["mcpServers"][name]["env"] = config["env"]
+                        env = {
+                            k: expand_mcp_vars(v, mcp_dir, repo_root) if isinstance(v, str) else v
+                            for k, v in config["env"].items()
+                        }
+                        data["mcpServers"][name]["env"] = env
                     needs_update = True
 
             if needs_update:
@@ -781,6 +804,110 @@ def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -
     return 1 if failed else 0
 
 
+def resolve_mcp_path(repo_root: Path, name: str) -> Path:
+    base = Path("~/.local/share/ooodnakov-config/mcp").expanduser()
+    return (base / name).resolve()
+
+
+def expand_mcp_vars(text: str, mcp_dir: Path, repo_root: Path) -> str:
+    # Use ~ expansion first
+    expanded = str(Path(text).expanduser()) if text.startswith("~") else text
+    return expanded.replace("{mcp_dir}", str(mcp_dir)).replace("{repo_root}", str(repo_root))
+
+
+def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+    common_data = load_common_data(repo_root, config, include_local=True)
+    mcp_servers = common_data.get("mcp_servers", {})
+    managed_mcps = {name: cfg for name, cfg in mcp_servers.items() if "source" in cfg}
+
+    if not managed_mcps:
+        print("No managed MCP servers (with 'source') configured.")
+        return 0
+
+    print_section("MCP Sync")
+    print(f"Mode: {'check' if check_only else 'sync'}")
+
+    attempted = 0
+    failed = 0
+    synced = 0
+    skipped = 0
+
+    for name, cfg in managed_mcps.items():
+        source = cfg["source"]
+        mcp_dir = resolve_mcp_path(repo_root, name)
+        install_cmd = cfg.get("install")
+
+        attempted += 1
+        print_status_line("info", f"Syncing {name} ({source})")
+
+        if not mcp_dir.parent.exists():
+            if not check_only:
+                mcp_dir.parent.mkdir(parents=True, exist_ok=True)
+
+        if not mcp_dir.exists():
+            print(f"  {icon('bullet')} Cloning into {mcp_dir}...")
+            if check_only:
+                synced += 1
+                continue
+            try:
+                subprocess.run(["git", "clone", source, str(mcp_dir)], check=True)
+            except subprocess.CalledProcessError as exc:
+                print_status_line("fail", f"Failed to clone {name}: {exc}")
+                failed += 1
+                continue
+        else:
+            print(f"  {icon('bullet')} Pulling latest changes in {mcp_dir}...")
+            if not check_only:
+                try:
+                    subprocess.run(["git", "-C", str(mcp_dir), "pull", "--ff-only"], check=True)
+                except subprocess.CalledProcessError as exc:
+                    print_status_line("warn", f"Failed to pull {name} (continuing): {exc}")
+
+        if install_cmd:
+            print(f"  {icon('bullet')} Running install: {install_cmd}")
+            if check_only:
+                synced += 1
+                continue
+
+            # Run install command in the mcp directory
+            try:
+                # Use shell=True to support command chains like "npm install && npm run build"
+                subprocess.run(install_cmd, shell=True, check=True, cwd=str(mcp_dir))
+                print_status_line("ok", f"Successfully installed {name}")
+                synced += 1
+            except subprocess.CalledProcessError as exc:
+                print_status_line("fail", f"Install failed for {name}: {exc}")
+                failed += 1
+                continue
+        else:
+            print_status_line("ok", f"Synced {name} (no install needed)")
+            synced += 1
+
+    print("")
+    print(f"Summary: synced {synced}/{attempted} managed MCPs; failed {failed}.")
+    return 1 if failed else 0
+
+
+def cmd_mcp_status(repo_root: Path, config: dict[str, Any]) -> int:
+    common_data = load_common_data(repo_root, config, include_local=True)
+    mcp_servers = common_data.get("mcp_servers", {})
+
+    print_section("MCP Status")
+
+    for name, cfg in sorted(mcp_servers.items()):
+        source = cfg.get("source")
+        if source:
+            mcp_dir = resolve_mcp_path(repo_root, name)
+            if mcp_dir.exists():
+                print_status_line("ok", f"{name} (managed): {mcp_dir}")
+            else:
+                print_status_line("missing", f"{name} (managed): {mcp_dir} NOT CLONED")
+        else:
+            print_status_line("ok", f"{name} (static): {cfg.get('command')} {shlex.join(cfg.get('args', []))}")
+
+    return 0
+
+
 if __name__ == "__main__":
     args = parse_args()
     root = resolve_repo_root(args.repo_root)
@@ -797,6 +924,11 @@ if __name__ == "__main__":
         raise SystemExit(cmd_sync(root, cfg, check_only=args.check, global_sync=args.global_sync))
     if args.command == "doctor":
         raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths))
+    if args.command == "mcp":
+        if args.subcommand == "sync":
+            raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check))
+        if args.subcommand == "status":
+            raise SystemExit(cmd_mcp_status(root, cfg))
     if args.command == "update":
         raise SystemExit(cmd_update(cfg, check_only=args.check))
     if args.command == "skills":
