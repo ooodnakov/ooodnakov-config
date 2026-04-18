@@ -384,6 +384,7 @@ Upstream inspirations:
 Reference docs:
 
 - architecture notes: [`docs/architecture.md`](docs/architecture.md)
+- contributing workflow: [`docs/contributing.md`](docs/contributing.md)
 - reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
 - dependency decisions: [`docs/dependency-decisions.md`](docs/dependency-decisions.md)
 - troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)
