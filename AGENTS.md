@@ -136,6 +136,7 @@ After changing Python helper scripts or Python project configuration, validate:
 uv run ruff check --select I --fix
 uv run ruff check
 uv run ruff format
+uv run pytest
 ```
 
 After changing CLI help output or completions:
