@@ -645,8 +645,8 @@ function Get-EditDistance {
             $rightChar = $Right.Substring($j - 1, 1)
             $cost = if ($leftChar -ceq $rightChar) { 0 } else { 1 }
             $deletion = $previous[$j] + 1
-            $insertion = $current[$j - 1] + 1
-            $substitution = $previous[$j - 1] + $cost
+            $insertion = $current[($j - 1)] + 1
+            $substitution = $previous[($j - 1)] + $cost
             $current[$j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
         }
 
