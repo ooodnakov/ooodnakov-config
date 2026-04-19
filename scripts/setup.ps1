@@ -1408,6 +1408,7 @@ function Install-PackageIfMissing {
 
             if (Test-AnyCommand -Names $CommandNames) {
                 Add-DependencySummary "${SummaryName}: installed via choco"
+                Add-NewlyAvailableCommand -CommandNames $CommandNames
                 return $true
             }
 
@@ -1464,6 +1465,7 @@ function Install-PackageIfMissing {
             $installedPath = Join-Path $cargoBinDir "$($CommandNames[0]).exe"
             if ((Test-AnyCommand -Names $CommandNames) -or (Test-Path $installedPath)) {
                 Add-DependencySummary "${SummaryName}: installed via cargo"
+                Add-NewlyAvailableCommand -CommandNames $CommandNames
                 return $true
             }
 
@@ -1533,6 +1535,7 @@ function Install-PnpmIfMissing {
 
     if (Get-Command pnpm -ErrorAction SilentlyContinue) {
         Add-DependencySummary "pnpm: installed"
+        Add-NewlyAvailableCommand -CommandNames @("pnpm")
         return $true
     }
 
@@ -1669,6 +1672,7 @@ function Install-RtkIfMissing {
             } -ArgumentList $cargoCommand
             if (Get-Command rtk -ErrorAction SilentlyContinue) {
                 Add-DependencySummary "rtk: installed (via cargo fallback)"
+                Add-NewlyAvailableCommand -CommandNames @("rtk")
                 return $true
             }
         }
@@ -1680,11 +1684,13 @@ function Install-RtkIfMissing {
 
     if (Get-Command rtk -ErrorAction SilentlyContinue -CommandType Application) {
         Add-DependencySummary "rtk: installed official v$rtkVer"
+        Add-NewlyAvailableCommand -CommandNames @("rtk")
         return $true
     }
 
     if (Test-Path $targetBinary) {
         Add-DependencySummary "rtk: installed official v$rtkVer"
+        Add-NewlyAvailableCommand -CommandNames @("rtk")
         return $true
     }
 
@@ -1727,7 +1733,10 @@ function Install-TectonicIfMissing {
         $asset = $latest.assets | Where-Object { $_.name -match "x86_64-pc-windows-msvc\.zip$" } | Select-Object -First 1
     }
 
-    $downloadUrl = if ($asset) { $asset.browser_download_url } else { "https://github.com/$repo/releases/download/$tag/tectonic-$version-x86_64-pc-windows-msvc.zip" }
+    $downloadUrl = if ($asset) { $asset.browser_download_url } else {
+        $encodedTag = [uri]::EscapeDataString($tag)
+        "https://github.com/$repo/releases/download/$encodedTag/tectonic-$version-x86_64-pc-windows-msvc.zip"
+    }
     
     $installRoot = Join-Path $ShareHome "tools/tectonic/v$version"
     $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "tectonic-windows-$version.zip"
@@ -1742,53 +1751,42 @@ function Install-TectonicIfMissing {
         return $false
     }
 
-    try {
-        if (-not (Ensure-Directory -Path $installRoot)) {
-            Add-DependencySummary "tectonic: install attempted"
-            return $false
+    $downloadSuccess = Invoke-ActionWithSpinner -Description "Installing Tectonic v$version via GitHub releases" -Action {
+        param($url, $zip, $root, $src, $dst)
+        if (-not (Ensure-Directory -Path $root)) { throw "Failed to create directory $root" }
+        if (-not (Test-Path $src)) {
+            Invoke-WebRequest -Uri $url -OutFile $zip
+            Expand-Archive -Path $zip -DestinationPath $root -Force
         }
-
-        if (-not (Test-Path $sourceBinary)) {
-            Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath
-            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
-        }
-
-        Copy-Item -Path $sourceBinary -Destination $targetBinary -Force
+        Copy-Item -Path $src -Destination $dst -Force
         Update-SessionEnvironment
-    } catch {
-        Write-Output $_
-        # Fallback to cargo if zip download/extract failed
-        $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
-        if ($cargoCommand) {
-            Invoke-ActionWithSpinner -Description "Installing tectonic via cargo (fallback)" -Action {
-                param($cmd)
-                & $cmd install tectonic | Out-Null
-            } -ArgumentList $cargoCommand
+    } -ArgumentList $downloadUrl, $archivePath, $installRoot, $sourceBinary, $targetBinary
+
+    if ($downloadSuccess -and (Test-AnyCommand -Names @("tectonic"))) {
+        Add-DependencySummary "tectonic: installed official v$version"
+        Add-NewlyAvailableCommand -CommandNames @("tectonic")
+        if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
+        return $true
+    }
+
+    # Fallback to cargo if download failed
+    $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
+    if ($cargoCommand) {
+        if (Invoke-ActionWithSpinner -Description "Installing tectonic via cargo (fallback)" -Action {
+            param($cmd)
+            & $cmd install tectonic | Out-Null
+        } -ArgumentList $cargoCommand) {
             if (Get-Command tectonic -ErrorAction SilentlyContinue) {
                 Add-DependencySummary "tectonic: installed (via cargo fallback)"
                 Add-NewlyAvailableCommand -CommandNames @("tectonic")
+                if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
                 return $true
             }
         }
-        Add-DependencySummary "tectonic: install attempted"
-        return $false
-    } finally {
-        if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
-    }
-
-    if (Get-Command tectonic -ErrorAction SilentlyContinue -CommandType Application) {
-        Add-DependencySummary "tectonic: installed official v$version"
-        Add-NewlyAvailableCommand -CommandNames @("tectonic")
-        return $true
-    }
-
-    if (Test-Path $targetBinary) {
-        Add-DependencySummary "tectonic: installed official v$version"
-        Add-NewlyAvailableCommand -CommandNames @("tectonic")
-        return $true
     }
 
     Add-DependencySummary "tectonic: install attempted"
+    if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
     return $false
 }
 
@@ -1830,17 +1828,18 @@ function Install-BitwardenCliIfMissing {
         Copy-Item -Path $sourceBinary -Destination $targetBinary -Force
     } catch {
         Write-Output $_
-        Add-DependencySummary "bw: install attempted"
-        return $false
+        Add-Failure "Installing Bitwarden CLI"
     }
 
     if (Get-Command bw -ErrorAction SilentlyContinue -CommandType Application) {
         Add-DependencySummary "bw: installed official v$bwVer"
+        Add-NewlyAvailableCommand -CommandNames @("bw")
         return $true
     }
 
     if (Test-Path $targetBinary) {
         Add-DependencySummary "bw: installed official v$bwVer"
+        Add-NewlyAvailableCommand -CommandNames @("bw")
         return $true
     }
 
@@ -1871,6 +1870,7 @@ function Install-CargoIfMissing {
 
         if (Get-Command cargo -ErrorAction SilentlyContinue) {
             Add-DependencySummary "cargo: installed via winget"
+            Add-NewlyAvailableCommand -CommandNames @("cargo", "rustc")
             return $true
         }
 
@@ -1918,7 +1918,7 @@ function Install-DuaIfMissing {
     }
 
     if ($DryRun) {
-        Write-Output "[dry-run] cargo install --git $duaRepoUrl dua-cli"
+        Write-Output "[dry-run] cargo install --locked --git $duaRepoUrl dua-cli"
         Add-DependencySummary "dua: install preview via cargo"
         return $false
     }
@@ -1931,6 +1931,7 @@ function Install-DuaIfMissing {
 
     if ((Get-Command dua -ErrorAction SilentlyContinue) -or (Test-Path $duaExe)) {
         Add-DependencySummary "dua: installed"
+        Add-NewlyAvailableCommand -CommandNames @("dua")
         return $true
     }
 
