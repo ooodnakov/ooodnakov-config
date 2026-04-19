@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($null -eq $IsWindows) { $IsWindows = $true }
 
 $RepoRoot = if ($env:OOODNAKOV_REPO_ROOT) {
     $env:OOODNAKOV_REPO_ROOT
@@ -43,7 +44,7 @@ $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $KnownShellAutoUvModes = @("enabled", "quiet", "status")
-$KnownKomorebiSubcommands = @("reload")
+$KnownKomorebiSubcommands = @("reload", "start", "stop")
 $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
@@ -527,9 +528,34 @@ function Invoke-KomorebiCommand {
         "--help" { Show-CommandUsage "komorebi"; return }
         "reload" {
             if ($IsWindows) {
-                Clear-Host
-                komorebic reload-configuration
-                Write-UiLine -Role ok -Message "Komorebi configuration reloaded."
+                Write-UiLine -Role info -Message "Reloading Komorebi configuration..."
+                # Use a fresh start for reload to ensure clean state
+                & "$PSScriptRoot/ooodnakov.ps1" komorebi stop
+                Start-Sleep -Milliseconds 500
+                & "$PSScriptRoot/ooodnakov.ps1" komorebi start
+            } else {
+                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
+            }
+            return
+        }
+        "start" {
+            if ($IsWindows) {
+                Write-UiLine -Role info -Message "Starting Komorebi, whkd, and bar..."
+                # Ensure clean state
+                Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
+                Start-Process komorebic -ArgumentList "start --whkd --bar" -WindowStyle Hidden
+                Write-UiLine -Role ok -Message "Komorebi stack started."
+            } else {
+                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
+            }
+            return
+        }
+        "stop" {
+            if ($IsWindows) {
+                Write-UiLine -Role info -Message "Stopping Komorebi stack..."
+                komorebic stop --bar
+                Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
+                Write-UiLine -Role ok -Message "Komorebi stack stopped."
             } else {
                 Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
             }
