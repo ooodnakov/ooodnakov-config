@@ -92,6 +92,12 @@
       "agent": "gemini",
       "source": "https://github.com/ooodnakov/Grok-MCP",
       "description": "xAI Grok API integration and search capabilities"
+    },
+    {
+      "name": "caveman",
+      "agent": "gemini",
+      "source": "https://github.com/JuliusBrussee/caveman",
+      "description": "Command compression and token-optimization skill pack"
     }
   ]
 }
