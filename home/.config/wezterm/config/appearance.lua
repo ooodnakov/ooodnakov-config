@@ -3,13 +3,6 @@ local backdrops = require("utils.backdrops")
 local colors = require("colors.custom")
 local platform = require("utils.platform")
 
-local initial_background = nil
-const_window_background_opacity = 0.7
-if platform.is_win then
-	initial_background = backdrops:initial_options(false)
-	const_window_background_opacity = 0
-end
-
 return {
 	max_fps = 120,
 	front_end = "OpenGL", ---@type 'WebGpu' | 'OpenGL' | 'Software'
@@ -29,7 +22,7 @@ return {
 	-- color scheme
 	colors = colors,
 
-	background = initial_background,
+	background = nil,
 
 	-- scrollbar
 	enable_scroll_bar = true,
@@ -65,10 +58,10 @@ return {
 		border_bottom_height = '0cell',
 		border_top_height = '0cell',
 	},
-	window_decorations = "INTEGRATED_BUTTONS|RESIZE",
-	window_background_opacity = const_window_background_opacity,
+	window_decorations = "INTEGRATED_BUTTONS",
+	window_background_opacity = 0,
 	macos_window_background_blur = 30,
-	kde_window_background_blur = true,
+	-- kde_window_background_blur = true,
 	win32_system_backdrop = 'Acrylic',
 	inactive_pane_hsb = {
 		saturation = 1,
