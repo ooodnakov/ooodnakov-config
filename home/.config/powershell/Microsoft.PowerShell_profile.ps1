@@ -4,6 +4,10 @@ $SharedEnv = Join-Path $ConfigRoot "env/common.ps1"
 $LocalEnv = Join-Path $ConfigRoot "local/env.ps1"
 $LocalBin = Join-Path $HOME ".local/bin"
 
+# Configure fzf to use a popup-style window to prevent screen shifting
+# We use a smaller height and no border to minimize displacement of multi-line prompts.
+$env:FZF_DEFAULT_OPTS = "--height 40% --inline-info --clear"
+
 if (Test-Path $LocalBin) {
     $pathParts = @($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ })
     if ($pathParts -notcontains $LocalBin) {
@@ -14,11 +18,13 @@ if (Test-Path $LocalBin) {
 $CacheDir = Join-Path $ConfigRoot "cache"
 if (-not (Test-Path $CacheDir)) { New-Item -ItemType Directory -Path $CacheDir -ErrorAction SilentlyContinue }
 
+# ---[ PLUGINS & CONFIG ]---
+
 # Optimized Oh My Posh initialization
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     $ompCache = Join-Path $CacheDir "oh-my-posh.ps1"
     if (-not (Test-Path $ompCache) -or (Get-Item $PromptConfig).LastWriteTime -gt (Get-Item $ompCache).LastWriteTime) {
-        oh-my-posh init pwsh --config $PromptConfig > $ompCache
+        oh-my-posh init pwsh --config $PromptConfig --print > $ompCache
     }
     . $ompCache
 }
@@ -61,9 +67,9 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
     Set-PSReadLineOption -PredictionSource HistoryAndPlugin
     Set-PSReadLineOption -PredictionViewStyle InlineView
-    Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
     Set-PSReadLineKeyHandler -Key "Ctrl+Spacebar" -Function MenuComplete
+
     Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
     Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
 
@@ -75,13 +81,24 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
             PSReadlineChordReverseHistory = 'Ctrl+r'
             TabExpansion                  = ($env:OOODNAKOV_PSFZF_TAB -ne 'disabled')
             GitKeyBindings                = ($env:OOODNAKOV_PSFZF_GIT -ne 'disabled')
+            TabCompletionPreviewWindow    = 'right'
         }
 
         if ($null -ne (Get-Command fd -ErrorAction SilentlyContinue)) {
             $psFzfArgs.EnableFd = $true
         }
-        Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
+        
         Set-PsFzfOption @psFzfArgs
+
+        # Explicitly bind both Ctrl+r and UpArrow to the PSFzf handler
+        if (Get-Command Invoke-FzfPsReadlineHandlerHistory -ErrorAction SilentlyContinue) {
+            Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -ScriptBlock { Invoke-FzfPsReadlineHandlerHistory }
+            Set-PSReadLineKeyHandler -Key UpArrow -ScriptBlock { Invoke-FzfPsReadlineHandlerHistory }
+        } else {
+            Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
+        }
+
+        Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
     }
 }
 

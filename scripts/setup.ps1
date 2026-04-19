@@ -387,6 +387,8 @@ function Get-OptionalDependencySpecs {
             Key         = $_.key
             DisplayName = $_.display
             Description = $_.description
+            Bin         = $_.bin
+            Check       = $_.check
             WindowsOnly = ($null -eq $_.linux -and $null -eq $_.macos -and $null -ne $_.windows)
             Linux       = if ($_.linux) { $_.linux } else { $null }
             Macos       = if ($_.macos) { $_.macos } else { $null }
@@ -411,6 +413,8 @@ function Get-AllOptionalDependencySpecs {
                 Key         = $_.key
                 DisplayName = $_.display
                 Description = $_.description
+                Bin         = $_.bin
+                Check       = $_.check
                 Linux       = if ($_.linux) { $_.linux } else { $null }
                 Macos       = if ($_.macos) { $_.macos } else { $null }
                 Windows     = if ($_.windows) { $_.windows } else { $null }
@@ -447,45 +451,46 @@ function Get-OptionalDependencyCommandNames {
         [string]$Key
     )
 
-    switch ($Key) {
-        "wget" { return @("wget") }
-        "git" { return @("git") }
-        "wezterm" { return @("wezterm") }
-        "zsh" { return @("zsh") }
-        "nvim" { return @("nvim") }
-        "oh-my-posh" { return @("oh-my-posh") }
-        "posh-git" { return @() }
-        "psfzf" { return @() }
-        "node" { return @("node") }
-        "choco" { return @("choco") }
-        "gsudo" { return @("gsudo") }
-        "rg" { return @("rg") }
-        "fd" { return @("fd") }
-        "direnv" { return @("direnv") }
-        "fzf" { return @("fzf") }
-        "bat" { return @("bat") }
-        "delta" { return @("delta") }
-        "glow" { return @("glow") }
-        "gum" { return @("gum") }
-        "zoxide" { return @("zoxide") }
-        "q" { return @("q") }
-        "eza" { return @("eza") }
-        "yazi" { return @("yazi") }
-        "ffmpeg" { return @("ffmpeg") }
-        "jq" { return @("jq") }
-        "p7zip" { return @("7z") }
-        "poppler" { return @("pdftotext") }
-        "uv" { return @("uv") }
-        "python3" { return @("python", "python3") }
-        "bw" { return @("bw") }
-        "pnpm" { return @("pnpm") }
-        "cargo" { return @("cargo") }
-        "dua" { return @("dua") }
-        "k" { return @("k") }
-        "lazygit" { return @("lazygit") }
-        "rtk" { return @("rtk") }
-        default { return @() }
+    if ($Key -eq "posh-git" -or $Key -eq "psfzf") {
+        return @()
     }
+
+    $names = [System.Collections.Generic.List[string]]::new()
+    $names.Add($Key)
+
+    $spec = Get-AllOptionalDependencySpecs | Where-Object { $_.Key -eq $Key } | Select-Object -First 1
+    if (-not $spec) {
+        return @($names)
+    }
+
+    # 1. explicit binary name
+    if ($spec.Bin -and $names -notcontains $spec.Bin) { $names.Add($spec.Bin) }
+
+    # 2. Extract from check command (e.g. "nvim --version" -> "nvim")
+    if ($spec.Check -and $spec.Check -match '^\s*([A-Za-z0-9_.-]+)') {
+        $cmdFromCheck = $matches[1]
+        if ($names -notcontains $cmdFromCheck) { $names.Add($cmdFromCheck) }
+    }
+
+    # 3. Platform specific info
+    $platformConfig = Get-OptionalDependencyPlatformConfig -Spec $spec
+    if ($platformConfig) {
+        # Only add command if it's a single word (no spaces, which indicates descriptive text)
+        if ($platformConfig.command -and $platformConfig.command -notmatch '\s') {
+            if ($names -notcontains $platformConfig.command) { $names.Add($platformConfig.command) }
+        }
+        # Often package name matches command name (except for cargo where it's a URL or repo)
+        if ($platformConfig.package -and $platformConfig.manager -ne "cargo" -and $platformConfig.package -notmatch '\s') {
+            if ($names -notcontains $platformConfig.package) { $names.Add($platformConfig.package) }
+        }
+    }
+
+    # Special handling for python3
+    if ($Key -eq "python3" -and ($names -notcontains "python")) {
+        $names.Add("python")
+    }
+
+    return @($names)
 }
 
 function Test-OptionalDependencyPresent {

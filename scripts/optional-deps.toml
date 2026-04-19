@@ -368,7 +368,7 @@ linux.package = "tree-sitter-cli"
 macos.manager = "brew"
 macos.package = "tree-sitter"
 windows.manager = "winget"
-windows.winget_id = "tree-sitter.tree-sitter"
+windows.winget_id = "tree-sitter.tree-sitter-cli"
 windows.package = "tree-sitter"
 
 [[deps]]
@@ -431,6 +431,18 @@ macos.package = "bitwarden-cli"
 windows.manager = "download"
 
 windows.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-x86_64-pc-windows-msvc.zip"
+
+[[deps]]
+key = "zig"
+display = "zig"
+description = "Zig compiler (recommended C compiler for nvim-treesitter on Windows)"
+linux.manager = "apt"
+linux.package = "zig"
+macos.manager = "brew"
+macos.package = "zig"
+windows.manager = "winget"
+windows.winget_id = "zig.zig"
+windows.package = "zig"
 
 [[deps]]
 key = "fastfetch"

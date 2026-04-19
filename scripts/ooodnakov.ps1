@@ -821,7 +821,14 @@ Common workflows:
   # Apply config and install dependencies:
   oooconf install
   oooconf deps
+"@
+}
 
+function Show-CommandUsage {
+    param($command)
+    switch ($command) {
+        "deps" {
+            Write-UiHelpBlock @"
 Usage: oooconf deps [--dry-run] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
@@ -832,7 +839,6 @@ All dependency metadata (including versions, URLs, and install methods) lives ex
   oooconf deps                         # interactive picker (when gum available)
   oooconf deps key1 key2                # specific tools (see optional-deps.toml for keys)
   oooconf deps --dry-run               # preview only
-
 "@
         }
         "update" {
@@ -967,11 +973,6 @@ Print the CLI version (git describe or commit SHA) and resolved repo root.
   oooconf version                      # show version and repo path
 "@
         }
-        default {
-            Write-Host "Unknown command: $command"
-        }
-    }
-}
         "shell" {
             Write-UiHelpBlock @"
 Usage: oooconf shell status
@@ -1197,9 +1198,9 @@ switch ($command) {
     "install" {
         Invoke-SetupCommand -SetupCommand "install" -SupportsDryRun -RemainingArgs $remaining
     }
-        "deps" {
-            Write-Output "See README.md for oooconf deps usage (includes --minimal for core tools)"
-        }
+    "deps" {
+        Invoke-SetupCommand -SetupCommand "deps" -SupportsDryRun -RemainingArgs $remaining
+    }
     "update" {
         Invoke-SetupCommand -SetupCommand "update" -SupportsDryRun -RemainingArgs $remaining
     }
