@@ -515,7 +515,8 @@ function Test-OptionalDependencyPresent {
     # If a custom check string with arguments is provided, execute it literally.
     if ($spec -and $spec.Check -and $spec.Check -match '\s') {
         try {
-            $null = Invoke-Expression $spec.Check
+            # Execute in a way that suppresses ALL output (stdout and stderr)
+            & { Invoke-Expression $spec.Check } > $null 2>&1
             return ($LASTEXITCODE -eq 0)
         } catch {
             return $false
@@ -631,16 +632,20 @@ function Install-OptionalDependencyFromSpec {
             return (Install-PackageIfMissing -CommandNames $commandNames -CargoGitUrl $cargoGitUrl -Description $description -SummaryName $summaryName)
         }
         "pnpm" {
-            return (Invoke-ActionWithSpinner -Description "Installing $description via pnpm" -Action {
+            $res = (Invoke-ActionWithSpinner -Description "Installing $description via pnpm" -Action {
                 param($pkg)
                 pnpm add --global $pkg | Out-Null
             } -ArgumentList $packageName)
+            Update-SessionEnvironment
+            return $res
         }
         "pip" {
-            return (Invoke-ActionWithSpinner -Description "Installing $description via pip" -Action {
+            $res = (Invoke-ActionWithSpinner -Description "Installing $description via pip" -Action {
                 param($pkg)
                 python3 -m pip install --upgrade $pkg | Out-Null
             } -ArgumentList $packageName)
+            Update-SessionEnvironment
+            return $res
         }
         default {
             Add-DependencySummary "${summaryName}: skipped (unsupported manager: $manager)"
@@ -835,6 +840,23 @@ function Stop-SetupLogging {
     }
 }
 
+
+function Update-SessionEnvironment {
+    # Refresh PATH from registry to see newly installed tools without restarting the shell.
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+    
+    $newPath = @()
+    if ($machinePath) { $newPath += $machinePath -split ';' }
+    if ($userPath) { $newPath += $userPath -split ';' }
+    
+    $uniquePath = $newPath | Where-Object { $_ } | Select-Object -Unique
+    $env:PATH = [string]::Join(';', $uniquePath)
+    
+    if (Test-VerboseMode) {
+        Write-Output "Refreshed session PATH."
+    }
+}
 
 function Invoke-ActionWithSpinner {
     param(
@@ -1347,6 +1369,8 @@ function Install-PackageIfMissing {
                 param($wid)
                 winget install --exact --id $wid --accept-package-agreements --accept-source-agreements --silent | Out-Null
             } -ArgumentList $WingetId
+            
+            Update-SessionEnvironment
 
             if (Test-AnyCommand -Names $CommandNames) {
                 Add-DependencySummary "${SummaryName}: installed via winget"
@@ -1373,6 +1397,8 @@ function Install-PackageIfMissing {
                 param($cid)
                 choco install $cid -y | Out-Null
             } -ArgumentList $ChocoId
+            
+            Update-SessionEnvironment
 
             if (Test-AnyCommand -Names $CommandNames) {
                 Add-DependencySummary "${SummaryName}: installed via choco"
