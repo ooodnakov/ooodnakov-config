@@ -82,10 +82,10 @@ function Get-OooconfCompletions {
         'cargo',
         'dua',
         'nvim',
+        'tree-sitter',
         'k',
         'python3',
         'lazygit',
-        'rtk',
         'uv',
         'bw',
         'fastfetch'

@@ -917,7 +917,14 @@ maybe_install_dependency() {
       fi
     fi
     if prompt_yes_no "Install $command_name for $description via cargo?"; then
-      run_with_spinner "Installing $command_name from Git via cargo" cargo install --locked --git "$package_name"
+      case "$package_name" in
+        http*|git@*)
+          run_with_spinner "Installing $command_name from Git via cargo" cargo install --locked --git "$package_name"
+          ;;
+        *)
+          run_with_spinner "Installing $command_name via cargo" cargo install "$package_name"
+          ;;
+      esac
       if command -v "$command_name" >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/$command_name" ]; then
         DEPENDENCY_SUMMARY+=("$command_name: installed")
       else

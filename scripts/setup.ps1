@@ -1382,14 +1382,22 @@ function Install-PackageIfMissing {
             }
 
             if ($DryRun) {
-                Write-Output "[dry-run] cargo install --git $CargoGitUrl"
+                if ($CargoGitUrl -match "^https?://" -or $CargoGitUrl -match "^git@") {
+                    Write-Output "[dry-run] cargo install --locked --git $CargoGitUrl"
+                } else {
+                    Write-Output "[dry-run] cargo install $CargoGitUrl"
+                }
                 Add-DependencySummary "${SummaryName}: install preview via cargo"
                 return $false
             }
 
             Invoke-ActionWithSpinner -Description "Installing $Description via cargo" -Action {
                 param($url, $cmd)
-                & $cmd install --locked --git $url | Out-Null
+                if ($url -match "^https?://" -or $url -match "^git@") {
+                    & $cmd install --locked --git $url | Out-Null
+                } else {
+                    & $cmd install $url | Out-Null
+                }
             } -ArgumentList $CargoGitUrl, $cargoCommand
 
             $installedPath = Join-Path $cargoBinDir "$($CommandNames[0]).exe"
