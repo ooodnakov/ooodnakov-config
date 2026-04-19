@@ -65,6 +65,7 @@ function Get-DepInfo {
 }
 
 $script:DependencySummary = [System.Collections.Generic.List[string]]::new()
+$script:NewlyAvailableCommands = [System.Collections.Generic.List[string]]::new()
 $script:ToolSummary = [System.Collections.Generic.List[string]]::new()
 $script:Failures = [System.Collections.Generic.List[string]]::new()
 $script:LogFile = $null
@@ -637,6 +638,7 @@ function Install-OptionalDependencyFromSpec {
                 pnpm add --global $pkg | Out-Null
             } -ArgumentList $packageName)
             Update-SessionEnvironment
+            if ($res) { Add-NewlyAvailableCommand -CommandNames $commandNames }
             return $res
         }
         "pip" {
@@ -645,6 +647,7 @@ function Install-OptionalDependencyFromSpec {
                 python3 -m pip install --upgrade $pkg | Out-Null
             } -ArgumentList $packageName)
             Update-SessionEnvironment
+            if ($res) { Add-NewlyAvailableCommand -CommandNames $commandNames }
             return $res
         }
         default {
@@ -1331,6 +1334,7 @@ function Install-Chocolatey {
         Invoke-RestMethod -Uri "https://community.chocolatey.org/install.ps1" | Invoke-Expression
         if (Get-Command choco -ErrorAction SilentlyContinue) {
             Add-DependencySummary "choco: installed"
+            Add-NewlyAvailableCommand -CommandNames @("choco")
             return $true
         }
     } catch {
@@ -1374,6 +1378,7 @@ function Install-PackageIfMissing {
 
             if (Test-AnyCommand -Names $CommandNames) {
                 Add-DependencySummary "${SummaryName}: installed via winget"
+                Add-NewlyAvailableCommand -CommandNames $CommandNames
                 return $true
             }
 
@@ -1567,6 +1572,7 @@ function Install-PoshGitIfMissing {
 
     if (Get-Module -ListAvailable -Name posh-git) {
         Add-DependencySummary "posh-git: installed via PowerShell Gallery"
+        Add-NewlyAvailableCommand -CommandNames @("Add-PoshGitToProfile")
         return $true
     }
 
@@ -1607,6 +1613,7 @@ function Install-PSFzfIfMissing {
 
     if (Get-Module -ListAvailable -Name PSFzf) {
         Add-DependencySummary "psfzf: installed via PowerShell Gallery"
+        Add-NewlyAvailableCommand -CommandNames @("Invoke-FuzzyHistory")
         return $true
     }
 
@@ -1917,8 +1924,31 @@ function Generate-OooconfCompletions {
     } -ArgumentList $OooconfCompletionsGenerator
 }
 
+function Add-NewlyAvailableCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$CommandNames
+    )
+    foreach ($cmd in $CommandNames) {
+        if ($null -ne (Get-Command $cmd -ErrorAction SilentlyContinue)) {
+            if ($script:NewlyAvailableCommands -notcontains $cmd) {
+                $script:NewlyAvailableCommands.Add($cmd)
+            }
+            return
+        }
+    }
+}
+
 function Write-Summary {
     Write-Output ""
+    if ($script:NewlyAvailableCommands.Count -gt 0) {
+        Write-Output "Newly available commands:"
+        foreach ($cmd in $script:NewlyAvailableCommands) {
+            Write-Output "  - $cmd is now available"
+        }
+        Write-Output ""
+    }
+
     Write-Output "Dependency summary:"
     $verbose = Test-VerboseMode
     foreach ($item in $script:DependencySummary) {
