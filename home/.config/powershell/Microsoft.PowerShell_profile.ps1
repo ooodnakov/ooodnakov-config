@@ -104,10 +104,6 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
 
 Set-Alias ll Get-ChildItem
 
-function gs {
-    git status @args
-}
-
 function gst {
     git status @args
 }
