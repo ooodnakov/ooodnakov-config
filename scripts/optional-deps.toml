@@ -480,8 +480,8 @@ linux.manager = "cargo"
 linux.package = "tectonic"
 macos.manager = "brew"
 macos.package = "tectonic"
-windows.manager = "cargo"
-windows.package = "tectonic"
+windows.manager = "custom"
+windows.command = "installed via specialized GitHub release installer in setup.ps1"
 
 [[deps]]
 key = "mermaid-cli"

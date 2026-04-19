@@ -583,6 +583,7 @@ function Install-OptionalDependencyFromSpec {
         "cargo" { return (Install-CargoIfMissing) }
         "dua" { return (Install-DuaIfMissing) }
         "rtk" { return (Install-RtkIfMissing) }
+        "tectonic" { return (Install-TectonicIfMissing) }
         "k" {
             Write-Warning "k is not available on Windows."
             Add-DependencySummary "k: skipped"
@@ -1688,6 +1689,106 @@ function Install-RtkIfMissing {
     }
 
     Add-DependencySummary "rtk: install attempted"
+    return $false
+}
+
+function Install-TectonicIfMissing {
+    if (Test-DependencyStatus -CommandName "tectonic" -SummaryName "tectonic") { return $true }
+
+    if (-not (Confirm-Install "Install Tectonic (modern LaTeX engine) from the official GitHub releases?")) {
+        Add-DependencySummary "tectonic: skipped"
+        return $false
+    }
+
+    $repo = "tectonic-typesetting/tectonic"
+    $latest = $null
+    try {
+        if ($null -ne (Get-Command gh -ErrorAction SilentlyContinue)) {
+             $latestJson = gh api repos/$repo/releases/latest | ConvertFrom-Json
+             $latest = [pscustomobject]@{ tag_name = $latestJson.tag_name; assets = $latestJson.assets }
+        } else {
+             $latest = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest"
+        }
+    } catch {
+        Write-Warning "Failed to fetch latest Tectonic release info from GitHub API: $($_.Exception.Message)"
+    }
+
+    if (-not $latest) {
+        # Fallback to hardcoded version if API fails
+        $version = "0.16.9"
+        $tag = "tectonic@0.16.9"
+    } else {
+        $tag = $latest.tag_name
+        $version = $tag -replace '^tectonic@', ''
+    }
+
+    $asset = $null
+    if ($latest) {
+        $asset = $latest.assets | Where-Object { $_.name -match "x86_64-pc-windows-msvc\.zip$" } | Select-Object -First 1
+    }
+
+    $downloadUrl = if ($asset) { $asset.browser_download_url } else { "https://github.com/$repo/releases/download/$tag/tectonic-$version-x86_64-pc-windows-msvc.zip" }
+    
+    $installRoot = Join-Path $ShareHome "tools/tectonic/v$version"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "tectonic-windows-$version.zip"
+    $sourceBinary = Join-Path $installRoot "tectonic.exe"
+    $targetBinary = Join-Path $LocalBinDir "tectonic.exe"
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Download $downloadUrl"
+        Write-Output "[dry-run] Expand-Archive $archivePath -> $installRoot"
+        Write-Output "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Add-DependencySummary "tectonic: install preview via official GitHub release"
+        return $false
+    }
+
+    try {
+        if (-not (Ensure-Directory -Path $installRoot)) {
+            Add-DependencySummary "tectonic: install attempted"
+            return $false
+        }
+
+        if (-not (Test-Path $sourceBinary)) {
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath
+            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
+        }
+
+        Copy-Item -Path $sourceBinary -Destination $targetBinary -Force
+        Update-SessionEnvironment
+    } catch {
+        Write-Output $_
+        # Fallback to cargo if zip download/extract failed
+        $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
+        if ($cargoCommand) {
+            Invoke-ActionWithSpinner -Description "Installing tectonic via cargo (fallback)" -Action {
+                param($cmd)
+                & $cmd install tectonic | Out-Null
+            } -ArgumentList $cargoCommand
+            if (Get-Command tectonic -ErrorAction SilentlyContinue) {
+                Add-DependencySummary "tectonic: installed (via cargo fallback)"
+                Add-NewlyAvailableCommand -CommandNames @("tectonic")
+                return $true
+            }
+        }
+        Add-DependencySummary "tectonic: install attempted"
+        return $false
+    } finally {
+        if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
+    }
+
+    if (Get-Command tectonic -ErrorAction SilentlyContinue -CommandType Application) {
+        Add-DependencySummary "tectonic: installed official v$version"
+        Add-NewlyAvailableCommand -CommandNames @("tectonic")
+        return $true
+    }
+
+    if (Test-Path $targetBinary) {
+        Add-DependencySummary "tectonic: installed official v$version"
+        Add-NewlyAvailableCommand -CommandNames @("tectonic")
+        return $true
+    }
+
+    Add-DependencySummary "tectonic: install attempted"
     return $false
 }
 
