@@ -59,13 +59,17 @@
     {
       "Date": {
         "enable": true,
-        "format": "󰃭 %a, %b %d"
+        "format": {
+          "Custom": "󰃭 %a, %b %d"
+        }
       }
     },
     {
       "Time": {
         "enable": true,
-        "format": "󱑒 %H:%M"
+        "format": {
+          "Custom": "󱑒 %H:%M"
+        }
       }
     },
     {
