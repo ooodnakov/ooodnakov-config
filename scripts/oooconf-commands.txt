@@ -16,3 +16,4 @@ version
 check
 preview
 upgrade
+komorebi

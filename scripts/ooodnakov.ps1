@@ -43,6 +43,7 @@ $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $KnownShellAutoUvModes = @("enabled", "quiet", "status")
+$KnownKomorebiSubcommands = @("reload")
 $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
@@ -134,6 +135,7 @@ function Get-UiCommandIcon {
             "shell" { return [char]::ConvertFromUtf32(0xF1183) }
             "secrets" { return [char]::ConvertFromUtf32(0xF082E) }
             "agents" { return [char]::ConvertFromUtf32(0xF0B79) }
+            "komorebi" { return [char]::ConvertFromUtf32(0xF074E) }
             default { return [char]::ConvertFromUtf32(0xF060D) }
         }
     }
@@ -150,6 +152,7 @@ function Get-UiCommandIcon {
         "shell" { return "[sh]" }
         "secrets" { return "[sec]" }
         "agents" { return "[agt]" }
+        "komorebi" { return "[komo]" }
         default { return "[cmd]" }
     }
 }
@@ -510,6 +513,36 @@ function Show-ShellStatus {
     Write-UiLine -Role info -Message "auto-uv-env: $(Get-AutoUvEnvMode)"
 }
 
+function Invoke-KomorebiCommand {
+    param(
+        [string[]]$KomorebiArgs
+    )
+
+    $subcommand = if ($KomorebiArgs.Count -gt 0) { $KomorebiArgs[0] } else { "" }
+
+    switch ($subcommand) {
+        "" { Show-CommandUsage "komorebi"; return }
+        "help" { Show-CommandUsage "komorebi"; return }
+        "-h" { Show-CommandUsage "komorebi"; return }
+        "--help" { Show-CommandUsage "komorebi"; return }
+        "reload" {
+            if ($IsWindows) {
+                Clear-Host
+                komorebic reload-configuration
+                Write-UiLine -Role ok -Message "Komorebi configuration reloaded."
+            } else {
+                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
+            }
+            return
+        }
+        default {
+            $suggestion = Get-SuggestionFromList -InputValue $subcommand -Candidates $KnownKomorebiSubcommands
+            Write-UnknownCommandMessage -Message "Unknown komorebi subcommand: $subcommand" -Suggestion $suggestion -Scope komorebi
+            throw "Unknown komorebi subcommand: $subcommand"
+        }
+    }
+}
+
 function Write-UnknownCommandMessage {
     param(
         [Parameter(Mandatory = $true)]
@@ -801,10 +834,11 @@ function Show-Usage {
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
+    Write-UiCommandRow -CommandName "komorebi" -Description "manage komorebi tiling window manager state"
     Write-Output @"
-Aliases:
-  check -> doctor
-  preview -> dry-run
+    Aliases:
+    check -> doctor
+    "@
   upgrade -> update
 Note:
   bootstrap is Unix-only in this wrapper.
@@ -1011,6 +1045,17 @@ Examples:
   oooconf shell psfzf-tab disabled
   oooconf shell psfzf-git status
   oooconf shell auto-uv-env quiet
+"@
+        }
+        "komorebi" {
+            Write-UiHelpBlock @"
+Usage: oooconf komorebi reload
+
+Manage komorebi tiling window manager state.
+Subcommands:
+  reload  reloads the komorebi configuration using komorebic reload-configuration
+Examples:
+  oooconf komorebi reload
 "@
         }
         "" { Show-Usage }
@@ -1244,6 +1289,9 @@ switch ($command) {
         }
         Require-PythonRuntime
         Run-Python -ScriptPath $AgentsToolScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
+    }
+    "komorebi" {
+        Invoke-KomorebiCommand -KomorebiArgs $remaining
     }
     default {
         $suggestion = Get-CommandSuggestion -InputCommand $command

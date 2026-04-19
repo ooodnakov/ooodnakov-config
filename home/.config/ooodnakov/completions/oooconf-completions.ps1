@@ -23,6 +23,7 @@ function Get-OooconfCompletions {
         'check',
         'preview',
         'upgrade',
+        'komorebi',
         'help'
     )
 
@@ -88,6 +89,14 @@ function Get-OooconfCompletions {
         'lazygit',
         'uv',
         'bw',
+        'imagemagick',
+        'ghostscript',
+        'luarocks',
+        'tectonic',
+        'mermaid-cli',
+        'zig',
+        'neovim-node',
+        'neovim-python',
         'fastfetch'
     )
 

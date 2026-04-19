@@ -6,8 +6,15 @@
   "default_workspace_padding": 10,
   "default_container_padding": 10,
   "border": true,
-  "border_width": 8,
+  "border_width": 4,
   "border_offset": -1,
+  "focus_follows_mouse": "Komorebi",
+  "mouse_follows_focus": true,
+  "animation": {
+    "enabled": true,
+    "duration": 150,
+    "fps": 120
+  },
   "theme": {
     "palette": "Base16",
     "name": "Ashes",
@@ -17,35 +24,14 @@
   "monitors": [
     {
       "workspaces": [
-        {
-          "name": "I",
-          "layout": "BSP"
-        },
-        {
-          "name": "II",
-          "layout": "VerticalStack"
-        },
-        {
-          "name": "III",
-          "layout": "HorizontalStack"
-        },
-        {
-          "name": "IV",
-          "layout": "UltrawideVerticalStack"
-        },
-        {
-          "name": "V",
-          "layout": "Rows"
-        },
-        {
-          "name": "VI",
-          "layout": "Grid"
-        },
-        {
-          "name": "VII",
-          "layout": "RightMainVerticalStack"
-        }
+        { "name": "󰈹", "layout": "BSP" },
+        { "name": "", "layout": "VerticalStack" },
+        { "name": "󰙯", "layout": "HorizontalStack" },
+        { "name": "󰓓", "layout": "UltrawideVerticalStack" },
+        { "name": "󱓷", "layout": "Rows" },
+        { "name": "󰉋", "layout": "Grid" },
+        { "name": "󰊫", "layout": "RightMainVerticalStack" }
       ]
     }
   ]
-}
+  }
