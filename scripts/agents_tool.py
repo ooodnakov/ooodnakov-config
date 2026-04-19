@@ -530,11 +530,11 @@ def sync_global_configs(
                     if f"[mcp_servers.{name}]" not in updated and f'[mcp_servers."{name}"]' not in updated:
                         if "command" not in config:
                             continue
-                        
+
                         mcp_dir = resolve_mcp_path(repo_root, name)
                         command = expand_mcp_vars(config["command"], mcp_dir, repo_root)
                         args = [expand_mcp_vars(arg, mcp_dir, repo_root) for arg in config.get("args", [])]
-                        
+
                         # Basic TOML injection (appending to end of file)
                         block = f"\n[mcp_servers.{name}]\ncommand = {json.dumps(command)}\nargs = {json.dumps(args)}\n"
                         if "env" in config:
@@ -542,10 +542,10 @@ def sync_global_configs(
                             for k, v in config["env"].items():
                                 val = expand_mcp_vars(v, mcp_dir, repo_root) if isinstance(v, str) else v
                                 block += f"{k} = {json.dumps(val)}\n"
-                        
+
                         updated += block
                         needs_update = True
-                
+
                 if needs_update:
                     changed.append(existing)
                     if not check_only:
@@ -593,20 +593,20 @@ def sync_global_configs(
                 if "context" not in data:
                     data["context"] = {}
                     needs_update = True
-                
+
                 required_files = ["AGENTS.md", "GEMINI.md"]
                 current_files = data["context"].get("fileName", [])
-                
+
                 if not isinstance(current_files, list):
                     current_files = [current_files] if current_files else []
-                
+
                 updated_files = list(current_files)
                 file_needs_update = False
                 for f in required_files:
                     if f not in updated_files:
                         updated_files.append(f)
                         file_needs_update = True
-                
+
                 if file_needs_update:
                     data["context"]["fileName"] = updated_files
                     needs_update = True
@@ -795,7 +795,7 @@ def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
 def cmd_install(repo_root: Path, config: dict[str, Any], agent_query: str, check_only: bool) -> int:
     specs = parse_agent_update_specs(config.get("agent_updates", []))
     spec = next((s for s in specs if s.command == agent_query or s.name.lower() == agent_query.lower()), None)
-    
+
     if not spec:
         print_status_line("fail", f"No agent update/install spec found for '{agent_query}'.")
         return 1
@@ -889,7 +889,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
             print_status_line("missing", f"{spec.name} ({spec.command}) not found on PATH; skipping.")
             skipped += 1
             continue
-        
+
         # Check version before update
         version_before = get_command_version(spec.command)
 
@@ -912,11 +912,11 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
             print_status_line("fail", f"{spec.name}: required updater '{command[0]}' is not installed.")
             failed += 1
             continue
-        
+
         command_exec = [resolved_runner, *command[1:]]
         print_status_line("info", f"Updating {spec.name} via {runner}")
         print(f"  command: {command_display}")
-        
+
         output_lines: list[str] = []
         process = subprocess.Popen(
             command_exec,
@@ -935,7 +935,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
         if return_code == 0:
             version_after = get_command_version(spec.command)
             runner_bin_dir = get_runner_bin_dir(runner)
-            
+
             is_shadowed = False
             if installed_path and runner_bin_dir:
                 # Normalizing paths for comparison

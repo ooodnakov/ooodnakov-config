@@ -82,6 +82,7 @@ deps_keys=(
   'lazygit:simple terminal UI for git commands'
   'uv:Python package manager via official installer'
   'bw:Bitwarden CLI via official native archive'
+  'rtk:RTK AI'
   'fastfetch:system information tool'
 )
 

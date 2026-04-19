@@ -88,6 +88,7 @@ function Get-OooconfCompletions {
         'lazygit',
         'uv',
         'bw',
+        'rtk',
         'fastfetch'
     )
 
