@@ -81,7 +81,7 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
             PSReadlineChordReverseHistory = 'Ctrl+r'
             TabExpansion                  = ($env:OOODNAKOV_PSFZF_TAB -ne 'disabled')
             GitKeyBindings                = ($env:OOODNAKOV_PSFZF_GIT -ne 'disabled')
-            TabCompletionPreviewWindow    = 'right'
+            TabCompletionPreviewWindow    = 'hidden'
         }
 
         if ($null -ne (Get-Command fd -ErrorAction SilentlyContinue)) {
