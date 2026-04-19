@@ -8,7 +8,7 @@ return {
    audible_bell = 'Disabled',
 
    scrollback_lines = 20000,
-   initial_cols = 120,
+   initial_cols = 125,
    initial_rows = 30,
    window_close_confirmation = 'NeverPrompt',
    color_scheme = 'Catppuccin Mocha',

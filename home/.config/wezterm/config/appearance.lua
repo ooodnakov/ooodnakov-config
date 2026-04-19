@@ -12,7 +12,7 @@ end
 
 return {
 	max_fps = 120,
-	front_end = "WebGpu", ---@type 'WebGpu' | 'OpenGL' | 'Software'
+	front_end = "OpenGL", ---@type 'WebGpu' | 'OpenGL' | 'Software'
 	webgpu_power_preference = "HighPerformance",
 	webgpu_preferred_adapter = gpu_adapters:pick_best(),
 	-- webgpu_preferred_adapter = gpu_adapters:pick_manual('Dx12', 'IntegratedGpu'),
