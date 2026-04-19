@@ -64,6 +64,29 @@ function Get-DepInfo {
     if ($dep) { $dep } else { @{} }
 }
 
+function Install-Fonts {
+    Step-Progress -Status "Installing bundled fonts"
+    $fontDir = Join-Path $RepoRoot "fonts/meslo"
+    if (-not (Test-Path $fontDir)) {
+        Write-Warning "Font directory not found at $fontDir"
+        return
+    }
+
+    $shellApp = New-Object -ComObject Shell.Application
+    $fontsFolder = $shellApp.Namespace(0x14) # CSIDL_FONTS
+
+    $fonts = Get-ChildItem -Path $fontDir -Filter "*.ttf"
+    foreach ($font in $fonts) {
+        $targetPath = Join-Path $env:SystemRoot "Fonts\$($font.Name)"
+        if (-not (Test-Path $targetPath)) {
+            Write-Output "Installing font: $($font.Name)"
+            $fontsFolder.CopyHere($font.FullName, 0x10)
+        } else {
+            Write-Verbose "Font already installed: $($font.Name)"
+        }
+    }
+}
+
 $script:DependencySummary = [System.Collections.Generic.List[string]]::new()
 $script:NewlyAvailableCommands = [System.Collections.Generic.List[string]]::new()
 $script:ToolSummary = [System.Collections.Generic.List[string]]::new()

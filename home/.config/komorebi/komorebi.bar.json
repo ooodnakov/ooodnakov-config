@@ -1,6 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/LGUG2Z/komorebi/v0.1.40/schema.bar.json",
-  "font_family": "MesloLGS DZ Nerd Font Mono",
+  "font_family": "MesloLGSDZ Nerd Font Mono",
+  "font_size": 14,
   "theme": {
     "palette": "Base16",
     "name": "Ashes",
@@ -8,6 +9,8 @@
   },
   "transparency": true,
   "glassy": true,
+  "margin": 10,
+  "height": 45,
   "left_widgets": [
     {
       "Komorebi": {
@@ -56,13 +59,13 @@
     {
       "Date": {
         "enable": true,
-        "format": "DayDateMonthYear"
+        "format": "󰃭 %a, %b %d"
       }
     },
     {
       "Time": {
         "enable": true,
-        "format": "TwentyFourHour"
+        "format": "󱑒 %H:%M"
       }
     },
     {
