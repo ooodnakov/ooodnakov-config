@@ -18,6 +18,12 @@ alt + f                 : komorebic toggle-float
 alt + shift + f         : komorebic toggle-monocle
 alt + shift + r         : komorebic retile
 
+# Layout toggles
+alt + shift + b         : komorebic change-layout bsp
+alt + shift + c         : komorebic change-layout columns
+alt + shift + g         : komorebic change-layout grid
+alt + shift + s         : komorebic change-layout vertical-stack
+
 # Focus windows
 alt + h                 : komorebic focus left
 alt + j                 : komorebic focus down
