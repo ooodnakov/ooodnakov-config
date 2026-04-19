@@ -510,6 +510,18 @@ function Test-OptionalDependencyPresent {
         return [bool](Get-Module -ListAvailable -Name PSFzf)
     }
 
+    $spec = Get-AllOptionalDependencySpecs | Where-Object { $_.Key -eq $Key } | Select-Object -First 1
+    
+    # If a custom check string with arguments is provided, execute it literally.
+    if ($spec -and $spec.Check -and $spec.Check -match '\s') {
+        try {
+            $null = Invoke-Expression $spec.Check
+            return ($LASTEXITCODE -eq 0)
+        } catch {
+            return $false
+        }
+    }
+
     $commandNames = @(Get-OptionalDependencyCommandNames -Key $Key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     if ($commandNames.Count -eq 0) {
         return $false
