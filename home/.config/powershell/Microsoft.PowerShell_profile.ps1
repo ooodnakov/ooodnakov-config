@@ -218,6 +218,15 @@ function myip {
     Invoke-RestMethod -Uri "https://wtfismyip.com/text"
 }
 
+function we {
+    if (Test-Command "curl") {
+        curl "https://wttr.in/"
+        return
+    }
+
+    Invoke-RestMethod -Uri "https://wttr.in/"
+}
+
 function cheat {
     param(
         [Parameter(Position = 0)]
