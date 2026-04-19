@@ -63,6 +63,7 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
     Set-PSReadLineOption -PredictionViewStyle InlineView
     Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+    Set-PSReadLineKeyHandler -Key "Ctrl+Spacebar" -Function MenuComplete
     Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
     Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
 
