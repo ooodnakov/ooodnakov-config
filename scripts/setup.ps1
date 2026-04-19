@@ -2123,12 +2123,19 @@ function Test-Doctor {
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
 
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")
+
     Test-DoctorCommand -Name "git"
     Test-DoctorCommand -Name "wezterm"
     Test-DoctorCommand -Name "nvim"
     Test-DoctorCommand -Name "oh-my-posh"
     Test-DoctorCommand -Name "oooconf"
     Test-DoctorCommand -Name "o"
+    Test-DoctorCommand -Name "komorebic"
+    Test-DoctorCommand -Name "whkd"
 
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
@@ -2140,7 +2147,8 @@ function Test-Doctor {
     }
 
     if ($script:Failures.Count -gt 0) {
-        throw "Doctor found $($script:Failures.Count) issue(s)."
+        Write-Output "`nDoctor found $($script:Failures.Count) issue(s). Run 'oooconf install' to try fixing them."
+        return
     }
 
     Write-Output "Doctor checks passed."
@@ -2216,6 +2224,19 @@ function Invoke-Install {
     }
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")) {
         Add-ToolSummary "o.cmd: linked into $LocalBinDir"
+    }
+
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")) {
+        Add-ToolSummary "komorebi: linked config"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")) {
+        Add-ToolSummary "komorebi-bar: linked config"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")) {
+        Add-ToolSummary "komorebi-applications: linked config"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")) {
+        Add-ToolSummary "whkd: linked config"
     }
 
     if (Ensure-UserPathContains -PathEntry $LocalBinDir) {
