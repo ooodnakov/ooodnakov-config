@@ -553,7 +553,8 @@ function Invoke-KomorebiCommand {
         "stop" {
             if ($IsWindows) {
                 Write-UiLine -Role info -Message "Stopping Komorebi stack..."
-                komorebic stop --bar
+                # Suppress errors if daemon is already unresponsive
+                komorebic stop --bar 2>$null
                 Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
                 Write-UiLine -Role ok -Message "Komorebi stack stopped."
             } else {
