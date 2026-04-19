@@ -32,6 +32,17 @@
         { "name": "󰉋", "layout": "Grid" },
         { "name": "󰊫", "layout": "RightMainVerticalStack" }
       ]
+    },
+    {
+      "workspaces": [
+        { "name": "󰈹", "layout": "BSP" },
+        { "name": "", "layout": "VerticalStack" },
+        { "name": "󰙯", "layout": "HorizontalStack" },
+        { "name": "󰓓", "layout": "UltrawideVerticalStack" },
+        { "name": "󱓷", "layout": "Rows" },
+        { "name": "󰉋", "layout": "Grid" },
+        { "name": "󰊫", "layout": "RightMainVerticalStack" }
+      ]
     }
   ]
-  }
+}

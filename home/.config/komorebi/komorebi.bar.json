@@ -1,11 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/LGUG2Z/komorebi/v0.1.40/schema.bar.json",
-  "font_family": "JetBrains Mono",
+  "font_family": "MesloLGS DZ Nerd Font Mono",
   "theme": {
     "palette": "Base16",
     "name": "Ashes",
     "accent": "Base0D"
   },
+  "transparency": true,
+  "glassy": true,
   "left_widgets": [
     {
       "Komorebi": {
