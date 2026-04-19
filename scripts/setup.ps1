@@ -45,16 +45,7 @@ $LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
 # All versions/pins now live in optional-deps.toml ONLY (sole source of truth).
-# These variables are removed. Use Get-DepInfo or Get-ManagedTool instead.
-function Get-ManagedTool {
-    param([string]$Name, [string]$Field = "ref")
-    $json = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("managed-tools") | ConvertFrom-Json
-    if ($json.PSObject.Properties.Name -contains $Name) {
-        $json.$Name.$Field
-    } else {
-        ""
-    }
-}
+# These variables are removed. Use Get-DepInfo instead.
 
 function Get-DepInfo {
     param([string]$Key)

@@ -32,6 +32,7 @@ PROGRESS_TOTAL=0
 PROGRESS_CURRENT=0
 PROGRESS_TITLE=""
 
+# shellcheck source=/dev/null
 source "$PYTHON_LIB"
 
 run_python() {
@@ -1171,7 +1172,7 @@ maybe_install_rtk() {
 
   tmp_dir="$(mktemp -d)"
   run_with_spinner "Downloading and extracting rtk v${rtk_ver}" sh -c "curl -fsSL '$target_url' | tar -xz -C '$tmp_dir'"
-  
+
   if [ -f "$tmp_dir/rtk" ]; then
     run_cmd mkdir -p "$HOME_DIR/.local/bin"
     run_cmd cp "$tmp_dir/rtk" "$HOME_DIR/.local/bin/rtk"
@@ -1581,7 +1582,8 @@ maybe_install_bw() {
     fi
   fi
 
-  local bw_ver=$(get_managed_tool bw ver)
+  local bw_ver
+  bw_ver=$(get_managed_tool bw ver)
   [ -z "$bw_ver" ] && bw_ver="1.22.1"
   release_url="https://github.com/bitwarden/cli/releases/download/v${bw_ver}/bw-linux-${bw_ver}.zip"
   archive_path="${TMPDIR:-/tmp}/bw-linux-${bw_ver}.zip"
@@ -1669,7 +1671,8 @@ maybe_install_pnpm() {
   export PATH="$PNPM_HOME:$PATH"
   run_cmd mkdir -p "$PNPM_HOME"
 
-  local pnpm_ver=$(get_managed_tool pnpm ver)
+  local pnpm_ver
+  pnpm_ver=$(get_managed_tool pnpm ver)
   [ -z "$pnpm_ver" ] && pnpm_ver="10.18.3"
 
   if command -v corepack >/dev/null 2>&1; then
@@ -1879,52 +1882,47 @@ generate_oooconf_completions() {
 }
 
 install_managed_tools() {
-  # All pins now pulled from optional-deps.toml via get_managed_tool (sole source of truth)
-  local ohmyzsh_repo=$(get_managed_tool oh-my-zsh repo)
-  local ohmyzsh_ref=$(get_managed_tool oh-my-zsh ref)
-  local p10k_repo=$(get_managed_tool powerlevel10k repo)
-  local p10k_ref=$(get_managed_tool powerlevel10k ref)
-  local nvm_repo=$(get_managed_tool nvm repo)
-  local nvm_ref=$(get_managed_tool nvm ref)
-  local k_repo=$(get_managed_tool k repo)
-  local k_ref=$(get_managed_tool k ref)
-  local marker_repo=$(get_managed_tool marker repo)
-  local marker_ref=$(get_managed_tool marker ref)
-  local todo_repo=$(get_managed_tool todo-txt repo)
-  local todo_ref=$(get_managed_tool todo-txt ref)
-  local autosuggestions_repo=$(get_managed_tool zsh-autosuggestions repo)
-  local autosuggestions_ref=$(get_managed_tool zsh-autosuggestions ref)
-  local highlighting_repo=$(get_managed_tool zsh-syntax-highlighting repo)
-  local highlighting_ref=$(get_managed_tool zsh-syntax-highlighting ref)
-  local history_repo=$(get_managed_tool zsh-history-substring-search repo)
-  local history_ref=$(get_managed_tool zsh-history-substring-search ref)
-  local autocomplete_repo=$(get_managed_tool zsh-autocomplete repo)
-  local autocomplete_ref=$(get_managed_tool zsh-autocomplete ref)
-  local fzftab_repo=$(get_managed_tool fzf-tab repo)
-  local fzftab_ref=$(get_managed_tool fzf-tab ref)
-  local forgit_repo=$(get_managed_tool forgit repo)
-  local forgit_ref=$(get_managed_tool forgit ref)
-  local youshoulduse_repo=$(get_managed_tool you-should-use repo)
-  local youshoulduse_ref=$(get_managed_tool you-should-use ref)
-  local autouv_repo=$(get_managed_tool auto-uv-env repo)
-  local autouv_ref=$(get_managed_tool auto-uv-env ref)
+  # All pins now pulled from optional-deps.toml (sole source of truth)
+  local managed_tools_json
+  managed_tools_json=$(run_python scripts/read_optional_deps.py managed-tools)
+
+  # Fetch all tools as pipe-delimited list to avoid multiple python invocations
+  local tools_info
+  tools_info=$(echo "$managed_tools_json" | python3 -c '
+import sys, json
+data = json.load(sys.stdin)
+for name, info in data.items():
+    print("{}|{}|{}".format(name, info.get("repo", ""), info.get("ref", "")))
+')
+
+  while IFS="|" read -r tool repo ref; do
+    if [ "$tool" = "auto-uv-env" ] || [ -z "$tool" ]; then
+      continue # Handled separately in install_auto_uv_env
+    fi
+
+    local target_dir=""
+    case "$tool" in
+      "oh-my-zsh") target_dir="$STATE_HOME/oh-my-zsh" ;;
+      "powerlevel10k") target_dir="$STATE_HOME/powerlevel10k" ;;
+      "nvm") target_dir="$HOME_DIR/.nvm" ;;
+      "k") target_dir="$STATE_HOME/oh-my-zsh/custom/plugins/k" ;;
+      "marker") target_dir="$STATE_HOME/marker" ;;
+      "todo-txt") target_dir="$STATE_HOME/todo" ;;
+      "zsh-autosuggestions") target_dir="$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" ;;
+      "zsh-syntax-highlighting") target_dir="$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" ;;
+      "zsh-history-substring-search") target_dir="$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" ;;
+      "zsh-autocomplete") target_dir="$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" ;;
+      "fzf-tab") target_dir="$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" ;;
+      "forgit") target_dir="$STATE_HOME/oh-my-zsh/custom/plugins/forgit" ;;
+      "you-should-use") target_dir="$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" ;;
+    esac
+
+    if [ -n "$target_dir" ] && [ -n "$repo" ] && [ -n "$ref" ]; then
+      sync_repo "$repo" "$ref" "$target_dir" && TOOL_SUMMARY+=("$tool: synced") || TOOL_SUMMARY+=("$tool: failed")
+    fi
+  done <<< "$tools_info"
 
   local bin_dir="$STATE_HOME/bin"
-
-  sync_repo "$ohmyzsh_repo" "$ohmyzsh_ref" "$STATE_HOME/oh-my-zsh" && TOOL_SUMMARY+=("oh-my-zsh: synced") || TOOL_SUMMARY+=("oh-my-zsh: failed")
-  sync_repo "$p10k_repo" "$p10k_ref" "$STATE_HOME/powerlevel10k" && TOOL_SUMMARY+=("powerlevel10k: synced") || TOOL_SUMMARY+=("powerlevel10k: failed")
-  sync_repo "$nvm_repo" "$nvm_ref" "$HOME_DIR/.nvm" && TOOL_SUMMARY+=("nvm: synced") || TOOL_SUMMARY+=("nvm: failed")
-  sync_repo "$k_repo" "$k_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/k" && TOOL_SUMMARY+=("k: synced") || TOOL_SUMMARY+=("k: failed")
-  sync_repo "$marker_repo" "$marker_ref" "$STATE_HOME/marker" && TOOL_SUMMARY+=("marker: synced") || TOOL_SUMMARY+=("marker: failed")
-  sync_repo "$todo_repo" "$todo_ref" "$STATE_HOME/todo" && TOOL_SUMMARY+=("todo.txt-cli: synced") || TOOL_SUMMARY+=("todo.txt-cli: failed")
-  sync_repo "$autosuggestions_repo" "$autosuggestions_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" && TOOL_SUMMARY+=("zsh-autosuggestions: synced") || TOOL_SUMMARY+=("zsh-autosuggestions: failed")
-  sync_repo "$highlighting_repo" "$highlighting_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" && TOOL_SUMMARY+=("zsh-syntax-highlighting: synced") || TOOL_SUMMARY+=("zsh-syntax-highlighting: failed")
-  sync_repo "$history_repo" "$history_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" && TOOL_SUMMARY+=("zsh-history-substring-search: synced") || TOOL_SUMMARY+=("zsh-history-substring-search: failed")
-  sync_repo "$autocomplete_repo" "$autocomplete_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" && TOOL_SUMMARY+=("zsh-autocomplete: synced") || TOOL_SUMMARY+=("zsh-autocomplete: failed")
-  sync_repo "$fzftab_repo" "$fzftab_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" && TOOL_SUMMARY+=("fzf-tab: synced") || TOOL_SUMMARY+=("fzf-tab: failed")
-  sync_repo "$forgit_repo" "$forgit_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/forgit" && TOOL_SUMMARY+=("forgit: synced") || TOOL_SUMMARY+=("forgit: failed")
-  sync_repo "$youshoulduse_repo" "$youshoulduse_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" && TOOL_SUMMARY+=("you-should-use: synced") || TOOL_SUMMARY+=("you-should-use: failed")
-
   run_cmd mkdir -p "$bin_dir"
   run_cmd ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh" && TOOL_SUMMARY+=("todo.sh: linked into $bin_dir") || TOOL_SUMMARY+=("todo.sh: link failed")
 
@@ -1964,8 +1962,10 @@ install_auto_uv_env() {
     fi
   fi
 
-  local autouv_repo=$(get_managed_tool auto-uv-env repo)
-  local autouv_ref=$(get_managed_tool auto-uv-env ref)
+  local autouv_repo
+  autouv_repo=$(get_managed_tool auto-uv-env repo)
+  local autouv_ref
+  autouv_ref=$(get_managed_tool auto-uv-env ref)
   sync_repo "$autouv_repo" "$autouv_ref" "$source_dir" || {
     TOOL_SUMMARY+=("auto-uv-env: failed")
     return 1
