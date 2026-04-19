@@ -955,7 +955,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
                     if is_shadowed:
                         print_status_line("warn", f"{spec.name} is up to date in {runner}, but SHADOWED on PATH.")
                         print(f"  Active: {installed_path}")
-                        print(f"  Try: npm uninstall -g {spec.package} (if installed via npm)")
+                        print(f"  Try: pnpm remove -g {spec.package} (if installed via pnpm)")
                     else:
                         print_status_line("ok", f"{spec.name} is already up to date ({version_after})")
             else:
@@ -1114,7 +1114,7 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
 
             # Run install command in the mcp directory
             try:
-                # Use shell=True to support command chains like "npm install && npm run build"
+                # Use shell=True to support command chains like "pnpm install && pnpm run build"
                 subprocess.run(install_cmd, shell=True, check=True, cwd=str(mcp_dir))
                 print_status_line("ok", f"Successfully installed {name}")
                 synced += 1

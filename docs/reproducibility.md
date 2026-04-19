@@ -71,7 +71,7 @@ Fonts are also manual for now. The tracked defaults assume a Nerd Font is instal
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.
 
 For Neovim, the Unix setup validates `nvim >= 0.11.0` for LazyVim. On Linux, if the distro package manager only provides an older version, setup installs the pinned official Neovim release tarball into the repo-managed XDG data tree and links `nvim` from there.
-For `pnpm`, the tracked shell environment reserves `PNPM_HOME`, and setup installs a pinned version through `corepack` when available or through `npm` into that path otherwise.
+For `pnpm`, the tracked shell environment reserves `PNPM_HOME`, and setup installs a pinned version through `corepack` when available or through `pnpm` into that path otherwise.
 
 ## Bootstrap trust model
 
@@ -111,7 +111,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 - `oooconf agents detect` to detect configured AI coding agent CLIs available on `PATH`
 - `oooconf agents sync` to update managed shared AGENTS.md policy sections from tracked snippets
 - `oooconf agents doctor` to verify AGENTS.md managed sections and check common MCP/skills markers in default agent config paths
-- `oooconf agents update` to update installed agent CLIs; npm-preferred agents are updated through `pnpm`
+- `oooconf agents update` to update installed agent CLIs; pnpm-preferred agents are updated through `pnpm`
 - `oooconf agents doctor --strict-config-paths` to fail when expected agent default config files are missing
 - `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic. Helper scripts use `uv run` if `uv` is available to ensure they run with the pinned Python version and a consistent environment. If `uv` is not present, they fall back to the system `python3`.
 - autogen completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.

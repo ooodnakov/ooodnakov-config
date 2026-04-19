@@ -618,6 +618,18 @@ function Install-OptionalDependencyFromSpec {
         "cargo" {
             return (Install-PackageIfMissing -CommandNames $commandNames -CargoGitUrl $cargoGitUrl -Description $description -SummaryName $summaryName)
         }
+        "pnpm" {
+            return (Invoke-ActionWithSpinner -Description "Installing $description via pnpm" -Action {
+                param($pkg)
+                pnpm add --global $pkg | Out-Null
+            } -ArgumentList $packageName)
+        }
+        "pip" {
+            return (Invoke-ActionWithSpinner -Description "Installing $description via pip" -Action {
+                param($pkg)
+                python3 -m pip install --upgrade $pkg | Out-Null
+            } -ArgumentList $packageName)
+        }
         default {
             Add-DependencySummary "${summaryName}: skipped (unsupported manager: $manager)"
             return $false
@@ -1471,7 +1483,7 @@ function Install-PnpmIfMissing {
             npm install --global "pnpm@$version" --prefix $homeDir | Out-Null
         } -ArgumentList $pnpmHome, $pnpmVer
     } else {
-        Add-DependencySummary "pnpm: missing (requires corepack or npm)"
+        Add-DependencySummary "pnpm: missing (requires corepack)"
         return $false
     }
 

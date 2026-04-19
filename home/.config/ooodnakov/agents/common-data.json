@@ -1,7 +1,7 @@
 {
   "mcp_servers": {
     "playwright": {
-      "command": "npx",
+      "command": "pnpm dlx",
       "args": [
         "-y",
         "@playwright/mcp@latest"
@@ -16,7 +16,7 @@
       "description": "Windows system inspection and automation (processes, windows, registry)"
     },
     "context7": {
-      "command": "npx",
+      "command": "pnpm dlx",
       "args": [
         "-y",
         "@upstash/context7-mcp",
@@ -26,7 +26,7 @@
       "description": "documentation search and code examples for thousands of libraries"
     },
     "github": {
-      "command": "npx",
+      "command": "pnpm dlx",
       "args": [
         "-y",
         "@modelcontextprotocol/server-github"
@@ -39,7 +39,7 @@
       "args": [
         "{mcp_dir}/build/index.js"
       ],
-      "install": "npm install && npm run build",
+      "install": "pnpm install && pnpm run build",
       "description": "Godot engine editor interaction"
     },
     "gemini-webapi": {

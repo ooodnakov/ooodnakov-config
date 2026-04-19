@@ -1024,7 +1024,7 @@ Subcommands:
   sync [--check]        append/update shared AGENTS.md managed block
   doctor [--strict-config-paths]
                         verify AGENTS.md managed block and default agent config paths
-  update [--check]      update installed agent CLIs (npm-based tools use pnpm)
+  update [--check]      update installed agent CLIs (pnpm-based tools use pnpm)
 EOF
       ;;
     secrets)

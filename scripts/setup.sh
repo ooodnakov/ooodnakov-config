@@ -703,6 +703,16 @@ install_optional_dependency_from_catalog() {
         choco)
           maybe_note_dependency "$command_name" "$description (Windows choco package: ${choco_id:-$package_name})"
           ;;
+        pnpm)
+          if optional_dependency_selected "$key"; then
+            run_with_spinner "Installing $description via pnpm" pnpm add -g "$package_name"
+            if command -v "$command_name" >/dev/null 2>&1; then
+              DEPENDENCY_SUMMARY+=("$command_name: installed via pnpm")
+            else
+              DEPENDENCY_SUMMARY+=("$command_name: install attempted via pnpm")
+            fi
+          fi
+          ;;
         "")
           maybe_note_dependency "$command_name" "$description (no package manager declared)"
           ;;
@@ -1687,7 +1697,7 @@ maybe_install_pnpm() {
       run_cmd ln -sfn "$PNPM_HOME/bin/pnpx" "$PNPM_HOME/pnpx"
     fi
   else
-    DEPENDENCY_SUMMARY+=("pnpm: missing (requires corepack or npm)")
+    DEPENDENCY_SUMMARY+=("pnpm: missing (requires corepack)")
     return 0
   fi
 
