@@ -4,3 +4,5 @@
  at line 85 column 15
 [2m2026-04-20T00:37:15.155650Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m keybindings[10].commands: unexpected argument found
  at line 85 column 15
+[2m2026-04-20T00:38:11.507916Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m keybindings[26].commands: unexpected argument found
+ at line 123 column 15

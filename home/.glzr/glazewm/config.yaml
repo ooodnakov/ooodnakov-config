@@ -120,7 +120,7 @@ keybindings:
     bindings: ['Alt+Shift+7']
 
   # Binding Modes
-  - commands: ['wm-enable-binding-mode resize']
+  - commands: ['wm-enable-binding-mode --name resize']
     bindings: ['Alt+R']
 
   # Layout Toggles
@@ -151,7 +151,7 @@ binding_modes:
         bindings: ['K']
       - commands: ['resize --width 2%']
         bindings: ['L']
-      - commands: ['wm-disable-binding-mode resize']
+      - commands: ['wm-disable-binding-mode --name resize']
         bindings: ['Escape', 'Enter']
 
 # Rules for floating windows
