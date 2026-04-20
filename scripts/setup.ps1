@@ -327,17 +327,45 @@ function Test-OptionalDependencyApplicable {
     }
 }
 
-function Get-OptionalDependencySpecsFromTomlFallback {
+function Get-OptionalDepsTomlFallbackData {
+    if ($script:OptionalDepsTomlFallbackData) {
+        return $script:OptionalDepsTomlFallbackData
+    }
+
     $tomlPath = Join-Path $PSScriptRoot "optional-deps.toml"
     if (-not (Test-Path $tomlPath)) {
-        return @()
+        $script:OptionalDepsTomlFallbackData = @{
+            Deps        = @()
+            MinimalKeys = @()
+        }
+        return $script:OptionalDepsTomlFallbackData
     }
 
     $entries = @()
+    $minimalKeys = @()
     $current = @{}
+    $inMinimalSection = $false
     foreach ($rawLine in (Get-Content -Path $tomlPath -ErrorAction SilentlyContinue)) {
         $line = $rawLine.Trim()
         if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
+            continue
+        }
+
+        if ($line -eq "[minimal]") {
+            $inMinimalSection = $true
+            continue
+        }
+
+        if ($line -match '^\[' -and $line -ne "[minimal]" -and $line -ne "[[deps]]") {
+            $inMinimalSection = $false
+        }
+
+        if ($inMinimalSection -and $line -match '^keys\s*=\s*\[(.*)\]\s*$') {
+            $minimalKeys = @(
+                $matches[1] -split ',' |
+                    ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
+                    Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            )
             continue
         }
 
@@ -361,7 +389,7 @@ function Get-OptionalDependencySpecsFromTomlFallback {
         $entries += ,$current
     }
 
-    return @($entries | ForEach-Object {
+    $deps = @($entries | ForEach-Object {
         $entry = $_
         $linux = @{}
         $macos = @{}
@@ -391,6 +419,16 @@ function Get-OptionalDependencySpecsFromTomlFallback {
             Windows     = if ($windows.Count -gt 0) { $windows } else { $null }
         }
     })
+
+    $script:OptionalDepsTomlFallbackData = @{
+        Deps        = $deps
+        MinimalKeys = @($minimalKeys | Select-Object -Unique)
+    }
+    return $script:OptionalDepsTomlFallbackData
+}
+
+function Get-OptionalDependencySpecsFromTomlFallback {
+    return @((Get-OptionalDepsTomlFallbackData).Deps)
 }
 
 function Get-OptionalDependencySpecs {
@@ -2159,28 +2197,7 @@ function Get-MinimalDependencyKeys {
     }
 
     if ($keys.Count -eq 0) {
-        $tomlPath = Join-Path $PSScriptRoot "optional-deps.toml"
-        if (Test-Path $tomlPath) {
-            $inMinimalSection = $false
-            foreach ($rawLine in Get-Content -Path $tomlPath -ErrorAction SilentlyContinue) {
-                $line = $rawLine.Trim()
-                if ($line -match '^\[minimal\]$') {
-                    $inMinimalSection = $true
-                    continue
-                }
-                if ($inMinimalSection -and $line -match '^\[') {
-                    break
-                }
-                if ($inMinimalSection -and $line -match '^keys\s*=\s*\[(.*)\]\s*$') {
-                    $keys = @(
-                        $matches[1] -split ',' |
-                            ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
-                            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-                    )
-                    break
-                }
-            }
-        }
+        $keys = @((Get-OptionalDepsTomlFallbackData).MinimalKeys)
     }
 
     $script:MinimalDependencyKeysCache = @($keys | Select-Object -Unique)
