@@ -31,6 +31,8 @@ KNOWN_SETUP_COMMANDS=(install update doctor deps completions)
 PROGRESS_TOTAL=0
 PROGRESS_CURRENT=0
 PROGRESS_TITLE=""
+NEOVIM_MIN_VERSION="${OOODNAKOV_NEOVIM_MIN_VERSION:-0.10.0}"
+NEOVIM_LINUX_VERSION="${OOODNAKOV_NEOVIM_LINUX_VERSION:-0.10.4}"
 
 source "$PYTHON_LIB"
 
@@ -352,6 +354,12 @@ optional_dependency_install_info() {
   run_python "$OPTIONAL_DEPS_SCRIPT" install-info "$key" "$platform" 2>/dev/null
 }
 
+optional_dependency_field() {
+  local key="$1"
+  local field="$2"
+  run_python "$OPTIONAL_DEPS_SCRIPT" field "$key" "$field" 2>/dev/null || true
+}
+
 resolve_package_manager_for_dependency() {
   local detected_manager="$1"
   local declared_manager="$2"
@@ -651,6 +659,22 @@ maybe_install_fastfetch() {
   esac
 }
 
+maybe_install_k() {
+  maybe_note_dependency k "manual install if you want the standalone k command"
+}
+
+maybe_install_dua() {
+  maybe_install_dua_cli "$1"
+}
+
+maybe_install_nvim() {
+  maybe_install_neovim "$1"
+}
+
+maybe_install_tectonic() {
+  maybe_install_dependency "$1" tectonic tectonic "Modern LaTeX engine (required by Snacks.image for LaTeX)"
+}
+
 install_optional_dependency_if_selected() {
   local key="$1"
   shift
@@ -662,64 +686,52 @@ install_optional_dependency_if_selected() {
 install_optional_dependency_from_catalog() {
   local key="$1"
   local detected_manager="$2"
-  local description info declared_manager package_name command_name winget_id choco_id install_manager
+  local description info declared_manager package_name command_name winget_id choco_id install_manager handler
 
   description="$(optional_dependency_label "$key")"
   info="$(optional_dependency_install_info "$key" || true)"
+  handler="$(optional_dependency_field "$key" "handler")"
   IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ <<< "$info"
   install_manager="$(resolve_package_manager_for_dependency "$detected_manager" "$declared_manager")"
 
-  case "$key" in
-    gum) maybe_install_gum "$install_manager" ;;
-    q) maybe_install_q "$install_manager" ;;
-    eza) maybe_install_eza "$install_manager" ;;
-    p7zip) maybe_install_p7zip "$install_manager" ;;
-    poppler) maybe_install_poppler "$install_manager" ;;
-    oh-my-posh) maybe_install_oh_my_posh ;;
-    wezterm) maybe_install_wezterm "$install_manager" ;;
-    uv) maybe_install_uv ;;
-    bw) maybe_install_bw ;;
-    pnpm) maybe_install_pnpm ;;
-    cargo) maybe_install_cargo ;;
-    dua) maybe_install_dua_cli "$install_manager" ;;
-    nvim) maybe_install_neovim "$install_manager" ;;
-    k) maybe_note_dependency k "manual install if you want the standalone k command" ;;
-    rtk) maybe_install_rtk ;;
-    fastfetch) maybe_install_fastfetch "$install_manager" ;;
-    "")
+  if [ -n "$handler" ]; then
+    local handler_func
+    handler_func="maybe_install_${handler//-/_}"
+    if declare -f "$handler_func" >/dev/null 2>&1; then
+      "$handler_func" "$install_manager"
       return 0
+    fi
+  fi
+
+  if [ -z "$command_name" ]; then
+    command_name="$key"
+  fi
+
+  case "$install_manager" in
+    custom|curl)
+      maybe_note_dependency "$command_name" "$description (manual installer: $install_manager)"
+      ;;
+    winget)
+      maybe_note_dependency "$command_name" "$description (Windows winget package: ${winget_id:-$package_name})"
+      ;;
+    choco)
+      maybe_note_dependency "$command_name" "$description (Windows choco package: ${choco_id:-$package_name})"
+      ;;
+    pnpm)
+      if optional_dependency_selected "$key"; then
+        run_with_spinner "Installing $description via pnpm" pnpm add -g "$package_name"
+        if command -v "$command_name" >/dev/null 2>&1; then
+          DEPENDENCY_SUMMARY+=("$command_name: installed via pnpm")
+        else
+          DEPENDENCY_SUMMARY+=("$command_name: install attempted via pnpm")
+        fi
+      fi
+      ;;
+    "")
+      maybe_note_dependency "$command_name" "$description (no package manager declared)"
       ;;
     *)
-      if [ -z "$command_name" ]; then
-        command_name="$key"
-      fi
-      case "$install_manager" in
-        custom|curl)
-          maybe_note_dependency "$command_name" "$description (manual installer: $install_manager)"
-          ;;
-        winget)
-          maybe_note_dependency "$command_name" "$description (Windows winget package: ${winget_id:-$package_name})"
-          ;;
-        choco)
-          maybe_note_dependency "$command_name" "$description (Windows choco package: ${choco_id:-$package_name})"
-          ;;
-        pnpm)
-          if optional_dependency_selected "$key"; then
-            run_with_spinner "Installing $description via pnpm" pnpm add -g "$package_name"
-            if command -v "$command_name" >/dev/null 2>&1; then
-              DEPENDENCY_SUMMARY+=("$command_name: installed via pnpm")
-            else
-              DEPENDENCY_SUMMARY+=("$command_name: install attempted via pnpm")
-            fi
-          fi
-          ;;
-        "")
-          maybe_note_dependency "$command_name" "$description (no package manager declared)"
-          ;;
-        *)
-          maybe_install_dependency "$install_manager" "$command_name" "$package_name" "$description"
-          ;;
-      esac
+      maybe_install_dependency "$install_manager" "$command_name" "$package_name" "$description"
       ;;
   esac
 }

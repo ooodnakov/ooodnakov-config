@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from read_optional_deps import load_deps
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMMANDS_FILE = REPO_ROOT / "scripts" / "oooconf-commands.txt"
-OPTIONAL_DEPS_FILE = REPO_ROOT / "scripts" / "optional-deps.toml"
 ZSH_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf"
 POWERSHELL_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1"
 
@@ -61,41 +62,6 @@ SHELL_FORGIT_ALIAS_MODES = ["plain", "forgit", "status"]
 SHELL_TYPO_MODES = ["silent", "suggest", "help", "status"]
 SHELL_PSFZF_MODES = ["enabled", "disabled", "status"]
 SHELL_AUTO_UV_MODES = ["enabled", "quiet", "status"]
-
-
-def parse_optional_deps(path: Path) -> list[tuple[str, str]]:
-    deps: list[tuple[str, str]] = []
-    current_key: str | None = None
-    current_desc = ""
-
-    for raw_line in path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-
-        if line == "[[deps]]":
-            if current_key:
-                deps.append((current_key, current_desc))
-            current_key = None
-            current_desc = ""
-            continue
-
-        if "=" not in line:
-            continue
-
-        dotted_key, _, value = line.partition("=")
-        dotted_key = dotted_key.strip()
-        value = value.strip().strip('"')
-
-        if dotted_key == "key":
-            current_key = value
-        elif dotted_key == "description":
-            current_desc = value
-
-    if current_key:
-        deps.append((current_key, current_desc))
-
-    return deps
 
 
 def load_commands(path: Path) -> list[str]:
@@ -217,26 +183,26 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("")
     lines.append("command_name=")
     lines.append("for (( i = 2; i < CURRENT; i++ )); do")
-    lines.append("  case \"$words[i]\" in")
+    lines.append('  case "$words[i]" in')
     lines.append("    -C|--repo-root)")
     lines.append("      (( i++ ))")
     lines.append("      ;;")
     lines.append("    -*)")
     lines.append("      ;;")
     lines.append(f"    {command_pattern})")
-    lines.append("      command_name=\"$words[i]\"")
+    lines.append('      command_name="$words[i]"')
     lines.append("      break")
     lines.append("      ;;")
     lines.append("  esac")
     lines.append("done")
     lines.append("")
-    lines.append("if [[ -z \"$command_name\" ]]; then")
+    lines.append('if [[ -z "$command_name" ]]; then')
     lines.append("  _describe -t commands 'oooconf command' oooconf_commands && return 0")
     lines.append("  _describe -t options 'oooconf option' global_opts && return 0")
     lines.append("  return 0")
     lines.append("fi")
     lines.append("")
-    lines.append("case \"$command_name\" in")
+    lines.append('case "$command_name" in')
     lines.append("  upgrade)")
     lines.append("    command_name=update")
     lines.append("    ;;")
@@ -248,7 +214,7 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("    ;;")
     lines.append("esac")
     lines.append("")
-    lines.append("case \"$command_name\" in")
+    lines.append('case "$command_name" in')
     lines.append("  help)")
     lines.append("    _describe -t commands 'oooconf command' oooconf_commands && return 0")
     lines.append("    ;;")
@@ -262,35 +228,43 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("    return 0")
     lines.append("    ;;")
     lines.append("  update-pins)")
-    lines.append("    _describe -t options 'oooconf update-pins option' '--apply:write updated pins and lock artifacts'")
+    lines.append(
+        "    _describe -t options 'oooconf update-pins option' '--apply:write updated pins and lock artifacts'"
+    )
     lines.append("    return 0")
     lines.append("    ;;")
     lines.append("  agents)")
     lines.append("    local agents_command")
     lines.append("    agents_command=")
     lines.append("    for (( i = 3; i < CURRENT; i++ )); do")
-    lines.append("      case \"$words[i]\" in")
+    lines.append('      case "$words[i]" in')
     lines.append("        detect|sync|doctor|update)")
-    lines.append("          agents_command=\"$words[i]\"")
+    lines.append('          agents_command="$words[i]"')
     lines.append("          break")
     lines.append("          ;;")
     lines.append("      esac")
     lines.append("    done")
     lines.append("")
-    lines.append("    if [[ -z \"$agents_command\" ]]; then")
+    lines.append('    if [[ -z "$agents_command" ]]; then')
     lines.append("      _describe -t agents-subcommands 'oooconf agents command' agents_subcommands && return 0")
     lines.append("      return 0")
     lines.append("    fi")
     lines.append("")
-    lines.append("    case \"$agents_command\" in")
+    lines.append('    case "$agents_command" in')
     lines.append("      detect)")
-    lines.append("        _describe -t options 'oooconf agents detect option' $agents_opts '--json:emit machine-readable JSON output'")
+    lines.append(
+        "        _describe -t options 'oooconf agents detect option' $agents_opts '--json:emit machine-readable JSON output'"
+    )
     lines.append("        ;;")
     lines.append("      sync|update)")
-    lines.append("        _describe -t options \"oooconf agents $agents_command option\" $agents_opts '--check:validate only; do not write files'")
+    lines.append(
+        "        _describe -t options \"oooconf agents $agents_command option\" $agents_opts '--check:validate only; do not write files'"
+    )
     lines.append("        ;;")
     lines.append("      doctor)")
-    lines.append("        _describe -t options 'oooconf agents doctor option' $agents_opts '--strict-config-paths:fail if no default config path exists for a target'")
+    lines.append(
+        "        _describe -t options 'oooconf agents doctor option' $agents_opts '--strict-config-paths:fail if no default config path exists for a target'"
+    )
     lines.append("        ;;")
     lines.append("    esac")
     lines.append("    return 0")
@@ -298,20 +272,20 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("  shell)")
     lines.append("    shell_command=")
     lines.append("    for (( i = 3; i < CURRENT; i++ )); do")
-    lines.append("      case \"$words[i]\" in")
+    lines.append('      case "$words[i]" in')
     lines.append("        status|forgit-aliases|typo-handling|psfzf-tab|psfzf-git|auto-uv-env)")
-    lines.append("          shell_command=\"$words[i]\"")
+    lines.append('          shell_command="$words[i]"')
     lines.append("          break")
     lines.append("          ;;")
     lines.append("      esac")
     lines.append("    done")
     lines.append("")
-    lines.append("    if [[ -z \"$shell_command\" ]]; then")
+    lines.append('    if [[ -z "$shell_command" ]]; then')
     lines.append("      _describe -t shell-subcommands 'oooconf shell command' shell_subcommands && return 0")
     lines.append("      return 0")
     lines.append("    fi")
     lines.append("")
-    lines.append("    case \"$shell_command\" in")
+    lines.append('    case "$shell_command" in')
     lines.append("      forgit-aliases)")
     lines.append("        _describe -t modes 'forgit alias mode' shell_forgit_alias_modes")
     lines.append("        ;;")
@@ -333,20 +307,20 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("  secrets)")
     lines.append("    secrets_command=")
     lines.append("    for (( i = 3; i < CURRENT; i++ )); do")
-    lines.append("      case \"$words[i]\" in")
+    lines.append('      case "$words[i]" in')
     lines.append("        login|unlock|sync|doctor|list|ls|status|logout|add|remove|rm|del)")
-    lines.append("          secrets_command=\"$words[i]\"")
+    lines.append('          secrets_command="$words[i]"')
     lines.append("          break")
     lines.append("          ;;")
     lines.append("      esac")
     lines.append("    done")
     lines.append("")
-    lines.append("    if [[ -z \"$secrets_command\" ]]; then")
+    lines.append('    if [[ -z "$secrets_command" ]]; then')
     lines.append("      _describe -t secrets-subcommands 'oooconf secrets command' secrets_subcommands && return 0")
     lines.append("      return 0")
     lines.append("    fi")
     lines.append("")
-    lines.append("    case \"$secrets_command\" in")
+    lines.append('    case "$secrets_command" in')
     lines.append("      ls)")
     lines.append("        secrets_command=list")
     lines.append("        ;;")
@@ -355,18 +329,26 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("        ;;")
     lines.append("    esac")
     lines.append("")
-    lines.append("    case \"$secrets_command\" in")
+    lines.append('    case "$secrets_command" in')
     lines.append("      sync)")
-    lines.append("        _describe -t options 'oooconf secrets sync option' '--backend:secret backend to use:(bw)' '--template:override the tracked template path:_files' '--dry-run:preview the sync without writing files' '--force:rewrite generated files even when unchanged'")
+    lines.append(
+        "        _describe -t options 'oooconf secrets sync option' '--backend:secret backend to use:(bw)' '--template:override the tracked template path:_files' '--dry-run:preview the sync without writing files' '--force:rewrite generated files even when unchanged'"
+    )
     lines.append("        ;;")
     lines.append("      doctor)")
-    lines.append("        _describe -t options 'oooconf secrets doctor option' '--backend:secret backend to use:(bw)' '--template:override the tracked template path:_files'")
+    lines.append(
+        "        _describe -t options 'oooconf secrets doctor option' '--backend:secret backend to use:(bw)' '--template:override the tracked template path:_files'"
+    )
     lines.append("        ;;")
     lines.append("      list)")
-    lines.append("        _describe -t options 'oooconf secrets list option' '--template:override the tracked template path:_files' '--resolved:resolve bw:// references (requires unlocked BW_SESSION)' '--backend:secret backend to use:(bw)'")
+    lines.append(
+        "        _describe -t options 'oooconf secrets list option' '--template:override the tracked template path:_files' '--resolved:resolve bw:// references (requires unlocked BW_SESSION)' '--backend:secret backend to use:(bw)'"
+    )
     lines.append("        ;;")
     lines.append("      status)")
-    lines.append("        _describe -t options 'oooconf secrets status option' '--template:override the tracked template path:_files'")
+    lines.append(
+        "        _describe -t options 'oooconf secrets status option' '--template:override the tracked template path:_files'"
+    )
     lines.append("        ;;")
     lines.append("      login)")
     lines.append(
@@ -374,10 +356,14 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     )
     lines.append("        ;;")
     lines.append("      unlock)")
-    lines.append("        _describe -t options 'oooconf secrets unlock option' '--shell:shell syntax to emit:(sh zsh bash pwsh)' '--raw:print only the unlocked session token'")
+    lines.append(
+        "        _describe -t options 'oooconf secrets unlock option' '--shell:shell syntax to emit:(sh zsh bash pwsh)' '--raw:print only the unlocked session token'"
+    )
     lines.append("        ;;")
     lines.append("      add|remove)")
-    lines.append("        _describe -t options \"oooconf secrets $secrets_command option\" '--template:override the tracked template path:_files'")
+    lines.append(
+        "        _describe -t options \"oooconf secrets $secrets_command option\" '--template:override the tracked template path:_files'"
+    )
     lines.append("        ;;")
     lines.append("      logout)")
     lines.append("        return 0")
@@ -428,7 +414,9 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.extend(format_ps_array(SECRETS_SUBCOMMANDS))
     lines.append("    )")
     lines.append("")
-    lines.append("    $OooconfShellSubcommands = @('status', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')")
+    lines.append(
+        "    $OooconfShellSubcommands = @('status', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')"
+    )
     lines.append("    $OooconfForgitAliasModes = @('plain', 'forgit', 'status')")
     lines.append("    $OooconfTypoHandlingModes = @('silent', 'suggest', 'help', 'status')")
     lines.append("    $OooconfPsfzfModes = @('enabled', 'disabled', 'status')")
@@ -501,7 +489,9 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("                    'sync'   { $completions = @('--dry-run', '--force', '--template', '--backend') }")
     lines.append("                    'list'   { $completions = @('--resolved', '--template', '--backend') }")
     lines.append("                    'ls'     { $completions = @('--resolved', '--template', '--backend') }")
-    lines.append("                    'login'  { $completions = @('--server', '--method', '--client-id', '--client-secret') }")
+    lines.append(
+        "                    'login'  { $completions = @('--server', '--method', '--client-id', '--client-secret') }"
+    )
     lines.append("                    default  { $completions = @('--template') }")
     lines.append("                }")
     lines.append("            }")
@@ -531,7 +521,9 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("        $completions = @('--dry-run', '--yes-optional') + $OooconfDepsKeys")
     lines.append("    }")
     lines.append("    elseif ($subcommand -eq 'agents') {")
-    lines.append("        $completions = @('detect', 'sync', 'doctor', 'update', '--json', '--check', '--strict-config-paths')")
+    lines.append(
+        "        $completions = @('detect', 'sync', 'doctor', 'update', '--json', '--check', '--strict-config-paths')"
+    )
     lines.append("    }")
     lines.append("    elseif ($subcommand -eq 'update-pins') {")
     lines.append("        $completions = @('--apply')")
@@ -540,7 +532,7 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("        $completions = @('--dry-run')")
     lines.append("    }")
     lines.append("")
-    lines.append("    return $completions | Where-Object { $_ -like \"$wordToComplete*\" } | ForEach-Object {")
+    lines.append('    return $completions | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {')
     lines.append("        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)")
     lines.append("    }")
     lines.append("}")
@@ -549,7 +541,9 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("@('oooconf', 'oooconf.ps1', 'oooconf.cmd', 'o', 'o.ps1', 'o.cmd') | ForEach-Object {")
     lines.append("    Register-ArgumentCompleter -Native -CommandName $_ -ScriptBlock {")
     lines.append("        param($wordToComplete, $commandAst, $cursorPosition)")
-    lines.append("        Get-OooconfCompletions -wordToComplete $wordToComplete -commandAst $commandAst -cursorPosition $cursorPosition")
+    lines.append(
+        "        Get-OooconfCompletions -wordToComplete $wordToComplete -commandAst $commandAst -cursorPosition $cursorPosition"
+    )
     lines.append("    }")
     lines.append("}")
 
@@ -558,7 +552,8 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
 
 def main() -> int:
     commands = load_commands(COMMANDS_FILE)
-    deps = parse_optional_deps(OPTIONAL_DEPS_FILE)
+    deps_data = load_deps()["deps"]
+    deps = [(dep.get("key", ""), dep.get("description", "")) for dep in deps_data if dep.get("key")]
 
     ZSH_OUTPUT.write_text(render_zsh(commands, deps), encoding="utf-8", newline="\n")
     POWERSHELL_OUTPUT.write_text(render_powershell(commands, deps), encoding="utf-8", newline="\n")

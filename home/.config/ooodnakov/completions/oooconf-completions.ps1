@@ -90,6 +90,7 @@ function Get-OooconfCompletions {
         'lazygit',
         'uv',
         'bw',
+        'pnpm',
         'rtk',
         'imagemagick',
         'ghostscript',

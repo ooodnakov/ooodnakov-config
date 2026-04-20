@@ -84,6 +84,7 @@ deps_keys=(
   'lazygit:simple terminal UI for git commands'
   'uv:Python package manager via official installer'
   'bw:Bitwarden CLI via official native archive'
+  'pnpm:Node.js package manager via corepack or npm fallback'
   'rtk:token-optimized command proxy for AI CLI workflows'
   'imagemagick:Image processing library (required by Snacks.image)'
   'ghostscript:PostScript and PDF interpreter (required by Snacks.image for PDFs)'

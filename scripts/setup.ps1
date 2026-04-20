@@ -21,6 +21,11 @@ $DependencyKeys = $filteredKeys
 
 $ErrorActionPreference = "Stop"
 
+# Allow syntax/import checks to dot-source this script without executing setup actions.
+if ($MyInvocation.InvocationName -eq ".") {
+    return
+}
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $OptionalDepsScript = Join-Path $PSScriptRoot "read_optional_deps.py"
 $AutogenCompletionsManifest = Join-Path $PSScriptRoot "autogen-completions.txt"
@@ -322,17 +327,45 @@ function Test-OptionalDependencyApplicable {
     }
 }
 
-function Get-OptionalDependencySpecsFromTomlFallback {
+function Get-OptionalDepsTomlFallbackData {
+    if ($script:OptionalDepsTomlFallbackData) {
+        return $script:OptionalDepsTomlFallbackData
+    }
+
     $tomlPath = Join-Path $PSScriptRoot "optional-deps.toml"
     if (-not (Test-Path $tomlPath)) {
-        return @()
+        $script:OptionalDepsTomlFallbackData = @{
+            Deps        = @()
+            MinimalKeys = @()
+        }
+        return $script:OptionalDepsTomlFallbackData
     }
 
     $entries = @()
+    $minimalKeys = @()
     $current = @{}
+    $inMinimalSection = $false
     foreach ($rawLine in (Get-Content -Path $tomlPath -ErrorAction SilentlyContinue)) {
         $line = $rawLine.Trim()
         if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
+            continue
+        }
+
+        if ($line -eq "[minimal]") {
+            $inMinimalSection = $true
+            continue
+        }
+
+        if ($line -match '^\[' -and $line -ne "[minimal]" -and $line -ne "[[deps]]") {
+            $inMinimalSection = $false
+        }
+
+        if ($inMinimalSection -and $line -match '^keys\s*=\s*\[(.*)\]\s*$') {
+            $minimalKeys = @(
+                $matches[1] -split ',' |
+                    ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
+                    Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            )
             continue
         }
 
@@ -356,7 +389,7 @@ function Get-OptionalDependencySpecsFromTomlFallback {
         $entries += ,$current
     }
 
-    return @($entries | ForEach-Object {
+    $deps = @($entries | ForEach-Object {
         $entry = $_
         $linux = @{}
         $macos = @{}
@@ -375,6 +408,7 @@ function Get-OptionalDependencySpecsFromTomlFallback {
             Key         = if ($entry.ContainsKey("key")) { $entry["key"] } else { "" }
             DisplayName = if ($entry.ContainsKey("display")) { $entry["display"] } elseif ($entry.ContainsKey("key")) { $entry["key"] } else { "" }
             Description = if ($entry.ContainsKey("description")) { $entry["description"] } else { "" }
+            Handler     = if ($entry.ContainsKey("handler")) { $entry["handler"] } else { "" }
             Ver         = if ($entry.ContainsKey("ver")) { $entry["ver"] } else { "" }
             Url         = if ($entry.ContainsKey("url")) { $entry["url"] } else { "" }
             Bin         = if ($entry.ContainsKey("bin")) { $entry["bin"] } else { "" }
@@ -385,6 +419,16 @@ function Get-OptionalDependencySpecsFromTomlFallback {
             Windows     = if ($windows.Count -gt 0) { $windows } else { $null }
         }
     })
+
+    $script:OptionalDepsTomlFallbackData = @{
+        Deps        = $deps
+        MinimalKeys = @($minimalKeys | Select-Object -Unique)
+    }
+    return $script:OptionalDepsTomlFallbackData
+}
+
+function Get-OptionalDependencySpecsFromTomlFallback {
+    return @((Get-OptionalDepsTomlFallbackData).Deps)
 }
 
 function Get-OptionalDependencySpecs {
@@ -411,6 +455,7 @@ function Get-OptionalDependencySpecs {
             Key         = $_.key
             DisplayName = $_.display
             Description = $_.description
+            Handler     = $_.handler
             Bin         = $_.bin
             Check       = $_.check
             WindowsOnly = ($null -eq $_.linux -and $null -eq $_.macos -and $null -ne $_.windows)
@@ -437,6 +482,7 @@ function Get-AllOptionalDependencySpecs {
                 Key         = $_.key
                 DisplayName = $_.display
                 Description = $_.description
+                Handler     = $_.handler
                 Bin         = $_.bin
                 Check       = $_.check
                 Linux       = if ($_.linux) { $_.linux } else { $null }
@@ -597,7 +643,9 @@ function Install-OptionalDependencyFromSpec {
         return $false
     }
 
-    switch ($key) {
+    $handler = if ($Spec.PSObject.Properties.Name -contains "Handler") { [string]$Spec.Handler } else { "" }
+
+    switch ($handler) {
         "choco" { return (Install-Chocolatey) }
         "posh-git" { return (Install-PoshGitIfMissing) }
         "psfzf" { return (Install-PSFzfIfMissing) }
@@ -612,6 +660,9 @@ function Install-OptionalDependencyFromSpec {
             Add-DependencySummary "k: skipped"
             return $false
         }
+    }
+
+    switch ($key) {
         "zsh" {
             Write-Warning "zsh is not natively supported on Windows; use WSL or a custom build."
             Add-DependencySummary "zsh: skipped"
@@ -2131,6 +2182,67 @@ function Test-DoctorCommand {
     $script:Failures.Add("doctor command $Name") | Out-Null
 }
 
+function Get-MinimalDependencyKeys {
+    if ($script:MinimalDependencyKeysCache) {
+        return $script:MinimalDependencyKeysCache
+    }
+
+    $keys = @()
+    try {
+        $raw = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("minimal") 2>$null
+        if ($raw) {
+            $keys = @($raw -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        }
+    } catch {
+    }
+
+    if ($keys.Count -eq 0) {
+        $keys = @((Get-OptionalDepsTomlFallbackData).MinimalKeys)
+    }
+
+    $script:MinimalDependencyKeysCache = @($keys | Select-Object -Unique)
+    return $script:MinimalDependencyKeysCache
+}
+
+function Test-DoctorDependency {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Spec,
+        [switch]$Required
+    )
+
+    if (-not $Spec -or [string]::IsNullOrWhiteSpace($Spec.Key)) {
+        return
+    }
+
+    if (Test-OptionalDependencyPresent -Key $Spec.Key) {
+        Write-Output "[ok] dependency: $($Spec.Key)"
+        return
+    }
+
+    if ($Required) {
+        Write-Output "[missing] dependency: $($Spec.Key)"
+        $script:Failures.Add("doctor dependency $($Spec.Key)") | Out-Null
+        return
+    }
+
+    Write-Output "[optional] dependency: $($Spec.Key) not installed"
+}
+
+function Test-DoctorOptionalCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    if (Test-AnyCommand -Names @($Name)) {
+        Write-Output "[ok] optional command: $Name"
+        return
+    }
+
+    Write-Output "[optional] command: $Name not installed"
+}
+
 function Test-Doctor {
     Write-Output "Running doctor checks..."
 
@@ -2154,16 +2266,26 @@ function Test-Doctor {
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")
 
-    Test-DoctorCommand -Name "git"
-    Test-DoctorCommand -Name "wezterm"
-    Test-DoctorCommand -Name "nvim"
-    Test-DoctorCommand -Name "oh-my-posh"
     Test-DoctorCommand -Name "oooconf"
     Test-DoctorCommand -Name "o"
-    Test-DoctorCommand -Name "komorebic"
-    Test-DoctorCommand -Name "whkd"
-    Test-DoctorCommand -Name "glazewm"
-    Test-DoctorCommand -Name "zebar"
+
+    $requiredDependencyKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($key in (Get-MinimalDependencyKeys)) {
+        if (-not [string]::IsNullOrWhiteSpace($key)) {
+            $null = $requiredDependencyKeys.Add($key)
+        }
+    }
+    foreach ($key in @("wezterm", "nvim")) {
+        $null = $requiredDependencyKeys.Add($key)
+    }
+
+    foreach ($spec in @(Get-OptionalDependencySpecs | Sort-Object Key)) {
+        Test-DoctorDependency -Spec $spec -Required:$requiredDependencyKeys.Contains($spec.Key)
+    }
+
+    foreach ($commandName in @("komorebic", "whkd")) {
+        Test-DoctorOptionalCommand -Name $commandName
+    }
 
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
