@@ -2144,6 +2144,88 @@ function Test-DoctorCommand {
     $script:Failures.Add("doctor command $Name") | Out-Null
 }
 
+function Get-MinimalDependencyKeys {
+    if ($script:MinimalDependencyKeysCache) {
+        return $script:MinimalDependencyKeysCache
+    }
+
+    $keys = @()
+    try {
+        $raw = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("minimal") 2>$null
+        if ($raw) {
+            $keys = @($raw -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        }
+    } catch {
+    }
+
+    if ($keys.Count -eq 0) {
+        $tomlPath = Join-Path $PSScriptRoot "optional-deps.toml"
+        if (Test-Path $tomlPath) {
+            $inMinimalSection = $false
+            foreach ($rawLine in Get-Content -Path $tomlPath -ErrorAction SilentlyContinue) {
+                $line = $rawLine.Trim()
+                if ($line -match '^\[minimal\]$') {
+                    $inMinimalSection = $true
+                    continue
+                }
+                if ($inMinimalSection -and $line -match '^\[') {
+                    break
+                }
+                if ($inMinimalSection -and $line -match '^keys\s*=\s*\[(.*)\]\s*$') {
+                    $keys = @(
+                        $matches[1] -split ',' |
+                            ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
+                            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                    )
+                    break
+                }
+            }
+        }
+    }
+
+    $script:MinimalDependencyKeysCache = @($keys | Select-Object -Unique)
+    return $script:MinimalDependencyKeysCache
+}
+
+function Test-DoctorDependency {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Spec,
+        [switch]$Required
+    )
+
+    if (-not $Spec -or [string]::IsNullOrWhiteSpace($Spec.Key)) {
+        return
+    }
+
+    if (Test-OptionalDependencyPresent -Key $Spec.Key) {
+        Write-Output "[ok] dependency: $($Spec.Key)"
+        return
+    }
+
+    if ($Required) {
+        Write-Output "[missing] dependency: $($Spec.Key)"
+        $script:Failures.Add("doctor dependency $($Spec.Key)") | Out-Null
+        return
+    }
+
+    Write-Output "[optional] dependency: $($Spec.Key) not installed"
+}
+
+function Test-DoctorOptionalCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    if (Test-AnyCommand -Names @($Name)) {
+        Write-Output "[ok] optional command: $Name"
+        return
+    }
+
+    Write-Output "[optional] command: $Name not installed"
+}
+
 function Test-Doctor {
     Write-Output "Running doctor checks..."
 
@@ -2167,16 +2249,26 @@ function Test-Doctor {
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")
 
-    Test-DoctorCommand -Name "git"
-    Test-DoctorCommand -Name "wezterm"
-    Test-DoctorCommand -Name "nvim"
-    Test-DoctorCommand -Name "oh-my-posh"
     Test-DoctorCommand -Name "oooconf"
     Test-DoctorCommand -Name "o"
-    Test-DoctorCommand -Name "komorebic"
-    Test-DoctorCommand -Name "whkd"
-    Test-DoctorCommand -Name "glazewm"
-    Test-DoctorCommand -Name "zebar"
+
+    $requiredDependencyKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($key in (Get-MinimalDependencyKeys)) {
+        if (-not [string]::IsNullOrWhiteSpace($key)) {
+            $null = $requiredDependencyKeys.Add($key)
+        }
+    }
+    foreach ($key in @("wezterm", "nvim")) {
+        $null = $requiredDependencyKeys.Add($key)
+    }
+
+    foreach ($spec in @(Get-OptionalDependencySpecs | Sort-Object Key)) {
+        Test-DoctorDependency -Spec $spec -Required:$requiredDependencyKeys.Contains($spec.Key)
+    }
+
+    foreach ($commandName in @("komorebic", "whkd")) {
+        Test-DoctorOptionalCommand -Name $commandName
+    }
 
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
