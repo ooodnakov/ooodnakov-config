@@ -45,6 +45,8 @@ $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $KnownShellAutoUvModes = @("enabled", "quiet", "status")
 $KnownKomorebiSubcommands = @("reload", "start", "stop")
+$KnownWmSubcommands = @("status", "set", "start", "stop", "reload")
+$KnownWmOptions = @("komorebi", "glazewm")
 $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
@@ -137,6 +139,7 @@ function Get-UiCommandIcon {
             "secrets" { return [char]::ConvertFromUtf32(0xF082E) }
             "agents" { return [char]::ConvertFromUtf32(0xF0B79) }
             "komorebi" { return [char]::ConvertFromUtf32(0xF074E) }
+            "wm" { return [char]::ConvertFromUtf32(0xF030F) }
             default { return [char]::ConvertFromUtf32(0xF060D) }
         }
     }
@@ -154,6 +157,7 @@ function Get-UiCommandIcon {
         "secrets" { return "[sec]" }
         "agents" { return "[agt]" }
         "komorebi" { return "[komo]" }
+        "wm" { return "[wm]" }
         default { return "[cmd]" }
     }
 }
@@ -504,6 +508,91 @@ function Set-PsfzfGitMode {
     Write-UiLine -Role ok -Message "psfzf-git mode set to $Mode"
     Write-UiLine -Role info -Message "pwsh: $envPs1"
     Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
+}
+
+function Invoke-WmCommand {
+    param(
+        [string[]]$WmArgs
+    )
+
+    $subcommand = if ($WmArgs.Count -gt 0) { $WmArgs[0] } else { "" }
+
+    switch ($subcommand) {
+        "" { Show-CommandUsage "wm"; return }
+        "help" { Show-CommandUsage "wm"; return }
+        "-h" { Show-CommandUsage "wm"; return }
+        "--help" { Show-CommandUsage "wm"; return }
+        "status" {
+            $active = "none"
+            if (Get-Process komorebi -ErrorAction SilentlyContinue) { $active = "komorebi" }
+            elseif (Get-Process glazewm -ErrorAction SilentlyContinue) { $active = "glazewm" }
+            
+            Write-UiLine -Role info -Message "Active Window Manager: $(Format-UiText -Text $active -Role ok -Bold)"
+            return
+        }
+        "set" {
+            $choice = if ($WmArgs.Count -gt 1) { $WmArgs[1] } else { "" }
+            if ($choice -notin $KnownWmOptions) {
+                Write-UiLine -Role fail -Message "Invalid WM choice: $choice"
+                Write-UiLine -Role hint -Message "Available options: $($KnownWmOptions -join ', ')"
+                return
+            }
+
+            Write-UiLine -Role info -Message "Switching to $choice..."
+            # Stop everything first
+            & "$PSScriptRoot/ooodnakov.ps1" wm stop
+            Start-Sleep -Milliseconds 500
+
+            if ($choice -eq "komorebi") {
+                & "$PSScriptRoot/ooodnakov.ps1" komorebi start
+            } elseif ($choice -eq "glazewm") {
+                if (-not (Get-Command glazewm -ErrorAction SilentlyContinue)) {
+                    Write-UiLine -Role warn -Message "GlazeWM is not installed. Run 'oooconf deps glazewm' first."
+                    return
+                }
+                Write-UiLine -Role info -Message "Starting GlazeWM..."
+                Start-Process glazewm -WindowStyle Hidden
+                Write-UiLine -Role ok -Message "GlazeWM started."
+            }
+            return
+        }
+        "start" {
+            # Start the one that is currently active/linked?
+            # For now, default to komorebi if nothing is running
+            if (Get-Process glazewm -ErrorAction SilentlyContinue) { Write-UiLine -Role info -Message "GlazeWM is already running." }
+            elseif (Get-Process komorebi -ErrorAction SilentlyContinue) { Write-UiLine -Role info -Message "Komorebi is already running." }
+            else { & "$PSScriptRoot/ooodnakov.ps1" wm set komorebi }
+            return
+        }
+        "stop" {
+            Write-UiLine -Role info -Message "Stopping all Window Managers..."
+            # Stop Komorebi
+            & "$PSScriptRoot/ooodnakov.ps1" komorebi stop
+            # Stop GlazeWM
+            Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
+            Write-UiLine -Role ok -Message "WM stack stopped."
+            return
+        }
+        "reload" {
+            if (Get-Process komorebi -ErrorAction SilentlyContinue) { & "$PSScriptRoot/ooodnakov.ps1" komorebi reload }
+            elseif (Get-Process glazewm -ErrorAction SilentlyContinue) {
+                Write-UiLine -Role info -Message "Reloading GlazeWM..."
+                # GlazeWM reload is just a keypress usually, or we can restart it
+                Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 500
+                Start-Process glazewm -WindowStyle Hidden
+                Write-UiLine -Role ok -Message "GlazeWM reloaded."
+            } else {
+                Write-UiLine -Role warn -Message "No active WM found to reload."
+            }
+            return
+        }
+        default {
+            $suggestion = Get-SuggestionFromList -InputValue $subcommand -Candidates $KnownWmSubcommands
+            Write-UnknownCommandMessage -Message "Unknown wm subcommand: $subcommand" -Suggestion $suggestion -Scope wm
+            throw "Unknown wm subcommand: $subcommand"
+        }
+    }
 }
 
 function Show-ShellStatus {
@@ -862,11 +951,11 @@ function Show-Usage {
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
     Write-UiCommandRow -CommandName "komorebi" -Description "manage komorebi tiling window manager state"
+    Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
     Write-Output @"
     Aliases:
     check -> doctor
-    "@
-  upgrade -> update
+    "@  upgrade -> update
 Note:
   bootstrap is Unix-only in this wrapper.
   On Windows, run `scripts/setup.ps1 install` for initial setup.
@@ -1077,12 +1166,37 @@ Examples:
         "komorebi" {
             Write-UiHelpBlock @"
 Usage: oooconf komorebi reload
+       oooconf komorebi start
+       oooconf komorebi stop
 
 Manage komorebi tiling window manager state.
 Subcommands:
-  reload  reloads the komorebi configuration using komorebic reload-configuration
+  reload  reloads the komorebi configuration
+  start   starts komorebi, whkd, and the status bar
+  stop    stops the komorebi stack
 Examples:
   oooconf komorebi reload
+"@
+        }
+        "wm" {
+            Write-UiHelpBlock @"
+Usage: oooconf wm status
+       oooconf wm set [komorebi|glazewm]
+       oooconf wm start
+       oooconf wm stop
+       oooconf wm reload
+
+Switch between or manage window managers.
+Subcommands:
+  status  shows the currently running window manager
+  set     stops the current WM and starts the specified one
+  start   starts the default WM (komorebi)
+  stop    stops any running WM stack
+  reload  reloads the configuration of the active WM
+Examples:
+  oooconf wm status
+  oooconf wm set glazewm
+  oooconf wm reload
 "@
         }
         "" { Show-Usage }
@@ -1319,6 +1433,9 @@ switch ($command) {
     }
     "komorebi" {
         Invoke-KomorebiCommand -KomorebiArgs $remaining
+    }
+    "wm" {
+        Invoke-WmCommand -WmArgs $remaining
     }
     default {
         $suggestion = Get-CommandSuggestion -InputCommand $command

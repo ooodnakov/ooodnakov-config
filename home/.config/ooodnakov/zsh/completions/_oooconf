@@ -24,6 +24,7 @@ oooconf_commands=(
   'preview:alias for dry-run'
   'upgrade:alias for update'
   'komorebi:command'
+  'wm:command'
   'help:show help'
 )
 
@@ -92,6 +93,7 @@ deps_keys=(
   'neovim-node:Neovim provider for Node.js plugins'
   'neovim-python:Neovim provider for Python plugins'
   'fastfetch:system information tool'
+  'glazewm:Tiling window manager for Windows'
 )
 
 agents_subcommands=(
@@ -160,7 +162,7 @@ for (( i = 2; i < CURRENT; i++ )); do
       ;;
     -*)
       ;;
-    bootstrap|install|deps|update|doctor|dry-run|delete|remove|lock|update-pins|completions|agents|secrets|shell|version|check|preview|upgrade|komorebi|help)
+    bootstrap|install|deps|update|doctor|dry-run|delete|remove|lock|update-pins|completions|agents|secrets|shell|version|check|preview|upgrade|komorebi|wm|help)
       command_name="$words[i]"
       break
       ;;

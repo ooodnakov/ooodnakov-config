@@ -1,0 +1,151 @@
+# GlazeWM Configuration (ooodnakov-config)
+# https://github.com/glazewm/glazewm
+
+general:
+  # Gaps between windows and the screen edge.
+  gaps:
+    inner_gap: 10
+    outer_gap: 10
+
+  # Focus behavior
+  focus_follows_mouse: true
+  mouse_follows_focus: true
+
+  # Border settings (thicker, high contrast like komorebi)
+  active_window_border:
+    enabled: true
+    width: 6
+    color: "#8eb2c7" # Ashes Blue
+
+  # Animation settings
+  animations:
+    enabled: true
+
+# Bar configuration
+bar:
+  enabled: true
+  height: "40px"
+  position: "top"
+  opacity: 0.8
+  background: "#1c2023"
+  foreground: "#c0c5ce"
+  font_family: "MesloLGSDZ Nerd Font Mono"
+  font_size: "14px"
+  padding: "4px 10px"
+  offset_x: "10px"
+  offset_y: "10px"
+  width: "calc(100% - 20px)"
+  components_left:
+    - type: "workspaces"
+      focused_color: "#8eb2c7"
+      empty_color: "#565e65"
+      occupied_color: "#c0c5ce"
+  components_right:
+    - type: "time"
+      format: "󱑒 %H:%M"
+    - type: "date"
+      format: "󰃭 %a, %b %d"
+
+# Workspace icons (matching komorebi)
+workspaces:
+  - name: "1"
+    display_name: "󰈹"
+  - name: "2"
+    display_name: ""
+  - name: "3"
+    display_name: "󰙯"
+  - name: "4"
+    display_name: "󰓓"
+  - name: "5"
+    display_name: "󱓷"
+  - name: "6"
+    display_name: "󰉋"
+  - name: "7"
+    display_name: "󰊫"
+  - name: "8"
+    display_name: "8"
+  - name: "9"
+    display_name: "9"
+  - name: "10"
+    display_name: "10"
+
+# Keybindings matching komorebi behavior
+keybindings:
+  # Focus windows
+  - command: "focus left"
+    binding: "Alt+H"
+  - command: "focus down"
+    binding: "Alt+J"
+  - command: "focus up"
+    binding: "Alt+K"
+  - command: "focus right"
+    binding: "Alt+L"
+
+  # Move windows
+  - command: "move left"
+    binding: "Alt+Shift+H"
+  - command: "move down"
+    binding: "Alt+Shift+J"
+  - command: "move up"
+    binding: "Alt+Shift+K"
+  - command: "move right"
+    binding: "Alt+Shift+L"
+
+  # Workspaces
+  - command: "switch workspace 1"
+    binding: "Alt+1"
+  - command: "switch workspace 2"
+    binding: "Alt+2"
+  - command: "switch workspace 3"
+    binding: "Alt+3"
+  - command: "switch workspace 4"
+    binding: "Alt+4"
+  - command: "switch workspace 5"
+    binding: "Alt+5"
+  - command: "switch workspace 6"
+    binding: "Alt+6"
+  - command: "switch workspace 7"
+    binding: "Alt+7"
+  - command: "switch workspace 8"
+    binding: "Alt+8"
+  - command: "switch workspace 9"
+    binding: "Alt+9"
+  - command: "switch workspace 10"
+    binding: "Alt+0"
+
+  # Move to workspace
+  - command: "move to workspace 1"
+    binding: "Alt+Shift+1"
+  - command: "move to workspace 2"
+    binding: "Alt+Shift+2"
+  - command: "move to workspace 3"
+    binding: "Alt+Shift+3"
+  - command: "move to workspace 4"
+    binding: "Alt+Shift+4"
+  - command: "move to workspace 5"
+    binding: "Alt+Shift+5"
+  - command: "move to workspace 6"
+    binding: "Alt+Shift+6"
+  - command: "move to workspace 7"
+    binding: "Alt+Shift+7"
+  - command: "move to workspace 8"
+    binding: "Alt+Shift+8"
+  - command: "move to workspace 9"
+    binding: "Alt+Shift+9"
+  - command: "move to workspace 10"
+    binding: "Alt+Shift+0"
+
+  # Window management
+  - command: "close"
+    binding: "Alt+Q"
+  - command: "toggle floating"
+    binding: "Alt+T"
+  - command: "toggle fullscreen"
+    binding: "Alt+Shift+F"
+  - command: "reload config"
+    binding: "Alt+Shift+O"
+
+# Rules for floating windows
+window_rules:
+  - command: "set floating"
+    match_process_name: "/(Calculator|TaskManager|ControlPanel)/"
