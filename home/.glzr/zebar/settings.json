@@ -2,8 +2,8 @@
   "$schema": "https://github.com/glzr-io/zebar/raw/v3.3.1/resources/settings-schema.json",
   "startupConfigs": [
     {
-      "pack": "ooodnakov",
-      "widget": "ooodnakov",
+      "pack": "overline-zebar",
+      "widget": "main",
       "preset": "default"
     }
   ]

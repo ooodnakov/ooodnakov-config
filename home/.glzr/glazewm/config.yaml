@@ -29,7 +29,7 @@ general:
 gaps:
   inner_gap: '8px'
   outer_gap:
-    top: '55px'
+    top: '45px'
     left: '12px'
     right: '12px'
     bottom: '12px'
