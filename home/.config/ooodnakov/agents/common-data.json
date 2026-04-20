@@ -1,9 +1,9 @@
 {
   "mcp_servers": {
     "playwright": {
-      "command": "pnpm dlx",
+      "command": "pnpm",
       "args": [
-        "-y",
+        "dlx",
         "@playwright/mcp@latest"
       ],
       "description": "headless browser automation and web testing"
@@ -16,19 +16,20 @@
       "description": "Windows system inspection and automation (processes, windows, registry)"
     },
     "context7": {
-      "command": "pnpm dlx",
+      "command": "pnpm",
       "args": [
-        "-y",
+        "dlx",
         "@upstash/context7-mcp",
         "--api-key",
-        "$CONTEXT7_API_KEY"
+        "{CONTEXT7_API_KEY}"
       ],
+      "env_vars": ["CONTEXT7_API_KEY"],
       "description": "documentation search and code examples for thousands of libraries"
     },
     "github": {
-      "command": "pnpm dlx",
+      "command": "pnpm",
       "args": [
-        "-y",
+        "dlx",
         "@modelcontextprotocol/server-github"
       ],
       "description": "GitHub API access (repositories, issues, PRs)"
@@ -52,8 +53,8 @@
         "gemini-webapi-mcp"
       ],
       "env": {
-        "GEMINI_PSIDTS": "$GEMINI_PSIDTS",
-        "GEMINI_PSID": "$GEMINI_PSID"
+        "GEMINI_PSIDTS": "{GEMINI_PSIDTS}",
+        "GEMINI_PSID": "{GEMINI_PSID}"
       },
       "install": "uv sync",
       "description": "Unofficial Gemini Web API access"

@@ -84,6 +84,7 @@ deps_keys=(
   'lazygit:simple terminal UI for git commands'
   'uv:Python package manager via official installer'
   'bw:Bitwarden CLI via official native archive'
+  'rtk:token-optimized command proxy for AI CLI workflows'
   'imagemagick:Image processing library (required by Snacks.image)'
   'ghostscript:PostScript and PDF interpreter (required by Snacks.image for PDFs)'
   'luarocks:Package manager for Lua modules'
@@ -93,6 +94,7 @@ deps_keys=(
   'neovim-node:Neovim provider for Node.js plugins'
   'neovim-python:Neovim provider for Python plugins'
   'fastfetch:system information tool'
+  'btop:system information tool'
   'glazewm:Tiling window manager for Windows'
   'zebar:Modern, customizable status bar for Windows'
 )

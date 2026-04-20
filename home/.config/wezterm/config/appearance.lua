@@ -3,6 +3,10 @@ local backdrops = require("utils.backdrops")
 local colors = require("colors.custom")
 local platform = require("utils.platform")
 
+def_window_background_opacity = 0
+if platform.is_mac then
+	def_window_background_opacity = 0.01
+end 
 return {
 	max_fps = 120,
 	front_end = "OpenGL", ---@type 'WebGpu' | 'OpenGL' | 'Software'
@@ -58,9 +62,9 @@ return {
 		border_bottom_height = '0cell',
 		border_top_height = '0cell',
 	},
-	window_decorations = "INTEGRATED_BUTTONS",
-	window_background_opacity = 0,
-	macos_window_background_blur = 30,
+	window_decorations = "INTEGRATED_BUTTONS|RESIZE",
+	window_background_opacity = def_window_background_opacity,
+	macos_window_background_blur = 300,
 	-- kde_window_background_blur = true,
 	win32_system_backdrop = 'Acrylic',
 	inactive_pane_hsb = {

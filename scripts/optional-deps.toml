@@ -430,6 +430,19 @@ macos.manager = "brew"
 macos.package = "bitwarden-cli"
 windows.manager = "download"
 
+[[deps]]
+key = "rtk"
+display = "rtk"
+description = "token-optimized command proxy for AI CLI workflows"
+ver = "0.37.0"
+url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-${ver}-"
+bin = "rtk"
+check = "rtk --version"
+linux.manager = "download"
+linux.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-${ver}-x86_64-unknown-linux-musl.tar.gz"
+macos.manager = "download"
+macos.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-${ver}-aarch64-apple-darwin.tar.gz"
+windows.manager = "download"
 windows.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-x86_64-pc-windows-msvc.zip"
 
 [[deps]]

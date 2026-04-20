@@ -90,6 +90,7 @@ function Get-OooconfCompletions {
         'lazygit',
         'uv',
         'bw',
+        'rtk',
         'imagemagick',
         'ghostscript',
         'luarocks',
@@ -99,6 +100,7 @@ function Get-OooconfCompletions {
         'neovim-node',
         'neovim-python',
         'fastfetch',
+        'btop',
         'glazewm',
         'zebar'
     )
