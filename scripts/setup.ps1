@@ -655,6 +655,24 @@ function Install-OptionalDependencyFromSpec {
         "dua" { return (Install-DuaIfMissing) }
         "rtk" { return (Install-RtkIfMissing) }
         "tectonic" { return (Install-TectonicIfMissing) }
+        "zebar-pack-overline" {
+            if (-not $IsWindows) {
+                Add-DependencySummary "overline-zebar: skipped (Windows only)"
+                return $false
+            }
+
+            $cliScript = Join-Path $PSScriptRoot "ooodnakov.ps1"
+            $res = Invoke-ActionWithSpinner -Description "Installing overline-zebar" -Action {
+                param($scriptPath)
+                & pwsh -NoProfile -File $scriptPath wm zebar-config install overline-zebar | Out-Null
+            } -ArgumentList $cliScript
+            if ($res) {
+                Add-DependencySummary "overline-zebar: installed"
+            } else {
+                Add-DependencySummary "overline-zebar: install attempted"
+            }
+            return $res
+        }
         "k" {
             Write-Warning "k is not available on Windows."
             Add-DependencySummary "k: skipped"

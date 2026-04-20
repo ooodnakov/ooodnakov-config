@@ -620,3 +620,12 @@ check = "zebar --version"
 manager = "winget"
 package = "Zebar.Zebar"
 
+
+[[deps]]
+key = "overline-zebar"
+display = "overline-zebar"
+description = "Third-party Zebar widget pack with system tray, widgets, and a config UI"
+handler = "zebar-pack-overline"
+[deps.windows]
+manager = "custom"
+command = "oooconf wm zebar-config install overline-zebar"

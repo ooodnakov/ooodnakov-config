@@ -136,6 +136,10 @@ function Get-ZebarSettingsPath {
     return Join-Path (Get-ZebarConfigRoot) "settings.json"
 }
 
+function Get-ZebarExternalRoot {
+    return Join-Path $HOME ".glzr/zebar-external"
+}
+
 function Normalize-ZebarConfigName {
     param([string]$Value)
 
@@ -256,6 +260,123 @@ function Restart-ZebarIfRunning {
     Restart-ZebarForGlazeWm
 }
 
+function Add-GitExcludeEntry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RelativePath
+    )
+
+    $excludePath = Join-Path $RepoRoot ".git/info/exclude"
+    $existing = if (Test-Path $excludePath) { Get-Content -Path $excludePath -ErrorAction SilentlyContinue } else { @() }
+    if ($existing -contains $RelativePath) {
+        return
+    }
+
+    Add-Content -Path $excludePath -Value $RelativePath
+}
+
+function Resolve-ZebarInstallTarget {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Value
+    )
+
+    $knownTargets = @{
+        "overlinezebar" = @{
+            RepoUrl = "https://github.com/mushfikurr/overline-zebar.git"
+            DirectoryName = "overline-zebar"
+            BuildCommand = "pnpm --filter ""@overline-zebar/*"" build"
+        }
+    }
+
+    $normalized = Normalize-ZebarConfigName $Value
+    if ($knownTargets.ContainsKey($normalized)) {
+        return [pscustomobject]$knownTargets[$normalized]
+    }
+
+    if ($Value -match "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$") {
+        $directoryName = ($Value -split "/")[-1]
+        return [pscustomobject]@{
+            RepoUrl = "https://github.com/$Value.git"
+            DirectoryName = $directoryName
+            BuildCommand = "pnpm build"
+        }
+    }
+
+    if ($Value -match "^(https://|git@)") {
+        $directoryName = [System.IO.Path]::GetFileNameWithoutExtension($Value.TrimEnd('/'))
+        return [pscustomobject]@{
+            RepoUrl = $Value
+            DirectoryName = $directoryName
+            BuildCommand = "pnpm build"
+        }
+    }
+
+    return $null
+}
+
+function Install-ZebarConfigPack {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Target
+    )
+
+    $resolved = Resolve-ZebarInstallTarget -Value $Target
+    if (-not $resolved) {
+        Write-UiLine -Role fail -Message "Unknown Zebar pack source: $Target"
+        Write-UiLine -Role hint -Message "Use a known name like overline-zebar or a GitHub repo like owner/repo."
+        return $false
+    }
+
+    $externalRoot = Get-ZebarExternalRoot
+    $externalPath = Join-Path $externalRoot $resolved.DirectoryName
+    $linkPath = Join-Path (Get-ZebarConfigRoot) $resolved.DirectoryName
+    New-Item -ItemType Directory -Path $externalRoot -Force | Out-Null
+
+    if (Test-Path (Join-Path $externalPath ".git")) {
+        Write-UiLine -Role info -Message "Updating Zebar pack $($resolved.DirectoryName)..."
+        & git -C $externalPath pull --ff-only
+    } else {
+        Write-UiLine -Role info -Message "Cloning Zebar pack $($resolved.DirectoryName)..."
+        & git clone $resolved.RepoUrl $externalPath
+    }
+    if ($LASTEXITCODE -ne 0) {
+        Write-UiLine -Role fail -Message "Failed to fetch Zebar pack from $($resolved.RepoUrl)."
+        return $false
+    }
+
+    if (Test-Path (Join-Path $externalPath "package.json")) {
+        Write-UiLine -Role info -Message "Installing dependencies for $($resolved.DirectoryName)..."
+        & pnpm install --dir $externalPath
+        if ($LASTEXITCODE -ne 0) {
+            Write-UiLine -Role fail -Message "pnpm install failed for $($resolved.DirectoryName)."
+            return $false
+        }
+
+        Write-UiLine -Role info -Message "Building $($resolved.DirectoryName)..."
+        & pwsh -NoProfile -Command "Set-Location -LiteralPath '$externalPath'; $($resolved.BuildCommand)"
+        if ($LASTEXITCODE -ne 0) {
+            Write-UiLine -Role fail -Message "Build failed for $($resolved.DirectoryName)."
+            return $false
+        }
+    }
+
+    if (Test-Path $linkPath) {
+        $item = Get-Item -Path $linkPath -Force
+        if ($item.LinkType -and $item.Target -contains $externalPath) {
+            Add-GitExcludeEntry -RelativePath ("home/.glzr/zebar/{0}" -f $resolved.DirectoryName)
+            return $true
+        }
+
+        Write-UiLine -Role fail -Message "Path already exists and is not the expected external pack link: $linkPath"
+        return $false
+    }
+
+    New-Item -ItemType SymbolicLink -Path $linkPath -Target $externalPath | Out-Null
+    Add-GitExcludeEntry -RelativePath ("home/.glzr/zebar/{0}" -f $resolved.DirectoryName)
+    return $true
+}
+
 function Invoke-ZebarConfigCommand {
     param(
         [string[]]$ZebarArgs
@@ -318,9 +439,34 @@ function Invoke-ZebarConfigCommand {
             Write-UiLine -Role ok -Message "Zebar config set to $($pack.Id)."
             return
         }
+        "install" {
+            $target = if ($ZebarArgs.Count -gt 1) { $ZebarArgs[1] } else { "" }
+            if (-not $target) {
+                Write-UiLine -Role fail -Message "Missing Zebar pack source."
+                Write-UiLine -Role hint -Message "Usage: oooconf wm zebar-config install <name|owner/repo|git-url>"
+                return
+            }
+
+            if (-not (Install-ZebarConfigPack -Target $target)) {
+                return
+            }
+
+            $packs = @(Get-ZebarWidgetPacks)
+            $normalizedTarget = Normalize-ZebarConfigName $target
+            $pack = $packs | Where-Object { $_.MatchKeys -contains $normalizedTarget } | Select-Object -First 1
+            if ($pack) {
+                Set-ZebarActiveConfig -Pack $pack
+                Restart-ZebarIfRunning
+                Write-UiLine -Role ok -Message "Installed and activated Zebar config $($pack.Id)."
+            } else {
+                Write-UiLine -Role ok -Message "Installed Zebar pack from $target."
+                Write-UiLine -Role hint -Message "Run 'oooconf wm zebar-config list' to confirm the available pack name."
+            }
+            return
+        }
         default {
             Write-UiLine -Role fail -Message "Unknown zebar-config action: $action"
-            Write-UiLine -Role hint -Message "Use: status, list, or set <name>"
+            Write-UiLine -Role hint -Message "Use: status, list, set <name>, or install <source>"
             return
         }
     }
