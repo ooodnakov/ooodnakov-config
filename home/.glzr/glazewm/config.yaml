@@ -5,7 +5,11 @@ general:
   # Gaps between windows and the screen edge.
   gaps:
     inner_gap: 8
-    outer_gap: 12
+    outer_gap:
+      top: 55
+      left: 12
+      right: 12
+      bottom: 12
     scale_with_dpi: true
 
   # Focus behavior
@@ -156,6 +160,10 @@ binding_modes:
 
 # Rules for floating windows
 window_rules:
+  - commands: ['ignore']
+    match:
+      - window_process: { equals: 'zebar' }
+
   - commands: ['set-floating']
     match:
       - window_process: { regex: 'Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost' }
