@@ -99,6 +99,7 @@ function Get-OooconfCompletions {
         'neovim-node',
         'neovim-python',
         'fastfetch',
+        'btop',
         'glazewm',
         'zebar'
     )
