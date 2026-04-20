@@ -3,12 +3,12 @@
 
 general:
   startup_commands:
-    - 'shell-exec zebar startup'
+    - 'shell-exec powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Milliseconds 1500; zebar startup"'
   shutdown_commands:
     - 'shell-exec taskkill /F /IM zebar.exe'
   config_reload_commands:
     - 'shell-exec taskkill /F /IM zebar.exe'
-    - 'shell-exec zebar startup'
+    - 'shell-exec powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Milliseconds 1500; zebar startup"'
 
   # Focus behavior
   focus_follows_cursor: true
