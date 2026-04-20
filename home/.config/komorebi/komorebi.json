@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LGUG2Z/komorebi/v0.1.40/schema.json",
+  "app_specific_configuration_path": "$Env:USERPROFILE/applications.json",
+  "window_hiding_behaviour": "Cloak",
+  "cross_monitor_move_behaviour": "Insert",
+  "default_workspace_padding": 10,
+  "default_container_padding": 10,
+  "border": true,
+  "border_width": 10,
+  "border_offset": -1,
+  "focus_follows_mouse": "Komorebi",
+  "mouse_follows_focus": true,
+  "animation": {
+    "enabled": true,
+    "duration": 150,
+    "fps": 120
+  },
+  "theme": {
+    "palette": "Base16",
+    "name": "Ashes",
+    "active_border": "Base0D",
+    "unfocused_border": "Base03",
+    "bar_accent": "Base0D"
+  },
+  "float_rules": [
+    { "kind": "Class", "id": "SunAwtDialog", "matching_strategy": "Equals" },
+    { "kind": "Class", "id": "TaskManagerWindow", "matching_strategy": "Equals" },
+    { "kind": "Class", "id": "ApplicationFrameWindow", "matching_strategy": "Equals" },
+    { "kind": "Exe", "id": "CalculatorApp.exe", "matching_strategy": "Equals" },
+    { "kind": "Exe", "id": "ControlPanel.exe", "matching_strategy": "Equals" }
+  ],
+  "monitors": [
+    {
+      "workspaces": [
+        { "name": "󰈹", "layout": "BSP" },
+        { "name": "", "layout": "VerticalStack" },
+        { "name": "󰙯", "layout": "HorizontalStack" },
+        { "name": "󰓓", "layout": "UltrawideVerticalStack" },
+        { "name": "󱓷", "layout": "Rows" },
+        { "name": "󰉋", "layout": "Grid" },
+        { "name": "󰊫", "layout": "RightMainVerticalStack" }
+      ]
+    },
+    {
+      "workspaces": [
+        { "name": "󰈹", "layout": "BSP" },
+        { "name": "", "layout": "VerticalStack" },
+        { "name": "󰙯", "layout": "HorizontalStack" },
+        { "name": "󰓓", "layout": "UltrawideVerticalStack" },
+        { "name": "󱓷", "layout": "Rows" },
+        { "name": "󰉋", "layout": "Grid" },
+        { "name": "󰊫", "layout": "RightMainVerticalStack" }
+      ]
+    }
+  ]
+}

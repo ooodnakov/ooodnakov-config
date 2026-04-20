@@ -69,6 +69,29 @@ function Get-DepInfo {
     if ($dep) { $dep } else { @{} }
 }
 
+function Install-Fonts {
+    Step-Progress -Status "Installing bundled fonts"
+    $fontDir = Join-Path $RepoRoot "fonts/meslo"
+    if (-not (Test-Path $fontDir)) {
+        Write-Warning "Font directory not found at $fontDir"
+        return
+    }
+
+    $shellApp = New-Object -ComObject Shell.Application
+    $fontsFolder = $shellApp.Namespace(0x14) # CSIDL_FONTS
+
+    $fonts = Get-ChildItem -Path $fontDir -Filter "*.ttf"
+    foreach ($font in $fonts) {
+        $targetPath = Join-Path $env:SystemRoot "Fonts\$($font.Name)"
+        if (-not (Test-Path $targetPath)) {
+            Write-Output "Installing font: $($font.Name)"
+            $fontsFolder.CopyHere($font.FullName, 0x10)
+        } else {
+            Write-Verbose "Font already installed: $($font.Name)"
+        }
+    }
+}
+
 $script:DependencySummary = [System.Collections.Generic.List[string]]::new()
 $script:NewlyAvailableCommands = [System.Collections.Generic.List[string]]::new()
 $script:ToolSummary = [System.Collections.Generic.List[string]]::new()
@@ -2112,7 +2135,7 @@ function Test-DoctorCommand {
         [string]$Name
     )
 
-    if (Get-Command $Name -ErrorAction SilentlyContinue) {
+    if (Test-AnyCommand -Names @($Name)) {
         Write-Output "[ok] command: $Name"
         return
     }
@@ -2136,12 +2159,24 @@ function Test-Doctor {
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
 
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")
+
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")
+
     Test-DoctorCommand -Name "git"
     Test-DoctorCommand -Name "wezterm"
     Test-DoctorCommand -Name "nvim"
     Test-DoctorCommand -Name "oh-my-posh"
     Test-DoctorCommand -Name "oooconf"
     Test-DoctorCommand -Name "o"
+    Test-DoctorCommand -Name "komorebic"
+    Test-DoctorCommand -Name "whkd"
+    Test-DoctorCommand -Name "glazewm"
+    Test-DoctorCommand -Name "zebar"
 
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
@@ -2153,7 +2188,8 @@ function Test-Doctor {
     }
 
     if ($script:Failures.Count -gt 0) {
-        throw "Doctor found $($script:Failures.Count) issue(s)."
+        Write-Output "`nDoctor found $($script:Failures.Count) issue(s). Run 'oooconf install' to try fixing them."
+        return
     }
 
     Write-Output "Doctor checks passed."
@@ -2229,6 +2265,25 @@ function Invoke-Install {
     }
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")) {
         Add-ToolSummary "o.cmd: linked into $LocalBinDir"
+    }
+
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")) {
+        Add-ToolSummary "komorebi: linked config"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")) {
+        Add-ToolSummary "komorebi-bar: linked config"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")) {
+        Add-ToolSummary "komorebi-applications: linked config"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")) {
+        Add-ToolSummary "whkd: linked config"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")) {
+        Add-ToolSummary "glazewm: linked config directory"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")) {
+        Add-ToolSummary "zebar: linked config directory"
     }
 
     if (Ensure-UserPathContains -PathEntry $LocalBinDir) {

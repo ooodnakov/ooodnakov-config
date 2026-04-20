@@ -462,7 +462,7 @@ windows.manager = "custom"
 [[deps]]
 key = "rtk"
 display = "rtk"
-description = "runtime tools kit for streamlined command output"
+description = "token-optimized command proxy for AI CLI workflows"
 handler = "rtk"
 ver = "0.37.0"
 url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-x86_64-unknown-linux-musl.tar.gz"
@@ -587,3 +587,36 @@ macos.package = "fastfetch"
 windows.manager = "winget"
 windows.winget_id = "fastfetch-cli.fastfetch"
 windows.package = "fastfetch"
+
+[[deps]]
+key = "btop"
+display = "btop"
+description = "system information tool"
+linux.manager = "apt"
+linux.package = "btop"
+macos.manager = "brew"
+macos.package = "btop"
+windows.manager = "scoop"
+windows.package = "btop"
+
+[[deps]]
+key = "glazewm"
+display = "GlazeWM"
+description = "Tiling window manager for Windows"
+bin = "glazewm"
+check = "glazewm --version"
+[deps.windows]
+manager = "winget"
+package = "glazewm.glazewm"
+
+
+[[deps]]
+key = "zebar"
+display = "Zebar"
+description = "Modern, customizable status bar for Windows"
+bin = "zebar"
+check = "zebar --version"
+[deps.windows]
+manager = "winget"
+package = "Zebar.Zebar"
+

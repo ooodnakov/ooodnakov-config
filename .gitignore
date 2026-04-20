@@ -23,6 +23,8 @@ home/.config/nvim/.neoconf.json
 home/.config/zsh/.zsh_history
 home/.config/zsh/.zshenv
 home/.config/zsh/.zcompdump*
+home/.glzr/glazewm/errors.log
+home/.glzr/zebar/errors.log
 
 .zcompdump*
 

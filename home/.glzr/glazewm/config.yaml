@@ -1,0 +1,172 @@
+# GlazeWM Configuration (ooodnakov-config)
+# https://github.com/glazewm/glazewm
+
+general:
+  startup_commands:
+    - 'shell-exec zebar startup'
+  shutdown_commands:
+    - 'shell-exec taskkill /F /IM zebar.exe'
+  config_reload_commands: []
+
+  # Focus behavior
+  focus_follows_cursor: true
+  cursor_jump:
+    enabled: true
+    trigger: 'monitor_focus'
+
+  # Window hiding (cloak is best for Win11)
+  hide_method: 'cloak'
+
+  # Border settings
+  active_window_border:
+    enabled: true
+    width: 8
+    color: '#8eb2c7' # Ashes Blue
+
+  # Animation settings
+  animations:
+    enabled: true
+
+gaps:
+  inner_gap: '8px'
+  outer_gap:
+    top: '55px'
+    left: '12px'
+    right: '12px'
+    bottom: '12px'
+  scale_with_dpi: true
+
+# Workspace icons (matching komorebi)
+workspaces:
+  - name: '1'
+    display_name: '󰈹'
+  - name: '2'
+    display_name: ''
+  - name: '3'
+    display_name: '󰙯'
+  - name: '4'
+    display_name: '󰓓'
+  - name: '5'
+    display_name: '󱓷'
+  - name: '6'
+    display_name: '󰉋'
+  - name: '7'
+    display_name: '󰊫'
+
+# Keybindings
+keybindings:
+  # Focus windows
+  - commands: ['focus --direction left']
+    bindings: ['Alt+H']
+  - commands: ['focus --direction down']
+    bindings: ['Alt+J']
+  - commands: ['focus --direction up']
+    bindings: ['Alt+K']
+  - commands: ['focus --direction right']
+    bindings: ['Alt+L']
+
+  # Move windows
+  - commands: ['move --direction left']
+    bindings: ['Alt+Shift+H']
+  - commands: ['move --direction down']
+    bindings: ['Alt+Shift+J']
+  - commands: ['move --direction up']
+    bindings: ['Alt+Shift+K']
+  - commands: ['move --direction right']
+    bindings: ['Alt+Shift+L']
+
+  # Multi-Monitor
+  - commands: ['focus --monitor 0']
+    bindings: ['Alt+Shift+W']
+  - commands: ['focus --monitor 1']
+    bindings: ['Alt+Shift+E']
+  - commands: ['move-workspace --direction left']
+    bindings: ['Alt+Shift+W']
+  - commands: ['move-workspace --direction right']
+    bindings: ['Alt+Shift+E']
+
+  # Workspaces
+  - commands: ['focus --workspace 1']
+    bindings: ['Alt+1']
+  - commands: ['focus --workspace 2']
+    bindings: ['Alt+2']
+  - commands: ['focus --workspace 3']
+    bindings: ['Alt+3']
+  - commands: ['focus --workspace 4']
+    bindings: ['Alt+4']
+  - commands: ['focus --workspace 5']
+    bindings: ['Alt+5']
+  - commands: ['focus --workspace 6']
+    bindings: ['Alt+6']
+  - commands: ['focus --workspace 7']
+    bindings: ['Alt+7']
+
+  # Move to workspace
+  - commands: ['move --workspace 1', 'focus --workspace 1']
+    bindings: ['Alt+Shift+1']
+  - commands: ['move --workspace 2', 'focus --workspace 2']
+    bindings: ['Alt+Shift+2']
+  - commands: ['move --workspace 3', 'focus --workspace 3']
+    bindings: ['Alt+Shift+3']
+  - commands: ['move --workspace 4', 'focus --workspace 4']
+    bindings: ['Alt+Shift+4']
+  - commands: ['move --workspace 5', 'focus --workspace 5']
+    bindings: ['Alt+Shift+5']
+  - commands: ['move --workspace 6', 'focus --workspace 6']
+    bindings: ['Alt+Shift+6']
+  - commands: ['move --workspace 7', 'focus --workspace 7']
+    bindings: ['Alt+Shift+7']
+
+  # Binding Modes
+  - commands: ['wm-enable-binding-mode --name resize']
+    bindings: ['Alt+R']
+
+  # Layout Toggles
+  - commands: ['toggle-floating']
+    bindings: ['Alt+T']
+  - commands: ['toggle-fullscreen']
+    bindings: ['Alt+Shift+F']
+  - commands: ['toggle-tiling-direction']
+    bindings: ['Alt+X']
+
+  # System
+  - commands: ['close']
+    bindings: ['Alt+Q']
+  - commands: ['wm-reload-config']
+    bindings: ['Alt+Shift+O']
+  - commands: ['wm-exit']
+    bindings: ['Alt+Shift+Q']
+
+# Resize Binding Mode
+binding_modes:
+  - name: 'resize'
+    keybindings:
+      - commands: ['resize --width -2%']
+        bindings: ['H']
+      - commands: ['resize --height 2%']
+        bindings: ['J']
+      - commands: ['resize --height -2%']
+        bindings: ['K']
+      - commands: ['resize --width 2%']
+        bindings: ['L']
+      - commands: ['wm-disable-binding-mode --name resize']
+        bindings: ['Escape', 'Enter']
+
+# Rules for floating windows
+window_rules:
+  - commands: ['ignore']
+    match:
+      - window_process: { equals: 'zebar' }
+
+  - commands: ['set-floating --centered']
+    match:
+      - window_process: { regex: 'Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost' }
+      - window_class: { regex: 'SunAwtDialog|ApplicationFrameWindow' }
+  
+  # Workspace Routing
+  - commands: ['move --workspace 1']
+    match:
+      - window_process: { regex: 'chrome|firefox|zen' }
+  - commands: ['move --workspace 2']
+    match:
+      - window_process: { regex: 'wezterm|alacritty|windowsterminal' }

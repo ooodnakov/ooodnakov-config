@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ooodnakov Zebar</title>
+  <script
+    src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"
+    crossorigin="anonymous"
+  ></script>
+  <style>
+    :root {
+      --bg: rgba(28, 32, 35, 0.85);
+      --fg: #c0c5ce;
+      --accent: #8eb2c7;
+      --font: "MesloLGSDZ Nerd Font Mono", sans-serif;
+      --critical: #f2777a;
+      --warning: #f99157;
+      --success: #99cc99;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      color: var(--fg);
+      overflow: hidden;
+    }
+
+    #bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 32px; /* Slightly slimmer for professional feel */
+      margin: 10px;
+      padding: 0 15px;
+      background: var(--bg);
+      backdrop-filter: blur(12px);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Workspaces */
+    .workspace {
+      font-size: 14px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0.5;
+    }
+
+    .workspace.focused {
+      opacity: 1;
+      background: var(--accent);
+      color: #1c2023;
+      transform: scale(1.1);
+    }
+
+    .workspace.occupied {
+      opacity: 0.9;
+      color: var(--fg);
+    }
+
+    /* Window Title */
+    #window-title {
+      font-size: 13px;
+      max-width: 400px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--fg);
+      opacity: 0.8;
+    }
+
+    /* Widgets */
+    .widget {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 13px;
+    }
+
+    .icon {
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .critical { color: var(--critical); }
+    .warning { color: var(--warning); }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <div class="group" id="left">
+      <div class="group" id="workspaces"></div>
+      <div id="window-title">Ready</div>
+    </div>
+
+    <div class="group" id="center">
+      <div class="widget">
+        <span class="icon">󱑒</span>
+        <span id="time">00:00</span>
+      </div>
+    </div>
+
+    <div class="group" id="right">
+      <div class="widget" id="net-widget">
+        <span class="icon" id="net-icon">󰤨</span>
+        <span id="net-text">--</span>
+      </div>
+      <div class="widget">
+        <span class="icon"></span>
+        <span id="cpu">0%</span>
+      </div>
+      <div class="widget">
+        <span class="icon"></span>
+        <span id="memory">0%</span>
+      </div>
+      <div class="widget" id="bat-widget">
+        <span class="icon" id="bat-icon">󰁹</span>
+        <span id="bat-text">--%</span>
+      </div>
+      <div class="widget">
+        <span class="icon">󰃭</span>
+        <span id="date">Mon, Jan 01</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/babel" data-type="module">
+    import * as zebar from 'https://esm.sh/zebar@3.0';
+
+    const providers = zebar.createProviderGroup({
+      network: { type: 'network' },
+      glazewm: { type: 'glazewm' },
+      cpu: { type: 'cpu' },
+      date: { type: 'date', formatting: 'EEE d MMM t' },
+      battery: { type: 'battery' },
+      memory: { type: 'memory' },
+    });
+
+    const workspaceIcons = {
+      '1': '󰈹',
+      '2': '',
+      '3': '󰙯',
+      '4': '󰓓',
+      '5': '󱓷',
+      '6': '󰉋',
+      '7': '󰊫',
+    };
+
+    function render(output) {
+      if (output.date?.formatted) {
+        const formatted = output.date.formatted;
+        const lastSpace = formatted.lastIndexOf(' ');
+        if (lastSpace > 0) {
+          document.getElementById('date').innerText = formatted.slice(0, lastSpace);
+          document.getElementById('time').innerText = formatted.slice(lastSpace + 1);
+        } else {
+          document.getElementById('time').innerText = formatted;
+        }
+      }
+
+      if (output.cpu) {
+        document.getElementById('cpu').innerText = Math.round(output.cpu.usage) + '%';
+      }
+
+      if (output.memory) {
+        document.getElementById('memory').innerText = Math.round(output.memory.usage) + '%';
+      }
+
+      if (output.battery) {
+        const text = document.getElementById('bat-text');
+        const icon = document.getElementById('bat-icon');
+        const charge = Math.round(output.battery.chargePercent);
+
+        text.innerText = charge + '%';
+        text.classList.remove('critical');
+
+        if (output.battery.isCharging) {
+          icon.innerText = '󰂄';
+        } else if (charge < 20) {
+          icon.innerText = '󰂃';
+          text.classList.add('critical');
+        } else {
+          icon.innerText = '󰁹';
+        }
+      }
+
+      if (output.network) {
+        const icon = document.getElementById('net-icon');
+        const text = document.getElementById('net-text');
+        const type = output.network.defaultInterface?.type;
+
+        if (type === 'wifi') {
+          text.innerText = output.network.defaultGateway?.ssid || 'Wifi';
+          icon.innerText = '󰤨';
+        } else if (type === 'ethernet') {
+          text.innerText = 'Eth';
+          icon.innerText = '󰈀';
+        } else {
+          text.innerText = 'Offline';
+          icon.innerText = '󰤭';
+        }
+      }
+
+      if (output.glazewm) {
+        const wsContainer = document.getElementById('workspaces');
+        const titleEl = document.getElementById('window-title');
+        const workspaces = output.glazewm.currentWorkspaces || [];
+        const focusedWorkspace = output.glazewm.focusedWorkspace;
+
+        wsContainer.innerHTML = '';
+
+        workspaces.forEach(workspace => {
+          const el = document.createElement('div');
+          const focused = workspace.name === focusedWorkspace?.name;
+          const occupied = (workspace.displayedWindows?.length || 0) > 0;
+          el.className = 'workspace' + (focused ? ' focused' : '') + (occupied ? ' occupied' : '');
+          el.innerText = workspaceIcons[workspace.name] || workspace.name;
+          wsContainer.appendChild(el);
+        });
+
+        titleEl.innerText = output.glazewm.focusedContainer?.title || 'Desktop';
+      }
+    }
+
+    providers.onOutput(() => render(providers.outputMap));
+    render(providers.outputMap);
+  </script>
+</body>
+</html>

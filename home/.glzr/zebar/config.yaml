@@ -1,0 +1,34 @@
+# Zebar Configuration (ooodnakov-config)
+# https://github.com/nwinch/zebar
+
+window:
+  # Whether the window should be shown in the taskbar.
+  show_in_taskbar: false
+  # Whether the window should be always on top.
+  always_on_top: true
+  # Whether the window should be transparent.
+  transparent: true
+  # The style of the window.
+  window_style: "overlay"
+
+providers:
+  - type: "glazewm"
+    name: "glazewm"
+  - type: "cpu"
+    name: "cpu"
+    refresh_interval_ms: 2000
+  - type: "memory"
+    name: "memory"
+    refresh_interval_ms: 2000
+  - type: "battery"
+    name: "battery"
+    refresh_interval_ms: 5000
+  - type: "network"
+    name: "network"
+    refresh_interval_ms: 5000
+  - type: "date"
+    name: "date"
+    refresh_interval_ms: 1000
+
+# Path to the HTML template for the bar.
+template_path: "ooodnakov/index.html"

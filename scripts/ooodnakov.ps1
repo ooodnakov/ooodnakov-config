@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($null -eq $IsWindows) { $IsWindows = $true }
 
 $RepoRoot = if ($env:OOODNAKOV_REPO_ROOT) {
     $env:OOODNAKOV_REPO_ROOT
@@ -43,6 +44,9 @@ $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $KnownShellAutoUvModes = @("enabled", "quiet", "status")
+$KnownKomorebiSubcommands = @("reload", "start", "stop")
+$KnownWmSubcommands = @("status", "set", "start", "stop", "reload")
+$KnownWmOptions = @("komorebi", "glazewm")
 $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
@@ -86,6 +90,18 @@ function Run-Python {
     } else {
         & python3 $ScriptPath @ScriptArgs
     }
+}
+
+function Resolve-GlazeWmCommand {
+    $candidates = @("glazewm", "glazewm.exe")
+    foreach ($candidate in $candidates) {
+        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($command) {
+            return $command
+        }
+    }
+
+    return $null
 }
 
 function Test-UiInteractive {
@@ -134,6 +150,8 @@ function Get-UiCommandIcon {
             "shell" { return [char]::ConvertFromUtf32(0xF1183) }
             "secrets" { return [char]::ConvertFromUtf32(0xF082E) }
             "agents" { return [char]::ConvertFromUtf32(0xF0B79) }
+            "komorebi" { return [char]::ConvertFromUtf32(0xF074E) }
+            "wm" { return [char]::ConvertFromUtf32(0xF030F) }
             default { return [char]::ConvertFromUtf32(0xF060D) }
         }
     }
@@ -150,6 +168,8 @@ function Get-UiCommandIcon {
         "shell" { return "[sh]" }
         "secrets" { return "[sec]" }
         "agents" { return "[agt]" }
+        "komorebi" { return "[komo]" }
+        "wm" { return "[wm]" }
         default { return "[cmd]" }
     }
 }
@@ -502,12 +522,170 @@ function Set-PsfzfGitMode {
     Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
 }
 
+function Invoke-WmCommand {
+    param(
+        [string[]]$WmArgs
+    )
+
+    $subcommand = if ($WmArgs.Count -gt 0) { $WmArgs[0] } else { "" }
+
+    switch ($subcommand) {
+        "" { Show-CommandUsage "wm"; return }
+        "help" { Show-CommandUsage "wm"; return }
+        "-h" { Show-CommandUsage "wm"; return }
+        "--help" { Show-CommandUsage "wm"; return }
+        "status" {
+            $active = "none"
+            if (Get-Process komorebi -ErrorAction SilentlyContinue) { $active = "komorebi" }
+            elseif (Get-Process glazewm -ErrorAction SilentlyContinue) { $active = "glazewm" }
+            
+            Write-UiLine -Role info -Message "Active Window Manager: $(Format-UiText -Text $active -Role ok -Bold)"
+            return
+        }
+        "set" {
+            $choice = if ($WmArgs.Count -gt 1) { $WmArgs[1] } else { "" }
+            if ($choice -notin $KnownWmOptions) {
+                Write-UiLine -Role fail -Message "Invalid WM choice: $choice"
+                Write-UiLine -Role hint -Message "Available options: $($KnownWmOptions -join ', ')"
+                return
+            }
+
+            Write-UiLine -Role info -Message "Switching to $choice..."
+            # Stop everything first
+            & "$PSScriptRoot/ooodnakov.ps1" wm stop
+            Start-Sleep -Milliseconds 500
+
+            if ($choice -eq "komorebi") {
+                & "$PSScriptRoot/ooodnakov.ps1" komorebi start
+            } elseif ($choice -eq "glazewm") {
+                $glazeWmCommand = Resolve-GlazeWmCommand
+                if (-not $glazeWmCommand) {
+                    Write-UiLine -Role warn -Message "GlazeWM is not installed. Run 'oooconf deps glazewm' first."
+                    return
+                }
+                Write-UiLine -Role info -Message "Starting GlazeWM and Zebar..."
+                Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 500
+                Start-Process -FilePath $glazeWmCommand.Source -WindowStyle Hidden
+                Write-UiLine -Role ok -Message "GlazeWM stack started."
+            }
+            return
+        }
+        "start" {
+            # Start the one that is currently active/linked?
+            # For now, default to komorebi if nothing is running
+            if (Get-Process glazewm -ErrorAction SilentlyContinue) { Write-UiLine -Role info -Message "GlazeWM is already running." }
+            elseif (Get-Process komorebi -ErrorAction SilentlyContinue) { Write-UiLine -Role info -Message "Komorebi is already running." }
+            else { & "$PSScriptRoot/ooodnakov.ps1" wm set komorebi }
+            return
+        }
+        "stop" {
+            Write-UiLine -Role info -Message "Stopping all Window Managers..."
+            # Stop Komorebi
+            try {
+                if (Get-Process komorebi -ErrorAction SilentlyContinue) {
+                    Write-UiLine -Role info -Message "Stopping Komorebi stack..."
+                    komorebic stop --bar 2>$null
+                }
+            } catch {
+                Write-UiLine -Role warn -Message "Komorebic stop failed, forcing processes to close."
+            }
+            Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
+            
+            # Stop GlazeWM
+            Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
+            Write-UiLine -Role ok -Message "WM stack stopped."
+            return
+        }
+        "reload" {
+            if (Get-Process komorebi -ErrorAction SilentlyContinue) { & "$PSScriptRoot/ooodnakov.ps1" komorebi reload }
+            elseif (Get-Process glazewm -ErrorAction SilentlyContinue) {
+                $glazeWmCommand = Resolve-GlazeWmCommand
+                if (-not $glazeWmCommand) {
+                    Write-UiLine -Role warn -Message "GlazeWM executable was not found on PATH."
+                    return
+                }
+                Write-UiLine -Role info -Message "Reloading GlazeWM..."
+                Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
+                Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 500
+                Start-Process -FilePath $glazeWmCommand.Source -WindowStyle Hidden
+                Write-UiLine -Role ok -Message "GlazeWM reloaded."
+            } else {
+                Write-UiLine -Role warn -Message "No active WM found to reload."
+            }
+            return
+        }
+        default {
+            $suggestion = Get-SuggestionFromList -InputValue $subcommand -Candidates $KnownWmSubcommands
+            Write-UnknownCommandMessage -Message "Unknown wm subcommand: $subcommand" -Suggestion $suggestion -Scope wm
+            throw "Unknown wm subcommand: $subcommand"
+        }
+    }
+}
+
 function Show-ShellStatus {
     Write-UiLine -Role info -Message "forgit-aliases: $(Get-ForgitAliasMode)"
     Write-UiLine -Role info -Message "typo-handling: $(Get-TypoHandlingMode)"
     Write-UiLine -Role info -Message "psfzf-tab: $(Get-PsfzfTabMode)"
     Write-UiLine -Role info -Message "psfzf-git: $(Get-PsfzfGitMode)"
     Write-UiLine -Role info -Message "auto-uv-env: $(Get-AutoUvEnvMode)"
+}
+
+function Invoke-KomorebiCommand {
+    param(
+        [string[]]$KomorebiArgs
+    )
+
+    $subcommand = if ($KomorebiArgs.Count -gt 0) { $KomorebiArgs[0] } else { "" }
+
+    switch ($subcommand) {
+        "" { Show-CommandUsage "komorebi"; return }
+        "help" { Show-CommandUsage "komorebi"; return }
+        "-h" { Show-CommandUsage "komorebi"; return }
+        "--help" { Show-CommandUsage "komorebi"; return }
+        "reload" {
+            if ($IsWindows) {
+                Write-UiLine -Role info -Message "Reloading Komorebi configuration..."
+                # Use a fresh start for reload to ensure clean state
+                & "$PSScriptRoot/ooodnakov.ps1" komorebi stop
+                Start-Sleep -Milliseconds 500
+                & "$PSScriptRoot/ooodnakov.ps1" komorebi start
+            } else {
+                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
+            }
+            return
+        }
+        "start" {
+            if ($IsWindows) {
+                Write-UiLine -Role info -Message "Starting Komorebi, whkd, and bar..."
+                # Ensure clean state
+                Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
+                Start-Process komorebic -ArgumentList "start --whkd --bar" -WindowStyle Hidden
+                Write-UiLine -Role ok -Message "Komorebi stack started."
+            } else {
+                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
+            }
+            return
+        }
+        "stop" {
+            if ($IsWindows) {
+                Write-UiLine -Role info -Message "Stopping Komorebi stack..."
+                # Suppress errors if daemon is already unresponsive
+                komorebic stop --bar 2>$null
+                Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
+                Write-UiLine -Role ok -Message "Komorebi stack stopped."
+            } else {
+                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
+            }
+            return
+        }
+        default {
+            $suggestion = Get-SuggestionFromList -InputValue $subcommand -Candidates $KnownKomorebiSubcommands
+            Write-UnknownCommandMessage -Message "Unknown komorebi subcommand: $subcommand" -Suggestion $suggestion -Scope komorebi
+            throw "Unknown komorebi subcommand: $subcommand"
+        }
+    }
 }
 
 function Write-UnknownCommandMessage {
@@ -801,11 +979,12 @@ function Show-Usage {
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
+    Write-UiCommandRow -CommandName "komorebi" -Description "manage komorebi tiling window manager state"
+    Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
     Write-Output @"
-Aliases:
-  check -> doctor
-  preview -> dry-run
-  upgrade -> update
+    Aliases:
+    check -> doctor
+    "@  upgrade -> update
 Note:
   bootstrap is Unix-only in this wrapper.
   On Windows, run `scripts/setup.ps1 install` for initial setup.
@@ -1011,6 +1190,42 @@ Examples:
   oooconf shell psfzf-tab disabled
   oooconf shell psfzf-git status
   oooconf shell auto-uv-env quiet
+"@
+        }
+        "komorebi" {
+            Write-UiHelpBlock @"
+Usage: oooconf komorebi reload
+       oooconf komorebi start
+       oooconf komorebi stop
+
+Manage komorebi tiling window manager state.
+Subcommands:
+  reload  reloads the komorebi configuration
+  start   starts komorebi, whkd, and the status bar
+  stop    stops the komorebi stack
+Examples:
+  oooconf komorebi reload
+"@
+        }
+        "wm" {
+            Write-UiHelpBlock @"
+Usage: oooconf wm status
+       oooconf wm set [komorebi|glazewm]
+       oooconf wm start
+       oooconf wm stop
+       oooconf wm reload
+
+Switch between or manage window managers.
+Subcommands:
+  status  shows the currently running window manager
+  set     stops the current WM and starts the specified one
+  start   starts the default WM (komorebi)
+  stop    stops any running WM stack
+  reload  reloads the configuration of the active WM
+Examples:
+  oooconf wm status
+  oooconf wm set glazewm
+  oooconf wm reload
 "@
         }
         "" { Show-Usage }
@@ -1244,6 +1459,12 @@ switch ($command) {
         }
         Require-PythonRuntime
         Run-Python -ScriptPath $AgentsToolScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
+    }
+    "komorebi" {
+        Invoke-KomorebiCommand -KomorebiArgs $remaining
+    }
+    "wm" {
+        Invoke-WmCommand -WmArgs $remaining
     }
     default {
         $suggestion = Get-CommandSuggestion -InputCommand $command

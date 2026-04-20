@@ -23,6 +23,8 @@ function Get-OooconfCompletions {
         'check',
         'preview',
         'upgrade',
+        'komorebi',
+        'wm',
         'help'
     )
 
@@ -98,7 +100,10 @@ function Get-OooconfCompletions {
         'zig',
         'neovim-node',
         'neovim-python',
-        'fastfetch'
+        'fastfetch',
+        'btop',
+        'glazewm',
+        'zebar'
     )
 
     # Simple AST parsing to find the command and subcommands

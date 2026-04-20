@@ -23,6 +23,8 @@ oooconf_commands=(
   'check:alias for doctor'
   'preview:alias for dry-run'
   'upgrade:alias for update'
+  'komorebi:command'
+  'wm:command'
   'help:show help'
 )
 
@@ -83,7 +85,7 @@ deps_keys=(
   'uv:Python package manager via official installer'
   'bw:Bitwarden CLI via official native archive'
   'pnpm:Node.js package manager via corepack or npm fallback'
-  'rtk:runtime tools kit for streamlined command output'
+  'rtk:token-optimized command proxy for AI CLI workflows'
   'imagemagick:Image processing library (required by Snacks.image)'
   'ghostscript:PostScript and PDF interpreter (required by Snacks.image for PDFs)'
   'luarocks:Package manager for Lua modules'
@@ -93,6 +95,9 @@ deps_keys=(
   'neovim-node:Neovim provider for Node.js plugins'
   'neovim-python:Neovim provider for Python plugins'
   'fastfetch:system information tool'
+  'btop:system information tool'
+  'glazewm:Tiling window manager for Windows'
+  'zebar:Modern, customizable status bar for Windows'
 )
 
 agents_subcommands=(
@@ -161,7 +166,7 @@ for (( i = 2; i < CURRENT; i++ )); do
       ;;
     -*)
       ;;
-    bootstrap|install|deps|update|doctor|dry-run|delete|remove|lock|update-pins|completions|agents|secrets|shell|version|check|preview|upgrade|help)
+    bootstrap|install|deps|update|doctor|dry-run|delete|remove|lock|update-pins|completions|agents|secrets|shell|version|check|preview|upgrade|komorebi|wm|help)
       command_name="$words[i]"
       break
       ;;
