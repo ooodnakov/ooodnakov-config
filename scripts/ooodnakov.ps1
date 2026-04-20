@@ -45,7 +45,7 @@ $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $KnownShellAutoUvModes = @("enabled", "quiet", "status")
 $KnownKomorebiSubcommands = @("reload", "start", "stop")
-$KnownWmSubcommands = @("status", "set", "start", "stop", "reload")
+$KnownWmSubcommands = @("status", "set", "start", "stop", "reload", "zebar-config")
 $KnownWmOptions = @("komorebi", "glazewm")
 $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
@@ -126,6 +126,204 @@ function Restart-ZebarForGlazeWm {
     Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 2000
     & $zebarCommand.Source startup *> $null
+}
+
+function Get-ZebarConfigRoot {
+    return Join-Path $RepoRoot "home/.glzr/zebar"
+}
+
+function Get-ZebarSettingsPath {
+    return Join-Path (Get-ZebarConfigRoot) "settings.json"
+}
+
+function Normalize-ZebarConfigName {
+    param([string]$Value)
+
+    return (($Value ?? "") -replace "[^a-zA-Z0-9]+", "").ToLowerInvariant()
+}
+
+function Get-ZebarWidgetPacks {
+    $configRoot = Get-ZebarConfigRoot
+    if (-not (Test-Path $configRoot)) {
+        return @()
+    }
+
+    $packs = @()
+    $directories = Get-ChildItem -Path $configRoot -Directory -Force | Where-Object { $_.Name -notmatch "^\." }
+    foreach ($directory in $directories) {
+        $zpackPath = Join-Path $directory.FullName "zpack.json"
+        if (-not (Test-Path $zpackPath)) {
+            continue
+        }
+
+        try {
+            $zpack = Get-Content -Path $zpackPath -Raw | ConvertFrom-Json
+        } catch {
+            Write-UiLine -Role warn -Message "Skipping invalid Zebar pack at $($directory.Name)."
+            continue
+        }
+
+        $widgets = @($zpack.widgets)
+        if ($widgets.Count -eq 0) {
+            continue
+        }
+
+        $selectedWidget = $widgets | Where-Object { $_.name -eq $zpack.name } | Select-Object -First 1
+        if (-not $selectedWidget) {
+            $selectedWidget = $widgets | Where-Object { $_.name -eq "main" } | Select-Object -First 1
+        }
+        if (-not $selectedWidget) {
+            $selectedWidget = $widgets | Select-Object -First 1
+        }
+
+        $presets = @($selectedWidget.presets)
+        $selectedPreset = $presets | Where-Object { $_.name -eq "default" } | Select-Object -First 1
+        if (-not $selectedPreset) {
+            $selectedPreset = $presets | Select-Object -First 1
+        }
+
+        $packName = if ($zpack.name) { [string]$zpack.name } else { $directory.Name }
+        $widgetName = [string]$selectedWidget.name
+        $presetName = if ($selectedPreset) { [string]$selectedPreset.name } else { "" }
+
+        $packs += [pscustomobject]@{
+            Id = $directory.Name
+            PackName = $packName
+            WidgetName = $widgetName
+            PresetName = $presetName
+            Path = $directory.FullName
+            MatchKeys = @(
+                (Normalize-ZebarConfigName $directory.Name),
+                (Normalize-ZebarConfigName $packName),
+                (Normalize-ZebarConfigName $widgetName)
+            ) | Select-Object -Unique
+        }
+    }
+
+    return @($packs)
+}
+
+function Get-ZebarActiveConfig {
+    $settingsPath = Get-ZebarSettingsPath
+    if (-not (Test-Path $settingsPath)) {
+        return $null
+    }
+
+    try {
+        $settings = Get-Content -Path $settingsPath -Raw | ConvertFrom-Json
+    } catch {
+        Write-UiLine -Role warn -Message "Could not parse Zebar settings.json."
+        return $null
+    }
+
+    $startupConfigs = @($settings.startupConfigs)
+    if ($startupConfigs.Count -eq 0) {
+        return $null
+    }
+
+    return $startupConfigs[0]
+}
+
+function Set-ZebarActiveConfig {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Pack
+    )
+
+    $settingsPath = Get-ZebarSettingsPath
+    if (-not (Test-Path $settingsPath)) {
+        throw "Zebar settings.json was not found at $settingsPath."
+    }
+
+    $settings = Get-Content -Path $settingsPath -Raw | ConvertFrom-Json
+    $settings.startupConfigs = @(
+        [pscustomobject]@{
+            pack = $Pack.PackName
+            widget = $Pack.WidgetName
+            preset = $Pack.PresetName
+        }
+    )
+    ($settings | ConvertTo-Json -Depth 10) | Set-Content -Path $settingsPath
+}
+
+function Restart-ZebarIfRunning {
+    $hasGlazeWm = [bool](Get-Process glazewm -ErrorAction SilentlyContinue)
+    $hasZebar = [bool](Get-Process zebar -ErrorAction SilentlyContinue)
+    if (-not ($hasGlazeWm -or $hasZebar)) {
+        return
+    }
+
+    Restart-ZebarForGlazeWm
+}
+
+function Invoke-ZebarConfigCommand {
+    param(
+        [string[]]$ZebarArgs
+    )
+
+    $action = if ($ZebarArgs.Count -gt 0) { $ZebarArgs[0] } else { "status" }
+    $packs = @(Get-ZebarWidgetPacks)
+
+    switch ($action) {
+        "status" {
+            $active = Get-ZebarActiveConfig
+            if (-not $active) {
+                Write-UiLine -Role warn -Message "No active Zebar startup config is set."
+                return
+            }
+
+            $activeName = if ($active.pack) { $active.pack } else { "<unknown>" }
+            Write-UiLine -Role info -Message "Active Zebar config: $(Format-UiText -Text $activeName -Role ok -Bold)"
+            if ($active.widget) {
+                Write-UiLine -Role info -Message "Widget: $($active.widget)"
+            }
+            if ($active.preset) {
+                Write-UiLine -Role info -Message "Preset: $($active.preset)"
+            }
+            return
+        }
+        "list" {
+            if ($packs.Count -eq 0) {
+                Write-UiLine -Role warn -Message "No Zebar widget packs were found in home/.glzr/zebar."
+                return
+            }
+
+            $active = Get-ZebarActiveConfig
+            foreach ($pack in $packs) {
+                $marker = if ($active -and $active.pack -eq $pack.PackName) { "*" } else { "-" }
+                Write-UiLine -Role info -Message "$marker $($pack.Id) (pack=$($pack.PackName), widget=$($pack.WidgetName), preset=$($pack.PresetName))"
+            }
+            return
+        }
+        "set" {
+            $target = if ($ZebarArgs.Count -gt 1) { $ZebarArgs[1] } else { "" }
+            if (-not $target) {
+                Write-UiLine -Role fail -Message "Missing Zebar config name."
+                Write-UiLine -Role hint -Message "Usage: oooconf wm zebar-config set <name>"
+                return
+            }
+
+            $normalizedTarget = Normalize-ZebarConfigName $target
+            $pack = $packs | Where-Object { $_.MatchKeys -contains $normalizedTarget } | Select-Object -First 1
+            if (-not $pack) {
+                Write-UiLine -Role fail -Message "Unknown Zebar config: $target"
+                if ($packs.Count -gt 0) {
+                    Write-UiLine -Role hint -Message "Available configs: $($packs.Id -join ', ')"
+                }
+                return
+            }
+
+            Set-ZebarActiveConfig -Pack $pack
+            Restart-ZebarIfRunning
+            Write-UiLine -Role ok -Message "Zebar config set to $($pack.Id)."
+            return
+        }
+        default {
+            Write-UiLine -Role fail -Message "Unknown zebar-config action: $action"
+            Write-UiLine -Role hint -Message "Use: status, list, or set <name>"
+            return
+        }
+    }
 }
 
 function Test-UiInteractive {
@@ -558,6 +756,11 @@ function Invoke-WmCommand {
         "help" { Show-CommandUsage "wm"; return }
         "-h" { Show-CommandUsage "wm"; return }
         "--help" { Show-CommandUsage "wm"; return }
+        "zebar-config" {
+            $remainingArgs = if ($WmArgs.Count -gt 1) { $WmArgs[1..($WmArgs.Count - 1)] } else { @() }
+            Invoke-ZebarConfigCommand -ZebarArgs $remainingArgs
+            return
+        }
         "status" {
             $active = "none"
             if (Get-Process komorebi -ErrorAction SilentlyContinue) { $active = "komorebi" }
@@ -1237,18 +1440,24 @@ Usage: oooconf wm status
        oooconf wm start
        oooconf wm stop
        oooconf wm reload
+       oooconf wm zebar-config status
+       oooconf wm zebar-config list
+       oooconf wm zebar-config set <name>
 
 Switch between or manage window managers.
 Subcommands:
-  status  shows the currently running window manager
-  set     stops the current WM and starts the specified one
-  start   starts the default WM (komorebi)
-  stop    stops any running WM stack
-  reload  reloads the configuration of the active WM
+  status         shows the currently running window manager
+  set            stops the current WM and starts the specified one
+  start          starts the default WM (komorebi)
+  stop           stops any running WM stack
+  reload         reloads the configuration of the active WM
+  zebar-config   manages which local Zebar widget pack is used on startup
 Examples:
   oooconf wm status
   oooconf wm set glazewm
   oooconf wm reload
+  oooconf wm zebar-config list
+  oooconf wm zebar-config set overline-zebar
 "@
         }
         "" { Show-Usage }
