@@ -18,6 +18,14 @@ if (Test-Path $LocalBin) {
 $CacheDir = Join-Path $ConfigRoot "cache"
 if (-not (Test-Path $CacheDir)) { New-Item -ItemType Directory -Path $CacheDir -ErrorAction SilentlyContinue }
 
+function Test-InteractiveConsoleHost {
+    return (
+        -not [Console]::IsInputRedirected -and
+        -not [Console]::IsOutputRedirected -and
+        $Host.Name -eq 'ConsoleHost'
+    )
+}
+
 # ---[ PLUGINS & CONFIG ]---
 
 # Optimized Oh My Posh initialization
@@ -67,10 +75,7 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
 
     # Prediction rendering fails in redirected/non-VT hosts (for example RTK-wrapped commands).
-    if (
-        -not [Console]::IsOutputRedirected -and
-        $Host.Name -eq 'ConsoleHost'
-    ) {
+    if (Test-InteractiveConsoleHost) {
         try {
             Set-PSReadLineOption -PredictionSource HistoryAndPlugin
             Set-PSReadLineOption -PredictionViewStyle InlineView
@@ -314,7 +319,9 @@ function Update-Venv {
         # 3. Auto-Creation: If pyproject.toml exists but .venv doesn't, create it using uv
         if (-not (Test-Path $venvPath)) {
             if (Get-Command uv -ErrorAction SilentlyContinue) {
-                Write-Host "🔨 No .venv found. Creating one with uv..." -ForegroundColor Gray
+                if (Test-InteractiveConsoleHost) {
+                    Write-Host "🔨 No .venv found. Creating one with uv..." -ForegroundColor Gray
+                }
                 & uv venv --quiet
             } else {
                 return
@@ -349,7 +356,7 @@ function Update-Venv {
             $global:__managed_venv = $env:VIRTUAL_ENV
             $global:__last_venv_was_uv = $isUv
 
-            if ($env:AUTO_UV_ENV_QUIET -ne 1) {
+            if ($env:AUTO_UV_ENV_QUIET -ne 1 -and (Test-InteractiveConsoleHost)) {
                 if ($isUv) { Write-Host "🚀 UV environment activated (Python $version)" -ForegroundColor Cyan }
                 else { Write-Host "🚀 Environment activated (Python $version)" -ForegroundColor Green }
             }
@@ -361,7 +368,7 @@ function Update-Venv {
             deactivate
         }
 
-        if ($env:AUTO_UV_ENV_QUIET -ne 1) {
+        if ($env:AUTO_UV_ENV_QUIET -ne 1 -and (Test-InteractiveConsoleHost)) {
             $msg = if ($wasUv) { "⬇️  Deactivated UV environment" } else { "⬇️  Deactivated environment" }
             Write-Host $msg -ForegroundColor Gray
         }
