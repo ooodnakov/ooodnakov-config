@@ -554,9 +554,11 @@ function Invoke-WmCommand {
                 Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
                 Start-Sleep -Milliseconds 500
                 Start-Process glazewm -WindowStyle Hidden
+                
+                $widgetPath = (Resolve-Path (Join-Path $HOME ".glzr/zebar/ooodnakov")).Path
                 if (Get-Command zebar -ErrorAction SilentlyContinue) {
-                    # Using start-widget with all mandatory fields and absolute path discovery
-                    Start-Process zebar -ArgumentList "start-widget --pack ooodnakov --widget-name ooodnakov --anchor top_center --offset-x 0 --offset-y 0 --width 100% --height 40px --monitor-type all" -WindowStyle Hidden
+                    # Using absolute path via start-widget --path
+                    Start-Process zebar -ArgumentList "start-widget --path `"$widgetPath`" --anchor top_center --offset-x 0 --offset-y 0 --width 100% --height 40px --monitor-type all" -WindowStyle Hidden
                 }
                 Write-UiLine -Role ok -Message "GlazeWM stack started."
             }
