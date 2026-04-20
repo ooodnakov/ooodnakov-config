@@ -77,9 +77,9 @@ keybindings:
 
   # Multi-Monitor
   - commands: ['focus --monitor 0']
-    bindings: ['Alt+W']
+    bindings: ['Alt+Shift+W']
   - commands: ['focus --monitor 1']
-    bindings: ['Alt+E']
+    bindings: ['Alt+Shift+E']
   - commands: ['move-workspace --direction left']
     bindings: ['Alt+Shift+W']
   - commands: ['move-workspace --direction right']

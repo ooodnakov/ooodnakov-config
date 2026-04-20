@@ -544,6 +544,17 @@ windows.winget_id = "fastfetch-cli.fastfetch"
 windows.package = "fastfetch"
 
 [[deps]]
+key = "btop"
+display = "btop"
+description = "system information tool"
+linux.manager = "apt"
+linux.package = "btop"
+macos.manager = "brew"
+macos.package = "btop"
+windows.manager = "scoop"
+windows.package = "btop"
+
+[[deps]]
 key = "glazewm"
 display = "GlazeWM"
 description = "Tiling window manager for Windows"
