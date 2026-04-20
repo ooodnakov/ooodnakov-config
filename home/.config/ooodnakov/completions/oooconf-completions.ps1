@@ -88,6 +88,16 @@ function Get-OooconfCompletions {
         'lazygit',
         'uv',
         'bw',
+        'pnpm',
+        'rtk',
+        'imagemagick',
+        'ghostscript',
+        'luarocks',
+        'tectonic',
+        'mermaid-cli',
+        'zig',
+        'neovim-node',
+        'neovim-python',
         'fastfetch'
     )
 

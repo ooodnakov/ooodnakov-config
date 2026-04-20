@@ -21,6 +21,11 @@ $DependencyKeys = $filteredKeys
 
 $ErrorActionPreference = "Stop"
 
+# Allow syntax/import checks to dot-source this script without executing setup actions.
+if ($MyInvocation.InvocationName -eq ".") {
+    return
+}
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $OptionalDepsScript = Join-Path $PSScriptRoot "read_optional_deps.py"
 $AutogenCompletionsManifest = Join-Path $PSScriptRoot "autogen-completions.txt"
@@ -352,6 +357,7 @@ function Get-OptionalDependencySpecsFromTomlFallback {
             Key         = if ($entry.ContainsKey("key")) { $entry["key"] } else { "" }
             DisplayName = if ($entry.ContainsKey("display")) { $entry["display"] } elseif ($entry.ContainsKey("key")) { $entry["key"] } else { "" }
             Description = if ($entry.ContainsKey("description")) { $entry["description"] } else { "" }
+            Handler     = if ($entry.ContainsKey("handler")) { $entry["handler"] } else { "" }
             Ver         = if ($entry.ContainsKey("ver")) { $entry["ver"] } else { "" }
             Url         = if ($entry.ContainsKey("url")) { $entry["url"] } else { "" }
             Bin         = if ($entry.ContainsKey("bin")) { $entry["bin"] } else { "" }
@@ -388,6 +394,7 @@ function Get-OptionalDependencySpecs {
             Key         = $_.key
             DisplayName = $_.display
             Description = $_.description
+            Handler     = $_.handler
             Bin         = $_.bin
             Check       = $_.check
             WindowsOnly = ($null -eq $_.linux -and $null -eq $_.macos -and $null -ne $_.windows)
@@ -414,6 +421,7 @@ function Get-AllOptionalDependencySpecs {
                 Key         = $_.key
                 DisplayName = $_.display
                 Description = $_.description
+                Handler     = $_.handler
                 Bin         = $_.bin
                 Check       = $_.check
                 Linux       = if ($_.linux) { $_.linux } else { $null }
@@ -574,7 +582,9 @@ function Install-OptionalDependencyFromSpec {
         return $false
     }
 
-    switch ($key) {
+    $handler = if ($Spec.PSObject.Properties.Name -contains "Handler") { [string]$Spec.Handler } else { "" }
+
+    switch ($handler) {
         "choco" { return (Install-Chocolatey) }
         "posh-git" { return (Install-PoshGitIfMissing) }
         "psfzf" { return (Install-PSFzfIfMissing) }
@@ -589,6 +599,9 @@ function Install-OptionalDependencyFromSpec {
             Add-DependencySummary "k: skipped"
             return $false
         }
+    }
+
+    switch ($key) {
         "zsh" {
             Write-Warning "zsh is not natively supported on Windows; use WSL or a custom build."
             Add-DependencySummary "zsh: skipped"

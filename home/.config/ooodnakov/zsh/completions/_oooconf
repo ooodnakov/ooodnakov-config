@@ -82,6 +82,16 @@ deps_keys=(
   'lazygit:simple terminal UI for git commands'
   'uv:Python package manager via official installer'
   'bw:Bitwarden CLI via official native archive'
+  'pnpm:Node.js package manager via corepack or npm fallback'
+  'rtk:runtime tools kit for streamlined command output'
+  'imagemagick:Image processing library (required by Snacks.image)'
+  'ghostscript:PostScript and PDF interpreter (required by Snacks.image for PDFs)'
+  'luarocks:Package manager for Lua modules'
+  'tectonic:Modern LaTeX engine (required by Snacks.image for LaTeX)'
+  'mermaid-cli:Command-line interface for Mermaid (required by Snacks.image for diagrams)'
+  'zig:Zig compiler (recommended C compiler for nvim-treesitter on Windows)'
+  'neovim-node:Neovim provider for Node.js plugins'
+  'neovim-python:Neovim provider for Python plugins'
   'fastfetch:system information tool'
 )
 

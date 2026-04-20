@@ -33,6 +33,7 @@ Run `oooconf lock` after editing the TOML.
 ## Adding a New Optional Dependency
 
 1. Append a `[[deps]]` block to `scripts/optional-deps.toml` with the key, display name, description, and per-platform install info (`linux.manager`, `macos.manager`, `windows.manager`, plus `package`, `command`, `winget_id`, or `choco_id` as needed).
+   - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`).
 2. Add/adjust presence checks:
    - `optional_dependency_present()` in `scripts/setup.sh`
    - `Get-OptionalDependencyCommandNames` / `Test-OptionalDependencyPresent` in `scripts/setup.ps1`
@@ -40,7 +41,11 @@ Run `oooconf lock` after editing the TOML.
    - `install_optional_dependency_from_catalog()` in `scripts/setup.sh`
    - `Install-OptionalDependencyFromSpec` in `scripts/setup.ps1`
 4. Run `oooconf lock` to regenerate lock artifacts.
-5. Document the decision in this file under the appropriate table.
+5. Regenerate tracked completions: `python3 scripts/generate_oooconf_completions.py`
+6. Run drift checks so generated/consumer metadata stays aligned:
+   - `uv run pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py`
+   - `bash tests/test_shell.sh`
+7. Document the decision in this file under the appropriate table.
 
 ## Platform-Specific Installers
 
