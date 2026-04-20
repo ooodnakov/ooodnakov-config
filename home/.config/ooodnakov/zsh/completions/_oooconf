@@ -93,6 +93,7 @@ deps_keys=(
   'neovim-node:Neovim provider for Node.js plugins'
   'neovim-python:Neovim provider for Python plugins'
   'fastfetch:system information tool'
+  'btop:system information tool'
   'glazewm:Tiling window manager for Windows'
   'zebar:Modern, customizable status bar for Windows'
 )
