@@ -262,15 +262,19 @@
     const processIcons = {
       chrome: '󰊯',
       msedge: '󰇩',
+      msedgewebview2: '󰇩',
       firefox: '󰈹',
       zen: '󰰶',
       brave: '󰖟',
       explorer: '󰉋',
       wezterm: '',
+      weztermgui: '',
       alacritty: '',
       windowsterminal: '',
       code: '󰨞',
+      codeinsiders: '󰨞',
       cursor: '󰚩',
+      codex: '󱜙',
       notepad: '󰈙',
       discord: '󰙯',
       telegram: '',
@@ -318,6 +322,13 @@
 
     const titleCase = value => value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 
+    function normalizeAppName(value) {
+      return (value || '')
+        .toLowerCase()
+        .replace(/\.exe$/, '')
+        .replace(/[^a-z0-9]+/g, '');
+    }
+
     function getWindowProcessName(window) {
       return [
         window?.processName,
@@ -336,24 +347,74 @@
       ].find(Boolean) || '';
     }
 
-    function getWorkspaceWindows(workspace) {
+    function getWorkspaceKeyValues(workspace) {
+      return new Set([
+        workspace?.name,
+        workspace?.displayName,
+        workspace?.display_name,
+        workspace?.id,
+      ].filter(Boolean).map(value => String(value)));
+    }
+
+    function getWindowWorkspaceKeyValues(window) {
+      return new Set([
+        window?.workspaceName,
+        window?.workspace_name,
+        window?.workspaceId,
+        window?.workspace_id,
+        window?.workspace?.name,
+        window?.workspace?.displayName,
+        window?.workspace?.display_name,
+        window?.workspace?.id,
+        window?.displayedWorkspace?.name,
+        window?.displayedWorkspace?.displayName,
+        window?.displayedWorkspace?.display_name,
+        window?.displayedWorkspace?.id,
+        window?.parentWorkspace?.name,
+        window?.parentWorkspace?.displayName,
+        window?.parentWorkspace?.display_name,
+        window?.parentWorkspace?.id,
+      ].filter(Boolean).map(value => String(value)));
+    }
+
+    function getWorkspaceWindows(workspace, glazewmOutput) {
       const candidates = [
         workspace?.displayedWindows,
         workspace?.windows,
         workspace?.containers,
       ];
-      return candidates.find(Array.isArray) || [];
+      const direct = candidates.find(Array.isArray);
+      if (direct) {
+        return direct;
+      }
+
+      const allWindows = Array.isArray(glazewmOutput?.allWindows) ? glazewmOutput.allWindows : [];
+      const workspaceKeys = getWorkspaceKeyValues(workspace);
+      if (workspaceKeys.size === 0) {
+        return [];
+      }
+
+      return allWindows.filter(window => {
+        const windowKeys = getWindowWorkspaceKeyValues(window);
+        for (const key of windowKeys) {
+          if (workspaceKeys.has(key)) {
+            return true;
+          }
+        }
+        return false;
+      });
     }
 
     function getAppVisual(window) {
-      const processName = getWindowProcessName(window).toLowerCase().replace(/\.exe$/, '');
+      const rawProcessName = getWindowProcessName(window);
+      const processName = normalizeAppName(rawProcessName);
       const fromMap = processIcons[processName];
       if (fromMap) {
-        return { icon: fromMap, label: processName };
+        return { icon: fromMap, label: rawProcessName || processName };
       }
 
       if (processName) {
-        return { icon: titleCase(processName[0]), label: processName };
+        return { icon: titleCase((rawProcessName || processName)[0]), label: rawProcessName || processName };
       }
 
       const title = getWindowTitle(window).trim();
@@ -373,7 +434,7 @@
       const button = document.createElement('button');
       const label = document.createElement('span');
       const apps = document.createElement('span');
-      const windows = getWorkspaceWindows(workspace);
+      const windows = getWorkspaceWindows(workspace, glazewmOutput);
       const appVisuals = [];
       const seen = new Set();
       const focused = workspace.name === focusedWorkspace?.name;
