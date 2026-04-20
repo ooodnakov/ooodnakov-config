@@ -550,9 +550,12 @@ function Invoke-WmCommand {
                     Write-UiLine -Role warn -Message "GlazeWM is not installed. Run 'oooconf deps glazewm' first."
                     return
                 }
-                Write-UiLine -Role info -Message "Starting GlazeWM..."
+                Write-UiLine -Role info -Message "Starting GlazeWM and Zebar..."
                 Start-Process glazewm -WindowStyle Hidden
-                Write-UiLine -Role ok -Message "GlazeWM started."
+                if (Get-Command zebar -ErrorAction SilentlyContinue) {
+                    Start-Process zebar -ArgumentList "start ooodnakov" -WindowStyle Hidden
+                }
+                Write-UiLine -Role ok -Message "GlazeWM stack started."
             }
             return
         }

@@ -553,3 +553,14 @@ check = "glazewm --version"
 manager = "winget"
 package = "glazewm.glazewm"
 
+
+[[deps]]
+key = "zebar"
+display = "Zebar"
+description = "Modern, customizable status bar for Windows"
+bin = "zebar"
+check = "zebar --version"
+[deps.windows]
+manager = "winget"
+package = "Zebar.Zebar"
+

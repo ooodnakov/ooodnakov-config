@@ -94,6 +94,7 @@ deps_keys=(
   'neovim-python:Neovim provider for Python plugins'
   'fastfetch:system information tool'
   'glazewm:Tiling window manager for Windows'
+  'zebar:Modern, customizable status bar for Windows'
 )
 
 agents_subcommands=(

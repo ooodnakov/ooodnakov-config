@@ -4,43 +4,49 @@
 general:
   # Gaps between windows and the screen edge.
   gaps:
-    inner_gap: 10
-    outer_gap: 10
+    inner_gap: 8
+    outer_gap: 12
 
   # Focus behavior
   focus_follows_mouse: true
   mouse_follows_focus: true
 
-  # Border settings (thicker, high contrast like komorebi)
+  # Border settings (thicker, high contrast)
   active_window_border:
     enabled: true
-    width: 6
+    width: 20
     color: "#8eb2c7" # Ashes Blue
 
   # Animation settings
   animations:
     enabled: true
 
-# Bar configuration
+# Bar configuration (Floating Island Look)
 bar:
   enabled: true
-  height: "40px"
+  height: "44px"
   position: "top"
-  opacity: 0.8
+  opacity: 0.85
   background: "#1c2023"
   foreground: "#c0c5ce"
   font_family: "MesloLGSDZ Nerd Font Mono"
   font_size: "14px"
-  padding: "4px 10px"
-  offset_x: "10px"
-  offset_y: "10px"
-  width: "calc(100% - 20px)"
+  padding: "0px 15px"
+  offset_x: "12px"
+  offset_y: "12px"
+  width: "calc(100% - 24px)"
   components_left:
     - type: "workspaces"
       focused_color: "#8eb2c7"
       empty_color: "#565e65"
       occupied_color: "#c0c5ce"
   components_right:
+    - type: "cpu"
+      label: " "
+      refresh_interval_ms: 2000
+    - type: "memory"
+      label: " "
+      refresh_interval_ms: 2000
     - type: "time"
       format: "󱑒 %H:%M"
     - type: "date"
@@ -62,12 +68,6 @@ workspaces:
     display_name: "󰉋"
   - name: "7"
     display_name: "󰊫"
-  - name: "8"
-    display_name: "8"
-  - name: "9"
-    display_name: "9"
-  - name: "10"
-    display_name: "10"
 
 # Keybindings matching komorebi behavior
 keybindings:
@@ -91,6 +91,16 @@ keybindings:
   - command: "move right"
     binding: "Alt+Shift+L"
 
+  # Multi-Monitor (matched to Alt+W/E)
+  - command: "focus monitor left"
+    binding: "Alt+W"
+  - command: "focus monitor right"
+    binding: "Alt+E"
+  - command: "move to monitor left"
+    binding: "Alt+Shift+W"
+  - command: "move to monitor right"
+    binding: "Alt+Shift+E"
+
   # Workspaces
   - command: "switch workspace 1"
     binding: "Alt+1"
@@ -106,12 +116,6 @@ keybindings:
     binding: "Alt+6"
   - command: "switch workspace 7"
     binding: "Alt+7"
-  - command: "switch workspace 8"
-    binding: "Alt+8"
-  - command: "switch workspace 9"
-    binding: "Alt+9"
-  - command: "switch workspace 10"
-    binding: "Alt+0"
 
   # Move to workspace
   - command: "move to workspace 1"
@@ -128,24 +132,32 @@ keybindings:
     binding: "Alt+Shift+6"
   - command: "move to workspace 7"
     binding: "Alt+Shift+7"
-  - command: "move to workspace 8"
-    binding: "Alt+Shift+8"
-  - command: "move to workspace 9"
-    binding: "Alt+Shift+9"
-  - command: "move to workspace 10"
-    binding: "Alt+Shift+0"
 
-  # Window management
-  - command: "close"
-    binding: "Alt+Q"
+  # Layout Toggles (matched to komorebi)
   - command: "toggle floating"
     binding: "Alt+T"
   - command: "toggle fullscreen"
     binding: "Alt+Shift+F"
+  - command: "set tiling direction toggle"
+    binding: "Alt+X"
+
+  # System
+  - command: "close"
+    binding: "Alt+Q"
   - command: "reload config"
     binding: "Alt+Shift+O"
+  - command: "exit wm"
+    binding: "Alt+Shift+Q"
 
 # Rules for floating windows
 window_rules:
   - command: "set floating"
-    match_process_name: "/(Calculator|TaskManager|ControlPanel)/"
+    match_process_name: "/(Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost)/"
+  - command: "set floating"
+    match_class_name: "/(SunAwtDialog|ApplicationFrameWindow)/"
+  
+  # Workspace Routing
+  - command: "move to workspace 1"
+    match_process_name: "/(chrome|firefox|zen)/"
+  - command: "move to workspace 2"
+    match_process_name: "/(wezterm|alacritty|windowsterminal)/"

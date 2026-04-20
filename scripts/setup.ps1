@@ -2153,6 +2153,8 @@ function Test-Doctor {
 
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/glazewm/config.yaml") -Target (Join-Path $ConfigHome "glazewm/config.yaml")
 
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/zebar") -Target (Join-Path $ConfigHome "zebar")
+
     Test-DoctorCommand -Name "git"
     Test-DoctorCommand -Name "wezterm"
     Test-DoctorCommand -Name "nvim"
@@ -2162,6 +2164,7 @@ function Test-Doctor {
     Test-DoctorCommand -Name "komorebic"
     Test-DoctorCommand -Name "whkd"
     Test-DoctorCommand -Name "glazewm"
+    Test-DoctorCommand -Name "zebar"
 
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
@@ -2266,6 +2269,9 @@ function Invoke-Install {
     }
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/glazewm/config.yaml") -Target (Join-Path $ConfigHome "glazewm/config.yaml")) {
         Add-ToolSummary "glazewm: linked config"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/zebar") -Target (Join-Path $ConfigHome "zebar")) {
+        Add-ToolSummary "zebar: linked config"
     }
 
     if (Ensure-UserPathContains -PathEntry $LocalBinDir) {

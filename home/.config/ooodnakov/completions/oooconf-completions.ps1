@@ -99,7 +99,8 @@ function Get-OooconfCompletions {
         'neovim-node',
         'neovim-python',
         'fastfetch',
-        'glazewm'
+        'glazewm',
+        'zebar'
     )
 
     # Simple AST parsing to find the command and subcommands
