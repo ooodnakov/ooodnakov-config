@@ -27,6 +27,7 @@ def test_lock_files_are_generated_from_toml():
     lock_path = Path("deps.lock.json")
     assert lock_path.exists()
     import json
+
     data = json.loads(lock_path.read_text())
     assert data["source"] == "scripts/optional-deps.toml"
     assert len(data["dependencies"]) > 10

@@ -3,14 +3,45 @@
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 # Make scripts importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.read_optional_deps import load_deps, output_catalog, output_json
+
+
+def _bash_syntax_check(script: str) -> subprocess.CompletedProcess[str]:
+    """Run bash -n against LF-normalized content so Windows CRLF checkouts still parse."""
+    return _run_normalized_bash_script(script, "-n")
+
+
+def _run_normalized_bash_script(script: str, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run a bash command against an LF-normalized temporary copy of a tracked script."""
+    source_path = Path(__file__).parent.parent / script
+    normalized = source_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+    with tempfile.NamedTemporaryFile(
+        "w",
+        suffix=source_path.suffix,
+        prefix=f"{source_path.stem}-",
+        dir=source_path.parent,
+        delete=False,
+        encoding="utf-8",
+        newline="\n",
+    ) as handle:
+        handle.write(normalized)
+        temp_path = Path(handle.name)
+    try:
+        return subprocess.run(
+            ["bash", *args, str(temp_path)],
+            capture_output=True,
+            text=True,
+            cwd=Path(__file__).parent.parent,
+        )
+    finally:
+        temp_path.unlink(missing_ok=True)
 
 
 def test_load_deps_structure():
@@ -41,9 +72,9 @@ def test_url_template_substitution():
     data = load_deps()
     rtk = next((d for d in data["deps"] if d.get("key") == "rtk"), None)
     assert rtk is not None
-    assert rtk["ver"] == "0.37.0"
+    assert rtk["ver"] == "0.37.2"
     # URL replacement is handled in load_deps(); platform fields contain version
-    assert any("0.37.0" in str(v) for v in rtk.values() if isinstance(v, str))
+    assert any("0.37.2" in str(v) for v in rtk.values() if isinstance(v, str))
 
 
 def test_defaults_section():
@@ -72,7 +103,7 @@ def test_json_output_includes_new_fields(capsys):
     assert "ver" in rtk
     assert "url" in rtk
     assert "bin" in rtk
-    assert rtk["ver"] == "0.37.0"
+    assert rtk["ver"] == "0.37.2"
 
 
 @pytest.mark.parametrize("key", ["rtk", "bw", "pnpm"])
@@ -89,9 +120,22 @@ def test_all_managed_tools_present():
     """Test that all expected git-pinned tools are in managed-tools."""
     data = load_deps()
     tools = data["managed_tools"]
-    expected = {"oh-my-zsh", "powerlevel10k", "zsh-autosuggestions", "zsh-syntax-highlighting",
-                "zsh-history-substring-search", "zsh-autocomplete", "fzf-tab", "forgit",
-                "you-should-use", "auto-uv-env", "nvm", "k", "marker", "todo-txt"}
+    expected = {
+        "oh-my-zsh",
+        "powerlevel10k",
+        "zsh-autosuggestions",
+        "zsh-syntax-highlighting",
+        "zsh-history-substring-search",
+        "zsh-autocomplete",
+        "fzf-tab",
+        "forgit",
+        "you-should-use",
+        "auto-uv-env",
+        "nvm",
+        "k",
+        "marker",
+        "todo-txt",
+    }
     assert expected.issubset(tools.keys())
 
 
@@ -124,6 +168,7 @@ def test_defaults_loading():
 def test_invalid_key_handling():
     """Test graceful handling of unknown keys."""
     import subprocess
+
     result = subprocess.run(
         ["uv", "run", "scripts/read_optional_deps.py", "get", "nonexistentkey"],
         capture_output=True,
@@ -135,6 +180,7 @@ def test_invalid_key_handling():
 def test_completions_generator():
     """Test that completions generator uses the central parser without hard-coded lists."""
     import subprocess
+
     result = subprocess.run(
         ["uv", "run", "scripts/generate_oooconf_completions.py"],
         capture_output=True,
@@ -149,23 +195,23 @@ def test_shell_scripts_syntax_and_dry_run():
     """Test .sh and .ps1 files for syntax and basic dry-run (no full PS1 execution if pwsh missing)."""
     # Bash syntax (only .sh files; Python is tested via pytest/ruff)
     for script in ["scripts/setup.sh", "scripts/ooodnakov.sh", "scripts/delete.sh"]:
-        result = subprocess.run(["bash", "-n", script], capture_output=True, text=True)
+        result = _bash_syntax_check(script)
         assert result.returncode == 0, f"{script} has syntax errors: {result.stderr}"
 
     # Basic dry-run test for setup (tests the central TOML path and refactored parser)
-    result = subprocess.run(
-        ["scripts/ooodnakov.sh", "deps", "--dry-run", "rtk"],
-        capture_output=True,
-        text=True,
-        cwd=Path(__file__).parent.parent,
-    )
+    result = _run_normalized_bash_script("scripts/ooodnakov.sh", "deps", "--dry-run", "rtk")
     assert result.returncode == 0, f"dry-run failed: {result.stderr}"
     assert any(k in result.stdout.lower() for k in ["dry-run", "rtk", "dependency summary", "complete"])
 
     # PowerShell syntax (if pwsh available)
     if Path("/usr/bin/pwsh").exists() or Path("/usr/local/bin/pwsh").exists():
         result = subprocess.run(
-            ["pwsh", "-NoProfile", "-Command", "Import-Module PSScriptAnalyzer -ErrorAction SilentlyContinue; if ($?) { Invoke-ScriptAnalyzer -Path scripts/setup.ps1 -Severity Error } else { exit 0 }"],
+            [
+                "pwsh",
+                "-NoProfile",
+                "-Command",
+                "Import-Module PSScriptAnalyzer -ErrorAction SilentlyContinue; if ($?) { Invoke-ScriptAnalyzer -Path scripts/setup.ps1 -Severity Error } else { exit 0 }",
+            ],
             capture_output=True,
             text=True,
         )
@@ -173,6 +219,6 @@ def test_shell_scripts_syntax_and_dry_run():
         assert "syntax error" not in result.stderr.lower()
 
     # Run dedicated shell test script (covers .sh dry-run, managed_tool helper, .ps1 fallback)
-    result = subprocess.run(["bash", "tests/test_shell.sh"], capture_output=True, text=True, cwd=Path(__file__).parent.parent)
+    result = _run_normalized_bash_script("tests/test_shell.sh")
     assert result.returncode == 0, f"shell test failed: {result.stderr}"
     assert "All shell tests passed" in result.stdout

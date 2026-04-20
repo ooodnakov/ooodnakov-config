@@ -44,8 +44,11 @@ def test_completions_generator_uses_canonical_parser() -> None:
 
 def test_setup_dispatch_uses_handler_metadata() -> None:
     setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
-    assert "handler_func=\"maybe_install_${handler//-/_}\"" in setup_sh
-    assert "case \"$key\" in" not in setup_sh.split("install_optional_dependency_from_catalog()", 1)[1].split("run_with_spinner()", 1)[0]
+    assert 'handler_func="maybe_install_${handler//-/_}"' in setup_sh
+    assert (
+        'case "$key" in'
+        not in setup_sh.split("install_optional_dependency_from_catalog()", 1)[1].split("run_with_spinner()", 1)[0]
+    )
 
     setup_ps1 = (REPO_ROOT / "scripts/setup.ps1").read_text(encoding="utf-8")
     install_fn = setup_ps1.split("function Install-OptionalDependencyFromSpec", 1)[1]

@@ -16,6 +16,7 @@ def download_pwsh():
     os.chmod("/tmp/pwsh_dir/pwsh", 0o755)
     print("Done")
 
+
 if __name__ == "__main__":
     download_pwsh()
     result = subprocess.run(["/tmp/pwsh_dir/pwsh", "test2.ps1"], capture_output=True, text=True)

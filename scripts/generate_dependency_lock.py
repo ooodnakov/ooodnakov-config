@@ -18,6 +18,7 @@ MD_LOCK = REPO_ROOT / "docs" / "dependency-lock.md"
 def parse_managed_tools() -> list[dict[str, str]]:
     """Parse from optional-deps.toml managed-tools section (sole source of truth)."""
     import subprocess
+
     data = subprocess.run(
         ["uv", "run", "scripts/read_optional_deps.py", "managed-tools"],
         capture_output=True,
@@ -25,15 +26,18 @@ def parse_managed_tools() -> list[dict[str, str]]:
         check=True,
     )
     import json
+
     tools = json.loads(data.stdout)
     pins = []
     for name, info in sorted(tools.items()):
         if isinstance(info, dict) and "repo" in info and "ref" in info:
-            pins.append({
-                "name": name,
-                "repo": info["repo"],
-                "ref": info["ref"],
-            })
+            pins.append(
+                {
+                    "name": name,
+                    "repo": info["repo"],
+                    "ref": info["ref"],
+                }
+            )
     return pins
 
 
