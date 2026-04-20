@@ -65,8 +65,20 @@ if ($null -ne (Get-Module -ListAvailable -Name PSFzf)) {
 
 if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
-    Set-PSReadLineOption -PredictionSource HistoryAndPlugin
-    Set-PSReadLineOption -PredictionViewStyle InlineView
+
+    # Prediction rendering fails in redirected/non-VT hosts (for example RTK-wrapped commands).
+    if (
+        -not [Console]::IsOutputRedirected -and
+        $Host.Name -eq 'ConsoleHost'
+    ) {
+        try {
+            Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+            Set-PSReadLineOption -PredictionViewStyle InlineView
+        } catch {
+            # Skip predictive suggestions when the current host cannot render them.
+        }
+    }
+
     Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
     Set-PSReadLineKeyHandler -Key "Ctrl+Spacebar" -Function MenuComplete
 
