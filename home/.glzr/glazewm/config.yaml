@@ -82,9 +82,9 @@ keybindings:
     bindings: ['Alt+W']
   - commands: ['focus --monitor 1']
     bindings: ['Alt+E']
-  - commands: ['move --monitor 0']
+  - commands: ['move-workspace --direction left']
     bindings: ['Alt+Shift+W']
-  - commands: ['move --monitor 1']
+  - commands: ['move-workspace --direction right']
     bindings: ['Alt+Shift+E']
 
   # Workspaces
