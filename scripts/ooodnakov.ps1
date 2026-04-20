@@ -553,7 +553,8 @@ function Invoke-WmCommand {
                 Write-UiLine -Role info -Message "Starting GlazeWM and Zebar..."
                 Start-Process glazewm -WindowStyle Hidden
                 if (Get-Command zebar -ErrorAction SilentlyContinue) {
-                    Start-Process zebar -ArgumentList "start-widget ooodnakov" -WindowStyle Hidden
+                    # Using start-widget with all mandatory fields
+                    Start-Process zebar -ArgumentList "start-widget --pack ooodnakov --widget-name ooodnakov --anchor top_center --offset-x 0 --offset-y 0 --width 100% --height 40px --monitor-type all" -WindowStyle Hidden
                 }
                 Write-UiLine -Role ok -Message "GlazeWM stack started."
             }
@@ -570,7 +571,16 @@ function Invoke-WmCommand {
         "stop" {
             Write-UiLine -Role info -Message "Stopping all Window Managers..."
             # Stop Komorebi
-            & "$PSScriptRoot/ooodnakov.ps1" komorebi stop
+            try {
+                if (Get-Process komorebi -ErrorAction SilentlyContinue) {
+                    Write-UiLine -Role info -Message "Stopping Komorebi stack..."
+                    komorebic stop --bar 2>$null
+                }
+            } catch {
+                Write-UiLine -Role warn -Message "Komorebic stop failed, forcing processes to close."
+            }
+            Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
+            
             # Stop GlazeWM
             Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
             Write-UiLine -Role ok -Message "WM stack stopped."

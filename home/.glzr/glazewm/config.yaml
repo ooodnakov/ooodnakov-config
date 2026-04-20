@@ -156,13 +156,17 @@ binding_modes:
 
 # Rules for floating windows
 window_rules:
-  - command: "set floating"
-    match_process_name: "/(Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost)/"
-  - command: "set floating"
-    match_class_name: "/(SunAwtDialog|ApplicationFrameWindow)/"
+  - match:
+      - process_name: "/(Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost)/"
+    commands: ["set-floating"]
+  - match:
+      - class_name: "/(SunAwtDialog|ApplicationFrameWindow)/"
+    commands: ["set-floating"]
   
   # Workspace Routing
-  - command: "move to workspace 1"
-    match_process_name: "/(chrome|firefox|zen)/"
-  - command: "move to workspace 2"
-    match_process_name: "/(wezterm|alacritty|windowsterminal)/"
+  - match:
+      - process_name: "/(chrome|firefox|zen)/"
+    commands: ["move to workspace 1"]
+  - match:
+      - process_name: "/(wezterm|alacritty|windowsterminal)/"
+    commands: ["move to workspace 2"]
