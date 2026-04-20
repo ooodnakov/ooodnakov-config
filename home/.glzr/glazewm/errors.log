@@ -1,0 +1,7 @@
+[2m2026-04-20T00:23:13.640499Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m window_rules[0]: missing field `commands` at line 168 column 5
+[2m2026-04-20T00:23:45.234104Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m window_rules[0]: missing field `commands` at line 169 column 5
+[2m2026-04-20T00:25:36.407586Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m window_rules[0].commands: unrecognized subcommand
+ at line 169 column 15
+[2m2026-04-20T00:25:55.495474Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m window_rules[0].commands: unrecognized subcommand
+ at line 169 column 15
+[2m2026-04-20T00:26:19.488872Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m window_rules[0]: missing field `match` at line 169 column 5

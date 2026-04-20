@@ -553,7 +553,7 @@ function Invoke-WmCommand {
                 Write-UiLine -Role info -Message "Starting GlazeWM and Zebar..."
                 Start-Process glazewm -WindowStyle Hidden
                 if (Get-Command zebar -ErrorAction SilentlyContinue) {
-                    Start-Process zebar -ArgumentList "start ooodnakov" -WindowStyle Hidden
+                    Start-Process zebar -ArgumentList "start-widget ooodnakov" -WindowStyle Hidden
                 }
                 Write-UiLine -Role ok -Message "GlazeWM stack started."
             }

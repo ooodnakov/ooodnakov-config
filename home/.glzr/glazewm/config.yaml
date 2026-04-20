@@ -6,51 +6,35 @@ general:
   gaps:
     inner_gap: 8
     outer_gap: 12
+    scale_with_dpi: true
 
   # Focus behavior
-  focus_follows_mouse: true
-  mouse_follows_focus: true
+  focus_follows_cursor: true
+  cursor_jump: true
 
-  # Border settings (thicker, high contrast)
+  # Window hiding (cloak is best for Win11)
+  hide_method: "cloak"
+
+  # Border settings
   active_window_border:
     enabled: true
-    width: 20
+    width: 8
     color: "#8eb2c7" # Ashes Blue
 
   # Animation settings
   animations:
     enabled: true
 
-# Bar configuration (Floating Island Look)
+# Use Zebar as the bar (handled via startup_commands)
 bar:
-  enabled: true
-  height: "44px"
-  position: "top"
-  opacity: 0.85
-  background: "#1c2023"
-  foreground: "#c0c5ce"
-  font_family: "MesloLGSDZ Nerd Font Mono"
-  font_size: "14px"
-  padding: "0px 15px"
-  offset_x: "12px"
-  offset_y: "12px"
-  width: "calc(100% - 24px)"
-  components_left:
-    - type: "workspaces"
-      focused_color: "#8eb2c7"
-      empty_color: "#565e65"
-      occupied_color: "#c0c5ce"
-  components_right:
-    - type: "cpu"
-      label: " "
-      refresh_interval_ms: 2000
-    - type: "memory"
-      label: " "
-      refresh_interval_ms: 2000
-    - type: "time"
-      format: "󱑒 %H:%M"
-    - type: "date"
-      format: "󰃭 %a, %b %d"
+  enabled: false
+
+# Startup / Shutdown
+startup_commands:
+  - "zebar start-widget ooodnakov"
+
+shutdown_commands:
+  - "taskkill /F /IM zebar.exe"
 
 # Workspace icons (matching komorebi)
 workspaces:
@@ -69,7 +53,7 @@ workspaces:
   - name: "7"
     display_name: "󰊫"
 
-# Keybindings matching komorebi behavior
+# Keybindings
 keybindings:
   # Focus windows
   - command: "focus left"
@@ -91,7 +75,7 @@ keybindings:
   - command: "move right"
     binding: "Alt+Shift+L"
 
-  # Multi-Monitor (matched to Alt+W/E)
+  # Multi-Monitor
   - command: "focus monitor left"
     binding: "Alt+W"
   - command: "focus monitor right"
@@ -133,7 +117,11 @@ keybindings:
   - command: "move to workspace 7"
     binding: "Alt+Shift+7"
 
-  # Layout Toggles (matched to komorebi)
+  # Binding Modes
+  - command: "wm-enable-binding-mode resize"
+    binding: "Alt+R"
+
+  # Layout Toggles
   - command: "toggle floating"
     binding: "Alt+T"
   - command: "toggle fullscreen"
@@ -148,6 +136,21 @@ keybindings:
     binding: "Alt+Shift+O"
   - command: "exit wm"
     binding: "Alt+Shift+Q"
+
+# Resize Binding Mode
+binding_modes:
+  - name: "resize"
+    keybindings:
+      - command: "resize width -2%"
+        binding: "H"
+      - command: "resize height 2%"
+        binding: "J"
+      - command: "resize height -2%"
+        binding: "K"
+      - command: "resize width 2%"
+        binding: "L"
+      - command: "wm-disable-binding-mode resize"
+        bindings: ["Escape", "Enter"]
 
 # Rules for floating windows
 window_rules:
