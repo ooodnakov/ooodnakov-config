@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -54,6 +55,9 @@ ANSI_COLORS = {
     "info": "\033[38;5;117m",
     "muted": "\033[38;5;245m",
 }
+ENV_PLACEHOLDER_PATTERN = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
+BRACED_ENV_REF_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+SIMPLE_ENV_REF_PATTERN = re.compile(r"(?<!\$)\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
 @dataclass(frozen=True)
@@ -121,7 +125,7 @@ def parse_args() -> argparse.Namespace:
     mcp_subparsers = mcp_parser.add_subparsers(dest="subcommand", required=True)
     mcp_sync_parser = mcp_subparsers.add_parser("sync", help="Synchronize (clone/pull/install) managed MCP servers.")
     mcp_sync_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
-    mcp_status_parser = subparsers.add_parser("status", help="Show status of managed MCP servers.")
+    subparsers.add_parser("status", help="Show status of managed MCP servers.")
 
     rtk_parser = subparsers.add_parser(
         "rtk", help="Manage RTK (Rust Token Killer) integration."
@@ -530,19 +534,20 @@ def sync_global_configs(
                     if f"[mcp_servers.{name}]" not in updated and f'[mcp_servers."{name}"]' not in updated:
                         if "command" not in config:
                             continue
-                        
-                        mcp_dir = resolve_mcp_path(repo_root, name)
-                        command = expand_mcp_vars(config["command"], mcp_dir, repo_root)
-                        args = [expand_mcp_vars(arg, mcp_dir, repo_root) for arg in config.get("args", [])]
-                        
+
+                        entry = render_mcp_server_entry(target, name, config, repo_root)
+
                         # Basic TOML injection (appending to end of file)
-                        block = f"\n[mcp_servers.{name}]\ncommand = {json.dumps(command)}\nargs = {json.dumps(args)}\n"
-                        if "env" in config:
+                        block = (
+                            f"\n[mcp_servers.{name}]\n"
+                            f"command = {json.dumps(entry['command'])}\n"
+                            f"args = {json.dumps(entry['args'])}\n"
+                        )
+                        if "env" in entry:
                             block += f"[mcp_servers.{name}.env]\n"
-                            for k, v in config["env"].items():
-                                val = expand_mcp_vars(v, mcp_dir, repo_root) if isinstance(v, str) else v
-                                block += f"{k} = {json.dumps(val)}\n"
-                        
+                            for key, value in entry["env"].items():
+                                block += f"{key} = {json.dumps(value)}\n"
+
                         updated += block
                         needs_update = True
                 
@@ -572,20 +577,7 @@ def sync_global_configs(
                         if "command" not in config:
                             continue
 
-                        mcp_dir = resolve_mcp_path(repo_root, name)
-                        command = expand_mcp_vars(config["command"], mcp_dir, repo_root)
-                        args = [expand_mcp_vars(arg, mcp_dir, repo_root) for arg in config.get("args", [])]
-
-                        data["mcpServers"][name] = {
-                            "command": command,
-                            "args": args,
-                        }
-                        if "env" in config:
-                            env = {
-                                k: expand_mcp_vars(v, mcp_dir, repo_root) if isinstance(v, str) else v
-                                for k, v in config["env"].items()
-                            }
-                            data["mcpServers"][name]["env"] = env
+                        data["mcpServers"][name] = render_mcp_server_entry(target, name, config, repo_root)
                         needs_update = True
 
             # Gemini-specific context config sync
@@ -680,7 +672,6 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
 
 
 def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> int:
-    common_text = get_platform_common_text(repo_root, config)
     # merged_data for global agent configs (includes local overrides)
     merged_data = load_common_data(repo_root, config, include_local=True)
 
@@ -1058,6 +1049,78 @@ def expand_mcp_vars(text: str, mcp_dir: Path, repo_root: Path) -> str:
     return expanded.replace("{mcp_dir}", str(mcp_dir)).replace("{repo_root}", str(repo_root))
 
 
+def resolve_env_reference(var_name: str) -> str | None:
+    return os.environ.get(var_name)
+
+
+def replace_env_references(text: str) -> str:
+    def replace_with_value(match: re.Match[str]) -> str:
+        name = match.group(1)
+        value = resolve_env_reference(name)
+        return value if value is not None else match.group(0)
+
+    rewritten = BRACED_ENV_REF_PATTERN.sub(replace_with_value, text)
+    rewritten = SIMPLE_ENV_REF_PATTERN.sub(replace_with_value, rewritten)
+    return ENV_PLACEHOLDER_PATTERN.sub(replace_with_value, rewritten)
+
+
+def render_mcp_value(
+    value: str,
+    *,
+    mcp_dir: Path,
+    repo_root: Path,
+) -> str:
+    rendered = expand_mcp_vars(value, mcp_dir, repo_root)
+    return replace_env_references(rendered)
+
+
+def build_mcp_env(
+    config: dict[str, Any],
+    *,
+    mcp_dir: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    env: dict[str, Any] = {}
+
+    for name in config.get("env_vars", []):
+        env[name] = resolve_env_reference(name) or f"{{{name}}}"
+
+    for key, value in config.get("env", {}).items():
+        env[key] = (
+            render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root)
+            if isinstance(value, str)
+            else value
+        )
+
+    return env
+
+
+def render_mcp_server_entry(
+    _target: AgentConfigTarget,
+    name: str,
+    config: dict[str, Any],
+    repo_root: Path,
+) -> dict[str, Any]:
+    mcp_dir = resolve_mcp_path(repo_root, name)
+    entry = {
+        "command": render_mcp_value(
+            config["command"],
+            mcp_dir=mcp_dir,
+            repo_root=repo_root,
+        ),
+        "args": [
+            render_mcp_value(arg, mcp_dir=mcp_dir, repo_root=repo_root)
+            for arg in config.get("args", [])
+        ],
+    }
+
+    env = build_mcp_env(config, mcp_dir=mcp_dir, repo_root=repo_root)
+    if env:
+        entry["env"] = env
+
+    return entry
+
+
 def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     mcp_servers = common_data.get("mcp_servers", {})
@@ -1073,7 +1136,6 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
     attempted = 0
     failed = 0
     synced = 0
-    skipped = 0
 
     for name, cfg in managed_mcps.items():
         source = cfg["source"]

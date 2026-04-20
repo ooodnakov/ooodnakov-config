@@ -21,7 +21,7 @@
         "dlx",
         "@upstash/context7-mcp",
         "--api-key",
-        "$CONTEXT7_API_KEY"
+        "{CONTEXT7_API_KEY}"
       ],
       "env_vars": ["CONTEXT7_API_KEY"],
       "description": "documentation search and code examples for thousands of libraries"
@@ -53,8 +53,8 @@
         "gemini-webapi-mcp"
       ],
       "env": {
-        "GEMINI_PSIDTS": "$GEMINI_PSIDTS",
-        "GEMINI_PSID": "$GEMINI_PSID"
+        "GEMINI_PSIDTS": "{GEMINI_PSIDTS}",
+        "GEMINI_PSID": "{GEMINI_PSID}"
       },
       "install": "uv sync",
       "description": "Unofficial Gemini Web API access"
