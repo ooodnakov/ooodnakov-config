@@ -27,13 +27,13 @@ general:
   animations:
     enabled: true
 
-# Use Zebar as the bar (handled via startup_commands)
+# Use Zebar as the bar
 bar:
   enabled: false
 
 # Startup / Shutdown
 startup_commands:
-  - "zebar start-widget ooodnakov"
+  - "zebar start-widget --pack ooodnakov --widget-name ooodnakov --anchor top_center --offset-x 0 --offset-y 0 --width 100% --height 40px --monitor-type all"
 
 shutdown_commands:
   - "taskkill /F /IM zebar.exe"
@@ -58,65 +58,65 @@ workspaces:
 # Keybindings
 keybindings:
   # Focus windows
-  - command: "focus left"
+  - command: "focus --direction left"
     binding: "Alt+H"
-  - command: "focus down"
+  - command: "focus --direction down"
     binding: "Alt+J"
-  - command: "focus up"
+  - command: "focus --direction up"
     binding: "Alt+K"
-  - command: "focus right"
+  - command: "focus --direction right"
     binding: "Alt+L"
 
   # Move windows
-  - command: "move left"
+  - command: "move --direction left"
     binding: "Alt+Shift+H"
-  - command: "move down"
+  - command: "move --direction down"
     binding: "Alt+Shift+J"
-  - command: "move up"
+  - command: "move --direction up"
     binding: "Alt+Shift+K"
-  - command: "move right"
+  - command: "move --direction right"
     binding: "Alt+Shift+L"
 
   # Multi-Monitor
-  - command: "focus monitor left"
+  - command: "focus-monitor --direction left"
     binding: "Alt+W"
-  - command: "focus monitor right"
+  - command: "focus-monitor --direction right"
     binding: "Alt+E"
-  - command: "move to monitor left"
+  - command: "move-to-monitor --direction left"
     binding: "Alt+Shift+W"
-  - command: "move to monitor right"
+  - command: "move-to-monitor --direction right"
     binding: "Alt+Shift+E"
 
   # Workspaces
-  - command: "switch workspace 1"
+  - command: "focus --workspace 1"
     binding: "Alt+1"
-  - command: "switch workspace 2"
+  - command: "focus --workspace 2"
     binding: "Alt+2"
-  - command: "switch workspace 3"
+  - command: "focus --workspace 3"
     binding: "Alt+3"
-  - command: "switch workspace 4"
+  - command: "focus --workspace 4"
     binding: "Alt+4"
-  - command: "switch workspace 5"
+  - command: "focus --workspace 5"
     binding: "Alt+5"
-  - command: "switch workspace 6"
+  - command: "focus --workspace 6"
     binding: "Alt+6"
-  - command: "switch workspace 7"
+  - command: "focus --workspace 7"
     binding: "Alt+7"
 
   # Move to workspace
-  - command: "move to workspace 1"
+  - command: "move --workspace 1"
     binding: "Alt+Shift+1"
-  - command: "move to workspace 2"
+  - command: "move --workspace 2"
     binding: "Alt+Shift+2"
-  - command: "move to workspace 3"
+  - command: "move --workspace 3"
     binding: "Alt+Shift+3"
-  - command: "move to workspace 4"
+  - command: "move --workspace 4"
     binding: "Alt+Shift+4"
-  - command: "move to workspace 5"
+  - command: "move --workspace 5"
     binding: "Alt+Shift+5"
-  - command: "move to workspace 6"
+  - command: "move --workspace 6"
     binding: "Alt+Shift+6"
-  - command: "move to workspace 7"
+  - command: "move --workspace 7"
     binding: "Alt+Shift+7"
 
   # Binding Modes
@@ -124,32 +124,32 @@ keybindings:
     binding: "Alt+R"
 
   # Layout Toggles
-  - command: "toggle floating"
+  - command: "toggle-floating"
     binding: "Alt+T"
-  - command: "toggle fullscreen"
+  - command: "toggle-fullscreen"
     binding: "Alt+Shift+F"
-  - command: "set tiling direction toggle"
+  - command: "toggle-tiling-direction"
     binding: "Alt+X"
 
   # System
   - command: "close"
     binding: "Alt+Q"
-  - command: "reload config"
+  - command: "reload-config"
     binding: "Alt+Shift+O"
-  - command: "exit wm"
+  - command: "exit-wm"
     binding: "Alt+Shift+Q"
 
 # Resize Binding Mode
 binding_modes:
   - name: "resize"
     keybindings:
-      - command: "resize width -2%"
+      - command: "resize --width -2%"
         binding: "H"
-      - command: "resize height 2%"
+      - command: "resize --height 2%"
         binding: "J"
-      - command: "resize height -2%"
+      - command: "resize --height -2%"
         binding: "K"
-      - command: "resize width 2%"
+      - command: "resize --width 2%"
         binding: "L"
       - command: "wm-disable-binding-mode resize"
         bindings: ["Escape", "Enter"]
@@ -166,7 +166,7 @@ window_rules:
   # Workspace Routing
   - match:
       - process_name: "/(chrome|firefox|zen)/"
-    commands: ["move to workspace 1"]
+    commands: ["move --workspace 1"]
   - match:
       - process_name: "/(wezterm|alacritty|windowsterminal)/"
-    commands: ["move to workspace 2"]
+    commands: ["move --workspace 2"]
