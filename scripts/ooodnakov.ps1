@@ -554,10 +554,6 @@ function Invoke-WmCommand {
                 Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
                 Start-Sleep -Milliseconds 500
                 Start-Process glazewm -WindowStyle Hidden
-                
-                if (Get-Command zebar -ErrorAction SilentlyContinue) {
-                    Start-Process zebar -ArgumentList "start-widget --pack ooodnakov --widget-name ooodnakov --anchor top_center --offset-x 0 --offset-y 0 --width 100% --height 40px --monitor-type all" -WindowStyle Hidden
-                }
                 Write-UiLine -Role ok -Message "GlazeWM stack started."
             }
             return
@@ -592,7 +588,7 @@ function Invoke-WmCommand {
             if (Get-Process komorebi -ErrorAction SilentlyContinue) { & "$PSScriptRoot/ooodnakov.ps1" komorebi reload }
             elseif (Get-Process glazewm -ErrorAction SilentlyContinue) {
                 Write-UiLine -Role info -Message "Reloading GlazeWM..."
-                # GlazeWM reload is just a keypress usually, or we can restart it
+                Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
                 Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
                 Start-Sleep -Milliseconds 500
                 Start-Process glazewm -WindowStyle Hidden

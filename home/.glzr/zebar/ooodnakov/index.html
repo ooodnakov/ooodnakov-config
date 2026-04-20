@@ -130,75 +130,106 @@
     </div>
   </div>
 
-  <script>
-    const zebar = window.zebar;
-    
-    zebar.on('update', (data) => {
-      // Update Time & Date
-      if (data.date) {
-        const d = new Date(data.date.now);
-        document.getElementById('time').innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-        document.getElementById('date').innerText = d.toLocaleDateString([], { weekday: 'short', month: 'short', day: '2-digit' });
+  <script type="module">
+    import * as zebar from 'https://esm.sh/zebar@3.0';
+
+    const providers = zebar.createProviderGroup({
+      network: { type: 'network' },
+      glazewm: { type: 'glazewm' },
+      cpu: { type: 'cpu' },
+      date: { type: 'date', formatting: 'EEE d MMM t' },
+      battery: { type: 'battery' },
+      memory: { type: 'memory' },
+    });
+
+    const workspaceIcons = {
+      '1': '󰈹',
+      '2': '',
+      '3': '󰙯',
+      '4': '󰓓',
+      '5': '󱓷',
+      '6': '󰉋',
+      '7': '󰊫',
+    };
+
+    function render(output) {
+      if (output.date?.formatted) {
+        const formatted = output.date.formatted;
+        const lastSpace = formatted.lastIndexOf(' ');
+        if (lastSpace > 0) {
+          document.getElementById('date').innerText = formatted.slice(0, lastSpace);
+          document.getElementById('time').innerText = formatted.slice(lastSpace + 1);
+        } else {
+          document.getElementById('time').innerText = formatted;
+        }
       }
 
-      // Update CPU & Memory
-      if (data.cpu) {
-        document.getElementById('cpu').innerText = Math.round(data.cpu.usage) + '%';
-      }
-      if (data.memory) {
-        document.getElementById('memory').innerText = Math.round(data.memory.usage_percent) + '%';
+      if (output.cpu) {
+        document.getElementById('cpu').innerText = Math.round(output.cpu.usage) + '%';
       }
 
-      // Update Battery
-      if (data.battery) {
-        const bat = data.battery;
+      if (output.memory) {
+        document.getElementById('memory').innerText = Math.round(output.memory.usage) + '%';
+      }
+
+      if (output.battery) {
         const text = document.getElementById('bat-text');
         const icon = document.getElementById('bat-icon');
-        text.innerText = Math.round(bat.charge_percent) + '%';
-        
-        if (bat.is_charging) icon.innerText = '󰂄';
-        else if (bat.charge_percent < 20) {
+        const charge = Math.round(output.battery.chargePercent);
+
+        text.innerText = charge + '%';
+        text.classList.remove('critical');
+
+        if (output.battery.isCharging) {
+          icon.innerText = '󰂄';
+        } else if (charge < 20) {
           icon.innerText = '󰂃';
           text.classList.add('critical');
-        } else icon.innerText = '󰁹';
+        } else {
+          icon.innerText = '󰁹';
+        }
       }
 
-      // Update Network
-      if (data.network) {
-        const net = data.network;
+      if (output.network) {
         const icon = document.getElementById('net-icon');
         const text = document.getElementById('net-text');
-        if (net.default_interface) {
-          text.innerText = net.default_interface.type === 'wifi' ? 'Wifi' : 'Eth';
-          icon.innerText = net.default_interface.type === 'wifi' ? '󰤨' : '󰈀';
+        const type = output.network.defaultInterface?.type;
+
+        if (type === 'wifi') {
+          text.innerText = output.network.defaultGateway?.ssid || 'Wifi';
+          icon.innerText = '󰤨';
+        } else if (type === 'ethernet') {
+          text.innerText = 'Eth';
+          icon.innerText = '󰈀';
         } else {
           text.innerText = 'Offline';
           icon.innerText = '󰤭';
         }
       }
 
-      // Update Workspaces & Window Title from GlazeWM
-      if (data.glazewm) {
+      if (output.glazewm) {
         const wsContainer = document.getElementById('workspaces');
         const titleEl = document.getElementById('window-title');
-        wsContainer.innerHTML = '';
-        
-        const icons = { "1": "󰈹", "2": "", "3": "󰙯", "4": "󰓓", "5": "󱓷", "6": "󰉋", "7": "󰊫" };
+        const workspaces = output.glazewm.currentWorkspaces || [];
+        const focusedWorkspace = output.glazewm.focusedWorkspace;
 
-        data.glazewm.workspaces.forEach(ws => {
+        wsContainer.innerHTML = '';
+
+        workspaces.forEach(workspace => {
           const el = document.createElement('div');
-          el.className = 'workspace' + (ws.is_focused ? ' focused' : '') + (ws.children.length > 0 ? ' occupied' : '');
-          el.innerText = icons[ws.name] || ws.name;
+          const focused = workspace.name === focusedWorkspace?.name;
+          const occupied = (workspace.displayedWindows?.length || 0) > 0;
+          el.className = 'workspace' + (focused ? ' focused' : '') + (occupied ? ' occupied' : '');
+          el.innerText = workspaceIcons[workspace.name] || workspace.name;
           wsContainer.appendChild(el);
         });
 
-        if (data.glazewm.focused_window) {
-          titleEl.innerText = data.glazewm.focused_window.title;
-        } else {
-          titleEl.innerText = 'Desktop';
-        }
+        titleEl.innerText = output.glazewm.focusedContainer?.title || 'Desktop';
       }
-    });
+    }
+
+    providers.onOutput(() => render(providers.outputMap));
+    render(providers.outputMap);
   </script>
 </body>
 </html>

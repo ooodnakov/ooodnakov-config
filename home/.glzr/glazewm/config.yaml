@@ -2,15 +2,11 @@
 # https://github.com/glazewm/glazewm
 
 general:
-  # Gaps between windows and the screen edge.
-  gaps:
-    inner_gap: '8px'
-    outer_gap:
-      top: '55px'
-      left: '12px'
-      right: '12px'
-      bottom: '12px'
-    scale_with_dpi: true
+  startup_commands:
+    - 'shell-exec zebar startup'
+  shutdown_commands:
+    - 'shell-exec taskkill /F /IM zebar.exe'
+  config_reload_commands: []
 
   # Focus behavior
   focus_follows_cursor: true
@@ -31,16 +27,14 @@ general:
   animations:
     enabled: true
 
-# Use Zebar as the bar
-bar:
-  enabled: false
-
-# Startup / Shutdown
-startup_commands: 
-  - 'shell-exec zebar start-widget --pack ooodnakov --widget-name ooodnakov --anchor top_center --offset-x 0 --offset-y 0 --width 100% --height 40px --monitor-type all'
-
-shutdown_commands:
-  - 'shell-exec taskkill /F /IM zebar.exe'
+gaps:
+  inner_gap: '8px'
+  outer_gap:
+    top: '55px'
+    left: '12px'
+    right: '12px'
+    bottom: '12px'
+  scale_with_dpi: true
 
 # Workspace icons (matching komorebi)
 workspaces:
@@ -164,7 +158,7 @@ window_rules:
     match:
       - window_process: { equals: 'zebar' }
 
-  - commands: ['set-floating']
+  - commands: ['set-floating --centered']
     match:
       - window_process: { regex: 'Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost' }
       - window_class: { regex: 'SunAwtDialog|ApplicationFrameWindow' }
