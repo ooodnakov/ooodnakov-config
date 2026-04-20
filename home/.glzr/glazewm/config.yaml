@@ -4,12 +4,12 @@
 general:
   # Gaps between windows and the screen edge.
   gaps:
-    inner_gap: 8
+    inner_gap: '8px'
     outer_gap:
-      top: 55
-      left: 12
-      right: 12
-      bottom: 12
+      top: '55px'
+      left: '12px'
+      right: '12px'
+      bottom: '12px'
     scale_with_dpi: true
 
   # Focus behavior

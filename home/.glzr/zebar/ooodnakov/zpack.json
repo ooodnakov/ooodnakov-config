@@ -1,0 +1,12 @@
+{
+  "id": "ooodnakov",
+  "name": "ooodnakov",
+  "version": "1.0.0",
+  "description": "Custom glassy island bar for ooodnakov-config",
+  "widgets": [
+    {
+      "name": "ooodnakov",
+      "template_path": "index.html"
+    }
+  ]
+}
