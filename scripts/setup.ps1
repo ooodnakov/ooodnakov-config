@@ -2151,9 +2151,8 @@ function Test-Doctor {
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")
 
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/glazewm") -Target (Join-Path $ConfigHome "glazewm")
-
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/zebar") -Target (Join-Path $ConfigHome "zebar")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")
 
     Test-DoctorCommand -Name "git"
     Test-DoctorCommand -Name "wezterm"
@@ -2267,15 +2266,11 @@ function Invoke-Install {
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")) {
         Add-ToolSummary "whkd: linked config"
     }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/glazewm") -Target (Join-Path $ConfigHome "glazewm")) {
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")) {
         Add-ToolSummary "glazewm: linked config directory"
     }
-    # Link ~/.glazewm to ~/.config/glazewm for maximum compatibility
-    if (New-Symlink -Source (Join-Path $ConfigHome "glazewm") -Target (Join-Path $HomeDir ".glazewm")) {
-        Add-ToolSummary "glazewm: ensured compatibility link"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/zebar") -Target (Join-Path $ConfigHome "zebar")) {
-        Add-ToolSummary "zebar: linked config"
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")) {
+        Add-ToolSummary "zebar: linked config directory"
     }
 
     if (Ensure-UserPathContains -PathEntry $LocalBinDir) {
