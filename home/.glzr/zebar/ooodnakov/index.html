@@ -29,11 +29,11 @@
 
     #bar {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       height: 32px; /* Slightly slimmer for professional feel */
       margin: 10px;
       padding: 0 15px;
+      gap: 12px;
       background: var(--bg);
       backdrop-filter: blur(12px);
       border-radius: 10px;
@@ -44,7 +44,7 @@
     .group {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     #left {
@@ -52,16 +52,15 @@
       flex: 1 1 auto;
     }
 
-    #center {
-      flex: 0 0 auto;
-    }
-
     #right {
-      flex: 0 0 auto;
+      margin-left: auto;
+      flex: 0 1 auto;
+      gap: 9px;
+      min-width: 0;
     }
 
     #workspaces {
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
       flex-wrap: nowrap;
       overflow: hidden;
@@ -71,10 +70,10 @@
       appearance: none;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
-      max-width: 220px;
-      padding: 5px 10px;
+      max-width: 132px;
+      padding: 3px 8px;
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.03);
@@ -107,10 +106,12 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 22px;
-      height: 22px;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 3px;
       border-radius: 999px;
-      font-size: 12px;
+      line-height: 1;
+      font-size: 10px;
       font-weight: 700;
       color: #1c2023;
       background: rgba(192, 197, 206, 0.85);
@@ -124,7 +125,7 @@
     .workspace-apps {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       min-width: 0;
       overflow: hidden;
       white-space: nowrap;
@@ -134,9 +135,9 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 18px;
-      height: 18px;
-      font-size: 13px;
+      min-width: 12px;
+      height: 14px;
+      font-size: 11px;
       color: var(--fg);
       opacity: 0.92;
       flex: 0 0 auto;
@@ -152,8 +153,12 @@
 
     /* Window Title */
     #window-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-size: 13px;
-      max-width: 440px;
+      max-width: 280px;
+      min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -161,17 +166,43 @@
       opacity: 0.8;
     }
 
+    #window-title-icon {
+      color: var(--accent);
+      font-size: 13px;
+      flex: 0 0 auto;
+    }
+
+    #window-title-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     /* Widgets */
     .widget {
       display: flex;
       align-items: center;
       gap: 5px;
-      font-size: 13px;
+      min-width: 0;
+      font-size: 12px;
     }
 
     .icon {
       color: var(--accent);
-      font-size: 14px;
+      font-size: 13px;
+    }
+
+    #net-text,
+    #date,
+    #time {
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    #net-text {
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .critical { color: var(--critical); }
@@ -182,13 +213,9 @@
   <div id="bar">
     <div class="group" id="left">
       <div class="group" id="workspaces"></div>
-      <div id="window-title">Ready</div>
-    </div>
-
-    <div class="group" id="center">
-      <div class="widget">
-        <span class="icon">󱑒</span>
-        <span id="time">00:00</span>
+      <div id="window-title">
+        <span id="window-title-icon">󰍹</span>
+        <span id="window-title-text">Ready</span>
       </div>
     </div>
 
@@ -208,6 +235,10 @@
       <div class="widget" id="bat-widget">
         <span class="icon" id="bat-icon">󰁹</span>
         <span id="bat-text">--%</span>
+      </div>
+      <div class="widget">
+        <span class="icon">󱑒</span>
+        <span id="time">00:00</span>
       </div>
       <div class="widget">
         <span class="icon">󰃭</span>
@@ -263,6 +294,28 @@
       notepadplusplus: '󰈙',
     };
 
+    const titleIcons = [
+      [/zen/i, '󰰶'],
+      [/chrome|google chrome/i, '󰊯'],
+      [/edge|microsoft edge/i, '󰇩'],
+      [/firefox/i, '󰈹'],
+      [/discord/i, '󰙯'],
+      [/telegram/i, ''],
+      [/slack/i, '󰒱'],
+      [/spotify/i, '󰓇'],
+      [/steam/i, '󰓓'],
+      [/obsidian/i, '󰎚'],
+      [/cursor/i, '󰚩'],
+      [/visual studio code|vscode|code/i, '󰨞'],
+      [/wezterm|terminal|powershell|pwsh|cmd/i, ''],
+      [/explorer|files/i, '󰉋'],
+      [/excel/i, '󰈛'],
+      [/word/i, '󰈭'],
+      [/powerpoint/i, '󰈧'],
+      [/task manager/i, '󰄪'],
+      [/calculator/i, '󰃬'],
+    ];
+
     const titleCase = value => value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 
     function getWindowProcessName(window) {
@@ -304,6 +357,11 @@
       }
 
       const title = getWindowTitle(window).trim();
+      const titleIcon = titleIcons.find(([pattern]) => pattern.test(title));
+      if (titleIcon) {
+        return { icon: titleIcon[1], label: title };
+      }
+
       if (title) {
         return { icon: title[0].toUpperCase(), label: title };
       }
@@ -363,7 +421,9 @@
       }
 
       button.appendChild(label);
-      button.appendChild(apps);
+      if (appVisuals.length > 0) {
+        button.appendChild(apps);
+      }
       return button;
     }
 
@@ -388,6 +448,7 @@
       }
 
       if (output.battery) {
+        document.getElementById('bat-widget').style.display = '';
         const text = document.getElementById('bat-text');
         const icon = document.getElementById('bat-icon');
         const charge = Math.round(output.battery.chargePercent);
@@ -403,6 +464,8 @@
         } else {
           icon.innerText = '󰁹';
         }
+      } else {
+        document.getElementById('bat-widget').style.display = 'none';
       }
 
       if (output.network) {
@@ -424,9 +487,12 @@
 
       if (output.glazewm) {
         const wsContainer = document.getElementById('workspaces');
-        const titleEl = document.getElementById('window-title');
+        const titleEl = document.getElementById('window-title-text');
+        const titleIconEl = document.getElementById('window-title-icon');
         const workspaces = output.glazewm.currentWorkspaces || [];
         const focusedWorkspace = output.glazewm.focusedWorkspace;
+        const focusedContainer = output.glazewm.focusedContainer;
+        const focusedVisual = getAppVisual(focusedContainer);
 
         wsContainer.innerHTML = '';
 
@@ -434,7 +500,8 @@
           wsContainer.appendChild(renderWorkspace(workspace, focusedWorkspace, output.glazewm));
         });
 
-        titleEl.innerText = output.glazewm.focusedContainer?.title || 'Desktop';
+        titleIconEl.innerText = focusedVisual.icon;
+        titleEl.innerText = focusedContainer?.title || 'Desktop';
       }
     }
 
