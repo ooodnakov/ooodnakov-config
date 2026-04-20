@@ -125,8 +125,7 @@ function Restart-ZebarForGlazeWm {
 
     Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
     Start-Sleep -Milliseconds 2000
-    Start-Process -FilePath $zebarCommand.Source -ArgumentList "startup" -WindowStyle Hidden `
-        -RedirectStandardOutput $null -RedirectStandardError $null
+    & $zebarCommand.Source startup *> $null
 }
 
 function Test-UiInteractive {
