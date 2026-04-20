@@ -2,13 +2,10 @@
 # https://github.com/glazewm/glazewm
 
 general:
-  startup_commands:
-    - 'shell-exec --hide-window cmd.exe /C "ping 127.0.0.1 -n 3 >NUL && zebar startup"'
+  startup_commands: []
   shutdown_commands:
     - 'shell-exec taskkill /F /IM zebar.exe'
-  config_reload_commands:
-    - 'shell-exec taskkill /F /IM zebar.exe'
-    - 'shell-exec --hide-window cmd.exe /C "ping 127.0.0.1 -n 3 >NUL && zebar startup"'
+  config_reload_commands: []
 
   # Focus behavior
   focus_follows_cursor: true

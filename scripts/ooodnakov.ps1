@@ -104,6 +104,30 @@ function Resolve-GlazeWmCommand {
     return $null
 }
 
+function Resolve-ZebarCommand {
+    $candidates = @("zebar", "zebar.exe")
+    foreach ($candidate in $candidates) {
+        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($command) {
+            return $command
+        }
+    }
+
+    return $null
+}
+
+function Restart-ZebarForGlazeWm {
+    $zebarCommand = Resolve-ZebarCommand
+    if (-not $zebarCommand) {
+        Write-UiLine -Role warn -Message "Zebar is not installed. Run 'oooconf deps zebar' first."
+        return
+    }
+
+    Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 2000
+    & $zebarCommand.Source startup
+}
+
 function Test-UiInteractive {
     try {
         return -not [Console]::IsOutputRedirected
@@ -564,9 +588,8 @@ function Invoke-WmCommand {
                     return
                 }
                 Write-UiLine -Role info -Message "Starting GlazeWM and Zebar..."
-                Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
-                Start-Sleep -Milliseconds 500
                 Start-Process -FilePath $glazeWmCommand.Source -WindowStyle Hidden
+                Restart-ZebarForGlazeWm
                 Write-UiLine -Role ok -Message "GlazeWM stack started."
             }
             return
@@ -606,10 +629,10 @@ function Invoke-WmCommand {
                     return
                 }
                 Write-UiLine -Role info -Message "Reloading GlazeWM..."
-                Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
                 Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
                 Start-Sleep -Milliseconds 500
                 Start-Process -FilePath $glazeWmCommand.Source -WindowStyle Hidden
+                Restart-ZebarForGlazeWm
                 Write-UiLine -Role ok -Message "GlazeWM reloaded."
             } else {
                 Write-UiLine -Role warn -Message "No active WM found to reload."
