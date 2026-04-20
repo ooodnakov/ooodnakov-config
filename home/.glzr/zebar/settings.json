@@ -4,12 +4,12 @@
     {
       "pack": "ooodnakov",
       "widget": "ooodnakov",
-      "preset": "primary"
+      "preset": "secondary"
     },
     {
       "pack": "ooodnakov",
       "widget": "ooodnakov",
-      "preset": "secondary"
+      "preset": "primary"
     }
   ]
 }
