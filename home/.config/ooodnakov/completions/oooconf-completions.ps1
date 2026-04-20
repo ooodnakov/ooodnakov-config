@@ -103,7 +103,8 @@ function Get-OooconfCompletions {
         'fastfetch',
         'btop',
         'glazewm',
-        'zebar'
+        'zebar',
+        'overline-zebar'
     )
 
     # Simple AST parsing to find the command and subcommands

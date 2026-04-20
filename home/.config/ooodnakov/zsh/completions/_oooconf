@@ -98,6 +98,7 @@ deps_keys=(
   'btop:system information tool'
   'glazewm:Tiling window manager for Windows'
   'zebar:Modern, customizable status bar for Windows'
+  'overline-zebar:Third-party Zebar widget pack with system tray, widgets, and a config UI'
 )
 
 agents_subcommands=(
