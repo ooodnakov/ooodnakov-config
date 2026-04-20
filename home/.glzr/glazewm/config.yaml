@@ -156,7 +156,7 @@ binding_modes:
 
 # Rules for floating windows
 window_rules:
-  - commands: ['toggle-floating --enabled true']
+  - commands: ['set-floating']
     match:
       - window_process: { regex: 'Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost' }
       - window_class: { regex: 'SunAwtDialog|ApplicationFrameWindow' }
