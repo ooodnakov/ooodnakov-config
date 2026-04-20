@@ -6,7 +6,9 @@ general:
     - 'shell-exec zebar startup'
   shutdown_commands:
     - 'shell-exec taskkill /F /IM zebar.exe'
-  config_reload_commands: []
+  config_reload_commands:
+    - 'shell-exec taskkill /F /IM zebar.exe'
+    - 'shell-exec zebar startup'
 
   # Focus behavior
   focus_follows_cursor: true
