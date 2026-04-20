@@ -92,6 +92,18 @@ function Run-Python {
     }
 }
 
+function Resolve-GlazeWmCommand {
+    $candidates = @("glazewm", "glazewm.exe")
+    foreach ($candidate in $candidates) {
+        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($command) {
+            return $command
+        }
+    }
+
+    return $null
+}
+
 function Test-UiInteractive {
     try {
         return -not [Console]::IsOutputRedirected
@@ -546,14 +558,15 @@ function Invoke-WmCommand {
             if ($choice -eq "komorebi") {
                 & "$PSScriptRoot/ooodnakov.ps1" komorebi start
             } elseif ($choice -eq "glazewm") {
-                if (-not (Get-Command glazewm -ErrorAction SilentlyContinue)) {
+                $glazeWmCommand = Resolve-GlazeWmCommand
+                if (-not $glazeWmCommand) {
                     Write-UiLine -Role warn -Message "GlazeWM is not installed. Run 'oooconf deps glazewm' first."
                     return
                 }
                 Write-UiLine -Role info -Message "Starting GlazeWM and Zebar..."
                 Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
                 Start-Sleep -Milliseconds 500
-                Start-Process glazewm -WindowStyle Hidden
+                Start-Process -FilePath $glazeWmCommand.Source -WindowStyle Hidden
                 Write-UiLine -Role ok -Message "GlazeWM stack started."
             }
             return
@@ -587,11 +600,16 @@ function Invoke-WmCommand {
         "reload" {
             if (Get-Process komorebi -ErrorAction SilentlyContinue) { & "$PSScriptRoot/ooodnakov.ps1" komorebi reload }
             elseif (Get-Process glazewm -ErrorAction SilentlyContinue) {
+                $glazeWmCommand = Resolve-GlazeWmCommand
+                if (-not $glazeWmCommand) {
+                    Write-UiLine -Role warn -Message "GlazeWM executable was not found on PATH."
+                    return
+                }
                 Write-UiLine -Role info -Message "Reloading GlazeWM..."
                 Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
                 Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
                 Start-Sleep -Milliseconds 500
-                Start-Process glazewm -WindowStyle Hidden
+                Start-Process -FilePath $glazeWmCommand.Source -WindowStyle Hidden
                 Write-UiLine -Role ok -Message "GlazeWM reloaded."
             } else {
                 Write-UiLine -Role warn -Message "No active WM found to reload."

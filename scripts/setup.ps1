@@ -2122,7 +2122,7 @@ function Test-DoctorCommand {
         [string]$Name
     )
 
-    if (Get-Command $Name -ErrorAction SilentlyContinue) {
+    if (Test-AnyCommand -Names @($Name)) {
         Write-Output "[ok] command: $Name"
         return
     }
