@@ -10,7 +10,9 @@ general:
 
   # Focus behavior
   focus_follows_cursor: true
-  cursor_jump: true
+  cursor_jump:
+    enabled: true
+    trigger: "monitor_focus"
 
   # Window hiding (cloak is best for Win11)
   hide_method: "cloak"

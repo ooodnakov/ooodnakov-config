@@ -5,3 +5,5 @@
 [2m2026-04-20T00:25:55.495474Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m window_rules[0].commands: unrecognized subcommand
  at line 169 column 15
 [2m2026-04-20T00:26:19.488872Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m window_rules[0]: missing field `match` at line 169 column 5
+[2m2026-04-20T00:29:27.025415Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m general.cursor_jump: invalid type: boolean `true`, expected struct CursorJumpConfig at line 13 column 16
+[2m2026-04-20T00:30:27.723096Z[0m [31mERROR[0m [2mglazewm[0m[2m:[0m window_rules[0]: missing field `commands` at line 159 column 5
