@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ooodnakov Zebar</title>
+  <script
+    src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"
+    crossorigin="anonymous"
+  ></script>
   <style>
     :root {
       --bg: rgba(28, 32, 35, 0.85);
@@ -130,7 +134,7 @@
     </div>
   </div>
 
-  <script type="module">
+  <script type="text/babel" data-type="module">
     import * as zebar from 'https://esm.sh/zebar@3.0';
 
     const providers = zebar.createProviderGroup({
