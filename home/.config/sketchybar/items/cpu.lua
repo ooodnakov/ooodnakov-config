@@ -8,7 +8,9 @@ local function set_popup_label(item, value)
 	item:set({
 		label = {
 			string = value,
-			font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",
+			font = "MesloLGSDZ Nerd Font Mono:Regular:12.0",
+			color = colors.TEXT_WHITE,
+			padding_left = 8,
 		},
 	})
 end
@@ -23,7 +25,7 @@ local cpu = sbar.add("item", "cpu", {
 		color = colors.TEXT_RED,
 	},
 	label = {
-		font = "MesloLGSDZ Nerd Font Mono:Bold:13.0",
+		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
 		padding_right = 8,
 		color = colors.TEXT_RED,
 	},
@@ -48,24 +50,33 @@ local cpu = sbar.add("item", "cpu", {
 local user_item = sbar.add("item", {
 	position = "popup." .. cpu.name,
 	icon = {
-		string = "usr",
+		string = "User",
 		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 46,
+		align = "left",
+		color = colors.TEXT_GREY,
 	},
 })
 
 local system_item = sbar.add("item", {
 	position = "popup." .. cpu.name,
 	icon = {
-		string = "sys",
+		string = "System",
 		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 46,
+		align = "left",
+		color = colors.TEXT_GREY,
 	},
 })
 
 local idle_item = sbar.add("item", {
 	position = "popup." .. cpu.name,
 	icon = {
-		string = "idl",
+		string = "Idle",
 		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 46,
+		align = "left",
+		color = colors.TEXT_GREY,
 	},
 })
 
@@ -88,7 +99,7 @@ local function refresh_cpu()
 
 		cpu:set({
 			label = {
-				string = total and string.format("%d%%", math.floor(total + 0.5)) or "--",
+				string = total and string.format("%2d%%", math.floor(total + 0.5)) or "--",
 			},
 		})
 

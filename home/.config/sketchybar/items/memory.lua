@@ -8,7 +8,9 @@ local function set_popup_label(item, value)
 	item:set({
 		label = {
 			string = value,
-			font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",
+			font = "MesloLGSDZ Nerd Font Mono:Regular:12.0",
+			color = colors.TEXT_WHITE,
+			padding_left = 4,
 		},
 	})
 end
@@ -23,7 +25,7 @@ local memory = sbar.add("item", "memory", {
 		color = colors.TEXT_ORANGE,
 	},
 	label = {
-		font = "MesloLGSDZ Nerd Font Mono:Bold:13.0",
+		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
 		padding_right = 8,
 		color = colors.TEXT_ORANGE,
 	},
@@ -48,32 +50,44 @@ local memory = sbar.add("item", "memory", {
 local used_item = sbar.add("item", {
 	position = "popup." .. memory.name,
 	icon = {
-		string = "used",
+		string = "Used",
 		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 54,
+		align = "left",
+		color = colors.TEXT_GREY,
 	},
 })
 
 local wired_item = sbar.add("item", {
 	position = "popup." .. memory.name,
 	icon = {
-		string = "wrd",
+		string = "Wired",
 		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 54,
+		align = "left",
+		color = colors.TEXT_GREY,
 	},
 })
 
 local compressor_item = sbar.add("item", {
 	position = "popup." .. memory.name,
 	icon = {
-		string = "cmp",
+		string = "Comp",
 		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 54,
+		align = "left",
+		color = colors.TEXT_GREY,
 	},
 })
 
 local swap_item = sbar.add("item", {
 	position = "popup." .. memory.name,
 	icon = {
-		string = "swp",
+		string = "Swap",
 		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 54,
+		align = "left",
+		color = colors.TEXT_GREY,
 	},
 })
 
@@ -83,10 +97,10 @@ local function refresh_memory()
 			memory:set({
 				label = { string = "--" },
 			})
-			set_popup_label(used_item, "Unavailable")
-			set_popup_label(wired_item, "Unavailable")
-			set_popup_label(compressor_item, "Unavailable")
-			set_popup_label(swap_item, "Unavailable")
+			set_popup_label(used_item, "n/a")
+			set_popup_label(wired_item, "n/a")
+			set_popup_label(compressor_item, "n/a")
+			set_popup_label(swap_item, "n/a")
 			return
 		end
 
@@ -99,14 +113,14 @@ local function refresh_memory()
 
 		memory:set({
 			label = {
-				string = used ~= "" and used:gsub("%s+used$", "") or "--",
+				string = used ~= "" and used:gsub("%s+used$", ""):gsub("%.0([GMK])", "%1") or "--",
 			},
 		})
 
-		set_popup_label(used_item, used ~= "" and used or "Unavailable")
-		set_popup_label(wired_item, wired ~= "" and wired or "Unavailable")
-		set_popup_label(compressor_item, compressor ~= "" and compressor or "Unavailable")
-		set_popup_label(swap_item, swap ~= "" and (swap .. " swapins") or "Unavailable")
+		set_popup_label(used_item, used ~= "" and used:gsub("%s+used$", "") or "n/a")
+		set_popup_label(wired_item, wired ~= "" and wired:gsub("%s+wired$", "") or "n/a")
+		set_popup_label(compressor_item, compressor ~= "" and compressor:gsub("%s+compressor$", "") or "n/a")
+		set_popup_label(swap_item, swap ~= "" and swap or "n/a")
 	end)
 end
 
