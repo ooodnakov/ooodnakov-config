@@ -15,35 +15,10 @@ local function set_popup_label(item, value)
 	})
 end
 
-local function refresh_public_ip(item, force)
-	local now = os.time()
-	local should_refresh = force
-		or wifi_state.public_ip == nil
-		or wifi_state.last_public_ip_refresh == nil
-		or (now - wifi_state.last_public_ip_refresh) >= PUBLIC_IP_REFRESH_SECONDS
-
-	if not should_refresh then
-		set_popup_label(item, wifi_state.public_ip)
-		return
-	end
-
-	sbar.exec("curl -fsS https://ipinfo.io/ip", function(result, exit_code)
-		if exit_code == 0 then
-			wifi_state.public_ip = trim(result)
-			wifi_state.last_public_ip_refresh = now
-		elseif wifi_state.public_ip == nil then
-			wifi_state.public_ip = "Unavailable"
-		end
-
-		set_popup_label(item, wifi_state.public_ip or "Unavailable")
-	end)
-end
-
 local wifi_state = {
 	connected = false,
 	ssid = "Disconnected",
 	private_ip = "Unavailable",
-	router = "Unavailable",
 	public_ip = nil,
 	last_public_ip_refresh = nil,
 }
@@ -56,7 +31,7 @@ local wifi = sbar.add("item", "wifi", {
 	},
 	label = {
 		font = "MesloLGSDZ Nerd Font Mono:Italic:12.0",
-		max_chars = 12,
+		max_chars = 18,
 	},
 	scroll_texts = true,
 	click_script = "open 'x-apple.systempreferences:com.apple.NetworkSettings'",
@@ -87,14 +62,6 @@ local private_ip_item = sbar.add("item", {
 	},
 })
 
-local router_item = sbar.add("item", {
-	position = "popup." .. wifi.name,
-	icon = {
-		string = "󰒓",
-		font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",
-	},
-})
-
 local public_ip_item = sbar.add("item", {
 	position = "popup." .. wifi.name,
 	icon = {
@@ -106,7 +73,6 @@ local public_ip_item = sbar.add("item", {
 local function apply_popup_state()
 	set_popup_label(ssid_item, wifi_state.ssid)
 	set_popup_label(private_ip_item, wifi_state.private_ip)
-	set_popup_label(router_item, wifi_state.router)
 	set_popup_label(public_ip_item, wifi_state.public_ip or "Refreshing...")
 end
 
@@ -117,10 +83,35 @@ local function update_summary()
 			color = wifi_state.connected and colors.TEXT_WHITE or colors.TEXT_GREY,
 		},
 		label = {
-			string = wifi_state.ssid,
+			string = wifi_state.connected and wifi_state.ssid or "Disconnected",
 			color = wifi_state.connected and colors.TEXT_WHITE or colors.TEXT_GREY,
 		},
 	})
+end
+
+local function refresh_public_ip(force)
+	local now = os.time()
+	local should_refresh = force
+		or wifi_state.public_ip == nil
+		or wifi_state.last_public_ip_refresh == nil
+		or (now - wifi_state.last_public_ip_refresh) >= PUBLIC_IP_REFRESH_SECONDS
+
+	if not should_refresh then
+		set_popup_label(public_ip_item, wifi_state.public_ip)
+		return
+	end
+
+	sbar.exec("zsh -lc 'myip'", function(result, exit_code)
+		if exit_code == 0 then
+			local public_ip = trim(result)
+			wifi_state.public_ip = public_ip ~= "" and public_ip or "Unavailable"
+			wifi_state.last_public_ip_refresh = now
+		elseif wifi_state.public_ip == nil then
+			wifi_state.public_ip = "Unavailable"
+		end
+
+		set_popup_label(public_ip_item, wifi_state.public_ip or "Unavailable")
+	end)
 end
 
 local function refresh_wifi()
@@ -129,19 +120,17 @@ local function refresh_wifi()
 			wifi_state.connected = false
 			wifi_state.ssid = "Wi-Fi error"
 			wifi_state.private_ip = "Unavailable"
-			wifi_state.router = "Unavailable"
 			update_summary()
 			apply_popup_state()
 			return
 		end
 
 		local ipv4 = trim(local_info:match("IP address:%s*([^\r\n]+)") or "")
-		local router = trim(local_info:match("Router:%s*([^\r\n]+)") or "")
-		local is_connected = ipv4 ~= "" and ipv4 ~= "none"
+		local ipv6 = trim(local_info:match("IPv6 IP address:%s*([^\r\n]+)") or "")
+		local is_connected = (ipv4 ~= "" and ipv4 ~= "none") or (ipv6 ~= "" and ipv6 ~= "none")
 
 		wifi_state.connected = is_connected
-		wifi_state.private_ip = is_connected and ipv4 or "Unavailable"
-		wifi_state.router = (router ~= "" and router ~= "none") and router or "Unavailable"
+		wifi_state.private_ip = (ipv4 ~= "" and ipv4 ~= "none") and ipv4 or "Unavailable"
 
 		if not is_connected then
 			wifi_state.ssid = "Disconnected"
@@ -150,9 +139,9 @@ local function refresh_wifi()
 			return
 		end
 
-		sbar.exec("networksetup -getairportnetwork en0", function(airport_info, airport_exit_code)
-			if airport_exit_code == 0 then
-				local ssid = trim(airport_info:match(": (.+)$") or "")
+		sbar.exec("networksetup -listpreferredwirelessnetworks en0 | sed -n '2s/^\\t//p'", function(ssid_info, ssid_exit_code)
+			if ssid_exit_code == 0 then
+				local ssid = trim(ssid_info)
 				wifi_state.ssid = ssid ~= "" and ssid or "Connected"
 			else
 				wifi_state.ssid = "Connected"
@@ -173,7 +162,7 @@ wifi:subscribe("mouse.entered", function()
 	apply_popup_state()
 
 	if wifi_state.connected then
-		refresh_public_ip(public_ip_item, false)
+		refresh_public_ip(false)
 	else
 		set_popup_label(public_ip_item, "Offline")
 	end
