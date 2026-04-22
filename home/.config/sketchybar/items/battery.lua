@@ -69,6 +69,28 @@ local draw_item = sbar.add("item", {
 	},
 })
 
+local health_item = sbar.add("item", {
+	position = "popup." .. battery.name,
+	icon = {
+		string = "Health",
+		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 60,
+		align = "left",
+		color = colors.TEXT_GREY,
+	},
+})
+
+local cycle_item = sbar.add("item", {
+	position = "popup." .. battery.name,
+	icon = {
+		string = "Cycles",
+		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
+		width = 60,
+		align = "left",
+		color = colors.TEXT_GREY,
+	},
+})
+
 local function refresh_battery()
 	sbar.exec("pmset -g batt", function(batt_info, exit_code)
 		if exit_code ~= 0 then
@@ -81,6 +103,8 @@ local function refresh_battery()
 			set_popup_label(source_item, "n/a")
 			set_popup_label(eta_item, "n/a")
 			set_popup_label(draw_item, "n/a")
+			set_popup_label(health_item, "n/a")
+			set_popup_label(cycle_item, "n/a")
 			return
 		end
 
@@ -148,6 +172,21 @@ local function refresh_battery()
 
 				local draw = draw_info:match("([%d%.]+W)")
 				set_popup_label(draw_item, draw or "n/a")
+			end
+		)
+
+		sbar.exec(
+			[[ioreg -r -c AppleSmartBattery -l | awk -F'= ' '/"AppleRawMaxCapacity" =/ { max=$2 } /"DesignCapacity" =/ { design=$2 } /"CycleCount" =/ { cycle=$2 } END { gsub(/ /, "", max); gsub(/ /, "", design); gsub(/ /, "", cycle); if (max == "" || design == "") { print "n/a|n/a"; exit 0 } health = (max / design) * 100; printf "%.0f%%|%s\n", health, (cycle == "" ? "n/a" : cycle); }']],
+			function(health_info, health_exit_code)
+				if health_exit_code ~= 0 then
+					set_popup_label(health_item, "n/a")
+					set_popup_label(cycle_item, "n/a")
+					return
+				end
+
+				local health, cycles = health_info:match("([^|]+)|(.+)")
+				set_popup_label(health_item, health or "n/a")
+				set_popup_label(cycle_item, cycles or "n/a")
 			end
 		)
 	end)

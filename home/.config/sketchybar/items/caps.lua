@@ -17,6 +17,7 @@ local kan = sbar.add("item", "kan", {
 })
 
 local caps_lock_state_cmd = [[swift -e 'import AppKit; print(NSEvent.modifierFlags.contains(.capsLock) ? "ru" : "en")']]
+local toggle_caps_lock_cmd = [[osascript -e 'tell application "System Events" to key code 57']]
 
 kan:subscribe({ "routine", "forced", "system_woke" }, function()
 	sbar.exec(caps_lock_state_cmd, function(state)
@@ -24,6 +25,12 @@ kan:subscribe({ "routine", "forced", "system_woke" }, function()
 		kan:set({
 			label = { string = (normalized == "ru") and "ru" or "en" },
 		})
+	end)
+end)
+
+kan:subscribe("mouse.clicked", function()
+	sbar.exec(toggle_caps_lock_cmd, function()
+		sbar.trigger("forced")
 	end)
 end)
 
