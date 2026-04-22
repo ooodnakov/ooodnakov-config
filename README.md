@@ -11,6 +11,7 @@ Active tracked config lives under `home/` and includes:
 - `zsh` and modular zsh config
 - pinned shell dependencies and helpers
 - WezTerm config
+- Yazi config
 - PowerShell profile
 - `oh-my-posh` config
 - shared portable environment files

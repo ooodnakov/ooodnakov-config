@@ -1401,7 +1401,7 @@ Usage: oooconf doctor
 
 Validate managed symlinks and required commands.
 Checks that all managed config links point to valid targets and that
-key tools (git, zsh, wezterm, nvim, etc.) are available on PATH.
+key tools (git, zsh, wezterm, yazi, nvim, etc.) are available on PATH.
 Examples:
   oooconf doctor                       # run all checks
 "@

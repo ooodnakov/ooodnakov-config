@@ -2265,6 +2265,7 @@ function Test-Doctor {
     Write-Output "Running doctor checks..."
 
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
     Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
@@ -2293,7 +2294,7 @@ function Test-Doctor {
             $null = $requiredDependencyKeys.Add($key)
         }
     }
-    foreach ($key in @("wezterm", "nvim")) {
+    foreach ($key in @("wezterm", "yazi", "nvim")) {
         $null = $requiredDependencyKeys.Add($key)
     }
 
@@ -2343,6 +2344,9 @@ function Invoke-Install {
     Step-Progress -Status "Linking managed configuration"
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")) {
         Add-ToolSummary "wezterm: linked"
+    }
+    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")) {
+        Add-ToolSummary "yazi: linked"
     }
     if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")) {
         Add-ToolSummary "lazygit: linked"

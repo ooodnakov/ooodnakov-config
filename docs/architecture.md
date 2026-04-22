@@ -22,7 +22,7 @@ The repo uses a symlink-first install model.
 
 On Unix-like systems:
 
-- `scripts/setup.sh` links tracked files from `home/` into XDG and home-directory targets such as `~/.config/zsh`, `~/.config/wezterm`, `~/.config/niri`, `~/.config/nvim`, and `~/.config/ooodnakov`
+- `scripts/setup.sh` links tracked files from `home/` into XDG and home-directory targets such as `~/.config/zsh`, `~/.config/wezterm`, `~/.config/yazi`, `~/.config/niri`, `~/.config/nvim`, and `~/.config/ooodnakov`
 - `home/.config/ooodnakov/bin/oooconf` is linked into `~/.local/bin/oooconf` and `home/.config/ooodnakov/bin/o` into `~/.local/bin/o`
 - replaced files are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`
 - logs are written to `~/.local/state/ooodnakov-config/logs/`

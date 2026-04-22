@@ -2099,6 +2099,7 @@ run_doctor() {
   doctor_check_link "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
   doctor_check_link "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"
   doctor_check_link "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm"
+  doctor_check_link "$REPO_ROOT/home/.config/yazi" "$CONFIG_HOME/yazi"
   doctor_check_link "$REPO_ROOT/home/.config/niri" "$CONFIG_HOME/niri"
   doctor_check_link "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"
   doctor_check_link "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov"
@@ -2107,6 +2108,7 @@ run_doctor() {
   doctor_check_command git
   doctor_check_command zsh
   doctor_check_command wezterm
+  doctor_check_command yazi
   doctor_check_nvim
   doctor_check_command oooconf
   doctor_check_command o
@@ -2326,6 +2328,7 @@ managed_link_pairs=(
   "home/.zshrc|$HOME_DIR/.zshrc"
   "home/.config/zsh|$CONFIG_HOME/zsh"
   "home/.config/wezterm|$CONFIG_HOME/wezterm"
+  "home/.config/yazi|$CONFIG_HOME/yazi"
   "home/.config/niri|$CONFIG_HOME/niri"
   "home/.config/ooodnakov|$CONFIG_HOME/ooodnakov"
 )

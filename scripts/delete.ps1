@@ -130,6 +130,7 @@ $ActivePowerShellProfile = $PROFILE.CurrentUserCurrentHost
 
 # Remove managed links
 Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")
 Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
 Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
 Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
@@ -143,6 +144,7 @@ Remove-FontDir
 
 if ($Mode -eq "restore") {
     Restore-Backup -Target (Join-Path $ConfigHome "wezterm")
+    Restore-Backup -Target (Join-Path $ConfigHome "yazi")
     Restore-Backup -Target (Join-Path $ConfigHome "lazygit")
     Restore-Backup -Target (Join-Path $ConfigHome "nvim")
     Restore-Backup -Target (Join-Path $ConfigHome "ooodnakov")
