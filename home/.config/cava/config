@@ -1,0 +1,12 @@
+[general]
+bars = 24
+framerate = 30
+sleep_timer = 1
+
+[input]
+method = portaudio
+
+[output]
+method = raw
+data_format = ascii
+

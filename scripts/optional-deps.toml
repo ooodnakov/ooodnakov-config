@@ -600,6 +600,18 @@ windows.manager = "scoop"
 windows.package = "btop"
 
 [[deps]]
+key = "cava"
+display = "cava"
+description = "terminal audio visualizer used by SketchyBar"
+check = "cava -v"
+linux.manager = "apt"
+linux.package = "cava"
+macos.manager = "brew"
+macos.package = "cava"
+windows.manager = "custom"
+windows.command = "not available on Windows"
+
+[[deps]]
 key = "glazewm"
 display = "GlazeWM"
 description = "Tiling window manager for Windows"

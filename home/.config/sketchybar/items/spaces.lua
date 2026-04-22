@@ -242,7 +242,7 @@ local function update_all_workspaces()
 				if not states_equal(old_ws_state, new_ws_state) then
 					local is_focused = (new_ws_state.icon_color == colors.TEXT_WHITE)
 
-					sbar.animate("sin", 10, function()
+					sbar.animate("tanh", 5, function()
 						sbar.set("space." .. sid, {
 							display = new_ws_state.display,
 							drawing = new_ws_state.drawing,

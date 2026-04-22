@@ -1,7 +1,7 @@
 local colors = require("colors")
 
 -- Right items bracket
-sbar.add("bracket", "rightItems", { "cpu", "memory", "kan", "wifi", "battery", "volume" }, {
+sbar.add("bracket", "rightItems", { "cpu", "memory", "kan", "wifi", "battery", "volume", "audio" }, {
 	background = {
 		color = colors.BACKGROUND,
 		border_color = colors.BACKGROUND_DARK,

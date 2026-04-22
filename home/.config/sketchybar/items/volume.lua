@@ -1,5 +1,7 @@
 local colors = require("colors")
 
+local VOLUME_POPUP_HIDE_DELAY = 0.25
+
 local volume = sbar.add("item", "volume", {
 	position = "right",
 	popup = {
@@ -82,7 +84,7 @@ local function schedule_volume_popup_hide()
 	volume_hide_token = volume_hide_token + 1
 	local hide_token = volume_hide_token
 
-	sbar.exec("sleep 1", function()
+	sbar.exec("sleep " .. VOLUME_POPUP_HIDE_DELAY, function()
 		if volume_popup_hovered or hide_token ~= volume_hide_token then
 			return
 		end
