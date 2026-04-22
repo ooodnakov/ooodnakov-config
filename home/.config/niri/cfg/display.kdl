@@ -7,7 +7,7 @@ output "HDMI-A-2" {
     mode "2560x1440@239.970"
     position x=0 y=0
     scale 1.0
-    variable-refresh-rate
+    variable-refresh-rate on-demand=true
 }
 
 output "DP-1" {
