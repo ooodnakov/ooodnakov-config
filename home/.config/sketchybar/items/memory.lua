@@ -16,23 +16,21 @@ local function set_popup_label(item, value)
 end
 
 local memory = sbar.add("item", "memory", {
-	position = "e",
+	position = "right",
 	update_freq = 10,
 	icon = {
 		string = "",
 		font = "MesloLGSDZ Nerd Font Mono:Bold:20.0",
-		padding_left = 8,
+		padding_left = 4,
 		color = colors.TEXT_ORANGE,
 	},
 	label = {
 		font = "MesloLGSDZ Nerd Font Mono:Bold:12.0",
-		padding_right = 8,
+		padding_right = 4,
 		color = colors.TEXT_ORANGE,
 	},
 	background = {
-		corner_radius = 10,
-		color = colors.BACKGROUND_DARK,
-		height = 30,
+		drawing = "off",
 	},
 	drawing = "on",
 	click_script = "open -a 'Activity Monitor'",

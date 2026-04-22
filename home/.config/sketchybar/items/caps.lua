@@ -1,18 +1,22 @@
 local colors = require("colors")
 
 local kan = sbar.add("item", "kan", {
-	position = "e",
+	position = "right",
 	update_freq = 1,
-	icon = { string = "", font = "MesloLGSDZ Nerd Font Mono:Bold:17.0", padding_left = 8 },
+	icon = {
+		string = "",
+		font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",
+		padding_left = 4,
+		color = colors.TEXT_GREY,
+	},
 	label = {
 		string = "en",
-		font = "MesloLGSDZ Nerd Font Mono:Italic:13.0",
-		padding_right = 8,
+		font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",
+		padding_right = 4,
+		color = colors.TEXT_GREY,
 	},
 	background = {
-		corner_radius = 10,
-		color = colors.BACKGROUND_DARK,
-		height = 30,
+		drawing = "off",
 	},
 })
 
