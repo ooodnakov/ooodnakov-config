@@ -183,7 +183,7 @@ After changing CLI help output or completions:
 ## Core Principles
 
 - **Be precise and minimal** — Make the smallest correct change. Never refactor unrelated code unless asked.
-- **Verify before claiming success** — Always run the relevant build/test/lint commands (prefixed with `rtk`).
+- **Verify before claiming success** — Always run the relevant build/test/lint commands.
 - **Use Context7 for anything technical** — Never rely on training data for libraries, APIs, CLIs, or frameworks.
 - **Prefer modern, idiomatic solutions** — Follow current best practices for the language and ecosystem.
 - **Ask when uncertain** — If requirements are ambiguous, ask for clarification rather than guessing.
@@ -223,46 +223,11 @@ Use Grok tools when the task benefits from real-time research, code execution, v
 - Prefer narrower tools (`web_search`, `code_executor`, etc.) when the task is focused.
 - For citations, set `include_inline_citations=true` when supported.
 
-<!-- oooconf:rtk:start -->
-## Token-Efficient Execution (RTK)
-
-**Golden Rule**: **Always** prefix shell commands with `rtk`. It safely reduces output while preserving exit codes and behavior.
-
-**Why it matters**: Reduces token usage by 60–99% on build, test, and lint output.
-
-### Recommended Patterns
-
-```bash
-# Build & Type Checking
-rtk cargo build / check / clippy
-rtk tsc
-rtk next build
-rtk pnpm build
-
-# Testing (failures only)
-rtk cargo test
-rtk pytest
-rtk vitest
-rtk playwright test
-rtk jest
-
-# Linting & Formatting
-rtk eslint
-rtk biome
-rtk ruff
-rtk prettier --check
-
-# Git (clean output)
-rtk git status / diff / log
-```
-Use `rtk <any command>` as a safe passthrough for everything else.
-<!-- oooconf:rtk:end -->
-
 ## General Workflow Rules
 
-- Explore relevant files first (use filesystem MCP or `rtk` commands).
+- Explore relevant files first.
 - Make the minimal viable change.
-- Run `rtk` + relevant test/lint/build commands.
+- Run relevant test/lint/build commands.
 - Fix any failures before moving on.
 - Summarize changes and reasoning clearly when finished.
 
