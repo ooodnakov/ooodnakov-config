@@ -13,6 +13,7 @@ Active tracked config lives under `home/` and includes:
 - WezTerm config
 - Yazi config
 - Niri config under `~/.config/niri`
+- Noctalia config under `~/.config/noctalia`
 - PowerShell profile
 - `oh-my-posh` config
 - shared portable environment files
@@ -217,7 +218,7 @@ Setup symlinks tracked config into standard locations and preserves replaced fil
 - Unix: `~/.local/state/ooodnakov-config/backups/`
 - Windows: `$HOME\.local\state\ooodnakov-config\backups\`
 
-On Unix, that managed tree includes `~/.config/niri` linked from [`home/.config/niri`](home/.config/niri) alongside the existing shell, terminal, editor, and `ooodnakov` config links.
+On Unix, that managed tree includes `~/.config/niri` linked from [`home/.config/niri`](home/.config/niri) and `~/.config/noctalia` linked from [`home/.config/noctalia`](home/.config/noctalia) alongside the existing shell, terminal, editor, and `ooodnakov` config links.
 
 Each install, update, or doctor run also writes logs under:
 

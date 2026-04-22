@@ -2101,6 +2101,7 @@ run_doctor() {
   doctor_check_link "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm"
   doctor_check_link "$REPO_ROOT/home/.config/yazi" "$CONFIG_HOME/yazi"
   doctor_check_link "$REPO_ROOT/home/.config/niri" "$CONFIG_HOME/niri"
+  doctor_check_link "$REPO_ROOT/home/.config/noctalia" "$CONFIG_HOME/noctalia"
   doctor_check_link "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"
   doctor_check_link "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov"
   doctor_check_link "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json"
@@ -2330,6 +2331,7 @@ managed_link_pairs=(
   "home/.config/wezterm|$CONFIG_HOME/wezterm"
   "home/.config/yazi|$CONFIG_HOME/yazi"
   "home/.config/niri|$CONFIG_HOME/niri"
+  "home/.config/noctalia|$CONFIG_HOME/noctalia"
   "home/.config/ooodnakov|$CONFIG_HOME/ooodnakov"
 )
 
