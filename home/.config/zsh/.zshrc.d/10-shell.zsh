@@ -6,7 +6,7 @@ setopt share_history
 setopt auto_cd
 
 alias l="ls -lAhrtF"
-alias a="eza -lah --git --colour-scale all -g --smart-group --icons always"
+alias a="eza -lah --git --colour-scale all -g --smart-group --icons always --hyperlink"
 alias aa="a -s modified -r"
 alias e="exit"
 alias ip="ip --color=auto"
