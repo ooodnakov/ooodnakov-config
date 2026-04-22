@@ -5,7 +5,6 @@ sleep_timer = 1
 
 [input]
 method = portaudio
-source = "BlackHole"
 
 [output]
 method = raw
