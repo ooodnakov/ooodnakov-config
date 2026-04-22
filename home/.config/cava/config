@@ -5,8 +5,8 @@ sleep_timer = 1
 
 [input]
 method = portaudio
+source = "BlackHole 2ch"
 
 [output]
 method = raw
 data_format = ascii
-

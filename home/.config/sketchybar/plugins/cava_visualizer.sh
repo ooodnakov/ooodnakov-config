@@ -24,20 +24,26 @@ cava_config="${XDG_CONFIG_HOME:-$HOME/.config}/cava/config"
 (
   trap 'rm -f "$pid_file"' EXIT
 
-  cava -p "$cava_config" | while IFS= read -r line; do
-    [ -n "$line" ] || continue
+  while true; do
+    if cava -p "$cava_config" | while IFS= read -r line; do
+      [ -n "$line" ] || continue
 
-    values=()
-    IFS=';' read -r -a raw_values <<< "$line"
-    for raw_value in "${raw_values[@]}"; do
-      [ -n "$raw_value" ] || continue
-      normalized="$(awk -v value="$raw_value" 'BEGIN { if (value < 0) value = 0; if (value > 7) value = 7; printf "%.3f", value / 7.0 }')"
-      values+=("$normalized")
-    done
+      values=()
+      IFS=';' read -r -a raw_values <<< "$line"
+      for raw_value in "${raw_values[@]}"; do
+        [ -n "$raw_value" ] || continue
+        normalized="$(awk -v value="$raw_value" 'BEGIN { if (value < 0) value = 0; if (value > 7) value = 7; printf "%.3f", value / 7.0 }')"
+        values+=("$normalized")
+      done
 
-    if [ "${#values[@]}" -gt 0 ]; then
-      sketchybar --push "$GRAPH_NAME" "${values[@]}"
+      if [ "${#values[@]}" -gt 0 ]; then
+        sketchybar --push "$GRAPH_NAME" "${values[@]}"
+      fi
+    done; then
+      :
     fi
+
+    sleep 5
   done
 ) >/dev/null 2>&1 &
 

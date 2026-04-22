@@ -189,20 +189,6 @@ local function build_current_state(callback)
 	end)
 end
 
-local function rebalance_empty_workspaces()
-	run("aerospace list-monitors --count", function(monitors_count)
-		if monitors_count ~= "2" then
-			return
-		end
-
-		run("aerospace list-workspaces --monitor 2 --empty", function(workspaces_raw)
-			for _, sid in ipairs(split_lines(workspaces_raw)) do
-				sbar.exec("aerospace move-workspace-to-monitor --workspace " .. shell_quote(sid) .. " 1")
-			end
-		end)
-	end)
-end
-
 local function update_all_workspaces()
 	if not spaces_ready then
 		return
@@ -388,18 +374,6 @@ local function initialize_spaces()
 
 		observer:subscribe("front_app_switched", function()
 			update_all_workspaces()
-		end)
-
-		observer:subscribe("aerospace_monitor_change", function(env)
-			if env.FOCUSED_WORKSPACE and env.TARGET_MONITOR then
-				sbar.set("space." .. env.FOCUSED_WORKSPACE, {
-					display = env.TARGET_MONITOR,
-				})
-
-				if workspace_states[env.FOCUSED_WORKSPACE] then
-					workspace_states[env.FOCUSED_WORKSPACE].display = tostring(env.TARGET_MONITOR)
-				end
-			end
 		end)
 
 		local space_names = {}

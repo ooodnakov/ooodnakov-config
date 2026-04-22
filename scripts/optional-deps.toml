@@ -612,6 +612,17 @@ windows.manager = "custom"
 windows.command = "not available on Windows"
 
 [[deps]]
+key = "blackhole-2ch"
+display = "BlackHole 2ch"
+description = "macOS loopback audio device for CAVA and audio capture"
+linux.manager = "custom"
+linux.command = "not available on Linux"
+macos.manager = "brew"
+macos.package = "blackhole-2ch"
+windows.manager = "custom"
+windows.command = "not available on Windows"
+
+[[deps]]
 key = "glazewm"
 display = "GlazeWM"
 description = "Tiling window manager for Windows"
