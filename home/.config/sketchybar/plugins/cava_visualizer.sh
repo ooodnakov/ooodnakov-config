@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
 GRAPH_NAME="${1:-audio}"
 
 cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
