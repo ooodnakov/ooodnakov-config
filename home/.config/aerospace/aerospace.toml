@@ -237,6 +237,10 @@ if.app-id = 'com.cisco.secureclient.gui'
 run = 'layout floating'
 
 [[on-window-detected]]
+if.app-id = 'kontur.talk'
+run = 'layout floating'
+
+[[on-window-detected]]
 if.app-id = 'app.zen-browser.zen'
 run = 'move-node-to-workspace B'
 
