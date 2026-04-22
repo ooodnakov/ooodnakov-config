@@ -91,6 +91,18 @@ local cycle_item = sbar.add("item", {
 	},
 })
 
+local function show_battery_popup()
+	sbar.animate("tanh", 12, function()
+		battery:set({ popup = { drawing = true } })
+	end)
+end
+
+local function hide_battery_popup()
+	sbar.animate("tanh", 12, function()
+		battery:set({ popup = { drawing = false } })
+	end)
+end
+
 local function refresh_battery()
 	sbar.exec("pmset -g batt", function(batt_info, exit_code)
 		if exit_code ~= 0 then
@@ -197,15 +209,15 @@ battery:subscribe({ "routine", "system_woke", "power_source_change" }, function(
 end)
 
 battery:subscribe("mouse.entered", function()
-	battery:set({ popup = { drawing = true } })
+	show_battery_popup()
 end)
 
 battery:subscribe("mouse.exited.global", function()
-	battery:set({ popup = { drawing = false } })
+	hide_battery_popup()
 end)
 
 battery:subscribe("mouse.exited", function()
-	battery:set({ popup = { drawing = false } })
+	hide_battery_popup()
 end)
 
 refresh_battery()

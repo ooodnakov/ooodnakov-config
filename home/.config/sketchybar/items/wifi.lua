@@ -70,6 +70,18 @@ local public_ip_item = sbar.add("item", {
 	},
 })
 
+local function show_wifi_popup()
+	sbar.animate("tanh", 12, function()
+		wifi:set({ popup = { drawing = true } })
+	end)
+end
+
+local function hide_wifi_popup()
+	sbar.animate("tanh", 12, function()
+		wifi:set({ popup = { drawing = false } })
+	end)
+end
+
 local function apply_popup_state()
 	set_popup_label(ssid_item, wifi_state.ssid)
 	set_popup_label(private_ip_item, wifi_state.private_ip)
@@ -158,7 +170,7 @@ wifi:subscribe({ "routine", "system_woke", "wifi_change" }, function()
 end)
 
 wifi:subscribe("mouse.entered", function()
-	wifi:set({ popup = { drawing = true } })
+	show_wifi_popup()
 	apply_popup_state()
 
 	if wifi_state.connected then
@@ -169,11 +181,11 @@ wifi:subscribe("mouse.entered", function()
 end)
 
 wifi:subscribe("mouse.exited.global", function()
-	wifi:set({ popup = { drawing = false } })
+	hide_wifi_popup()
 end)
 
 wifi:subscribe("mouse.exited", function()
-	wifi:set({ popup = { drawing = false } })
+	hide_wifi_popup()
 end)
 
 refresh_wifi()
