@@ -16,6 +16,7 @@ Active tracked config lives under `home/` and includes:
 - shared portable environment files
 - shared SSH host include config
 - LazyVim starter config under `~/.config/nvim`
+- AeroSpace, SketchyBar, and Borders config under `~/.config/`
 
 Bootstrap and maintenance entrypoints live under `scripts/`:
 

@@ -1,0 +1,33 @@
+#!/Users/a.odnakov/.local/bin/lua-sbar
+
+local script_path = debug.getinfo(1, "S").source:sub(2)
+local config_dir = script_path:match("(.*/)")
+local home_dir = os.getenv("HOME")
+	or (os.getenv("USER") and ("/Users/" .. os.getenv("USER")))
+	or script_path:match("^(/Users/[^/]+)")
+
+assert(home_dir, "Unable to determine home directory for SketchyBar Lua module path")
+
+-- Make config requires independent of the daemon's working directory.
+package.path = table.concat({
+	config_dir .. "?.lua",
+	config_dir .. "?/init.lua",
+	package.path,
+}, ";")
+
+-- Load the SketchyBar Lua module using HOME, since launchd does not set USER.
+package.cpath = package.cpath .. ";" .. home_dir .. "/.local/share/sketchybar_lua/?.so"
+
+-- Initialize sbar module
+sbar = require("sketchybar")
+
+-- Load configuration
+sbar.begin_config()
+require("init")
+sbar.hotload(true)
+sbar.end_config()
+
+
+sbar.event_loop()
+-- Trigger update to run all scripts
+sbar.update()

@@ -1,0 +1,11 @@
+-- Load all items
+require("items.spaces")
+require("items.clock")
+require("items.volume")
+require("items.battery")
+require("items.wifi")
+require("items.memory")
+require("items.cpu")
+require("items.caps")
+require("items.ncspot")
+-- require("items.day")
