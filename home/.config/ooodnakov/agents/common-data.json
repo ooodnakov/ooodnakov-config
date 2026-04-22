@@ -23,7 +23,9 @@
         "--api-key",
         "{CONTEXT7_API_KEY}"
       ],
-      "env_vars": ["CONTEXT7_API_KEY"],
+      "env_vars": [
+        "CONTEXT7_API_KEY"
+      ],
       "description": "documentation search and code examples for thousands of libraries"
     },
     "github": {
@@ -71,6 +73,30 @@
       ],
       "install": "uv sync",
       "description": "xAI Grok API access"
+    },
+    "ssh-mcp-openwrt": {
+      "command": "npx",
+      "args": [
+        "ssh-mcp",
+        "-y",
+        "--",
+        "--host=192.168.1.1",
+        "--user=root",
+        "--timeout=30000",
+        "--maxChars=none"
+      ]
+    },
+    "ssh-mcp-orange": {
+      "command": "npx",
+      "args": [
+        "ssh-mcp",
+        "-y",
+        "--",
+        "--host=192.168.1.201",
+        "--user=rem",
+        "--timeout=30000",
+        "--maxChars=none"
+      ]
     }
   },
   "skills": [
