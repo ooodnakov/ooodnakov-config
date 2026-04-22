@@ -72,7 +72,9 @@ end
 local function show_volume_popup()
 	volume_popup_hovered = true
 	volume_hide_token = volume_hide_token + 1
-	volume:set({ popup = { drawing = true } })
+	sbar.animate("tanh", 12, function()
+		volume:set({ popup = { drawing = true } })
+	end)
 end
 
 local function schedule_volume_popup_hide()
@@ -85,7 +87,9 @@ local function schedule_volume_popup_hide()
 			return
 		end
 
-		volume:set({ popup = { drawing = false } })
+		sbar.animate("tanh", 12, function()
+			volume:set({ popup = { drawing = false } })
+		end)
 	end)
 end
 
