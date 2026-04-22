@@ -26,6 +26,7 @@ local ncspot = sbar.add("item", "ncspot", {
 			border_color = colors.TEXT_GREY,
 			corner_radius = 10,
 		},
+		horizontal = true,
 		align = "center",
 		y_offset = 5,
 	},
@@ -37,13 +38,13 @@ local ncspot_hide_token = 0
 local function make_control(name, icon, command)
 	return sbar.add("item", name, {
 		position = "popup." .. ncspot.name,
-		width = 72,
+		width = 34,
 		icon = {
 			string = icon,
 			font = "MesloLGSDZ Nerd Font Mono:Regular:14.0",
 			color = colors.TEXT_WHITE,
-			padding_left = 10,
-			padding_right = 8,
+			padding_left = 8,
+			padding_right = 6,
 		},
 		label = {
 			drawing = "off",
