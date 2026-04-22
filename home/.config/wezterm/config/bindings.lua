@@ -49,11 +49,12 @@ local keys = {
    },
 
    -- cursor movement --
-   { key = 'LeftArrow',  mods = 'ALT',           action = act.SendString '\u{1b}b' },
-   { key = 'RightArrow', mods = 'ALT',           action = act.SendString '\u{1b}f' },
+   { key = 'LeftArrow',  mods = 'ALT',         action = act.SendString '\u{1b}b' },
+   { key = 'RightArrow', mods = 'ALT',         action = act.SendString '\u{1b}f' },
    { key = 'LeftArrow',  mods = mod.SUPER,     action = act.SendString '\u{1b}OH' },
    { key = 'RightArrow', mods = mod.SUPER,     action = act.SendString '\u{1b}OF' },
    { key = 'Backspace',  mods = mod.SUPER,     action = act.SendString '\u{15}' },
+   { key = 'Backspace',  mods = 'ALT',         action = act.SendString '\u{17}' },
 
    -- copy/paste --
    { key = 'c',          mods = 'CTRL|SHIFT',  action = act.CopyTo('Clipboard') },
@@ -190,10 +191,10 @@ local keys = {
    { key = 'w',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
 
    -- panes: navigation
-   { key = 'k',     mods = mod.SUPER_REV, action = act.ActivatePaneDirection('Up') },
-   { key = 'j',     mods = mod.SUPER_REV, action = act.ActivatePaneDirection('Down') },
-   { key = 'h',     mods = mod.SUPER_REV, action = act.ActivatePaneDirection('Left') },
-   { key = 'l',     mods = mod.SUPER_REV, action = act.ActivatePaneDirection('Right') },
+   { key = 'k',     mods = mod.SUPER,     action = act.ActivatePaneDirection('Up') },
+   { key = 'j',     mods = mod.SUPER,     action = act.ActivatePaneDirection('Down') },
+   { key = 'h',     mods = mod.SUPER,     action = act.ActivatePaneDirection('Left') },
+   { key = 'l',     mods = mod.SUPER,     action = act.ActivatePaneDirection('Right') },
    {
       key = 'p',
       mods = mod.SUPER_REV,
