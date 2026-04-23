@@ -53,6 +53,7 @@ local used_item = sbar.add("item", {
 		width = 54,
 		align = "left",
 		color = colors.TEXT_GREY,
+		padding_left=5,
 	},
 })
 
@@ -64,6 +65,7 @@ local wired_item = sbar.add("item", {
 		width = 54,
 		align = "left",
 		color = colors.TEXT_GREY,
+		padding_left=5,
 	},
 })
 
@@ -75,6 +77,7 @@ local compressor_item = sbar.add("item", {
 		width = 54,
 		align = "left",
 		color = colors.TEXT_GREY,
+		padding_left=5,
 	},
 })
 
@@ -86,6 +89,7 @@ local swap_item = sbar.add("item", {
 		width = 54,
 		align = "left",
 		color = colors.TEXT_GREY,
+		padding_left=5,
 	},
 })
 
@@ -103,11 +107,28 @@ local function refresh_memory()
 		end
 
 		local physmem = result:match("PhysMem:[^\r\n]+") or ""
-		local vm = result:match("VM:[^\r\n]+") or ""
-		local used = trim(physmem:match("([%d%.]+%a+ used)") or "")
-		local wired = trim(physmem:match("([%d%.]+%a+ wired)") or "")
+        local vm = result:match("VM:[^\r\n]+") or ""
+        local used = trim(physmem:match("([%d%%.]+%a+ used)") or "")
+        local wired = trim(physmem:match("([%d%%.]+%a+ wired)") or "")
 		local compressor = trim(physmem:match("([%d%.]+%a+ compressor)") or "")
-		local swap = trim(vm:match("([%d%.]+[GMTK]?) swapins") or "")
+        -- Convert memory values to gigabytes if they are in megabytes
+        local function format_to_gb(value)
+            if value:match("(%d+%.?%d*)M") then
+                local mb = tonumber(value:match("(%d+%.?%d*)"))
+                local gb = mb / 1024
+                if gb < 1 then
+                    return string.format("%.1fM", mb)
+                else
+                    return string.format("%.1fG", gb)
+                end
+            end
+            return value:gsub("%s+[a-zA-Z]+", "")
+        end
+
+        used = format_to_gb(used)
+        wired = format_to_gb(wired)
+		compressor = format_to_gb(compressor)
+		local swap = trim(vm:match("(%d+)%b() swapins") or "")
 
 		memory:set({
 			label = {

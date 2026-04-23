@@ -106,6 +106,7 @@ volume_slider:subscribe("mouse.clicked", function(env)
 	sbar.exec("osascript -e 'set volume output volume " .. percentage .. "'", function()
 		refresh_volume(percentage)
 	end)
+	schedule_volume_popup_hide()
 end)
 
 volume:subscribe("mouse.entered", function()

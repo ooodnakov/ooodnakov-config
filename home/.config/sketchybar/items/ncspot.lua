@@ -13,7 +13,7 @@ local ncspot = sbar.add("item", "ncspot", {
 	label = {
 		font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",
 		color = colors.TEXT_WHITE,
-		max_chars = 12,
+		max_chars = 20,
 		padding_left = 2,
 		padding_right = 4,
 	},

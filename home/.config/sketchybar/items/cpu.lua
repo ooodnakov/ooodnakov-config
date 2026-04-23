@@ -53,6 +53,7 @@ local user_item = sbar.add("item", {
 		width = 46,
 		align = "left",
 		color = colors.TEXT_GREY,
+		padding_left=5,
 	},
 })
 
@@ -64,6 +65,7 @@ local system_item = sbar.add("item", {
 		width = 46,
 		align = "left",
 		color = colors.TEXT_GREY,
+		padding_left=5,
 	},
 })
 
@@ -75,6 +77,7 @@ local idle_item = sbar.add("item", {
 		width = 46,
 		align = "left",
 		color = colors.TEXT_GREY,
+		padding_left=5,
 	},
 })
 

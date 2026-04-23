@@ -12,7 +12,7 @@ local audio = sbar.add("graph", "audio", 128, {
 		border_width = 1,
 		border_color = colors.BACKGROUND_DARKER,
 		corner_radius = 10,
-		height = 30,
+		height = 25,
 	},
 	padding_left = 4,
 	padding_right = 4,

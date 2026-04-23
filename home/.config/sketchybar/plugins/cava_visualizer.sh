@@ -43,7 +43,7 @@ cava_config="${XDG_CONFIG_HOME:-$HOME/.config}/cava/config"
       :
     fi
 
-    sleep 5
+    sleep 1
   done
 ) >/dev/null 2>&1 &
 

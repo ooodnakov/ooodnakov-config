@@ -12,7 +12,7 @@ local clock = sbar.add("item", "clock", {
 	background = {
 		color = colors.BACKGROUND_DARK,
 		corner_radius = 10,
-		height = 30,
+		height = 24,
 	},
 })
 

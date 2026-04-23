@@ -107,7 +107,7 @@ end
 
 local function build_current_state(callback)
 	run("aerospace list-workspaces --focused", function(focused_workspace)
-		run("aerospace list-monitors", function(monitors_raw)
+		run("aerospace list-monitors  --format '%{monitor-appkit-nsscreen-screens-id}'", function(monitors_raw)
 			local state = {}
 			local monitors = split_lines(monitors_raw)
 
@@ -151,8 +151,8 @@ local function build_current_state(callback)
 				callback(state)
 			end
 
-			for i, _ in ipairs(monitors) do
-				run("aerospace list-workspaces --monitor " .. i .. " --empty no", function(workspaces_raw)
+			for i, mid in ipairs(monitors) do
+				run("aerospace list-workspaces --monitor " .. mid .. " --empty no", function(workspaces_raw)
 					local non_empty_workspaces = split_lines(workspaces_raw)
 
 					if #non_empty_workspaces == 0 then
@@ -286,7 +286,7 @@ local function initialize_spaces()
 					drawing = "on",
 					border_width = 1,
 					border_color = colors.TEXT_WHITE,
-					height = 23,
+					height = 22,
 					padding_right = 5,
 					padding_left = 5,
 				},
@@ -308,7 +308,7 @@ local function initialize_spaces()
 			sbar.add("item", "space.popup." .. sid, {
 				position = "popup." .. space.name,
 				y_offset = 0,
-				height = 24,
+				height = 18,
 				icon = {
 					string = "",
 					font = "sketchybar-app-font:Regular:14.0",
@@ -397,7 +397,7 @@ local function initialize_spaces()
 			background = {
 				color = colors.BACKGROUND,
 				corner_radius = 10,
-				height = 30,
+				height = 28,
 			},
 		})
 

@@ -2,7 +2,7 @@
 require("items.spaces")
 require("items.clock")
 require("items.volume")
-require("items.audio")
+-- require("items.audio")
 require("items.battery")
 require("items.wifi")
 require("items.memory")
