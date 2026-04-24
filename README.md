@@ -202,10 +202,10 @@ The shared AGENTS policy snippets are configured in:
 
 The setup scripts intentionally do not try to provision a full workstation from bare metal. Core tools should already exist before first install:
 
-| Platform | Required System Tools | Core Terminal Tools |
-|----------|-----------------------|---------------------|
-| **Linux** | `git`, `zsh` | `wezterm`, `oh-my-posh` |
-| **macOS** | `git`, `zsh` | `wezterm`, `oh-my-posh` |
+| Platform    | Required System Tools               | Core Terminal Tools     |
+|-------------|-------------------------------------|-------------------------|
+| **Linux**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
+| **macOS**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
 
 

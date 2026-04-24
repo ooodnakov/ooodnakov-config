@@ -277,3 +277,8 @@ fi
 
 # To customize prompt, run `p10k configure` or edit ~/.config/ooodnakov/p10k.zsh.
 [[ ! -f ~/.config/ooodnakov/p10k.zsh ]] || source ~/.config/ooodnakov/p10k.zsh
+
+unalias x 2>/dev/null
+[ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.
+unalias h 2>/dev/null
+

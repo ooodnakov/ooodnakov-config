@@ -74,7 +74,7 @@ inner.horizontal = 15
 inner.vertical = 15
 outer.left = 15
 outer.bottom = 15
-outer.top = [{ monitor."S34C65xU" = 44  }, { monitor."M27T20" = 48  }, 6] # 14
+outer.top = [{ monitor."S34C65xU" = 38 }, { monitor."M27T20" = 38 }, 6] # 14
 outer.right = 15
 
 # 'main' binding mode declaration
@@ -142,7 +142,7 @@ alt-b = 'workspace B'
 # alt-c = 'workspace C'
 alt-d = 'workspace D'
 alt-e = 'workspace E'
-alt-f = 'workspace F'
+# alt-f = 'workspace F'
 alt-g = 'workspace G'
 alt-i = 'workspace I'
 alt-m = 'workspace M'
@@ -196,9 +196,7 @@ alt-shift-z = 'move-node-to-workspace Z --focus-follows-window'
 # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
 alt-tab = 'workspace-back-and-forth'
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
-alt-shift-tab = [
-  'move-workspace-to-monitor --wrap-around next',
-]
+alt-shift-tab = ['move-workspace-to-monitor --wrap-around next']
 
 
 [workspace-to-monitor-force-assignment]
@@ -239,6 +237,14 @@ alt-shift-l = ['join-with right', 'mode main']
 
 [[on-window-detected]]
 if.app-id = 'com.bitwarden.desktop'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.finder'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.ActivityMonitor'
 run = 'layout floating'
 
 [[on-window-detected]]
