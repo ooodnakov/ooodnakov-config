@@ -161,7 +161,7 @@ window_rules:
     match:
       - window_process: { regex: 'Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost' }
       - window_class: { regex: 'SunAwtDialog|ApplicationFrameWindow' }
-  
+
   # Workspace Routing
   - commands: ['move --workspace 1']
     match:

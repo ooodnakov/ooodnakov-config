@@ -34,6 +34,7 @@ PROGRESS_TITLE=""
 NEOVIM_MIN_VERSION="${OOODNAKOV_NEOVIM_MIN_VERSION:-0.10.0}"
 NEOVIM_LINUX_VERSION="${OOODNAKOV_NEOVIM_LINUX_VERSION:-0.10.4}"
 
+# shellcheck source=/dev/null
 source "$PYTHON_LIB"
 
 run_python() {
@@ -43,8 +44,10 @@ run_python() {
 # All pins, versions, and managed tools now live in optional-deps.toml ONLY.
 # These variables are deprecated and will be removed. Use get_managed_tool() instead.
 get_managed_tool() {
-  local name="$1"
-  local field="${2:-ref}"
+  local name
+  name="$1"
+  local field
+  field="${2:-ref}"
   run_python scripts/read_optional_deps.py managed-tools | \
     python3 -c '
 import sys, json
@@ -83,7 +86,8 @@ progress_init() {
 }
 
 progress_step() {
-  local description="$1"
+  local description
+  description="$1"
   PROGRESS_CURRENT=$((PROGRESS_CURRENT + 1))
 
   if ! is_interactive; then
@@ -93,7 +97,9 @@ progress_step() {
 
   printf 'Step: %s\n' "$description"
 
-  local width=24 filled=0 empty=0 percent=0 bar
+  local width
+
+  width=24 filled=0 empty=0 percent=0 bar
   if [ "$PROGRESS_TOTAL" -gt 0 ]; then
     percent=$((PROGRESS_CURRENT * 100 / PROGRESS_TOTAL))
     filled=$((PROGRESS_CURRENT * width / PROGRESS_TOTAL))
@@ -121,7 +127,8 @@ EOF
 }
 
 initialize_logging() {
-  local active_log_root="$LOG_ROOT"
+  local active_log_root
+  active_log_root="$LOG_ROOT"
 
   if ! mkdir -p "$active_log_root" 2>/dev/null; then
     active_log_root="${TMPDIR:-/tmp}/ooodnakov-config-logs"
@@ -155,7 +162,8 @@ run_cmd() {
 }
 
 prompt_yes_no() {
-  local prompt="$1"
+  local prompt
+  prompt="$1"
   local reply
 
   case "$INSTALL_OPTIONAL" in
@@ -187,7 +195,8 @@ detect_platform() {
 }
 
 optional_dependency_applicable() {
-  local key="$1"
+  local key
+  key="$1"
   local platform
   platform="$(detect_platform)"
   local info
@@ -210,7 +219,8 @@ optional_dependency_catalog_all() {
 }
 
 optional_dependency_exists() {
-  local expected_key="$1"
+  local expected_key
+  expected_key="$1"
   local key label description
 
   while IFS='|' read -r key label description; do
@@ -222,7 +232,8 @@ optional_dependency_exists() {
 
 optional_dependency_exists_any() {
   # Check if key exists in full catalog (including platform-inapplicable deps).
-  local expected_key="$1"
+  local expected_key
+  expected_key="$1"
   local key label description
 
   while IFS='|' read -r key label description; do
@@ -249,8 +260,10 @@ optional_dependency_keys_all() {
 }
 
 edit_distance() {
-  local left="$1"
-  local right="$2"
+  local left
+  left="$1"
+  local right
+  right="$2"
 
   awk -v left="$left" -v right="$right" '
     BEGIN {
@@ -290,11 +303,15 @@ edit_distance() {
 }
 
 suggest_from_candidates() {
-  local input="$1"
+  local input
+  input="$1"
   shift
 
-  local best_candidate=""
-  local best_distance=999
+  local best_candidate
+
+  best_candidate=""
+  local best_distance
+  best_distance=999
   local candidate distance threshold
 
   for candidate in "$@"; do
@@ -320,8 +337,10 @@ suggest_setup_command() {
 }
 
 suggest_dependency_key() {
-  local input="$1"
-  local keys=()
+  local input
+  input="$1"
+  local keys
+  keys=()
   local key
 
   while IFS= read -r key; do
@@ -332,7 +351,8 @@ suggest_dependency_key() {
 }
 
 optional_dependency_label() {
-  local expected_key="$1"
+  local expected_key
+  expected_key="$1"
   local key label description
 
   while IFS='|' read -r key label description; do
@@ -348,21 +368,26 @@ optional_dependency_label() {
 selected_optional_key_csv="${OOODNAKOV_SELECTED_OPTIONAL_KEYS:-}"
 
 optional_dependency_install_info() {
-  local key="$1"
+  local key
+  key="$1"
   local platform
   platform="$(detect_platform)"
   run_python "$OPTIONAL_DEPS_SCRIPT" install-info "$key" "$platform" 2>/dev/null
 }
 
 optional_dependency_field() {
-  local key="$1"
-  local field="$2"
+  local key
+  key="$1"
+  local field
+  field="$2"
   run_python "$OPTIONAL_DEPS_SCRIPT" field "$key" "$field" 2>/dev/null || true
 }
 
 resolve_package_manager_for_dependency() {
-  local detected_manager="$1"
-  local declared_manager="$2"
+  local detected_manager
+  detected_manager="$1"
+  local declared_manager
+  declared_manager="$2"
 
   case "$declared_manager" in
     apt)
@@ -378,7 +403,8 @@ resolve_package_manager_for_dependency() {
 }
 
 optional_dependency_selected() {
-  local key="$1"
+  local key
+  key="$1"
 
   if [ -z "$selected_optional_key_csv" ]; then
     return 0
@@ -459,7 +485,8 @@ EOF" || return 1
 }
 
 install_gum_package() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   case "$manager" in
     brew|pacman)
@@ -480,7 +507,8 @@ install_gum_package() {
 }
 
 maybe_install_gum() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   if check_dependency_status "gum" "gum"; then
     return 0
@@ -522,7 +550,9 @@ ensure_gum_for_optional_selector() {
     return 1
   fi
 
-  local previous_mode="$INSTALL_OPTIONAL"
+  local previous_mode
+
+  previous_mode="$INSTALL_OPTIONAL"
   INSTALL_OPTIONAL=always
   maybe_install_gum "$manager" >/dev/null 2>&1 || true
   INSTALL_OPTIONAL="$previous_mode"
@@ -628,12 +658,15 @@ choose_optional_dependencies_with_gum() {
     return 3
   fi
 
-  local IFS=,
+  local IFS
+
+  IFS=,
   printf '%s\n' "${selected_keys[*]}"
 }
 
 maybe_install_fastfetch() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   if check_dependency_status "fastfetch" "fastfetch"; then
     return 0
@@ -676,7 +709,8 @@ maybe_install_tectonic() {
 }
 
 install_optional_dependency_if_selected() {
-  local key="$1"
+  local key
+  key="$1"
   shift
 
   optional_dependency_selected "$key" || return 0
@@ -684,8 +718,10 @@ install_optional_dependency_if_selected() {
 }
 
 install_optional_dependency_from_catalog() {
-  local key="$1"
-  local detected_manager="$2"
+  local key
+  key="$1"
+  local detected_manager
+  detected_manager="$2"
   local description info declared_manager package_name command_name winget_id choco_id install_manager handler
 
   description="$(optional_dependency_label "$key")"
@@ -737,7 +773,8 @@ install_optional_dependency_from_catalog() {
 }
 
 run_with_spinner() {
-  local label="$1"
+  local label
+  label="$1"
   shift
   if [ "$DRY_RUN" -eq 1 ]; then
     printf "[dry-run] %s: %s\n" "$label" "$*"
@@ -796,7 +833,8 @@ run_with_spinner() {
   fi
 
   wait "$pid"
-  local status=$?
+  local status
+  status=$?
 
   if [ $status -eq 0 ]; then
     if is_interactive; then
@@ -820,7 +858,8 @@ run_with_spinner() {
 }
 
 record_failure() {
-  local label="$1"
+  local label
+  label="$1"
   FAILURES+=("$label")
   printf "\r[failed] %s\n" "$label" >&2
 }
@@ -842,7 +881,8 @@ detect_package_manager() {
 }
 
 install_packages() {
-  local manager="$1"
+  local manager
+  manager="$1"
   shift
   case "$manager" in
     apt)
@@ -871,7 +911,8 @@ install_packages() {
 }
 
 apt_package_available() {
-  local package_name="$1"
+  local package_name
+  package_name="$1"
 
   if ! command -v apt-cache >/dev/null 2>&1; then
     return 1
@@ -881,8 +922,10 @@ apt_package_available() {
 }
 
 check_dependency_status() {
-  local command_name="$1"
-  local log_name="${2:-$1}"
+  local command_name
+  command_name="$1"
+  local log_name
+  log_name="${2:-$1}"
 
   if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
     printf "[-] Checking %s...\r" "$log_name" > /dev/tty
@@ -911,10 +954,14 @@ check_dependency_status() {
 }
 
 maybe_install_dependency() {
-  local manager="$1"
-  local command_name="$2"
-  local package_name="$3"
-  local description="$4"
+  local manager
+  manager="$1"
+  local command_name
+  command_name="$2"
+  local package_name
+  package_name="$3"
+  local description
+  description="$4"
 
   if check_dependency_status "$command_name"; then
     return 0
@@ -981,7 +1028,8 @@ maybe_install_dependency() {
 }
 
 normalize_semver() {
-  local version="${1#v}"
+  local version
+  version="${1#v}"
   version="${version%%-*}"
   printf '%s\n' "$version"
 }
@@ -1037,8 +1085,10 @@ have_supported_nvim() {
 }
 
 download_to_file() {
-  local url="$1"
-  local output="$2"
+  local url
+  url="$1"
+  local output
+  output="$2"
 
   if command -v curl >/dev/null 2>&1; then
     run_with_spinner "Downloading $(basename "$output")" curl -fL --retry 3 -o "$output" "$url"
@@ -1086,7 +1136,8 @@ install_pinned_neovim_linux() {
 }
 
 maybe_install_neovim() {
-  local manager="$1"
+  local manager
+  manager="$1"
   local version_before version_after attempted_package_install=0
 
   if have_supported_nvim; then
@@ -1137,8 +1188,10 @@ maybe_install_neovim() {
 }
 
 maybe_note_dependency() {
-  local command_name="$1"
-  local description="$2"
+  local command_name
+  command_name="$1"
+  local description
+  description="$2"
 
   if command -v "$command_name" >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("$command_name: present")
@@ -1193,7 +1246,7 @@ maybe_install_rtk() {
 
   tmp_dir="$(mktemp -d)"
   run_with_spinner "Downloading and extracting rtk v${rtk_ver}" sh -c "curl -fsSL '$target_url' | tar -xz -C '$tmp_dir'"
-  
+
   if [ -f "$tmp_dir/rtk" ]; then
     run_cmd mkdir -p "$HOME_DIR/.local/bin"
     run_cmd cp "$tmp_dir/rtk" "$HOME_DIR/.local/bin/rtk"
@@ -1283,7 +1336,8 @@ setup_eza_apt_repo() {
 }
 
 maybe_install_eza() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   if check_dependency_status "eza" "eza"; then
     return 0
@@ -1358,7 +1412,8 @@ setup_wezterm_apt_repo() {
 }
 
 maybe_install_wezterm() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   if check_dependency_status "wezterm" "wezterm"; then
     return 0
@@ -1435,8 +1490,10 @@ setup_q_apt_repo() {
 }
 
 maybe_install_q() {
-  local manager="$1"
-  local aur_helper=""
+  local manager
+  manager="$1"
+  local aur_helper
+  aur_helper=""
 
   if check_dependency_status "q" "q"; then
     return 0
@@ -1494,8 +1551,10 @@ maybe_install_q() {
 }
 
 maybe_install_p7zip() {
-  local manager="$1"
-  local package_name="p7zip"
+  local manager
+  manager="$1"
+  local package_name
+  package_name="p7zip"
 
   if check_dependency_status "7z" "p7zip"; then
     return 0
@@ -1510,8 +1569,10 @@ maybe_install_p7zip() {
 }
 
 maybe_install_poppler() {
-  local manager="$1"
-  local package_name="poppler"
+  local manager
+  manager="$1"
+  local package_name
+  package_name="poppler"
 
   if check_dependency_status "pdftotext" "poppler"; then
     return 0
@@ -1558,8 +1619,10 @@ maybe_install_uv() {
 }
 
 extract_zip_archive() {
-  local archive_path="$1"
-  local destination_dir="$2"
+  local archive_path
+  archive_path="$1"
+  local destination_dir
+  destination_dir="$2"
 
   if command -v unzip >/dev/null 2>&1; then
     run_with_spinner "Extracting $(basename "$archive_path")" unzip -oq "$archive_path" -d "$destination_dir"
@@ -1603,7 +1666,9 @@ maybe_install_bw() {
     fi
   fi
 
-  local bw_ver=$(get_managed_tool bw ver)
+  local bw_ver
+
+  bw_ver=$(get_managed_tool bw ver)
   [ -z "$bw_ver" ] && bw_ver="1.22.1"
   release_url="https://github.com/bitwarden/cli/releases/download/v${bw_ver}/bw-linux-${bw_ver}.zip"
   archive_path="${TMPDIR:-/tmp}/bw-linux-${bw_ver}.zip"
@@ -1642,8 +1707,10 @@ maybe_install_bw() {
 }
 
 maybe_install_dua_cli() {
-  local manager="$1"
-  local repo_url="https://github.com/byron/dua-cli.git"
+  local manager
+  manager="$1"
+  local repo_url
+  repo_url="https://github.com/byron/dua-cli.git"
 
   if command -v dua >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("dua: present")
@@ -1674,7 +1741,8 @@ maybe_install_dua_cli() {
 }
 
 maybe_install_pnpm() {
-  local pnpm_home="${PNPM_HOME:-$HOME_DIR/.local/share/pnpm}"
+  local pnpm_home
+  pnpm_home="${PNPM_HOME:-$HOME_DIR/.local/share/pnpm}"
 
   if command -v pnpm >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("pnpm: present")
@@ -1691,7 +1759,9 @@ maybe_install_pnpm() {
   export PATH="$PNPM_HOME:$PATH"
   run_cmd mkdir -p "$PNPM_HOME"
 
-  local pnpm_ver=$(get_managed_tool pnpm ver)
+  local pnpm_ver
+
+  pnpm_ver=$(get_managed_tool pnpm ver)
   [ -z "$pnpm_ver" ] && pnpm_ver="10.18.3"
 
   if command -v corepack >/dev/null 2>&1; then
@@ -1721,8 +1791,10 @@ maybe_install_pnpm() {
 }
 
 link_file() {
-  local source="$1"
-  local target="$2"
+  local source
+  source="$1"
+  local target
+  target="$2"
   run_cmd mkdir -p "$(dirname "$target")"
   backup_target "$source" "$target" || {
     record_failure "Backing up $target"
@@ -1736,8 +1808,10 @@ link_file() {
 }
 
 backup_target() {
-  local source="$1"
-  local target="$2"
+  local source
+  source="$1"
+  local target
+  target="$2"
   local target_dir target_name backup_dir
 
   if [ -L "$target" ]; then
@@ -1766,9 +1840,12 @@ backup_target() {
 }
 
 sync_repo() {
-  local repo_url="$1"
-  local ref="$2"
-  local target="$3"
+  local repo_url
+  repo_url="$1"
+  local ref
+  ref="$2"
+  local target
+  target="$3"
 
   if [ ! -d "$target/.git" ]; then
     run_with_spinner "Cloning $(basename "$target")" git clone "$repo_url" "$target" || return 1
@@ -1779,7 +1856,8 @@ sync_repo() {
 }
 
 normalize_tree_permissions() {
-  local target="$1"
+  local target
+  target="$1"
 
   [ -e "$target" ] || return 0
 
@@ -1788,7 +1866,8 @@ normalize_tree_permissions() {
 }
 
 restore_git_executable_bits() {
-  local repo_root="$1"
+  local repo_root
+  repo_root="$1"
   local relative_path
 
   [ -d "$repo_root/.git" ] || return 0
@@ -1803,7 +1882,8 @@ restore_git_executable_bits() {
 }
 
 ensure_oh_my_zsh_permissions() {
-  local omz_root="$STATE_HOME/oh-my-zsh"
+  local omz_root
+  omz_root="$STATE_HOME/oh-my-zsh"
   local git_dir
   local repo_root
 
@@ -1826,9 +1906,12 @@ ensure_oh_my_zsh_permissions() {
 }
 
 ensure_ssh_include() {
-  local ssh_dir="$HOME_DIR/.ssh"
-  local ssh_config="$ssh_dir/config"
-  local include_line="Include ~/.config/ooodnakov/ssh/config"
+  local ssh_dir
+  ssh_dir="$HOME_DIR/.ssh"
+  local ssh_config
+  ssh_config="$ssh_dir/config"
+  local include_line
+  include_line="Include ~/.config/ooodnakov/ssh/config"
 
   run_cmd mkdir -p "$ssh_dir"
   run_cmd touch "$ssh_config"
@@ -1851,7 +1934,8 @@ ensure_ssh_include() {
 }
 
 install_fonts() {
-  local source_dir="$REPO_ROOT/fonts/meslo"
+  local source_dir
+  source_dir="$REPO_ROOT/fonts/meslo"
 
   if [ -d "$source_dir" ]; then
     run_cmd mkdir -p "$FONT_TARGET_DIR"
@@ -1863,7 +1947,8 @@ install_fonts() {
 }
 
 generate_autogen_completions() {
-  local target_dir="$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
+  local target_dir
+  target_dir="$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
   local spec binary description output_file completion_cmd
   [ "$DRY_RUN" -eq 1 ] && { echo "[dry-run] Generating autogen completions in $target_dir"; return 0; }
 
@@ -1902,36 +1987,66 @@ generate_oooconf_completions() {
 
 install_managed_tools() {
   # All pins now pulled from optional-deps.toml via get_managed_tool (sole source of truth)
-  local ohmyzsh_repo=$(get_managed_tool oh-my-zsh repo)
-  local ohmyzsh_ref=$(get_managed_tool oh-my-zsh ref)
-  local p10k_repo=$(get_managed_tool powerlevel10k repo)
-  local p10k_ref=$(get_managed_tool powerlevel10k ref)
-  local nvm_repo=$(get_managed_tool nvm repo)
-  local nvm_ref=$(get_managed_tool nvm ref)
-  local k_repo=$(get_managed_tool k repo)
-  local k_ref=$(get_managed_tool k ref)
-  local marker_repo=$(get_managed_tool marker repo)
-  local marker_ref=$(get_managed_tool marker ref)
-  local todo_repo=$(get_managed_tool todo-txt repo)
-  local todo_ref=$(get_managed_tool todo-txt ref)
-  local autosuggestions_repo=$(get_managed_tool zsh-autosuggestions repo)
-  local autosuggestions_ref=$(get_managed_tool zsh-autosuggestions ref)
-  local highlighting_repo=$(get_managed_tool zsh-syntax-highlighting repo)
-  local highlighting_ref=$(get_managed_tool zsh-syntax-highlighting ref)
-  local history_repo=$(get_managed_tool zsh-history-substring-search repo)
-  local history_ref=$(get_managed_tool zsh-history-substring-search ref)
-  local autocomplete_repo=$(get_managed_tool zsh-autocomplete repo)
-  local autocomplete_ref=$(get_managed_tool zsh-autocomplete ref)
-  local fzftab_repo=$(get_managed_tool fzf-tab repo)
-  local fzftab_ref=$(get_managed_tool fzf-tab ref)
-  local forgit_repo=$(get_managed_tool forgit repo)
-  local forgit_ref=$(get_managed_tool forgit ref)
-  local youshoulduse_repo=$(get_managed_tool you-should-use repo)
-  local youshoulduse_ref=$(get_managed_tool you-should-use ref)
-  local autouv_repo=$(get_managed_tool auto-uv-env repo)
-  local autouv_ref=$(get_managed_tool auto-uv-env ref)
+  local ohmyzsh_repo
+  ohmyzsh_repo=$(get_managed_tool oh-my-zsh repo)
+  local ohmyzsh_ref
+  ohmyzsh_ref=$(get_managed_tool oh-my-zsh ref)
+  local p10k_repo
+  p10k_repo=$(get_managed_tool powerlevel10k repo)
+  local p10k_ref
+  p10k_ref=$(get_managed_tool powerlevel10k ref)
+  local nvm_repo
+  nvm_repo=$(get_managed_tool nvm repo)
+  local nvm_ref
+  nvm_ref=$(get_managed_tool nvm ref)
+  local k_repo
+  k_repo=$(get_managed_tool k repo)
+  local k_ref
+  k_ref=$(get_managed_tool k ref)
+  local marker_repo
+  marker_repo=$(get_managed_tool marker repo)
+  local marker_ref
+  marker_ref=$(get_managed_tool marker ref)
+  local todo_repo
+  todo_repo=$(get_managed_tool todo-txt repo)
+  local todo_ref
+  todo_ref=$(get_managed_tool todo-txt ref)
+  local autosuggestions_repo
+  autosuggestions_repo=$(get_managed_tool zsh-autosuggestions repo)
+  local autosuggestions_ref
+  autosuggestions_ref=$(get_managed_tool zsh-autosuggestions ref)
+  local highlighting_repo
+  highlighting_repo=$(get_managed_tool zsh-syntax-highlighting repo)
+  local highlighting_ref
+  highlighting_ref=$(get_managed_tool zsh-syntax-highlighting ref)
+  local history_repo
+  history_repo=$(get_managed_tool zsh-history-substring-search repo)
+  local history_ref
+  history_ref=$(get_managed_tool zsh-history-substring-search ref)
+  local autocomplete_repo
+  autocomplete_repo=$(get_managed_tool zsh-autocomplete repo)
+  local autocomplete_ref
+  autocomplete_ref=$(get_managed_tool zsh-autocomplete ref)
+  local fzftab_repo
+  fzftab_repo=$(get_managed_tool fzf-tab repo)
+  local fzftab_ref
+  fzftab_ref=$(get_managed_tool fzf-tab ref)
+  local forgit_repo
+  forgit_repo=$(get_managed_tool forgit repo)
+  local forgit_ref
+  forgit_ref=$(get_managed_tool forgit ref)
+  local youshoulduse_repo
+  youshoulduse_repo=$(get_managed_tool you-should-use repo)
+  local youshoulduse_ref
+  youshoulduse_ref=$(get_managed_tool you-should-use ref)
+  local autouv_repo
+  autouv_repo=$(get_managed_tool auto-uv-env repo)
+  local autouv_ref
+  autouv_ref=$(get_managed_tool auto-uv-env ref)
 
-  local bin_dir="$STATE_HOME/bin"
+  local bin_dir
+
+  bin_dir="$STATE_HOME/bin"
 
   sync_repo "$ohmyzsh_repo" "$ohmyzsh_ref" "$STATE_HOME/oh-my-zsh" && TOOL_SUMMARY+=("oh-my-zsh: synced") || TOOL_SUMMARY+=("oh-my-zsh: failed")
   sync_repo "$p10k_repo" "$p10k_ref" "$STATE_HOME/powerlevel10k" && TOOL_SUMMARY+=("powerlevel10k: synced") || TOOL_SUMMARY+=("powerlevel10k: failed")
@@ -1970,10 +2085,14 @@ install_managed_tools() {
 }
 
 install_auto_uv_env() {
-  local source_dir="$STATE_HOME/src/auto-uv-env"
-  local legacy_dir="$STATE_HOME/auto-uv-env"
-  local share_dir="$STATE_HOME/auto-uv-env"
-  local bin_dir="$STATE_HOME/bin"
+  local source_dir
+  source_dir="$STATE_HOME/src/auto-uv-env"
+  local legacy_dir
+  legacy_dir="$STATE_HOME/auto-uv-env"
+  local share_dir
+  share_dir="$STATE_HOME/auto-uv-env"
+  local bin_dir
+  bin_dir="$STATE_HOME/bin"
 
   if [ -d "$legacy_dir/.git" ] && [ ! -e "$source_dir" ]; then
     run_cmd mkdir -p "$(dirname "$source_dir")"
@@ -1986,8 +2105,11 @@ install_auto_uv_env() {
     fi
   fi
 
-  local autouv_repo=$(get_managed_tool auto-uv-env repo)
-  local autouv_ref=$(get_managed_tool auto-uv-env ref)
+  local autouv_repo
+
+  autouv_repo=$(get_managed_tool auto-uv-env repo)
+  local autouv_ref
+  autouv_ref=$(get_managed_tool auto-uv-env ref)
   sync_repo "$autouv_repo" "$autouv_ref" "$source_dir" || {
     TOOL_SUMMARY+=("auto-uv-env: failed")
     return 1
@@ -2056,8 +2178,10 @@ update_repo() {
 }
 
 doctor_check_link() {
-  local source="$1"
-  local target="$2"
+  local source
+  source="$1"
+  local target
+  target="$2"
   if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
     echo "[ok] $target -> $source"
   else
@@ -2067,7 +2191,8 @@ doctor_check_link() {
 }
 
 doctor_check_command() {
-  local name="$1"
+  local name
+  name="$1"
   if command -v "$name" >/dev/null 2>&1; then
     echo "[ok] command: $name"
   else

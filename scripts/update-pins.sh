@@ -25,6 +25,7 @@ ui_line() {
   fi
 }
 
+# shellcheck source=/dev/null
 source "$PYTHON_LIB"
 
 run_python() {

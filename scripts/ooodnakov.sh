@@ -208,6 +208,7 @@ ui_render_help_block() {
   done
 }
 
+# shellcheck source=/dev/null
 source "$PYTHON_LIB"
 
 run_python() {
