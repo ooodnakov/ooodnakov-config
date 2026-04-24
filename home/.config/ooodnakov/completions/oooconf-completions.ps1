@@ -102,6 +102,8 @@ function Get-OooconfCompletions {
         'neovim-python',
         'fastfetch',
         'btop',
+        'cava',
+        'blackhole-2ch',
         'glazewm',
         'zebar',
         'overline-zebar'

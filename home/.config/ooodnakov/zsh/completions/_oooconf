@@ -96,6 +96,8 @@ deps_keys=(
   'neovim-python:Neovim provider for Python plugins'
   'fastfetch:system information tool'
   'btop:system information tool'
+  'cava:terminal audio visualizer used by SketchyBar'
+  'blackhole-2ch:macOS loopback audio device for CAVA and audio capture'
   'glazewm:Tiling window manager for Windows'
   'zebar:Modern, customizable status bar for Windows'
   'overline-zebar:Third-party Zebar widget pack with system tray, widgets, and a config UI'
