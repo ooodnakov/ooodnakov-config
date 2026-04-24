@@ -29,7 +29,7 @@ function Assert-True($Condition, $Message) {
 }
 
 # Test 1: Get-ManagedTool and Get-DepInfo (central TOML)
-Write-Host "`n1. Testing Get-ManagedTool and Get-DepInfo (from optional-deps.toml)..." 
+Write-Host "`n1. Testing Get-ManagedTool and Get-DepInfo (from optional-deps.toml)..."
 $ohmyzshRef = Get-ManagedTool "oh-my-zsh" "ref"
 Assert-True ($ohmyzshRef.Length -eq 40) "Get-ManagedTool returns valid git ref for oh-my-zsh"
 $rtkInfo = Get-DepInfo "rtk"

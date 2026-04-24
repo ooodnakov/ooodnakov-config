@@ -208,6 +208,7 @@ ui_render_help_block() {
   done
 }
 
+# shellcheck source=/dev/null
 source "$PYTHON_LIB"
 
 run_python() {
@@ -1187,7 +1188,11 @@ if should_normalize_global_flags "$command"; then
         ;;
     esac
   done
-  set -- "${normalized_args[@]}"
+  if [ ${#normalized_args[@]} -gt 0 ]; then
+    set -- "${normalized_args[@]}"
+  else
+    set --
+  fi
 fi
 
 exec_setup_command() {

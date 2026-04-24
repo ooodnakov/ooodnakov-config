@@ -34,8 +34,17 @@ def _run_normalized_bash_script(script: str, *args: str) -> subprocess.Completed
         handle.write(normalized)
         temp_path = Path(handle.name)
     try:
+        cmd = ["bash"]
+        if args and args[0] == "-n":
+            cmd.append("-n")
+            cmd.append(str(temp_path))
+            cmd.extend(args[1:])
+        else:
+            cmd.append(str(temp_path))
+            cmd.extend(args)
+
         return subprocess.run(
-            ["bash", *args, str(temp_path)],
+            cmd,
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent,
