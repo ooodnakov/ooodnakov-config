@@ -653,6 +653,7 @@ function Install-OptionalDependencyFromSpec {
         "pnpm" { return (Install-PnpmIfMissing) }
         "cargo" { return (Install-CargoIfMissing) }
         "dua" { return (Install-DuaIfMissing) }
+        "nvim" { return (Install-NeovimIfMissing) }
         "rtk" { return (Install-RtkIfMissing) }
         "tectonic" { return (Install-TectonicIfMissing) }
         "zebar-pack-overline" {
@@ -1787,6 +1788,61 @@ function Install-RtkIfMissing {
     }
 
     Add-DependencySummary "rtk: install attempted"
+    return $false
+}
+
+function Install-NeovimIfMissing {
+    if (Test-DependencyStatus -CommandName "nvim" -SummaryName "nvim") { return $true }
+
+    if (-not (Confirm-Install "Install Neovim from the official GitHub release archive?")) {
+        Add-DependencySummary "nvim: skipped"
+        return $false
+    }
+
+    $nvimInfo = Get-DepInfo "nvim"
+    $nvimVer = if ($nvimInfo.ver) { $nvimInfo.ver } else { "0.12.1" }
+    $arch = if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) { "arm64" } else { "x64" }
+    $assetName = if ($arch -eq "arm64") { "nvim-win-arm64.zip" } else { "nvim-win64.zip" }
+    $extractedDir = if ($arch -eq "arm64") { "nvim-win-arm64" } else { "nvim-win64" }
+    $installRoot = Join-Path $ShareHome "tools/neovim/v$nvimVer"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) $assetName
+    $releaseUrl = "https://github.com/neovim/neovim/releases/download/v$nvimVer/$assetName"
+    $sourceBinary = Join-Path $installRoot "$extractedDir/bin/nvim.exe"
+    $targetBinary = Join-Path $LocalBinDir "nvim.exe"
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Download $releaseUrl"
+        Write-Output "[dry-run] Expand-Archive $archivePath -> $installRoot"
+        Write-Output "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Add-DependencySummary "nvim: install preview via official GitHub release"
+        return $false
+    }
+
+    try {
+        if (-not (Ensure-Directory -Path $installRoot) -or -not (Ensure-Directory -Path $LocalBinDir)) {
+            Add-DependencySummary "nvim: install attempted"
+            return $false
+        }
+
+        if (-not (Test-Path $sourceBinary)) {
+            Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
+            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
+        }
+
+        Copy-Item -Path $sourceBinary -Destination $targetBinary -Force
+    } catch {
+        Write-Output $_
+        Add-Failure "Installing Neovim"
+    }
+
+    if ((Get-Command nvim -ErrorAction SilentlyContinue -CommandType Application) -or (Test-Path $targetBinary)) {
+        Add-DependencySummary "nvim: installed official v$nvimVer"
+        Add-NewlyAvailableCommand -CommandNames @("nvim")
+        return $true
+    }
+
+    Add-DependencySummary "nvim: install attempted"
+    if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
     return $false
 }
 

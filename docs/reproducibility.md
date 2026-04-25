@@ -70,7 +70,7 @@ The bootstrap scripts intentionally do not install every package manager package
 Fonts are also manual for now. The tracked defaults assume a Nerd Font is installed, with `MesloLGSDZ Nerd Font Mono` preferred.
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.
 
-For Neovim, the Unix setup validates `nvim >= 0.11.0` for LazyVim. On Linux, if the distro package manager only provides an older version, setup installs the pinned official Neovim release tarball into the repo-managed XDG data tree and links `nvim` from there.
+For Neovim, setup validates `nvim >= 0.10.0` for LazyVim. If Neovim is missing or too old, setup installs the pinned official Neovim GitHub release archive into the repo-managed data tree and links or copies `nvim` from there instead of using an OS package manager.
 For `pnpm`, the tracked shell environment reserves `PNPM_HOME`, and setup installs a pinned version through `corepack` when available or through `pnpm` into that path otherwise.
 
 ## Bootstrap trust model
