@@ -697,7 +697,7 @@ install_optional_dependency_from_catalog() {
   description="$(optional_dependency_label "$key")"
   info="$(optional_dependency_install_info "$key" || true)"
   handler="$(optional_dependency_field "$key" "handler")"
-  IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ <<< "$info"
+  IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ platform_url asset_name <<< "$info"
   install_manager="$(resolve_package_manager_for_dependency "$detected_manager" "$declared_manager")"
 
   if [ -n "$handler" ]; then
@@ -732,6 +732,9 @@ install_optional_dependency_from_catalog() {
           DEPENDENCY_SUMMARY+=("$command_name: install attempted via pnpm")
         fi
       fi
+      ;;
+    github-release)
+      maybe_install_github_release "$key" "$description" "$package_name" "$command_name" "$platform_url" "$asset_name"
       ;;
     "")
       maybe_note_dependency "$command_name" "$description (no package manager declared)"
@@ -1053,6 +1056,169 @@ download_to_file() {
   else
     echo "Neither curl nor wget is available for downloading $url" >&2
     return 1
+  fi
+}
+
+github_release_system() {
+  case "$(uname -s)" in
+    Linux) printf '%s\n' linux ;;
+    Darwin) printf '%s\n' darwin ;;
+    *) return 1 ;;
+  esac
+}
+
+github_release_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64) printf '%s\n' x86_64 ;;
+    aarch64|arm64) printf '%s\n' aarch64 ;;
+    i386|i686) printf '%s\n' i686 ;;
+    *) return 1 ;;
+  esac
+}
+
+expand_github_release_template() {
+  local template="$1"
+  local version="$2"
+  local system="$3"
+  local arch="$4"
+
+  template="${template//\$\{ver\}/$version}"
+  template="${template//\$\{system\}/$system}"
+  template="${template//\$\{arch\}/$arch}"
+  printf '%s\n' "$template"
+}
+
+archive_stem() {
+  local name="$1"
+  name="${name##*/}"
+  case "$name" in
+    *.tar.gz) name="${name%.tar.gz}" ;;
+    *.tgz) name="${name%.tgz}" ;;
+    *.zip) name="${name%.zip}" ;;
+    *.tar.xz) name="${name%.tar.xz}" ;;
+    *.tar.bz2) name="${name%.tar.bz2}" ;;
+    *) name="${name%.*}" ;;
+  esac
+  printf '%s\n' "$name"
+}
+
+maybe_install_github_release() {
+  local key="$1"
+  local description="$2"
+  local repo="$3"
+  local command_name="$4"
+  local url_template="$5"
+  local asset_template="$6"
+  local version system arch asset_name release_url archive_path install_root bin_dir extracted_binary target_binary
+
+  if check_dependency_status "$command_name" "$command_name"; then
+    return 0
+  fi
+
+  version="$(get_dep_field "$key" ver)"
+  if [ -z "$version" ] || [ -z "$repo" ]; then
+    DEPENDENCY_SUMMARY+=("$command_name: missing (github-release metadata incomplete)")
+    return 1
+  fi
+
+  system="$(github_release_system)" || {
+    DEPENDENCY_SUMMARY+=("$command_name: unsupported OS $(uname -s)")
+    return 1
+  }
+  arch="$(github_release_arch)" || {
+    DEPENDENCY_SUMMARY+=("$command_name: unsupported architecture $(uname -m)")
+    return 1
+  }
+
+  if [ -z "$asset_template" ] && [ -z "$url_template" ]; then
+    DEPENDENCY_SUMMARY+=("$command_name: missing (github-release asset metadata incomplete)")
+    return 1
+  fi
+
+  asset_name="$(expand_github_release_template "${asset_template:-${url_template##*/}}" "$version" "$system" "$arch")"
+  if [ -n "$url_template" ]; then
+    release_url="$(expand_github_release_template "$url_template" "$version" "$system" "$arch")"
+  else
+    release_url="https://github.com/${repo}/releases/download/v${version}/${asset_name}"
+  fi
+
+  if ! prompt_yes_no "Install $command_name for $description from the GitHub release archive?"; then
+    DEPENDENCY_SUMMARY+=("$command_name: skipped")
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name installer needs curl or wget. Install curl and retry?"; then
+      install_packages "$PACKAGE_MANAGER" curl
+    else
+      DEPENDENCY_SUMMARY+=("$command_name: missing (requires curl or wget)")
+      return 1
+    fi
+  fi
+
+  case "$asset_name" in
+    *.zip)
+      if ! command -v unzip >/dev/null 2>&1 && ! command -v bsdtar >/dev/null 2>&1; then
+        if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name archive extraction needs unzip or bsdtar. Install unzip and retry?"; then
+          install_packages "$PACKAGE_MANAGER" unzip
+        else
+          DEPENDENCY_SUMMARY+=("$command_name: missing (requires unzip or bsdtar)")
+          return 1
+        fi
+      fi
+      ;;
+    *.tar.gz|*.tgz|*.tar.xz|*.tar.bz2)
+      if ! command -v tar >/dev/null 2>&1; then
+        if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name archive extraction needs tar. Install tar and retry?"; then
+          install_packages "$PACKAGE_MANAGER" tar
+        else
+          DEPENDENCY_SUMMARY+=("$command_name: missing (requires tar)")
+          return 1
+        fi
+      fi
+      ;;
+  esac
+
+  install_root="$STATE_HOME/tools/$key/v${version}"
+  bin_dir="$STATE_HOME/bin"
+  archive_path="${TMPDIR:-/tmp}/${asset_name}"
+  target_binary="$bin_dir/$command_name"
+
+  run_cmd mkdir -p "$install_root" "$bin_dir" || return 1
+
+  if [ ! -x "$target_binary" ]; then
+    download_to_file "$release_url" "$archive_path" || {
+      DEPENDENCY_SUMMARY+=("$command_name: install attempted")
+      return 1
+    }
+
+    case "$asset_name" in
+      *.zip) extract_zip_archive "$archive_path" "$install_root" || return 1 ;;
+      *) run_with_spinner "Extracting $asset_name" tar -xf "$archive_path" -C "$install_root" || return 1 ;;
+    esac
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+      DEPENDENCY_SUMMARY+=("$command_name: install preview via GitHub release")
+      return 0
+    fi
+
+    extracted_binary="$(find "$install_root" -type f -name "$command_name" -perm -u=x 2>/dev/null | head -n 1)"
+    if [ -z "$extracted_binary" ] && [ -f "$install_root/$(archive_stem "$asset_name")/$command_name" ]; then
+      extracted_binary="$install_root/$(archive_stem "$asset_name")/$command_name"
+    fi
+    if [ -z "$extracted_binary" ]; then
+      DEPENDENCY_SUMMARY+=("$command_name: install attempted")
+      return 1
+    fi
+
+    run_cmd chmod u=rwx,go=rx "$extracted_binary" || true
+    run_cmd ln -sfn "$extracted_binary" "$target_binary" || return 1
+  fi
+
+  if command -v "$command_name" >/dev/null 2>&1 || [ -x "$target_binary" ]; then
+    DEPENDENCY_SUMMARY+=("$command_name: installed official v${version}")
+  else
+    DEPENDENCY_SUMMARY+=("$command_name: install attempted")
   fi
 }
 

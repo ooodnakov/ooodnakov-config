@@ -44,10 +44,10 @@ def _normalize_dep(raw: dict) -> dict:
 
     if ver:
         for k, v in list(entry.items()):
-            if isinstance(v, str) and ("url" in k.lower() or k == "url"):
+            if isinstance(v, str) and ("url" in k.lower() or "asset" in k.lower() or k == "url"):
                 entry[k] = v.replace("${ver}", ver)
 
-    for k in ("ver", "url", "bin", "check", "after", "repo", "ref", "strategy", "handler"):
+    for k in ("ver", "url", "asset", "bin", "check", "after", "repo", "ref", "strategy", "handler"):
         if k in raw:
             entry[k] = raw[k]
 
@@ -97,6 +97,8 @@ def normalized_deps(platform: str | None = None) -> list[dict]:
         command = dep.get("command", "")
         winget_id = dep.get("winget_id", "")
         choco_id = dep.get("choco_id", "")
+        url = dep.get("url", "")
+        asset = dep.get("asset", "")
 
         if platform:
             manager = dep.get(f"{platform}.manager", manager)
@@ -104,6 +106,8 @@ def normalized_deps(platform: str | None = None) -> list[dict]:
             command = dep.get(f"{platform}.command", command)
             winget_id = dep.get(f"{platform}.winget_id", winget_id)
             choco_id = dep.get(f"{platform}.choco_id", choco_id)
+            url = dep.get(f"{platform}.url", url)
+            asset = dep.get(f"{platform}.asset", asset)
 
         result.append(
             {
@@ -119,7 +123,8 @@ def normalized_deps(platform: str | None = None) -> list[dict]:
                 "bin": dep.get("bin"),
                 "check": dep.get("check"),
                 "ver": dep.get("ver"),
-                "url": dep.get("url"),
+                "url": url,
+                "asset": asset,
                 "after": dep.get("after"),
                 "handler": dep.get("handler"),
             }
@@ -149,6 +154,7 @@ def output_json() -> None:
             "description": d.get("description", ""),
             "ver": d.get("ver"),
             "url": d.get("url"),
+            "asset": d.get("asset"),
             "bin": d.get("bin"),
             "check": d.get("check"),
             "after": d.get("after"),
@@ -157,7 +163,7 @@ def output_json() -> None:
         # Platform info (backward compatible)
         for platform in ("linux", "macos", "windows"):
             pentry = {}
-            for subkey in ("manager", "package", "command", "winget_id", "choco_id"):
+            for subkey in ("manager", "package", "command", "winget_id", "choco_id", "url", "asset"):
                 key = f"{platform}.{subkey}"
                 if key in d:
                     pentry[subkey] = d[key]
@@ -200,8 +206,9 @@ def get_install_info(key: str, platform: str) -> None:
             winget_id = d.get(pfx + "winget_id", "")
             choco_id = d.get(pfx + "choco_id", "")
             ver = d.get("ver", "")
-            url = d.get("url", "")
-            print(f"{manager}|{package}|{command}|{winget_id}|{choco_id}|{ver}|{url}")
+            url = d.get(pfx + "url", d.get("url", ""))
+            asset = d.get(pfx + "asset", d.get("asset", ""))
+            print(f"{manager}|{package}|{command}|{winget_id}|{choco_id}|{ver}|{url}|{asset}")
             return
     sys.exit(1)
 

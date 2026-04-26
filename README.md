@@ -227,7 +227,7 @@ Each install, update, or doctor run also writes logs under:
 
 `setup-latest.log` points to the latest run.
 
-In interactive terminals, setup can also prompt to install common optional dependencies. The full catalog lives in `scripts/optional-deps.toml`, which both Unix and PowerShell setup scripts read. Each entry defines per-platform install methods (apt, brew, choco, winget, cargo, curl, or custom).
+In interactive terminals, setup can also prompt to install common optional dependencies. The full catalog lives in `scripts/optional-deps.toml`, which both Unix and PowerShell setup scripts read. Each entry defines per-platform install methods (apt, brew, choco, winget, cargo, curl, GitHub release archive, or custom).
 
 ### Installing Optional Dependencies
 
