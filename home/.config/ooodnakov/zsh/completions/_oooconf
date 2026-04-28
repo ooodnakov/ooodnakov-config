@@ -1,8 +1,10 @@
 #compdef oooconf o
 
-local -a oooconf_commands global_opts setup_opts deps_keys agents_subcommands agents_opts secrets_subcommands shell_subcommands shell_forgit_alias_modes shell_typo_modes shell_psfzf_modes shell_auto_uv_modes
-local command_name secrets_command shell_command
+local -a oooconf_commands global_opts deps_keys
+local command_name subcommand_name subsubcommand_name previous_token
+local safe_command safe_subcommand safe_subsubcommand
 local i
+typeset -A oooconf_aliases
 
 oooconf_commands=(
   'bootstrap:clone or update the repo, then run install'
@@ -23,29 +25,22 @@ oooconf_commands=(
   'check:alias for doctor'
   'preview:alias for dry-run'
   'upgrade:alias for update'
-  'komorebi:command'
-  'wm:command'
+  'komorebi:manage komorebi tiling window manager state'
+  'wm:switch or manage window managers'
   'help:show help'
 )
 
 global_opts=(
-  '-C:run against a specific repo checkout:_files -/'
-  '--repo-root:run against a specific repo checkout:_files -/'
-  '--print-repo-root:print the resolved repo root'
-  '-h:show help'
-  '--help:show help'
-  '-n:add --dry-run to install or update'
-  '--dry-run:add --dry-run to install or update'
-  '--yes-optional:auto-accept optional dependency installs'
-  '-V:show version information'
-  '--version:show version information'
-)
-
-setup_opts=(
-  '--dry-run:preview actions without changing the filesystem'
-  '--yes-optional:auto-accept optional dependency installs'
-  '-h:show setup help'
-  '--help:show setup help'
+  '-C:-C:_files -/'
+  '--repo-root:repo-root:_files -/'
+  '--print-repo-root:print-repo-root'
+  '-h:-h'
+  '--help:help'
+  '-n:-n'
+  '--dry-run:dry-run'
+  '--yes-optional:yes-optional'
+  '-V:-V'
+  '--version:version'
 )
 
 deps_keys=(
@@ -96,67 +91,508 @@ deps_keys=(
   'neovim-python:Neovim provider for Python plugins'
   'fastfetch:system information tool'
   'btop:system information tool'
+  'cava:terminal audio visualizer used by SketchyBar'
+  'blackhole-2ch:macOS loopback audio device for CAVA and audio capture'
   'glazewm:Tiling window manager for Windows'
   'zebar:Modern, customizable status bar for Windows'
   'overline-zebar:Third-party Zebar widget pack with system tray, widgets, and a config UI'
 )
 
-agents_subcommands=(
+oooconf_aliases['check']='doctor'
+oooconf_aliases['preview']='dry-run'
+oooconf_aliases['upgrade']='update'
+
+cmd_bootstrap_options=(
+)
+cmd_bootstrap_subcommands=(
+)
+cmd_bootstrap_option_values=(
+)
+
+cmd_install_options=(
+  '--dry-run:dry-run'
+  '--yes-optional:yes-optional'
+  '-h:-h'
+  '--help:help'
+)
+cmd_install_subcommands=(
+)
+cmd_install_option_values=(
+)
+
+cmd_deps_options=(
+  '--dry-run:dry-run'
+  '--yes-optional:yes-optional'
+  '-h:-h'
+  '--help:help'
+)
+cmd_deps_subcommands=(
+)
+cmd_deps_option_values=(
+)
+
+cmd_update_options=(
+  '--dry-run:dry-run'
+  '--yes-optional:yes-optional'
+  '-h:-h'
+  '--help:help'
+)
+cmd_update_subcommands=(
+)
+cmd_update_option_values=(
+)
+
+cmd_doctor_options=(
+)
+cmd_doctor_subcommands=(
+)
+cmd_doctor_option_values=(
+)
+
+cmd_dry_run_options=(
+)
+cmd_dry_run_subcommands=(
+)
+cmd_dry_run_option_values=(
+)
+
+cmd_delete_options=(
+)
+cmd_delete_subcommands=(
+)
+cmd_delete_option_values=(
+)
+
+cmd_remove_options=(
+)
+cmd_remove_subcommands=(
+)
+cmd_remove_option_values=(
+)
+
+cmd_lock_options=(
+)
+cmd_lock_subcommands=(
+)
+cmd_lock_option_values=(
+)
+
+cmd_update_pins_options=(
+  '--apply:apply'
+)
+cmd_update_pins_subcommands=(
+)
+cmd_update_pins_option_values=(
+)
+
+cmd_completions_options=(
+  '--dry-run:dry-run'
+)
+cmd_completions_subcommands=(
+)
+cmd_completions_option_values=(
+)
+
+cmd_agents_options=(
+)
+cmd_agents_subcommands=(
   'detect:detect configured agent CLIs on PATH'
   'sync:append or update shared AGENTS.md block'
   'doctor:verify AGENTS.md shared block is current'
+  'mcp:manage Model Context Protocol (MCP) servers'
+  'status:show status of managed MCP servers'
+  'rtk:manage RTK integration across agents'
   'update:update installed agent CLIs'
+  'install:install one specific agent CLI'
+  'install-scripts-build:build standalone install scripts for agents'
+  'skills:manage agent skills and extensions'
+)
+cmd_agents_detect_options=(
+  '--repo-root:repo-root'
+  '--config:config'
+  '--json:json'
+)
+cmd_agents_detect_values=(
+)
+cmd_agents_detect_subsubcommands=(
+)
+cmd_agents_sync_options=(
+  '--repo-root:repo-root'
+  '--config:config'
+  '--check:check'
+  '--global:global'
+)
+cmd_agents_sync_values=(
+)
+cmd_agents_sync_subsubcommands=(
+)
+cmd_agents_doctor_options=(
+  '--repo-root:repo-root'
+  '--config:config'
+  '--strict-config-paths:strict-config-paths'
+)
+cmd_agents_doctor_values=(
+)
+cmd_agents_doctor_subsubcommands=(
+)
+cmd_agents_mcp_options=(
+)
+cmd_agents_mcp_values=(
+)
+cmd_agents_mcp_subsubcommands=(
+  'sync:synchronize managed MCP servers'
+  'status:show managed MCP status'
+)
+cmd_agents_mcp_sync_options=(
+  '--check:check'
+)
+cmd_agents_mcp_status_options=(
+)
+cmd_agents_status_options=(
+)
+cmd_agents_status_values=(
+)
+cmd_agents_status_subsubcommands=(
+)
+cmd_agents_rtk_options=(
+)
+cmd_agents_rtk_values=(
+)
+cmd_agents_rtk_subsubcommands=(
+  'init:run '\''rtk init --global'\'' for detected agents'
+)
+cmd_agents_rtk_init_options=(
+  '--check:check'
+)
+cmd_agents_update_options=(
+  '--repo-root:repo-root'
+  '--config:config'
+  '--check:check'
+)
+cmd_agents_update_values=(
+)
+cmd_agents_update_subsubcommands=(
+)
+cmd_agents_install_options=(
+  '--repo-root:repo-root'
+  '--config:config'
+  '--check:check'
+)
+cmd_agents_install_values=(
+)
+cmd_agents_install_subsubcommands=(
+)
+cmd_agents_install_scripts_build_options=(
+)
+cmd_agents_install_scripts_build_values=(
+)
+cmd_agents_install_scripts_build_subsubcommands=(
+)
+cmd_agents_skills_options=(
+)
+cmd_agents_skills_values=(
+)
+cmd_agents_skills_subsubcommands=(
+  'sync:synchronize configured skill specs across agents'
+)
+cmd_agents_skills_sync_options=(
+  '--check:check'
+)
+cmd_agents_option_values=(
 )
 
-agents_opts=(
-  '--repo-root:repo root containing oooconf agent config:_files -/'
-  '--config:override agent config JSON path:_files'
+cmd_secrets_options=(
+)
+cmd_secrets_subcommands=(
+  'login:log in to Bitwarden/Vaultwarden'
+  'unlock:unlock and print session exports'
+  'sync:render local secret files from template'
+  'doctor:check secrets prerequisites and health'
+  'list:list template-managed secret keys'
+  'ls:alias for list'
+  'status:show sync and vault status'
+  'logout:lock vault and clear session'
+  'add:add a key to the template'
+  'remove:remove a key from the template'
+  'rm:alias for remove'
+  'del:alias for remove'
+)
+cmd_secrets_login_options=(
+  '--server:server'
+  '--method:method'
+  '--client-id:client-id'
+  '--client-secret:client-secret'
+)
+cmd_secrets_login_values=(
+)
+cmd_secrets_login_subsubcommands=(
+)
+cmd_secrets_unlock_options=(
+  '--shell:shell'
+  '--raw:raw'
+)
+cmd_secrets_unlock_values=(
+)
+cmd_secrets_unlock_subsubcommands=(
+)
+cmd_secrets_sync_options=(
+  '--backend:backend'
+  '--template:template'
+  '--dry-run:dry-run'
+  '--force:force'
+)
+cmd_secrets_sync_values=(
+)
+cmd_secrets_sync_subsubcommands=(
+)
+cmd_secrets_doctor_options=(
+  '--backend:backend'
+  '--template:template'
+)
+cmd_secrets_doctor_values=(
+)
+cmd_secrets_doctor_subsubcommands=(
+)
+cmd_secrets_list_options=(
+  '--template:template'
+  '--resolved:resolved'
+  '--backend:backend'
+)
+cmd_secrets_list_values=(
+)
+cmd_secrets_list_subsubcommands=(
+)
+cmd_secrets_ls_options=(
+  '--template:template'
+  '--resolved:resolved'
+  '--backend:backend'
+)
+cmd_secrets_ls_values=(
+)
+cmd_secrets_ls_subsubcommands=(
+)
+cmd_secrets_status_options=(
+  '--template:template'
+)
+cmd_secrets_status_values=(
+)
+cmd_secrets_status_subsubcommands=(
+)
+cmd_secrets_logout_options=(
+)
+cmd_secrets_logout_values=(
+)
+cmd_secrets_logout_subsubcommands=(
+)
+cmd_secrets_add_options=(
+  '--template:template'
+)
+cmd_secrets_add_values=(
+)
+cmd_secrets_add_subsubcommands=(
+)
+cmd_secrets_remove_options=(
+  '--template:template'
+)
+cmd_secrets_remove_values=(
+)
+cmd_secrets_remove_subsubcommands=(
+)
+cmd_secrets_rm_options=(
+  '--template:template'
+)
+cmd_secrets_rm_values=(
+)
+cmd_secrets_rm_subsubcommands=(
+)
+cmd_secrets_del_options=(
+  '--template:template'
+)
+cmd_secrets_del_values=(
+)
+cmd_secrets_del_subsubcommands=(
+)
+cmd_secrets_option_values=(
+  '--shell:sh zsh bash pwsh fish'
+  '--method:auto password apikey'
+  '--backend:bw'
 )
 
-secrets_subcommands=(
-  'login:login'
-  'unlock:unlock'
-  'sync:sync'
-  'doctor:doctor'
-  'list:list'
-  'ls:ls'
-  'status:status'
-  'logout:logout'
-  'add:add'
-  'remove:remove'
-  'rm:rm'
-  'del:del'
+cmd_shell_options=(
 )
-
-shell_subcommands=(
-  'status:status'
-  'forgit-aliases:forgit-aliases'
-  'typo-handling:typo-handling'
-  'psfzf-tab:psfzf-tab'
-  'psfzf-git:psfzf-git'
-  'auto-uv-env:auto-uv-env'
+cmd_shell_subcommands=(
+  'status:print all shell preference modes'
+  'forgit-aliases:toggle plain vs forgit git aliases'
+  'typo-handling:configure typo handling behavior'
+  'psfzf-tab:toggle PSFzf tab completion integration'
+  'psfzf-git:toggle PSFzf git integration'
+  'auto-uv-env:configure uv auto activation messaging'
 )
-
-shell_forgit_alias_modes=(
+cmd_shell_status_options=(
+)
+cmd_shell_status_values=(
+)
+cmd_shell_status_subsubcommands=(
+)
+cmd_shell_forgit_aliases_options=(
+)
+cmd_shell_forgit_aliases_values=(
   'plain:plain'
   'forgit:forgit'
   'status:status'
 )
-shell_typo_modes=(
+cmd_shell_forgit_aliases_subsubcommands=(
+)
+cmd_shell_typo_handling_options=(
+)
+cmd_shell_typo_handling_values=(
   'silent:silent'
   'suggest:suggest'
   'help:help'
   'status:status'
 )
-shell_psfzf_modes=(
+cmd_shell_typo_handling_subsubcommands=(
+)
+cmd_shell_psfzf_tab_options=(
+)
+cmd_shell_psfzf_tab_values=(
   'enabled:enabled'
   'disabled:disabled'
   'status:status'
 )
-shell_auto_uv_modes=(
+cmd_shell_psfzf_tab_subsubcommands=(
+)
+cmd_shell_psfzf_git_options=(
+)
+cmd_shell_psfzf_git_values=(
+  'enabled:enabled'
+  'disabled:disabled'
+  'status:status'
+)
+cmd_shell_psfzf_git_subsubcommands=(
+)
+cmd_shell_auto_uv_env_options=(
+)
+cmd_shell_auto_uv_env_values=(
   'enabled:enabled'
   'quiet:quiet'
   'status:status'
+)
+cmd_shell_auto_uv_env_subsubcommands=(
+)
+cmd_shell_option_values=(
+)
+
+cmd_version_options=(
+)
+cmd_version_subcommands=(
+)
+cmd_version_option_values=(
+)
+
+cmd_check_options=(
+)
+cmd_check_subcommands=(
+)
+cmd_check_option_values=(
+)
+
+cmd_preview_options=(
+)
+cmd_preview_subcommands=(
+)
+cmd_preview_option_values=(
+)
+
+cmd_upgrade_options=(
+)
+cmd_upgrade_subcommands=(
+)
+cmd_upgrade_option_values=(
+)
+
+cmd_komorebi_options=(
+)
+cmd_komorebi_subcommands=(
+  'reload:reload'
+  'start:start'
+  'stop:stop'
+)
+cmd_komorebi_reload_options=(
+)
+cmd_komorebi_reload_values=(
+)
+cmd_komorebi_reload_subsubcommands=(
+)
+cmd_komorebi_start_options=(
+)
+cmd_komorebi_start_values=(
+)
+cmd_komorebi_start_subsubcommands=(
+)
+cmd_komorebi_stop_options=(
+)
+cmd_komorebi_stop_values=(
+)
+cmd_komorebi_stop_subsubcommands=(
+)
+cmd_komorebi_option_values=(
+)
+
+cmd_wm_options=(
+)
+cmd_wm_subcommands=(
+  'status:status'
+  'set:set'
+  'start:start'
+  'stop:stop'
+  'reload:reload'
+  'zebar-config:zebar-config'
+)
+cmd_wm_status_options=(
+)
+cmd_wm_status_values=(
+)
+cmd_wm_status_subsubcommands=(
+)
+cmd_wm_set_options=(
+)
+cmd_wm_set_values=(
+)
+cmd_wm_set_subsubcommands=(
+)
+cmd_wm_start_options=(
+)
+cmd_wm_start_values=(
+)
+cmd_wm_start_subsubcommands=(
+)
+cmd_wm_stop_options=(
+)
+cmd_wm_stop_values=(
+)
+cmd_wm_stop_subsubcommands=(
+)
+cmd_wm_reload_options=(
+)
+cmd_wm_reload_values=(
+)
+cmd_wm_reload_subsubcommands=(
+)
+cmd_wm_zebar_config_options=(
+)
+cmd_wm_zebar_config_values=(
+)
+cmd_wm_zebar_config_subsubcommands=(
+)
+cmd_wm_option_values=(
+)
+
+cmd_help_options=(
+)
+cmd_help_subcommands=(
+)
+cmd_help_option_values=(
 )
 
 command_name=
@@ -180,156 +616,81 @@ if [[ -z "$command_name" ]]; then
   return 0
 fi
 
-case "$command_name" in
-  upgrade)
-    command_name=update
-    ;;
-  check)
-    command_name=doctor
-    ;;
-  preview)
-    command_name=dry-run
-    ;;
-esac
+if [[ -n "${oooconf_aliases[$command_name]:-}" ]]; then
+  command_name="${oooconf_aliases[$command_name]}"
+fi
 
-case "$command_name" in
-  help)
-    _describe -t commands 'oooconf command' oooconf_commands && return 0
-    ;;
-  install|update|deps)
-    _describe -t options 'oooconf option' setup_opts
+safe_command="${command_name//[^A-Za-z0-9_]/_}"
+if [[ "$safe_command" == <->* ]]; then safe_command="_$safe_command"; fi
+eval "local -a command_options=("${cmd_${safe_command}_options[@]}")"
+eval "local -a command_subcommands=("${cmd_${safe_command}_subcommands[@]}")"
+
+subcommand_name=
+for (( i = 3; i < CURRENT; i++ )); do
+  case "$words[i]" in
+    -*) ;;
+    *)
+      local candidate="$words[i]"
+      if (( ${command_subcommands[(Ie)$candidate]} )); then
+        subcommand_name="$candidate"
+        break
+      fi
+      ;;
+  esac
+done
+
+previous_token=
+if (( CURRENT > 2 )); then previous_token="$words[CURRENT-1]"; fi
+
+if [[ -z "$subcommand_name" ]]; then
+  _describe -t subcommands 'oooconf subcommand' command_subcommands
+  _describe -t options 'oooconf option' command_options
+  if [[ "$command_name" == install || "$command_name" == deps || "$command_name" == update ]]; then
     _describe -t dependencies 'dependency key' deps_keys
+  fi
+  return 0
+fi
+
+safe_subcommand="${subcommand_name//[^A-Za-z0-9_]/_}"
+if [[ "$safe_subcommand" == <->* ]]; then safe_subcommand="_$safe_subcommand"; fi
+eval "local -a sub_options=("${cmd_${safe_command}_${safe_subcommand}_options[@]}")"
+eval "local -a sub_values=("${cmd_${safe_command}_${safe_subcommand}_values[@]}")"
+eval "local -a sub_subcommands=("${cmd_${safe_command}_${safe_subcommand}_subsubcommands[@]}")"
+eval "local -a option_value_entries=("${cmd_${safe_command}_option_values[@]}")"
+
+subsubcommand_name=
+for (( i = 4; i < CURRENT; i++ )); do
+  case "$words[i]" in
+    -*) ;;
+    *)
+      local candidate="$words[i]"
+      if (( ${sub_subcommands[(Ie)$candidate]} )); then
+        subsubcommand_name="$candidate"
+        break
+      fi
+      ;;
+  esac
+done
+
+local option_entry
+for option_entry in "${option_value_entries[@]}"; do
+  local opt_name="${option_entry%%:*}"
+  local opt_values="${option_entry#*:}"
+  if [[ "$previous_token" == "$opt_name" ]]; then
+    _values "$opt_name value" ${(z)opt_values}
     return 0
-    ;;
-  completions)
-    _describe -t options 'oooconf completions option' '--dry-run:preview generation actions'
-    return 0
-    ;;
-  update-pins)
-    _describe -t options 'oooconf update-pins option' '--apply:write updated pins and lock artifacts'
-    return 0
-    ;;
-  agents)
-    local agents_command
-    agents_command=
-    for (( i = 3; i < CURRENT; i++ )); do
-      case "$words[i]" in
-        detect|sync|doctor|update)
-          agents_command="$words[i]"
-          break
-          ;;
-      esac
-    done
+  fi
+done
 
-    if [[ -z "$agents_command" ]]; then
-      _describe -t agents-subcommands 'oooconf agents command' agents_subcommands && return 0
-      return 0
-    fi
+if [[ -z "$subsubcommand_name" ]]; then
+  _describe -t options 'oooconf subcommand option' sub_options
+  _describe -t values 'oooconf subcommand value' sub_values
+  _describe -t subsubcommands 'oooconf subsubcommand' sub_subcommands
+  return 0
+fi
 
-    case "$agents_command" in
-      detect)
-        _describe -t options 'oooconf agents detect option' $agents_opts '--json:emit machine-readable JSON output'
-        ;;
-      sync|update)
-        _describe -t options "oooconf agents $agents_command option" $agents_opts '--check:validate only; do not write files'
-        ;;
-      doctor)
-        _describe -t options 'oooconf agents doctor option' $agents_opts '--strict-config-paths:fail if no default config path exists for a target'
-        ;;
-    esac
-    return 0
-    ;;
-  shell)
-    shell_command=
-    for (( i = 3; i < CURRENT; i++ )); do
-      case "$words[i]" in
-        status|forgit-aliases|typo-handling|psfzf-tab|psfzf-git|auto-uv-env)
-          shell_command="$words[i]"
-          break
-          ;;
-      esac
-    done
-
-    if [[ -z "$shell_command" ]]; then
-      _describe -t shell-subcommands 'oooconf shell command' shell_subcommands && return 0
-      return 0
-    fi
-
-    case "$shell_command" in
-      forgit-aliases)
-        _describe -t modes 'forgit alias mode' shell_forgit_alias_modes
-        ;;
-      typo-handling)
-        _describe -t modes 'typo handling mode' shell_typo_modes
-        ;;
-      psfzf-tab|psfzf-git)
-        _describe -t modes 'PSFzf mode' shell_psfzf_modes
-        ;;
-      auto-uv-env)
-        _describe -t modes 'auto-uv-env mode' shell_auto_uv_modes
-        ;;
-      status)
-        return 0
-        ;;
-    esac
-    return 0
-    ;;
-  secrets)
-    secrets_command=
-    for (( i = 3; i < CURRENT; i++ )); do
-      case "$words[i]" in
-        login|unlock|sync|doctor|list|ls|status|logout|add|remove|rm|del)
-          secrets_command="$words[i]"
-          break
-          ;;
-      esac
-    done
-
-    if [[ -z "$secrets_command" ]]; then
-      _describe -t secrets-subcommands 'oooconf secrets command' secrets_subcommands && return 0
-      return 0
-    fi
-
-    case "$secrets_command" in
-      ls)
-        secrets_command=list
-        ;;
-      rm|del)
-        secrets_command=remove
-        ;;
-    esac
-
-    case "$secrets_command" in
-      sync)
-        _describe -t options 'oooconf secrets sync option' '--backend:secret backend to use:(bw)' '--template:override the tracked template path:_files' '--dry-run:preview the sync without writing files' '--force:rewrite generated files even when unchanged'
-        ;;
-      doctor)
-        _describe -t options 'oooconf secrets doctor option' '--backend:secret backend to use:(bw)' '--template:override the tracked template path:_files'
-        ;;
-      list)
-        _describe -t options 'oooconf secrets list option' '--template:override the tracked template path:_files' '--resolved:resolve bw:// references (requires unlocked BW_SESSION)' '--backend:secret backend to use:(bw)'
-        ;;
-      status)
-        _describe -t options 'oooconf secrets status option' '--template:override the tracked template path:_files'
-        ;;
-      login)
-        _describe -t options 'oooconf secrets login option' '--server:Bitwarden or Vaultwarden server URL:' '--method:login method:(auto password apikey)' '--client-id:Bitwarden API key client ID:' '--client-secret:Bitwarden API key client secret:'
-        ;;
-      unlock)
-        _describe -t options 'oooconf secrets unlock option' '--shell:shell syntax to emit:(sh zsh bash pwsh)' '--raw:print only the unlocked session token'
-        ;;
-      add|remove)
-        _describe -t options "oooconf secrets $secrets_command option" '--template:override the tracked template path:_files'
-        ;;
-      logout)
-        return 0
-        ;;
-    esac
-    return 0
-    ;;
-  dry-run|doctor|delete|remove|lock|version|bootstrap)
-    return 0
-    ;;
-esac
-
+safe_subsubcommand="${subsubcommand_name//[^A-Za-z0-9_]/_}"
+if [[ "$safe_subsubcommand" == <->* ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi
+eval "local -a subsub_options=("${cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options[@]}")"
+_describe -t options 'oooconf subsubcommand option' subsub_options
 return 0

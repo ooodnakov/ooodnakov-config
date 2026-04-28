@@ -3,65 +3,17 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
+from oooconf_cli_spec import CliSpec, CommandSpec, load_cli_spec
 from read_optional_deps import load_deps
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMMANDS_FILE = REPO_ROOT / "scripts" / "oooconf-commands.txt"
+CLI_SPEC_FILE = REPO_ROOT / "scripts" / "oooconf-cli-spec.toml"
 ZSH_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf"
 POWERSHELL_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1"
-
-COMMAND_DESCRIPTIONS = {
-    "bootstrap": "clone or update the repo, then run install",
-    "install": "apply managed config",
-    "deps": "install optional dependencies only",
-    "update": "update the repo, then re-run install",
-    "upgrade": "alias for update",
-    "doctor": "validate managed links and tools",
-    "check": "alias for doctor",
-    "dry-run": "preview install without changes",
-    "preview": "alias for dry-run",
-    "delete": "remove managed links and restore backups",
-    "remove": "remove managed links only",
-    "lock": "regenerate dependency lock artifacts",
-    "update-pins": "check or update pinned refs",
-    "completions": "regenerate tracked completion files",
-    "agents": "detect/sync/doctor/update AGENTS.md policy blocks",
-    "shell": "manage local shell preferences",
-    "secrets": "sync or validate local secret env files",
-    "help": "show help",
-    "version": "show version information",
-}
-
-SECRETS_SUBCOMMANDS = [
-    "login",
-    "unlock",
-    "sync",
-    "doctor",
-    "list",
-    "ls",
-    "status",
-    "logout",
-    "add",
-    "remove",
-    "rm",
-    "del",
-]
-
-SHELL_SUBCOMMANDS = [
-    "status",
-    "forgit-aliases",
-    "typo-handling",
-    "psfzf-tab",
-    "psfzf-git",
-    "auto-uv-env",
-]
-
-SHELL_FORGIT_ALIAS_MODES = ["plain", "forgit", "status"]
-SHELL_TYPO_MODES = ["silent", "suggest", "help", "status"]
-SHELL_PSFZF_MODES = ["enabled", "disabled", "status"]
-SHELL_AUTO_UV_MODES = ["enabled", "quiet", "status"]
 
 
 def load_commands(path: Path) -> list[str]:
@@ -97,90 +49,122 @@ def quote_ps(value: str) -> str:
     return value.replace("'", "''")
 
 
-def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
+def command_spec(spec: CliSpec, name: str) -> CommandSpec | None:
+    return spec.commands.get(name)
+
+
+def zsh_safe_name(value: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_]", "_", value)
+    if not safe:
+        safe = "item"
+    if safe[0].isdigit():
+        safe = f"_{safe}"
+    return safe
+
+
+def subcommand_desc(command: CommandSpec, subcommand: str) -> str:
+    return command.subcommand_descriptions.get(subcommand, subcommand)
+
+
+def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSpec) -> None:
+    safe_command = zsh_safe_name(command)
+
+    lines.append(f"cmd_{safe_command}_options=(")
+    for option in spec.options:
+        lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option[2:] if option.startswith('--') else option)}'")
+    lines.append(")")
+
+    lines.append(f"cmd_{safe_command}_subcommands=(")
+    for subcommand in spec.subcommands:
+        lines.append(f"  '{quote_zsh(subcommand)}:{quote_zsh(subcommand_desc(spec, subcommand))}'")
+    lines.append(")")
+
+    for subcommand in spec.subcommands:
+        safe_sub = zsh_safe_name(subcommand)
+        options = list(spec.subcommand_options.get(subcommand, ()))
+        values = list(spec.subcommand_values.get(subcommand, ()))
+
+        lines.append(f"cmd_{safe_command}_{safe_sub}_options=(")
+        for option in options:
+            lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option[2:] if option.startswith('--') else option)}'")
+        lines.append(")")
+
+        lines.append(f"cmd_{safe_command}_{safe_sub}_values=(")
+        for value in values:
+            lines.append(f"  '{quote_zsh(value)}:{quote_zsh(value)}'")
+        lines.append(")")
+
+        subsubs = list(spec.subsubcommands.get(subcommand, ()))
+        subsub_desc = spec.subsubcommand_descriptions.get(subcommand, {})
+        lines.append(f"cmd_{safe_command}_{safe_sub}_subsubcommands=(")
+        for subsub in subsubs:
+            lines.append(f"  '{quote_zsh(subsub)}:{quote_zsh(subsub_desc.get(subsub, subsub))}'")
+        lines.append(")")
+
+        nested_opts = spec.subsubcommand_options.get(subcommand, {})
+        for subsub in subsubs:
+            safe_subsub = zsh_safe_name(subsub)
+            lines.append(f"cmd_{safe_command}_{safe_sub}_{safe_subsub}_options=(")
+            for option in nested_opts.get(subsub, ()):
+                label = option[2:] if option.startswith("--") else option
+                lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}'")
+            lines.append(")")
+
+    lines.append(f"cmd_{safe_command}_option_values=(")
+    for key, values in spec.value_sets.items():
+        option = f"--{key}"
+        joined = " ".join(quote_zsh(value) for value in values)
+        lines.append(f"  '{quote_zsh(option)}:{joined}'")
+    lines.append(")")
+
+
+def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) -> str:
     commands = unique_preserving_order(commands)
     command_pattern = "|".join(commands)
+
+    alias_map = {name: command.alias_for for name, command in spec.commands.items() if command.alias_for}
 
     lines: list[str] = []
     lines.append("#compdef oooconf o")
     lines.append("")
-    lines.append(
-        "local -a oooconf_commands global_opts setup_opts deps_keys agents_subcommands agents_opts secrets_subcommands shell_subcommands shell_forgit_alias_modes shell_typo_modes shell_psfzf_modes shell_auto_uv_modes"
-    )
-    lines.append("local command_name secrets_command shell_command")
+    lines.append("local -a oooconf_commands global_opts deps_keys")
+    lines.append("local command_name subcommand_name subsubcommand_name previous_token")
+    lines.append("local safe_command safe_subcommand safe_subsubcommand")
     lines.append("local i")
+    lines.append("typeset -A oooconf_aliases")
     lines.append("")
+
     lines.append("oooconf_commands=(")
     for command in commands:
-        description = COMMAND_DESCRIPTIONS.get(command, "command")
+        description = spec.commands.get(command).description if command in spec.commands else "command"
         lines.append(f"  '{quote_zsh(command)}:{quote_zsh(description)}'")
     lines.append(")")
     lines.append("")
+
     lines.append("global_opts=(")
-    lines.append("  '-C:run against a specific repo checkout:_files -/'")
-    lines.append("  '--repo-root:run against a specific repo checkout:_files -/'")
-    lines.append("  '--print-repo-root:print the resolved repo root'")
-    lines.append("  '-h:show help'")
-    lines.append("  '--help:show help'")
-    lines.append("  '-n:add --dry-run to install or update'")
-    lines.append("  '--dry-run:add --dry-run to install or update'")
-    lines.append("  '--yes-optional:auto-accept optional dependency installs'")
-    lines.append("  '-V:show version information'")
-    lines.append("  '--version:show version information'")
+    for option in spec.global_options:
+        label = option[2:] if option.startswith("--") else option
+        file_suffix = ":_files -/" if option in {"-C", "--repo-root"} else ""
+        lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}{file_suffix}'")
     lines.append(")")
     lines.append("")
-    lines.append("setup_opts=(")
-    lines.append("  '--dry-run:preview actions without changing the filesystem'")
-    lines.append("  '--yes-optional:auto-accept optional dependency installs'")
-    lines.append("  '-h:show setup help'")
-    lines.append("  '--help:show setup help'")
-    lines.append(")")
-    lines.append("")
+
     lines.append("deps_keys=(")
     for key, description in deps:
         desc = description if description else key
         lines.append(f"  '{quote_zsh(key)}:{quote_zsh(desc)}'")
     lines.append(")")
     lines.append("")
-    lines.append("agents_subcommands=(")
-    lines.append("  'detect:detect configured agent CLIs on PATH'")
-    lines.append("  'sync:append or update shared AGENTS.md block'")
-    lines.append("  'doctor:verify AGENTS.md shared block is current'")
-    lines.append("  'update:update installed agent CLIs'")
-    lines.append(")")
+
+    for alias, target in alias_map.items():
+        lines.append(f"oooconf_aliases['{quote_zsh(alias)}']='{quote_zsh(target)}'")
     lines.append("")
-    lines.append("agents_opts=(")
-    lines.append("  '--repo-root:repo root containing oooconf agent config:_files -/'")
-    lines.append("  '--config:override agent config JSON path:_files'")
-    lines.append(")")
-    lines.append("")
-    lines.append("secrets_subcommands=(")
-    for command in SECRETS_SUBCOMMANDS:
-        lines.append(f"  '{command}:{command}'")
-    lines.append(")")
-    lines.append("")
-    lines.append("shell_subcommands=(")
-    for command in SHELL_SUBCOMMANDS:
-        lines.append(f"  '{command}:{command}'")
-    lines.append(")")
-    lines.append("")
-    lines.append("shell_forgit_alias_modes=(")
-    for mode in SHELL_FORGIT_ALIAS_MODES:
-        lines.append(f"  '{mode}:{mode}'")
-    lines.append(")")
-    lines.append("shell_typo_modes=(")
-    for mode in SHELL_TYPO_MODES:
-        lines.append(f"  '{mode}:{mode}'")
-    lines.append(")")
-    lines.append("shell_psfzf_modes=(")
-    for mode in SHELL_PSFZF_MODES:
-        lines.append(f"  '{mode}:{mode}'")
-    lines.append(")")
-    lines.append("shell_auto_uv_modes=(")
-    for mode in SHELL_AUTO_UV_MODES:
-        lines.append(f"  '{mode}:{mode}'")
-    lines.append(")")
-    lines.append("")
+
+    for command in commands:
+        if command in spec.commands:
+            _render_zsh_command_metadata(lines, command, spec.commands[command])
+            lines.append("")
+
     lines.append("command_name=")
     lines.append("for (( i = 2; i < CURRENT; i++ )); do")
     lines.append('  case "$words[i]" in')
@@ -196,186 +180,102 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("  esac")
     lines.append("done")
     lines.append("")
+
     lines.append('if [[ -z "$command_name" ]]; then')
     lines.append("  _describe -t commands 'oooconf command' oooconf_commands && return 0")
     lines.append("  _describe -t options 'oooconf option' global_opts && return 0")
     lines.append("  return 0")
     lines.append("fi")
     lines.append("")
-    lines.append('case "$command_name" in')
-    lines.append("  upgrade)")
-    lines.append("    command_name=update")
-    lines.append("    ;;")
-    lines.append("  check)")
-    lines.append("    command_name=doctor")
-    lines.append("    ;;")
-    lines.append("  preview)")
-    lines.append("    command_name=dry-run")
-    lines.append("    ;;")
-    lines.append("esac")
+
+    lines.append('if [[ -n "${oooconf_aliases[$command_name]:-}" ]]; then')
+    lines.append('  command_name="${oooconf_aliases[$command_name]}"')
+    lines.append("fi")
     lines.append("")
-    lines.append('case "$command_name" in')
-    lines.append("  help)")
-    lines.append("    _describe -t commands 'oooconf command' oooconf_commands && return 0")
-    lines.append("    ;;")
-    lines.append("  install|update|deps)")
-    lines.append("    _describe -t options 'oooconf option' setup_opts")
+
+    lines.append('safe_command="${command_name//[^A-Za-z0-9_]/_}"')
+    lines.append('if [[ "$safe_command" == <->* ]]; then safe_command="_$safe_command"; fi')
+    lines.append('eval "local -a command_options=("${cmd_${safe_command}_options[@]}")"')
+    lines.append('eval "local -a command_subcommands=("${cmd_${safe_command}_subcommands[@]}")"')
+    lines.append("")
+
+    lines.append("subcommand_name=")
+    lines.append("for (( i = 3; i < CURRENT; i++ )); do")
+    lines.append('  case "$words[i]" in')
+    lines.append("    -*) ;;")
+    lines.append("    *)")
+    lines.append('      local candidate="$words[i]"')
+    lines.append("      if (( ${command_subcommands[(Ie)$candidate]} )); then")
+    lines.append('        subcommand_name="$candidate"')
+    lines.append("        break")
+    lines.append("      fi")
+    lines.append("      ;;")
+    lines.append("  esac")
+    lines.append("done")
+    lines.append("")
+
+    lines.append("previous_token=")
+    lines.append('if (( CURRENT > 2 )); then previous_token="$words[CURRENT-1]"; fi')
+    lines.append("")
+
+    lines.append('if [[ -z "$subcommand_name" ]]; then')
+    lines.append("  _describe -t subcommands 'oooconf subcommand' command_subcommands")
+    lines.append("  _describe -t options 'oooconf option' command_options")
+    lines.append('  if [[ "$command_name" == install || "$command_name" == deps || "$command_name" == update ]]; then')
     lines.append("    _describe -t dependencies 'dependency key' deps_keys")
+    lines.append("  fi")
+    lines.append("  return 0")
+    lines.append("fi")
+    lines.append("")
+
+    lines.append('safe_subcommand="${subcommand_name//[^A-Za-z0-9_]/_}"')
+    lines.append('if [[ "$safe_subcommand" == <->* ]]; then safe_subcommand="_$safe_subcommand"; fi')
+    lines.append('eval "local -a sub_options=("${cmd_${safe_command}_${safe_subcommand}_options[@]}")"')
+    lines.append('eval "local -a sub_values=("${cmd_${safe_command}_${safe_subcommand}_values[@]}")"')
+    lines.append('eval "local -a sub_subcommands=("${cmd_${safe_command}_${safe_subcommand}_subsubcommands[@]}")"')
+    lines.append('eval "local -a option_value_entries=("${cmd_${safe_command}_option_values[@]}")"')
+    lines.append("")
+
+    lines.append("subsubcommand_name=")
+    lines.append("for (( i = 4; i < CURRENT; i++ )); do")
+    lines.append('  case "$words[i]" in')
+    lines.append("    -*) ;;")
+    lines.append("    *)")
+    lines.append('      local candidate="$words[i]"')
+    lines.append("      if (( ${sub_subcommands[(Ie)$candidate]} )); then")
+    lines.append('        subsubcommand_name="$candidate"')
+    lines.append("        break")
+    lines.append("      fi")
+    lines.append("      ;;")
+    lines.append("  esac")
+    lines.append("done")
+    lines.append("")
+
+    lines.append("local option_entry")
+    lines.append('for option_entry in "${option_value_entries[@]}"; do')
+    lines.append('  local opt_name="${option_entry%%:*}"')
+    lines.append('  local opt_values="${option_entry#*:}"')
+    lines.append('  if [[ "$previous_token" == "$opt_name" ]]; then')
+    lines.append('    _values "$opt_name value" ${(z)opt_values}')
     lines.append("    return 0")
-    lines.append("    ;;")
-    lines.append("  completions)")
-    lines.append("    _describe -t options 'oooconf completions option' '--dry-run:preview generation actions'")
-    lines.append("    return 0")
-    lines.append("    ;;")
-    lines.append("  update-pins)")
-    lines.append(
-        "    _describe -t options 'oooconf update-pins option' '--apply:write updated pins and lock artifacts'"
-    )
-    lines.append("    return 0")
-    lines.append("    ;;")
-    lines.append("  agents)")
-    lines.append("    local agents_command")
-    lines.append("    agents_command=")
-    lines.append("    for (( i = 3; i < CURRENT; i++ )); do")
-    lines.append('      case "$words[i]" in')
-    lines.append("        detect|sync|doctor|update)")
-    lines.append('          agents_command="$words[i]"')
-    lines.append("          break")
-    lines.append("          ;;")
-    lines.append("      esac")
-    lines.append("    done")
+    lines.append("  fi")
+    lines.append("done")
     lines.append("")
-    lines.append('    if [[ -z "$agents_command" ]]; then')
-    lines.append("      _describe -t agents-subcommands 'oooconf agents command' agents_subcommands && return 0")
-    lines.append("      return 0")
-    lines.append("    fi")
+
+    lines.append('if [[ -z "$subsubcommand_name" ]]; then')
+    lines.append("  _describe -t options 'oooconf subcommand option' sub_options")
+    lines.append("  _describe -t values 'oooconf subcommand value' sub_values")
+    lines.append("  _describe -t subsubcommands 'oooconf subsubcommand' sub_subcommands")
+    lines.append("  return 0")
+    lines.append("fi")
     lines.append("")
-    lines.append('    case "$agents_command" in')
-    lines.append("      detect)")
+
+    lines.append('safe_subsubcommand="${subsubcommand_name//[^A-Za-z0-9_]/_}"')
+    lines.append('if [[ "$safe_subsubcommand" == <->* ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi')
     lines.append(
-        "        _describe -t options 'oooconf agents detect option' $agents_opts '--json:emit machine-readable JSON output'"
+        'eval "local -a subsub_options=("${cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options[@]}")"'
     )
-    lines.append("        ;;")
-    lines.append("      sync|update)")
-    lines.append(
-        "        _describe -t options \"oooconf agents $agents_command option\" $agents_opts '--check:validate only; do not write files'"
-    )
-    lines.append("        ;;")
-    lines.append("      doctor)")
-    lines.append(
-        "        _describe -t options 'oooconf agents doctor option' $agents_opts '--strict-config-paths:fail if no default config path exists for a target'"
-    )
-    lines.append("        ;;")
-    lines.append("    esac")
-    lines.append("    return 0")
-    lines.append("    ;;")
-    lines.append("  shell)")
-    lines.append("    shell_command=")
-    lines.append("    for (( i = 3; i < CURRENT; i++ )); do")
-    lines.append('      case "$words[i]" in')
-    lines.append("        status|forgit-aliases|typo-handling|psfzf-tab|psfzf-git|auto-uv-env)")
-    lines.append('          shell_command="$words[i]"')
-    lines.append("          break")
-    lines.append("          ;;")
-    lines.append("      esac")
-    lines.append("    done")
-    lines.append("")
-    lines.append('    if [[ -z "$shell_command" ]]; then')
-    lines.append("      _describe -t shell-subcommands 'oooconf shell command' shell_subcommands && return 0")
-    lines.append("      return 0")
-    lines.append("    fi")
-    lines.append("")
-    lines.append('    case "$shell_command" in')
-    lines.append("      forgit-aliases)")
-    lines.append("        _describe -t modes 'forgit alias mode' shell_forgit_alias_modes")
-    lines.append("        ;;")
-    lines.append("      typo-handling)")
-    lines.append("        _describe -t modes 'typo handling mode' shell_typo_modes")
-    lines.append("        ;;")
-    lines.append("      psfzf-tab|psfzf-git)")
-    lines.append("        _describe -t modes 'PSFzf mode' shell_psfzf_modes")
-    lines.append("        ;;")
-    lines.append("      auto-uv-env)")
-    lines.append("        _describe -t modes 'auto-uv-env mode' shell_auto_uv_modes")
-    lines.append("        ;;")
-    lines.append("      status)")
-    lines.append("        return 0")
-    lines.append("        ;;")
-    lines.append("    esac")
-    lines.append("    return 0")
-    lines.append("    ;;")
-    lines.append("  secrets)")
-    lines.append("    secrets_command=")
-    lines.append("    for (( i = 3; i < CURRENT; i++ )); do")
-    lines.append('      case "$words[i]" in')
-    lines.append("        login|unlock|sync|doctor|list|ls|status|logout|add|remove|rm|del)")
-    lines.append('          secrets_command="$words[i]"')
-    lines.append("          break")
-    lines.append("          ;;")
-    lines.append("      esac")
-    lines.append("    done")
-    lines.append("")
-    lines.append('    if [[ -z "$secrets_command" ]]; then')
-    lines.append("      _describe -t secrets-subcommands 'oooconf secrets command' secrets_subcommands && return 0")
-    lines.append("      return 0")
-    lines.append("    fi")
-    lines.append("")
-    lines.append('    case "$secrets_command" in')
-    lines.append("      ls)")
-    lines.append("        secrets_command=list")
-    lines.append("        ;;")
-    lines.append("      rm|del)")
-    lines.append("        secrets_command=remove")
-    lines.append("        ;;")
-    lines.append("    esac")
-    lines.append("")
-    lines.append('    case "$secrets_command" in')
-    lines.append("      sync)")
-    lines.append(
-        "        _describe -t options 'oooconf secrets sync option' '--backend:secret backend to use:(bw)' '--template:override the tracked template path:_files' '--dry-run:preview the sync without writing files' '--force:rewrite generated files even when unchanged'"
-    )
-    lines.append("        ;;")
-    lines.append("      doctor)")
-    lines.append(
-        "        _describe -t options 'oooconf secrets doctor option' '--backend:secret backend to use:(bw)' '--template:override the tracked template path:_files'"
-    )
-    lines.append("        ;;")
-    lines.append("      list)")
-    lines.append(
-        "        _describe -t options 'oooconf secrets list option' '--template:override the tracked template path:_files' '--resolved:resolve bw:// references (requires unlocked BW_SESSION)' '--backend:secret backend to use:(bw)'"
-    )
-    lines.append("        ;;")
-    lines.append("      status)")
-    lines.append(
-        "        _describe -t options 'oooconf secrets status option' '--template:override the tracked template path:_files'"
-    )
-    lines.append("        ;;")
-    lines.append("      login)")
-    lines.append(
-        "        _describe -t options 'oooconf secrets login option' '--server:Bitwarden or Vaultwarden server URL:' '--method:login method:(auto password apikey)' '--client-id:Bitwarden API key client ID:' '--client-secret:Bitwarden API key client secret:'"
-    )
-    lines.append("        ;;")
-    lines.append("      unlock)")
-    lines.append(
-        "        _describe -t options 'oooconf secrets unlock option' '--shell:shell syntax to emit:(sh zsh bash pwsh)' '--raw:print only the unlocked session token'"
-    )
-    lines.append("        ;;")
-    lines.append("      add|remove)")
-    lines.append(
-        "        _describe -t options \"oooconf secrets $secrets_command option\" '--template:override the tracked template path:_files'"
-    )
-    lines.append("        ;;")
-    lines.append("      logout)")
-    lines.append("        return 0")
-    lines.append("        ;;")
-    lines.append("    esac")
-    lines.append("    return 0")
-    lines.append("    ;;")
-    lines.append("  dry-run|doctor|delete|remove|lock|version|bootstrap)")
-    lines.append("    return 0")
-    lines.append("    ;;")
-    lines.append("esac")
-    lines.append("")
+    lines.append("_describe -t options 'oooconf subsubcommand option' subsub_options")
     lines.append("return 0")
 
     return "\n".join(lines) + "\n"
@@ -390,9 +290,44 @@ def format_ps_array(values: list[str], indent: str = "        ") -> list[str]:
     return lines
 
 
-def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
+def format_ps_hashtable(mapping: dict[str, list[str]], indent: str = "    ") -> list[str]:
+    lines: list[str] = [f"{indent}@{{"]
+    for key in sorted(mapping.keys()):
+        values = mapping[key]
+        rendered = ", ".join(f"'{quote_ps(value)}'" for value in values)
+        lines.append(f"{indent}    '{quote_ps(key)}' = @({rendered})")
+    lines.append(f"{indent}}}")
+    return lines
+
+
+def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) -> str:
     commands = unique_preserving_order(commands)
-    dep_keys = [key for key, _ in deps]
+
+    aliases: dict[str, list[str]] = {}
+    command_options: dict[str, list[str]] = {}
+    command_subcommands: dict[str, list[str]] = {}
+    subcommand_options: dict[str, list[str]] = {}
+    subcommand_values: dict[str, list[str]] = {}
+    subsubcommands: dict[str, list[str]] = {}
+    subsubcommand_options: dict[str, list[str]] = {}
+    option_values: dict[str, list[str]] = {}
+
+    for name, command in spec.commands.items():
+        if command.alias_for:
+            aliases[name] = [command.alias_for]
+        command_options[name] = list(command.options)
+        command_subcommands[name] = list(command.subcommands)
+        for subcommand, options in command.subcommand_options.items():
+            subcommand_options[f"{name}:{subcommand}"] = list(options)
+        for subcommand, values in command.subcommand_values.items():
+            subcommand_values[f"{name}:{subcommand}"] = list(values)
+        for subcommand, values in command.subsubcommands.items():
+            subsubcommands[f"{name}:{subcommand}"] = list(values)
+        for subcommand, mapping in command.subsubcommand_options.items():
+            for subsubcommand, options in mapping.items():
+                subsubcommand_options[f"{name}:{subcommand}:{subsubcommand}"] = list(options)
+        for key, values in command.value_sets.items():
+            option_values[f"{name}:--{key}"] = list(values)
 
     lines: list[str] = []
     lines.append("# PowerShell argument completions for oooconf")
@@ -401,32 +336,54 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("function Get-OooconfCompletions {")
     lines.append("    param($wordToComplete, $commandAst, $cursorPosition)")
     lines.append("")
+
     lines.append("    $OooconfCommands = @(")
     lines.extend(format_ps_array(commands))
     lines.append("    )")
     lines.append("")
+
     lines.append("    $OooconfGlobalOptions = @(")
-    lines.append("        '-C', '--repo-root', '-h', '--help', '-n', '--dry-run',")
-    lines.append("        '--yes-optional', '-V', '--version', '--print-repo-root'")
+    lines.extend(format_ps_array(list(spec.global_options)))
     lines.append("    )")
     lines.append("")
-    lines.append("    $OooconfSecretsSubcommands = @(")
-    lines.extend(format_ps_array(SECRETS_SUBCOMMANDS))
-    lines.append("    )")
-    lines.append("")
-    lines.append(
-        "    $OooconfShellSubcommands = @('status', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')"
-    )
-    lines.append("    $OooconfForgitAliasModes = @('plain', 'forgit', 'status')")
-    lines.append("    $OooconfTypoHandlingModes = @('silent', 'suggest', 'help', 'status')")
-    lines.append("    $OooconfPsfzfModes = @('enabled', 'disabled', 'status')")
-    lines.append("    $ShellValues = @('zsh', 'pwsh', 'bash', 'fish')")
-    lines.append("")
+
     lines.append("    $OooconfDepsKeys = @(")
-    lines.extend(format_ps_array(dep_keys))
+    lines.extend(format_ps_array([key for key, _ in deps]))
     lines.append("    )")
     lines.append("")
-    lines.append("    # Simple AST parsing to find the command and subcommands")
+
+    lines.append("    $OooconfAliases =")
+    lines.extend(format_ps_hashtable(aliases))
+    lines.append("")
+
+    lines.append("    $OooconfCommandOptions =")
+    lines.extend(format_ps_hashtable(command_options))
+    lines.append("")
+
+    lines.append("    $OooconfCommandSubcommands =")
+    lines.extend(format_ps_hashtable(command_subcommands))
+    lines.append("")
+
+    lines.append("    $OooconfSubcommandOptions =")
+    lines.extend(format_ps_hashtable(subcommand_options))
+    lines.append("")
+
+    lines.append("    $OooconfSubcommandValues =")
+    lines.extend(format_ps_hashtable(subcommand_values))
+    lines.append("")
+
+    lines.append("    $OooconfSubsubcommands =")
+    lines.extend(format_ps_hashtable(subsubcommands))
+    lines.append("")
+
+    lines.append("    $OooconfSubsubcommandOptions =")
+    lines.extend(format_ps_hashtable(subsubcommand_options))
+    lines.append("")
+
+    lines.append("    $OooconfOptionValues =")
+    lines.extend(format_ps_hashtable(option_values))
+    lines.append("")
+
     lines.append("    $elements = $commandAst.CommandElements")
     lines.append("    $tokens = @()")
     lines.append("    for ($i = 0; $i -lt $elements.Count; $i++) {")
@@ -438,7 +395,7 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("        }")
     lines.append("    }")
     lines.append("")
-    lines.append("    # Find the main oooconf command position (it might be oooconf/o, .ps1/.cmd variants, or a path)")
+
     lines.append("    $commandIndex = -1")
     lines.append("    for ($i = 0; $i -lt $tokens.Length; $i++) {")
     lines.append("        if ($tokens[$i] -match '(^|[\\\\/])(oooconf|o)(\\.ps1|\\.cmd)?$') {")
@@ -446,98 +403,81 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
     lines.append("            break")
     lines.append("        }")
     lines.append("    }")
-    lines.append("")
     lines.append("    if ($commandIndex -eq -1) { return @() }")
     lines.append("")
-    lines.append("    # Find the first subcommand after oooconf that isn't a global option")
-    lines.append("    $subcommand = $null")
-    lines.append("    $subcommandIndex = -1")
+
+    lines.append("    $commandName = $null")
+    lines.append("    $commandPos = -1")
     lines.append("    for ($i = $commandIndex + 1; $i -lt $tokens.Length; $i++) {")
-    lines.append("        $t = $tokens[$i]")
-    lines.append("        if ($t -in $OooconfCommands) {")
-    lines.append("            $subcommand = $t")
-    lines.append("            $subcommandIndex = $i")
-    lines.append("            break")
-    lines.append("        }")
+    lines.append("        $token = $tokens[$i]")
+    lines.append("        if ($token -in $OooconfCommands) { $commandName = $token; $commandPos = $i; break }")
     lines.append("    }")
     lines.append("")
+
     lines.append("    $completions = @()")
-    lines.append("")
-    lines.append("    if ($null -eq $subcommand) {")
-    lines.append("        # Complete subcommands and global options")
+    lines.append("    if ($null -eq $commandName) {")
     lines.append("        $completions = $OooconfCommands + $OooconfGlobalOptions")
-    lines.append("    }")
-    lines.append("    elseif ($subcommand -eq 'secrets') {")
-    lines.append("        # Secrets sub-subcommands")
-    lines.append("        $secSub = $null")
-    lines.append("        for ($i = $subcommandIndex + 1; $i -lt $tokens.Length; $i++) {")
-    lines.append("            if ($tokens[$i] -in $OooconfSecretsSubcommands) {")
-    lines.append("                $secSub = $tokens[$i]")
-    lines.append("                break")
-    lines.append("            }")
+    lines.append("    } else {")
+    lines.append(
+        "        if ($OooconfAliases.ContainsKey($commandName)) { $commandName = $OooconfAliases[$commandName][0] }"
+    )
+    lines.append(
+        "        $commandOpts = if ($OooconfCommandOptions.ContainsKey($commandName)) { $OooconfCommandOptions[$commandName] } else { @() }"
+    )
+    lines.append(
+        "        $subcommands = if ($OooconfCommandSubcommands.ContainsKey($commandName)) { $OooconfCommandSubcommands[$commandName] } else { @() }"
+    )
+    lines.append("")
+    lines.append("        $subcommandName = $null")
+    lines.append("        for ($i = $commandPos + 1; $i -lt $tokens.Length; $i++) {")
+    lines.append("            if ($tokens[$i] -in $subcommands) { $subcommandName = $tokens[$i]; break }")
     lines.append("        }")
     lines.append("")
-    lines.append("        if ($null -eq $secSub) {")
-    lines.append("            $completions = $OooconfSecretsSubcommands + @('--dry-run', '--resolved', '--shell')")
-    lines.append("        } else {")
-    lines.append("            # Sub-subcommand options")
-    lines.append("            if ($tokens[-1] -eq '--shell') {")
-    lines.append("                $completions = $ShellValues")
-    lines.append("            } else {")
-    lines.append("                switch ($secSub) {")
-    lines.append("                    'unlock' { $completions = @('--shell', '--raw') }")
-    lines.append("                    'sync'   { $completions = @('--dry-run', '--force', '--template', '--backend') }")
-    lines.append("                    'list'   { $completions = @('--resolved', '--template', '--backend') }")
-    lines.append("                    'ls'     { $completions = @('--resolved', '--template', '--backend') }")
+    lines.append("        if ($null -eq $subcommandName) {")
+    lines.append("            $completions = $commandOpts + $subcommands")
     lines.append(
-        "                    'login'  { $completions = @('--server', '--method', '--client-id', '--client-secret') }"
+        "            if ($commandName -in @('install', 'deps', 'update')) { $completions += $OooconfDepsKeys }"
     )
-    lines.append("                    default  { $completions = @('--template') }")
+    lines.append("        } else {")
+    lines.append("            $lastToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }")
+    lines.append('            $valueKey = "$commandName:$lastToken"')
+    lines.append("            if ($OooconfOptionValues.ContainsKey($valueKey)) {")
+    lines.append("                $completions = $OooconfOptionValues[$valueKey]")
+    lines.append("            } else {")
+    lines.append('                $optKey = "$commandName:$subcommandName"')
+    lines.append('                $subsubKey = "$commandName:$subcommandName"')
+    lines.append(
+        "                $subsubCommands = if ($OooconfSubsubcommands.ContainsKey($subsubKey)) { $OooconfSubsubcommands[$subsubKey] } else { @() }"
+    )
+    lines.append("                $subsubcommandName = $null")
+    lines.append("                for ($j = $commandPos + 2; $j -lt $tokens.Length; $j++) {")
+    lines.append("                    if ($tokens[$j] -in $subsubCommands) { $subsubcommandName = $tokens[$j]; break }")
+    lines.append("                }")
+    lines.append("")
+    lines.append("                if ($null -eq $subsubcommandName) {")
+    lines.append(
+        "                    if ($OooconfSubcommandOptions.ContainsKey($optKey)) { $completions += $OooconfSubcommandOptions[$optKey] }"
+    )
+    lines.append(
+        "                    if ($OooconfSubcommandValues.ContainsKey($optKey)) { $completions += $OooconfSubcommandValues[$optKey] }"
+    )
+    lines.append("                    $completions += $subsubCommands")
+    lines.append("                } else {")
+    lines.append('                    $subsubOptKey = "$commandName:$subcommandName:$subsubcommandName"')
+    lines.append(
+        "                    if ($OooconfSubsubcommandOptions.ContainsKey($subsubOptKey)) { $completions += $OooconfSubsubcommandOptions[$subsubOptKey] }"
+    )
     lines.append("                }")
     lines.append("            }")
     lines.append("        }")
     lines.append("    }")
-    lines.append("    elseif ($subcommand -eq 'shell') {")
-    lines.append("        $shellSub = $null")
-    lines.append("        for ($i = $subcommandIndex + 1; $i -lt $tokens.Length; $i++) {")
-    lines.append("            if ($tokens[$i] -in $OooconfShellSubcommands) {")
-    lines.append("                $shellSub = $tokens[$i]")
-    lines.append("                break")
-    lines.append("            }")
-    lines.append("        }")
-    lines.append("        if ($null -eq $shellSub) {")
-    lines.append("            $completions = $OooconfShellSubcommands")
-    lines.append("        } else {")
-    lines.append("            switch ($shellSub) {")
-    lines.append("                'forgit-aliases' { $completions = $OooconfForgitAliasModes }")
-    lines.append("                'typo-handling'  { $completions = $OooconfTypoHandlingModes }")
-    lines.append("                'psfzf-tab'      { $completions = $OooconfPsfzfModes }")
-    lines.append("                'psfzf-git'      { $completions = $OooconfPsfzfModes }")
-    lines.append("                'auto-uv-env'    { $completions = @('enabled', 'quiet', 'status') }")
-    lines.append("            }")
-    lines.append("        }")
-    lines.append("    }")
-    lines.append("    elseif ($subcommand -in @('install', 'deps', 'update', 'upgrade')) {")
-    lines.append("        $completions = @('--dry-run', '--yes-optional') + $OooconfDepsKeys")
-    lines.append("    }")
-    lines.append("    elseif ($subcommand -eq 'agents') {")
-    lines.append(
-        "        $completions = @('detect', 'sync', 'doctor', 'update', '--json', '--check', '--strict-config-paths')"
-    )
-    lines.append("    }")
-    lines.append("    elseif ($subcommand -eq 'update-pins') {")
-    lines.append("        $completions = @('--apply')")
-    lines.append("    }")
-    lines.append("    elseif ($subcommand -eq 'completions') {")
-    lines.append("        $completions = @('--dry-run')")
-    lines.append("    }")
     lines.append("")
+
     lines.append('    return $completions | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {')
     lines.append("        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)")
     lines.append("    }")
     lines.append("}")
     lines.append("")
-    lines.append("# Register for all possible names")
     lines.append("@('oooconf', 'oooconf.ps1', 'oooconf.cmd', 'o', 'o.ps1', 'o.cmd') | ForEach-Object {")
     lines.append("    Register-ArgumentCompleter -Native -CommandName $_ -ScriptBlock {")
     lines.append("        param($wordToComplete, $commandAst, $cursorPosition)")
@@ -551,12 +491,13 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]]) -> str:
 
 
 def main() -> int:
+    spec = load_cli_spec(CLI_SPEC_FILE)
     commands = load_commands(COMMANDS_FILE)
     deps_data = load_deps()["deps"]
     deps = [(dep.get("key", ""), dep.get("description", "")) for dep in deps_data if dep.get("key")]
 
-    ZSH_OUTPUT.write_text(render_zsh(commands, deps), encoding="utf-8", newline="\n")
-    POWERSHELL_OUTPUT.write_text(render_powershell(commands, deps), encoding="utf-8", newline="\n")
+    ZSH_OUTPUT.write_text(render_zsh(commands, deps, spec), encoding="utf-8", newline="\n")
+    POWERSHELL_OUTPUT.write_text(render_powershell(commands, deps, spec), encoding="utf-8", newline="\n")
 
     print(f"updated: {ZSH_OUTPUT.relative_to(REPO_ROOT)}")
     print(f"updated: {POWERSHELL_OUTPUT.relative_to(REPO_ROOT)}")
