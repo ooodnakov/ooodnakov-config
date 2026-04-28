@@ -39,7 +39,81 @@ def test_completion_keys_match_optional_deps_catalog() -> None:
 def test_completions_generator_uses_canonical_parser() -> None:
     content = (REPO_ROOT / "scripts/generate_oooconf_completions.py").read_text(encoding="utf-8")
     assert "from read_optional_deps import load_deps" in content
+    assert "from oooconf_cli_spec import CliSpec, CommandSpec, load_cli_spec" in content
     assert "def parse_optional_deps" not in content
+    assert 'eval "local -a' not in content
+    assert '${(@P)var_' in content
+
+
+def test_spec_driven_subcommand_options_are_emitted() -> None:
+    zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
+    assert "oooconf subcommand option" in zsh_content
+    assert "--strict-config-paths:strict-config-paths" in zsh_content
+    assert "--client-secret:client-secret" in zsh_content
+
+    pwsh_content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "'agents:detect' = @('--repo-root', '--config', '--json')" in pwsh_content
+    assert "'agents:mcp:sync' = @('--check')" in pwsh_content
+    assert "'secrets:login' = @('--server', '--method', '--client-id', '--client-secret')" in pwsh_content
+    assert "'secrets:--method' = @('auto', 'password', 'apikey')" in pwsh_content
+
+
+def test_spec_driven_subcommand_descriptions_are_emitted() -> None:
+    zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
+    assert "detect:detect configured agent CLIs on PATH" in zsh_content
+    assert "forgit-aliases:toggle plain vs forgit git aliases" in zsh_content
+
+    spec_content = (REPO_ROOT / "scripts/oooconf-cli-spec.toml").read_text(encoding="utf-8")
+    assert "[commands.agents.subcommand_descriptions]" in spec_content
+    assert "[commands.agents.subsubcommands]" in spec_content
+    assert 'mcp = ["sync", "status"]' in spec_content
+    assert "[commands.shell.subcommand_descriptions]" in spec_content
+
+
+def test_subsubcommand_metadata_is_emitted_for_zsh_and_powershell() -> None:
+    zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
+    assert "cmd_agents_mcp_subsubcommands=(" in zsh_content
+    assert "'sync:synchronize managed MCP servers'" in zsh_content
+    assert "cmd_agents_mcp_sync_options=(" in zsh_content
+    assert "'--check:check'" in zsh_content
+
+    pwsh_content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "'agents:mcp' = @('sync', 'status')" in pwsh_content
+    assert "'agents:mcp:sync' = @('--check')" in pwsh_content
+
+
+def test_top_level_command_values_are_emitted() -> None:
+    zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
+    assert "cmd_wm_values=(" in zsh_content
+    assert "'komorebi:komorebi'" in zsh_content
+    assert "'glazewm:glazewm'" in zsh_content
+
+    pwsh_content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "'wm' = @('komorebi', 'glazewm')" in pwsh_content
+
+
+def test_oooconf_completions_command_wires_generator() -> None:
+    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
+    assert 'OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/generate_oooconf_completions.py"' in setup_sh
+    assert 'run_python "$OOOCONF_COMPLETIONS_GENERATOR"' in setup_sh
+
+    setup_ps1 = (REPO_ROOT / "scripts/setup.ps1").read_text(encoding="utf-8")
+    assert '$OooconfCompletionsGenerator = Join-Path $PSScriptRoot "generate_oooconf_completions.py"' in setup_ps1
+    assert "$null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()" in setup_ps1
+
+    ooosh = (REPO_ROOT / "scripts/ooodnakov.sh").read_text(encoding="utf-8")
+    assert "completions)" in ooosh
+    assert 'exec_setup_command completions 1 "$@"' in ooosh
+
+    ooops1 = (REPO_ROOT / "scripts/ooodnakov.ps1").read_text(encoding="utf-8")
+    assert '"completions" {' in ooops1
+    assert 'Invoke-SetupCommand -SetupCommand "completions" -SupportsDryRun -RemainingArgs $remaining' in ooops1
 
 
 def test_setup_dispatch_uses_handler_metadata() -> None:

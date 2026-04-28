@@ -1,0 +1,189 @@
+[global]
+options = [
+  "-C",
+  "--repo-root",
+  "--print-repo-root",
+  "-h",
+  "--help",
+  "-n",
+  "--dry-run",
+  "--yes-optional",
+  "-V",
+  "--version",
+]
+option_descriptions = { "-C" = "set repo root path", "--repo-root" = "set repo root path", "--print-repo-root" = "print resolved repo root", "-h" = "show help", "--help" = "show help", "-n" = "preview actions without changing files", "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-V" = "show version", "--version" = "show version" }
+option_completion_types = { "-C" = "directory", "--repo-root" = "directory" }
+
+[commands.bootstrap]
+description = "clone or update the repo, then run install"
+
+[commands.install]
+description = "apply managed config"
+options = ["--dry-run", "--yes-optional", "-h", "--help"]
+option_descriptions = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+
+[commands.deps]
+description = "install optional dependencies only"
+options = ["--dry-run", "--yes-optional", "-h", "--help"]
+option_descriptions = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+
+[commands.update]
+description = "update the repo, then re-run install"
+options = ["--dry-run", "--yes-optional", "-h", "--help"]
+option_descriptions = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+
+[commands.doctor]
+description = "validate managed links and tools"
+
+[commands.dry-run]
+description = "preview install without changes"
+
+[commands.delete]
+description = "remove managed links and restore backups"
+
+[commands.remove]
+description = "remove managed links only"
+
+[commands.lock]
+description = "regenerate dependency lock artifacts"
+
+[commands.update-pins]
+description = "check or update pinned refs"
+options = ["--apply"]
+
+[commands.completions]
+description = "regenerate tracked completion files"
+options = ["--dry-run"]
+
+[commands.agents]
+description = "detect/sync/doctor/update AGENTS.md policy blocks"
+subcommands = ["detect", "sync", "doctor", "mcp", "status", "rtk", "update", "install", "install-scripts-build", "skills"]
+
+[commands.agents.subcommand_descriptions]
+detect = "detect configured agent CLIs on PATH"
+sync = "append or update shared AGENTS.md block"
+doctor = "verify AGENTS.md shared block is current"
+mcp = "manage Model Context Protocol (MCP) servers"
+status = "show status of managed MCP servers"
+rtk = "manage RTK integration across agents"
+update = "update installed agent CLIs"
+install = "install one specific agent CLI"
+install-scripts-build = "build standalone install scripts for agents"
+skills = "manage agent skills and extensions"
+
+[commands.agents.subcommand_options]
+detect = ["--repo-root", "--config", "--json"]
+sync = ["--repo-root", "--config", "--check", "--global"]
+doctor = ["--repo-root", "--config", "--strict-config-paths"]
+update = ["--repo-root", "--config", "--check"]
+install = ["--repo-root", "--config", "--check"]
+
+[commands.agents.subsubcommands]
+mcp = ["sync", "status"]
+rtk = ["init"]
+skills = ["sync"]
+
+[commands.agents.subsubcommand_descriptions.mcp]
+sync = "synchronize managed MCP servers"
+status = "show managed MCP status"
+
+[commands.agents.subsubcommand_descriptions.rtk]
+init = "run 'rtk init --global' for detected agents"
+
+[commands.agents.subsubcommand_descriptions.skills]
+sync = "synchronize configured skill specs across agents"
+
+[commands.agents.subsubcommand_options.mcp]
+sync = ["--check"]
+status = []
+
+[commands.agents.subsubcommand_options.rtk]
+init = ["--check"]
+
+[commands.agents.subsubcommand_options.skills]
+sync = ["--check"]
+
+[commands.secrets]
+description = "sync or validate local secret env files"
+subcommands = ["login", "unlock", "sync", "doctor", "list", "ls", "status", "logout", "add", "remove", "rm", "del"]
+
+[commands.secrets.subcommand_descriptions]
+login = "log in to Bitwarden/Vaultwarden"
+unlock = "unlock and print session exports"
+sync = "render local secret files from template"
+doctor = "check secrets prerequisites and health"
+list = "list template-managed secret keys"
+ls = "alias for list"
+status = "show sync and vault status"
+logout = "lock vault and clear session"
+add = "add a key to the template"
+remove = "remove a key from the template"
+rm = "alias for remove"
+del = "alias for remove"
+
+[commands.secrets.subcommand_options]
+login = ["--server", "--method", "--client-id", "--client-secret"]
+unlock = ["--shell", "--raw"]
+sync = ["--backend", "--template", "--dry-run", "--force"]
+doctor = ["--backend", "--template"]
+list = ["--template", "--resolved", "--backend"]
+ls = ["--template", "--resolved", "--backend"]
+status = ["--template"]
+add = ["--template"]
+remove = ["--template"]
+rm = ["--template"]
+del = ["--template"]
+
+[commands.secrets.value_sets]
+shell = ["sh", "zsh", "bash", "pwsh", "fish"]
+method = ["auto", "password", "apikey"]
+backend = ["bw"]
+
+[commands.shell]
+description = "manage local shell preferences"
+subcommands = ["status", "forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env"]
+
+[commands.shell.subcommand_descriptions]
+status = "print all shell preference modes"
+forgit-aliases = "toggle plain vs forgit git aliases"
+typo-handling = "configure typo handling behavior"
+psfzf-tab = "toggle PSFzf tab completion integration"
+psfzf-git = "toggle PSFzf git integration"
+auto-uv-env = "configure uv auto activation messaging"
+
+[commands.shell.subcommand_values]
+forgit-aliases = ["plain", "forgit", "status"]
+typo-handling = ["silent", "suggest", "help", "status"]
+psfzf-tab = ["enabled", "disabled", "status"]
+psfzf-git = ["enabled", "disabled", "status"]
+auto-uv-env = ["enabled", "quiet", "status"]
+
+[commands.help]
+description = "show help"
+
+[commands.version]
+description = "show version information"
+
+[commands.check]
+description = "alias for doctor"
+alias_for = "doctor"
+
+[commands.preview]
+description = "alias for dry-run"
+alias_for = "dry-run"
+
+[commands.upgrade]
+description = "alias for update"
+alias_for = "update"
+
+[commands.minimal]
+description = "run minimal setup"
+
+[commands.komorebi]
+description = "manage komorebi tiling window manager state"
+subcommands = ["reload", "start", "stop"]
+
+[commands.wm]
+description = "switch or manage window managers"
+subcommands = ["status", "set", "start", "stop", "reload", "zebar-config"]
+values = ["komorebi", "glazewm"]

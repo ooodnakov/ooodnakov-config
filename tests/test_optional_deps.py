@@ -34,8 +34,11 @@ def _run_normalized_bash_script(script: str, *args: str) -> subprocess.Completed
         handle.write(normalized)
         temp_path = Path(handle.name)
     try:
+        command = (
+            ["bash", "-n", str(temp_path), *args[1:]] if args and args[0] == "-n" else ["bash", str(temp_path), *args]
+        )
         return subprocess.run(
-            ["bash", *args, str(temp_path)],
+            command,
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent,
@@ -75,6 +78,17 @@ def test_url_template_substitution():
     assert rtk["ver"] == "0.37.2"
     # URL replacement is handled in load_deps(); platform fields contain version
     assert any("0.37.2" in str(v) for v in rtk.values() if isinstance(v, str))
+
+
+def test_github_release_asset_metadata():
+    """Test GitHub release archive metadata is normalized for platform installers."""
+    data = load_deps()
+    bat = next((d for d in data["deps"] if d.get("key") == "bat"), None)
+    assert bat is not None
+    assert bat["ver"] == "0.26.1"
+    assert bat["linux.manager"] == "github-release"
+    assert bat["linux.package"] == "sharkdp/bat"
+    assert bat["linux.asset"] == "bat-v0.26.1-${arch}-unknown-linux-musl.tar.gz"
 
 
 def test_defaults_section():

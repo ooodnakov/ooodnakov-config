@@ -395,7 +395,7 @@ function Get-OptionalDepsTomlFallbackData {
         $macos = @{}
         $windows = @{}
 
-        foreach ($k in @("manager", "package", "command", "winget_id", "choco_id")) {
+        foreach ($k in @("manager", "package", "command", "winget_id", "choco_id", "url", "asset")) {
             $linuxKey = "linux.$k"
             $macosKey = "macos.$k"
             $windowsKey = "windows.$k"
@@ -411,6 +411,7 @@ function Get-OptionalDepsTomlFallbackData {
             Handler     = if ($entry.ContainsKey("handler")) { $entry["handler"] } else { "" }
             Ver         = if ($entry.ContainsKey("ver")) { $entry["ver"] } else { "" }
             Url         = if ($entry.ContainsKey("url")) { $entry["url"] } else { "" }
+            Asset       = if ($entry.ContainsKey("asset")) { $entry["asset"] } else { "" }
             Bin         = if ($entry.ContainsKey("bin")) { $entry["bin"] } else { "" }
             Check       = if ($entry.ContainsKey("check")) { $entry["check"] } else { "" }
             After       = if ($entry.ContainsKey("after")) { $entry["after"] } else { "" }
@@ -456,6 +457,9 @@ function Get-OptionalDependencySpecs {
             DisplayName = $_.display
             Description = $_.description
             Handler     = $_.handler
+            Ver         = $_.ver
+            Url         = $_.url
+            Asset       = $_.asset
             Bin         = $_.bin
             Check       = $_.check
             WindowsOnly = ($null -eq $_.linux -and $null -eq $_.macos -and $null -ne $_.windows)
@@ -483,6 +487,9 @@ function Get-AllOptionalDependencySpecs {
                 DisplayName = $_.display
                 Description = $_.description
                 Handler     = $_.handler
+                Ver         = $_.ver
+                Url         = $_.url
+                Asset       = $_.asset
                 Bin         = $_.bin
                 Check       = $_.check
                 Linux       = if ($_.linux) { $_.linux } else { $null }
@@ -550,7 +557,7 @@ function Get-OptionalDependencyCommandNames {
             if ($names -notcontains $platformConfig.command) { $names.Add($platformConfig.command) }
         }
         # Often package name matches command name (except for cargo where it's a URL or repo)
-        if ($platformConfig.package -and $platformConfig.manager -ne "cargo" -and $platformConfig.package -notmatch '\s') {
+        if ($platformConfig.package -and $platformConfig.manager -notin @("cargo", "github-release") -and $platformConfig.package -notmatch '\s') {
             if ($names -notcontains $platformConfig.package) { $names.Add($platformConfig.package) }
         }
     }
@@ -734,6 +741,9 @@ function Install-OptionalDependencyFromSpec {
             Update-SessionEnvironment
             if ($res) { Add-NewlyAvailableCommand -CommandNames $commandNames }
             return $res
+        }
+        "github-release" {
+            return (Install-GitHubReleaseDependencyIfMissing -Spec $Spec -PlatformConfig $platformConfig -CommandNames $commandNames -Description $description -SummaryName $summaryName)
         }
         "pip" {
             $res = (Invoke-ActionWithSpinner -Description "Installing $description via pip" -Action {
@@ -1571,6 +1581,149 @@ function Install-PackageIfMissing {
     }
 
     Add-DependencySummary "${SummaryName}: missing (no supported package manager)"
+    return $false
+}
+
+function Get-OptionalConfigValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Config,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    if ($Config -is [hashtable]) {
+        if ($Config.ContainsKey($Name)) { return [string]$Config[$Name] }
+        return ""
+    }
+
+    if ($Config.PSObject.Properties.Name -contains $Name) {
+        return [string]$Config.$Name
+    }
+
+    return ""
+}
+
+function Get-GitHubReleaseArch {
+    $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+    if ($arch -eq [System.Runtime.InteropServices.Architecture]::X64) { return "x86_64" }
+    if ($arch -eq [System.Runtime.InteropServices.Architecture]::Arm64) { return "aarch64" }
+    if ($arch -eq [System.Runtime.InteropServices.Architecture]::X86) { return "i686" }
+    return ""
+}
+
+function Expand-GitHubReleaseTemplate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Template,
+        [Parameter(Mandatory = $true)]
+        [string]$Version,
+        [Parameter(Mandatory = $true)]
+        [string]$System,
+        [Parameter(Mandatory = $true)]
+        [string]$Arch
+    )
+
+    return $Template.Replace('${ver}', $Version).Replace('${system}', $System).Replace('${arch}', $Arch)
+}
+
+function Install-GitHubReleaseDependencyIfMissing {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Spec,
+        [Parameter(Mandatory = $true)]
+        [object]$PlatformConfig,
+        [Parameter(Mandatory = $true)]
+        [string[]]$CommandNames,
+        [Parameter(Mandatory = $true)]
+        [string]$Description,
+        [Parameter(Mandatory = $true)]
+        [string]$SummaryName
+    )
+
+    if (Test-DependencyStatus -CommandName $CommandNames[0] -SummaryName $SummaryName) { return $true }
+
+    $repo = Get-OptionalConfigValue -Config $PlatformConfig -Name "package"
+    $version = if ($Spec.Ver) { [string]$Spec.Ver } else { "" }
+    $assetTemplate = Get-OptionalConfigValue -Config $PlatformConfig -Name "asset"
+    $urlTemplate = Get-OptionalConfigValue -Config $PlatformConfig -Name "url"
+    if ([string]::IsNullOrWhiteSpace($version) -or [string]::IsNullOrWhiteSpace($repo) -or ([string]::IsNullOrWhiteSpace($assetTemplate) -and [string]::IsNullOrWhiteSpace($urlTemplate))) {
+        Add-DependencySummary "${SummaryName}: missing (github-release metadata incomplete)"
+        return $false
+    }
+
+    $system = Detect-Platform
+    $arch = Get-GitHubReleaseArch
+    if ([string]::IsNullOrWhiteSpace($arch)) {
+        Add-DependencySummary "${SummaryName}: unsupported architecture"
+        return $false
+    }
+
+    if ([string]::IsNullOrWhiteSpace($assetTemplate)) {
+        $assetTemplate = Split-Path -Leaf $urlTemplate
+    }
+
+    $assetName = Expand-GitHubReleaseTemplate -Template $assetTemplate -Version $version -System $system -Arch $arch
+    $releaseUrl = if ([string]::IsNullOrWhiteSpace($urlTemplate)) {
+        "https://github.com/$repo/releases/download/v$version/$assetName"
+    } else {
+        Expand-GitHubReleaseTemplate -Template $urlTemplate -Version $version -System $system -Arch $arch
+    }
+
+    if (-not (Confirm-Install "Install $Description from the GitHub release archive?")) {
+        Add-DependencySummary "${SummaryName}: skipped"
+        return $false
+    }
+
+    $binaryName = if ($Spec.Bin) { [string]$Spec.Bin } else { $CommandNames[0] }
+    $binaryFile = if ($IsWindows -and -not $binaryName.EndsWith(".exe")) { "$binaryName.exe" } else { $binaryName }
+    $installRoot = Join-Path $ShareHome "tools/$SummaryName/v$version"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) $assetName
+    $targetBinary = Join-Path $LocalBinDir $binaryFile
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Download $releaseUrl"
+        Write-Output "[dry-run] Extract $archivePath -> $installRoot"
+        Write-Output "[dry-run] Copy $binaryFile -> $targetBinary"
+        Add-DependencySummary "${SummaryName}: install preview via GitHub release"
+        return $false
+    }
+
+    try {
+        if (-not (Ensure-Directory -Path $installRoot) -or -not (Ensure-Directory -Path $LocalBinDir)) {
+            Add-DependencySummary "${SummaryName}: install attempted"
+            return $false
+        }
+
+        Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
+        if ($assetName.EndsWith(".zip")) {
+            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
+        } else {
+            tar -xf $archivePath -C $installRoot
+        }
+
+        $sourceBinary = Get-ChildItem -Path $installRoot -Recurse -File -Filter $binaryFile | Select-Object -First 1
+        if (-not $sourceBinary) {
+            Add-DependencySummary "${SummaryName}: install attempted"
+            return $false
+        }
+
+        Copy-Item -Path $sourceBinary.FullName -Destination $targetBinary -Force
+        Update-SessionEnvironment
+    } catch {
+        Write-Output $_
+        Add-Failure "Installing $Description"
+    } finally {
+        if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
+    }
+
+    if ((Test-AnyCommand -Names $CommandNames) -or (Test-Path $targetBinary)) {
+        Add-DependencySummary "${SummaryName}: installed official v$version"
+        Add-NewlyAvailableCommand -CommandNames $CommandNames
+        return $true
+    }
+
+    Add-DependencySummary "${SummaryName}: install attempted"
     return $false
 }
 

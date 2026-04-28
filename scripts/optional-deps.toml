@@ -11,6 +11,8 @@
 #   after        - post-install shell snippet
 #   repo, ref    - for git-pinned tools
 #   manager, package, command, winget_id, choco_id (existing)
+#   asset        - GitHub release asset template for github-release manager
+#                  supports ${system}, ${arch}, ${ver}
 #
 # Top-level [managed-tools] holds all git-pinned zsh ecosystem entries.
 # [defaults] holds common paths used by installers.
@@ -181,12 +183,18 @@ windows.package = "fzf"
 key = "bat"
 display = "bat"
 description = "cat alternative with syntax highlighting"
-linux.manager = "apt"
-linux.package = "bat"
-macos.manager = "brew"
-macos.package = "bat"
-windows.manager = "choco"
-windows.package = "bat"
+ver = "0.26.1"
+bin = "bat"
+check = "bat --version"
+linux.manager = "github-release"
+linux.package = "sharkdp/bat"
+linux.asset = "bat-v${ver}-${arch}-unknown-linux-musl.tar.gz"
+macos.manager = "github-release"
+macos.package = "sharkdp/bat"
+macos.asset = "bat-v${ver}-${arch}-apple-darwin.tar.gz"
+windows.manager = "github-release"
+windows.package = "sharkdp/bat"
+windows.asset = "bat-v${ver}-${arch}-pc-windows-msvc.zip"
 
 [[deps]]
 key = "delta"
