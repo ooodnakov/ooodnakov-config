@@ -231,7 +231,7 @@ Use Grok tools when the task benefits from real-time research, code execution, v
 - Fix any failures before moving on.
 - Summarize changes and reasoning clearly when finished.
 
-## Boundaries & Safety 
+## Boundaries & Safety
 
 - Never commit secrets, tokens, API keys, or machine-specific values.
 - Never perform broad refactors unless explicitly requested.

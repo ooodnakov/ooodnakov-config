@@ -588,7 +588,7 @@ function Test-OptionalDependencyPresent {
     }
 
     $spec = Get-AllOptionalDependencySpecs | Where-Object { $_.Key -eq $Key } | Select-Object -First 1
-    
+
     # If a custom check string with arguments is provided, execute it literally.
     if ($spec -and $spec.Check -and $spec.Check -match '\s') {
         try {
@@ -952,14 +952,14 @@ function Update-SessionEnvironment {
     # Refresh PATH from registry to see newly installed tools without restarting the shell.
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-    
+
     $newPath = @()
     if ($machinePath) { $newPath += $machinePath -split ';' }
     if ($userPath) { $newPath += $userPath -split ';' }
-    
+
     $uniquePath = $newPath | Where-Object { $_ } | Select-Object -Unique
     $env:PATH = [string]::Join(';', $uniquePath)
-    
+
     if (Test-VerboseMode) {
         Write-Output "Refreshed session PATH."
     }
@@ -1477,7 +1477,7 @@ function Install-PackageIfMissing {
                 param($wid)
                 winget install --exact --id $wid --accept-package-agreements --accept-source-agreements --silent | Out-Null
             } -ArgumentList $WingetId
-            
+
             Update-SessionEnvironment
 
             if (Test-AnyCommand -Names $CommandNames) {
@@ -1506,7 +1506,7 @@ function Install-PackageIfMissing {
                 param($cid)
                 choco install $cid -y | Out-Null
             } -ArgumentList $ChocoId
-            
+
             Update-SessionEnvironment
 
             if (Test-AnyCommand -Names $CommandNames) {
@@ -2038,7 +2038,7 @@ function Install-TectonicIfMissing {
         $encodedTag = [uri]::EscapeDataString($tag)
         "https://github.com/$repo/releases/download/$encodedTag/tectonic-$version-x86_64-pc-windows-msvc.zip"
     }
-    
+
     $installRoot = Join-Path $ShareHome "tools/tectonic/v$version"
     $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "tectonic-windows-$version.zip"
     $sourceBinary = Join-Path $installRoot "tectonic.exe"

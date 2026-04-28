@@ -6,7 +6,7 @@ local platform = require("utils.platform")
 def_window_background_opacity = 0
 if platform.is_mac then
 	def_window_background_opacity = 0.01
-end 
+end
 return {
 	max_fps = 120,
 	front_end = "OpenGL", ---@type 'WebGpu' | 'OpenGL' | 'Software'
