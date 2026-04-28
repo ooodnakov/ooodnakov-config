@@ -27,6 +27,20 @@ local keys = {
    },
    { key = 'F11', mods = 'NONE',    action = act.ToggleFullScreen },
    { key = 'F12', mods = 'NONE',    action = act.ShowDebugOverlay },
+
+   { key = 'F1',  mods = mod.SUPER, action = act.SendKey { key = 'F1'  } },
+   { key = 'F2',  mods = mod.SUPER, action = act.SendKey { key = 'F2'  } },
+   { key = 'F3',  mods = mod.SUPER, action = act.SendKey { key = 'F3'  } },
+   { key = 'F4',  mods = mod.SUPER, action = act.SendKey { key = 'F4'  } },
+   { key = 'F5',  mods = mod.SUPER, action = act.SendKey { key = 'F5'  } },
+   { key = 'F6',  mods = mod.SUPER, action = act.SendKey { key = 'F6'  } },
+   { key = 'F7',  mods = mod.SUPER, action = act.SendKey { key = 'F7'  } },
+   { key = 'F8',  mods = mod.SUPER, action = act.SendKey { key = 'F8'  } },
+   { key = 'F9',  mods = mod.SUPER, action = act.SendKey { key = 'F9'  } },
+   { key = 'F10', mods = mod.SUPER, action = act.SendKey { key = 'F10' } },
+   { key = 'F11', mods = mod.SUPER, action = act.SendKey { key = 'F11' } },
+   { key = 'F12', mods = mod.SUPER, action = act.SendKey { key = 'F12' } },
+   
    { key = 'f',   mods = mod.SUPER, action = act.Search({ CaseInSensitiveString = '' }) },
    {
       key = 'u',
