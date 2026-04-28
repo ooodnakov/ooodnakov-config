@@ -31,4 +31,5 @@ if handle then
    end
 end
 
+config.color_scheme = "Noctalia"
 return config.options
