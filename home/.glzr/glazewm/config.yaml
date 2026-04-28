@@ -38,19 +38,19 @@ gaps:
 # Workspace icons (matching komorebi)
 workspaces:
   - name: '1'
-    display_name: '󰈹'
+    display_name: '1' # '󰈹'
   - name: '2'
-    display_name: ''
+    display_name: '2' # ''
   - name: '3'
-    display_name: '󰙯'
+    display_name: '3' # '󰙯'
   - name: '4'
-    display_name: '󰓓'
+    display_name: '4' # '󰓓'
   - name: '5'
-    display_name: '󱓷'
+    display_name: '5' # '󱓷'
   - name: '6'
-    display_name: '󰉋'
+    display_name: '6' # '󰉋'
   - name: '7'
-    display_name: '󰊫'
+    display_name: '7' # '󰊫'
 
 # Keybindings
 keybindings:
@@ -132,7 +132,7 @@ keybindings:
   - commands: ['close']
     bindings: ['Alt+Q']
   - commands: ['wm-reload-config']
-    bindings: ['Alt+Shift+O']
+    bindings: ['Ctrl+Alt+Shift+O']
   - commands: ['wm-exit']
     bindings: ['Alt+Shift+Q']
 
@@ -160,8 +160,8 @@ window_rules:
   - commands: ['set-floating --centered']
     match:
       - window_process: { regex: 'Calculator|TaskManager|ControlPanel|SystemSettings|SearchHost' }
-      - window_class: { regex: 'SunAwtDialog|ApplicationFrameWindow' }
-
+      - window_class: { regex: 'SunAwtDialog|ApplicationFrameWindow|MozillaDialogClass|TaskManagerWindow' }
+  
   # Workspace Routing
   - commands: ['move --workspace 1']
     match:
