@@ -111,12 +111,17 @@ Phase-2 dependency audit ergonomics are implemented with:
 - `oooconf agents detect` to detect configured AI coding agent CLIs available on `PATH`
 - `oooconf agents sync` to update managed shared AGENTS.md policy sections from tracked snippets
 - `oooconf agents doctor` to verify AGENTS.md managed sections and check common MCP/skills markers in default agent config paths
+- `oooconf agents mcp sync|status` to manage and inspect managed MCP server clones/install status
+- `oooconf agents rtk init` to run RTK global initialization for detected agents
+- `oooconf agents skills sync` to synchronize configured skill specs across agent ecosystems
 - `oooconf agents update` to update installed agent CLIs; pnpm-preferred agents are updated through `pnpm`
+- `oooconf agents install <agent>` to install one specific agent CLI
+- `oooconf agents install-scripts-build` to regenerate standalone install scripts for agents
 - `oooconf agents doctor --strict-config-paths` to fail when expected agent default config files are missing
 - `oooconf agents sync --global` to sync MCP configs with environment-backed secret rendering, including `env_vars` passthrough and `{env_var}` placeholders resolved from the current shell environment
 - `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic. Helper scripts use `uv run` if `uv` is available to ensure they run with the pinned Python version and a consistent environment. If `uv` is not present, they fall back to the system `python3`.
 - autogen completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.
-- `oooconf` command completions are generated from tracked command/dependency catalogs by `scripts/generate_oooconf_completions.py`.
+- `oooconf` command completions are generated from tracked command/dependency catalogs and canonical CLI spec metadata (`scripts/oooconf-cli-spec.toml`) by `scripts/generate_oooconf_completions.py`.
 
 
 ## Phase-3 ergonomics
