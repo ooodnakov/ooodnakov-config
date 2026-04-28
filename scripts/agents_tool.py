@@ -45,15 +45,13 @@ NERD_FONT_ICONS = {
 }
 ANSI_RESET = "\033[0m"
 ANSI_BOLD = "\033[1m"
-ANSI_COLORS = {
-    "section": "\033[38;5;111m",
-    "ok": "\033[38;5;78m",
-    "warn": "\033[38;5;221m",
-    "fail": "\033[38;5;203m",
-    "missing": "\033[38;5;203m",
-    "outdated": "\033[38;5;215m",
-    "info": "\033[38;5;117m",
-    "muted": "\033[38;5;245m",
+THEME_COLORS = {
+    "default": {"section": 111, "ok": 78, "warn": 221, "fail": 203, "missing": 203, "outdated": 215, "info": 117, "muted": 245},
+    "catppuccin": {"section": 111, "ok": 150, "warn": 223, "fail": 203, "missing": 203, "outdated": 181, "info": 117, "muted": 145},
+    "gruvbox": {"section": 214, "ok": 142, "warn": 214, "fail": 167, "missing": 167, "outdated": 214, "info": 109, "muted": 248},
+    "nord": {"section": 110, "ok": 108, "warn": 180, "fail": 174, "missing": 174, "outdated": 109, "info": 110, "muted": 146},
+    "tokyonight": {"section": 111, "ok": 114, "warn": 221, "fail": 203, "missing": 203, "outdated": 180, "info": 117, "muted": 146},
+    "noctalia": {"section": 141, "ok": 110, "warn": 180, "fail": 174, "missing": 174, "outdated": 109, "info": 117, "muted": 146},
 }
 ENV_PLACEHOLDER_PATTERN = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 BRACED_ENV_REF_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -304,10 +302,16 @@ def supports_color_output() -> bool:
     return sys.stdout.isatty()
 
 
+def _theme_palette() -> dict[str, int]:
+    return THEME_COLORS.get(os.environ.get("OOOCONF_THEME", "default").lower(), THEME_COLORS["default"])
+
+
 def colorize(text: str, role: str, *, bold: bool = False) -> str:
     if not supports_color_output():
         return text
-    color = ANSI_COLORS.get(role, "")
+    palette = _theme_palette()
+    color_num = palette.get(role)
+    color = f"\033[38;5;{color_num}m" if color_num is not None else ""
     weight = ANSI_BOLD if bold else ""
     return f"{weight}{color}{text}{ANSI_RESET}"
 

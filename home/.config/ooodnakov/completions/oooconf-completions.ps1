@@ -19,6 +19,7 @@ function Get-OooconfCompletions {
         'agents',
         'secrets',
         'shell',
+        'color',
         'version',
         'check',
         'preview',
@@ -108,6 +109,7 @@ function Get-OooconfCompletions {
         'agents' = @()
         'bootstrap' = @()
         'check' = @()
+        'color' = @()
         'completions' = @('--dry-run')
         'delete' = @()
         'deps' = @('--dry-run', '--yes-optional', '-h', '--help')
@@ -134,6 +136,7 @@ function Get-OooconfCompletions {
         'agents' = @('detect', 'sync', 'doctor', 'mcp', 'status', 'rtk', 'update', 'install', 'install-scripts-build', 'skills')
         'bootstrap' = @()
         'check' = @()
+        'color' = @()
         'completions' = @()
         'delete' = @()
         'deps' = @()
@@ -160,6 +163,7 @@ function Get-OooconfCompletions {
         'agents' = @()
         'bootstrap' = @()
         'check' = @()
+        'color' = @('status', 'list', 'default', 'catppuccin', 'gruvbox', 'nord', 'tokyonight', 'noctalia')
         'completions' = @()
         'delete' = @()
         'deps' = @()

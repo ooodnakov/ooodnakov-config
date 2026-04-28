@@ -21,6 +21,7 @@ oooconf_commands=(
   'agents:detect/sync/doctor/update AGENTS.md policy blocks'
   'secrets:sync or validate local secret env files'
   'shell:manage local shell preferences'
+  'color:set a unified oooconf CLI color theme'
   'version:show version information'
   'check:alias for doctor'
   'preview:alias for dry-run'
@@ -511,6 +512,23 @@ cmd_shell_auto_uv_env_subsubcommands=(
 cmd_shell_option_values=(
 )
 
+cmd_color_options=(
+)
+cmd_color_values=(
+  'status:status'
+  'list:list'
+  'default:default'
+  'catppuccin:catppuccin'
+  'gruvbox:gruvbox'
+  'nord:nord'
+  'tokyonight:tokyonight'
+  'noctalia:noctalia'
+)
+cmd_color_subcommands=(
+)
+cmd_color_option_values=(
+)
+
 cmd_version_options=(
 )
 cmd_version_values=(
@@ -647,7 +665,7 @@ for (( i = 2; i < CURRENT; i++ )); do
       ;;
     -*)
       ;;
-    bootstrap|install|deps|update|doctor|dry-run|delete|remove|lock|update-pins|completions|agents|secrets|shell|version|check|preview|upgrade|komorebi|wm|help)
+    bootstrap|install|deps|update|doctor|dry-run|delete|remove|lock|update-pins|completions|agents|secrets|shell|color|version|check|preview|upgrade|komorebi|wm|help)
       command_name="$words[i]"
       break
       ;;

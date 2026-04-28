@@ -12,6 +12,7 @@ completions
 agents
 secrets
 shell
+color
 version
 check
 preview

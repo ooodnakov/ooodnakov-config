@@ -11,6 +11,7 @@ GEN_LOCK="$REPO_ROOT/scripts/generate_dependency_lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
 AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
+SYNC_COLOR_THEME="$REPO_ROOT/scripts/sync_color_theme.py"
 COMMANDS_FILE="$REPO_ROOT/scripts/oooconf-commands.txt"
 KNOWN_COMMANDS=()
 KNOWN_SHELL_SUBCOMMANDS=(status forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
@@ -18,6 +19,7 @@ KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
 KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
 KNOWN_SHELL_PSFZF_MODES=(enabled disabled status)
 KNOWN_SHELL_AUTO_UV_MODES=(enabled quiet status)
+KNOWN_COLOR_THEMES=(default catppuccin gruvbox nord tokyonight noctalia)
 LOCAL_OVERRIDES_START="# --- LOCAL OVERRIDES START ---"
 LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
 FORGIT_ALIAS_VAR="OOODNAKOV_FORGIT_ALIAS_MODE"
@@ -25,9 +27,11 @@ TYPO_HANDLING_VAR="OOODNAKOV_TYPO_HANDLING_MODE"
 PSFZF_TAB_VAR="OOODNAKOV_PSFZF_TAB"
 PSFZF_GIT_VAR="OOODNAKOV_PSFZF_GIT"
 AUTO_UV_ENV_VAR="AUTO_UV_ENV_QUIET"
+OOOCONF_THEME_VAR="OOOCONF_THEME"
+OOOCONF_OMP_CONFIG_VAR="OOOCONF_OMP_CONFIG"
 
 load_known_commands() {
-  local fallback_commands=(bootstrap install deps update doctor dry-run delete remove lock update-pins completions agents secrets shell version check preview upgrade minimal)
+  local fallback_commands=(bootstrap install deps update doctor dry-run delete remove lock update-pins completions agents secrets shell color version check preview upgrade minimal)
   local line
 
   KNOWN_COMMANDS=()
@@ -139,18 +143,73 @@ ui_colorize() {
   local role="$1"
   local text="$2"
   local code=""
+  local theme
   if ! ui_use_color; then
     printf '%s' "$text"
     return 0
   fi
+  theme="$(get_oooconf_theme)"
   case "$role" in
-    section) code='1;38;5;111' ;;
-    ok) code='1;38;5;78' ;;
-    warn) code='1;38;5;221' ;;
-    fail) code='1;38;5;203' ;;
-    info) code='1;38;5;117' ;;
-    hint) code='38;5;245' ;;
-    muted) code='38;5;245' ;;
+    section)
+      case "$theme" in
+        catppuccin) code='1;38;5;111' ;;
+        gruvbox) code='1;38;5;214' ;;
+        nord) code='1;38;5;110' ;;
+        tokyonight) code='1;38;5;111' ;;
+        noctalia) code='1;38;5;141' ;;
+        *) code='1;38;5;111' ;;
+      esac
+      ;;
+    ok)
+      case "$theme" in
+        catppuccin) code='1;38;5;150' ;;
+        gruvbox) code='1;38;5;142' ;;
+        nord) code='1;38;5;108' ;;
+        tokyonight) code='1;38;5;114' ;;
+        noctalia) code='1;38;5;110' ;;
+        *) code='1;38;5;78' ;;
+      esac
+      ;;
+    warn)
+      case "$theme" in
+        catppuccin) code='1;38;5;223' ;;
+        gruvbox) code='1;38;5;214' ;;
+        nord) code='1;38;5;180' ;;
+        tokyonight) code='1;38;5;221' ;;
+        noctalia) code='1;38;5;180' ;;
+        *) code='1;38;5;221' ;;
+      esac
+      ;;
+    fail)
+      case "$theme" in
+        catppuccin) code='1;38;5;203' ;;
+        gruvbox) code='1;38;5;167' ;;
+        nord) code='1;38;5;174' ;;
+        tokyonight) code='1;38;5;203' ;;
+        noctalia) code='1;38;5;174' ;;
+        *) code='1;38;5;203' ;;
+      esac
+      ;;
+    info)
+      case "$theme" in
+        catppuccin) code='1;38;5;117' ;;
+        gruvbox) code='1;38;5;109' ;;
+        nord) code='1;38;5;110' ;;
+        tokyonight) code='1;38;5;117' ;;
+        noctalia) code='1;38;5;117' ;;
+        *) code='1;38;5;117' ;;
+      esac
+      ;;
+    hint|muted)
+      case "$theme" in
+        catppuccin) code='38;5;145' ;;
+        gruvbox) code='38;5;248' ;;
+        nord) code='38;5;146' ;;
+        tokyonight) code='38;5;146' ;;
+        noctalia) code='38;5;146' ;;
+        *) code='38;5;245' ;;
+      esac
+      ;;
     *) code='' ;;
   esac
   if [ -n "$code" ]; then
@@ -394,6 +453,75 @@ get_auto_uv_env_mode() {
   printf 'enabled\n'
 }
 
+get_oooconf_theme() {
+  local env_zsh mode
+
+  if [ -n "${OOOCONF_THEME:-}" ]; then
+    printf '%s\n' "$OOOCONF_THEME"
+    return 0
+  fi
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  if [ -f "$env_zsh" ]; then
+    mode="$(sed -n "s/^export ${OOOCONF_THEME_VAR}=\"\\([^\"]*\\)\"$/\\1/p" "$env_zsh" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+  fi
+
+  if detect_repo_color_theme; then
+    return 0
+  fi
+
+  printf 'default\n'
+}
+
+detect_repo_color_theme() {
+  if [ -f "$REPO_ROOT/home/.config/wezterm/wezterm.lua" ] && grep -q 'Noctalia' "$REPO_ROOT/home/.config/wezterm/wezterm.lua"; then
+    printf 'noctalia\n'
+    return 0
+  fi
+  if [ -f "$REPO_ROOT/home/.config/wezterm/config/general.lua" ] && grep -qi 'catppuccin' "$REPO_ROOT/home/.config/wezterm/config/general.lua"; then
+    printf 'catppuccin\n'
+    return 0
+  fi
+  if [ -f "$REPO_ROOT/home/.config/nvim/lua/plugins/colorscheme.lua" ] && grep -qi 'catppuccin' "$REPO_ROOT/home/.config/nvim/lua/plugins/colorscheme.lua"; then
+    printf 'catppuccin\n'
+    return 0
+  fi
+  return 1
+}
+
+set_oooconf_theme() {
+  local mode="$1"
+  local env_zsh env_ps1 omp_config_path
+
+  case "$mode" in
+    default|catppuccin|gruvbox|nord|tokyonight|noctalia) ;;
+    *)
+      visible_error "Invalid theme: $mode"
+      visible_error "Expected one of: ${KNOWN_COLOR_THEMES[*]}"
+      return 1
+      ;;
+  esac
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  env_ps1="$(shell_local_env_ps1_path)"
+  omp_config_path="$(shell_config_home)/local/ohmyposh/${mode}.omp.json"
+
+  upsert_override_line "$env_zsh" "$OOOCONF_THEME_VAR" "export $OOOCONF_THEME_VAR=\"$mode\""
+  upsert_override_line "$env_ps1" "$OOOCONF_THEME_VAR" "\$env:$OOOCONF_THEME_VAR = '$mode'"
+  upsert_override_line "$env_zsh" "$OOOCONF_OMP_CONFIG_VAR" "export $OOOCONF_OMP_CONFIG_VAR=\"$omp_config_path\""
+  upsert_override_line "$env_ps1" "$OOOCONF_OMP_CONFIG_VAR" "\$env:$OOOCONF_OMP_CONFIG_VAR = '$omp_config_path'"
+
+  ui_line ok "oooconf theme set to $mode"
+  ui_line info "zsh: $env_zsh"
+  ui_line info "pwsh: $env_ps1"
+  OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$SYNC_COLOR_THEME" apply --theme "$mode"
+  ui_line hint "Open a new shell session to apply the theme globally."
+}
+
 set_auto_uv_env_mode() {
   local mode="$1"
   local env_zsh env_ps1 val
@@ -526,6 +654,20 @@ print_help_for_scope() {
   case "$scope" in
     shell)
       handle_shell_command help
+      ;;
+    color)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf color [status|list|<theme>]
+
+Set or inspect the oooconf CLI color theme.
+Themes:
+  default, catppuccin, gruvbox, nord, tokyonight, noctalia
+Examples:
+  oooconf color status
+  oooconf color list
+  oooconf color catppuccin
+  oooconf color noctalia
+EOF
       ;;
     *)
       usage
@@ -697,6 +839,36 @@ EOF
   esac
 }
 
+handle_color_command() {
+  local action="${1:-status}"
+  case "$action" in
+    status)
+      printf '%s\n' "$(get_oooconf_theme)"
+      OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$SYNC_COLOR_THEME" status || true
+      ;;
+    list)
+      printf '%s\n' "${KNOWN_COLOR_THEMES[@]}"
+      ;;
+    help|-h|--help)
+      cat <<'EOF'
+Usage:
+  oooconf color status
+  oooconf color list
+  oooconf color <theme>
+
+Select a unified oooconf CLI color theme.
+Available themes:
+  default, catppuccin, gruvbox, nord, tokyonight, noctalia
+This also syncs theme-friendly overrides for yazi, wezterm local override, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
+Status output also reports detected nvim and oh-my-posh theme config state.
+EOF
+      ;;
+    *)
+      set_oooconf_theme "$action"
+      ;;
+  esac
+}
+
 resolve_command_alias() {
   case "$1" in
     check) printf 'doctor\n' ;;
@@ -841,6 +1013,7 @@ EOF
   ui_command_row "completions" "regenerate tracked shell completions (autogen + oooconf)"
   printf '  %s\n' "$(ui_colorize "hint" "Shell / Secrets / Agents:")"
   ui_command_row "shell" "manage local shell preferences such as forgit aliases"
+  ui_command_row "color" "set a unified oooconf CLI color theme"
   ui_command_row "secrets" "sync or validate local secret env files"
   ui_command_row "agents" "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
   cat <<EOF
@@ -1060,6 +1233,9 @@ EOF
     shell)
       handle_shell_command help
       ;;
+    color)
+      handle_color_command help
+      ;;
     version)
       cat <<'EOF' | ui_render_help_block
 Usage: oooconf version
@@ -1104,6 +1280,7 @@ while [ "$#" -gt 0 ]; do
       UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
       RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
       AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
+      SYNC_COLOR_THEME="$REPO_ROOT/scripts/sync_color_theme.py"
       shift 2
       ;;
     --print-repo-root)
@@ -1298,6 +1475,9 @@ case "$command" in
     ;;
   shell)
     handle_shell_command "$@"
+    ;;
+  color)
+    handle_color_command "$@"
     ;;
   *)
     suggestion="$(suggest_command "$command")"

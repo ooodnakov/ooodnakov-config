@@ -25,15 +25,18 @@ NERD_FONT_ICONS = {
 
 ANSI_RESET = "\033[0m"
 ANSI_BOLD = "\033[1m"
-ANSI_COLORS = {
-    "section": "\033[38;5;111m",
-    "ok": "\033[38;5;78m",
-    "warn": "\033[38;5;221m",
-    "fail": "\033[38;5;203m",
-    "info": "\033[38;5;117m",
-    "hint": "\033[38;5;245m",
-    "muted": "\033[38;5;245m",
+THEME_COLORS = {
+    "default": {"section": 111, "ok": 78, "warn": 221, "fail": 203, "info": 117, "hint": 245, "muted": 245},
+    "catppuccin": {"section": 111, "ok": 150, "warn": 223, "fail": 203, "info": 117, "hint": 145, "muted": 145},
+    "gruvbox": {"section": 214, "ok": 142, "warn": 214, "fail": 167, "info": 109, "hint": 248, "muted": 248},
+    "nord": {"section": 110, "ok": 108, "warn": 180, "fail": 174, "info": 110, "hint": 146, "muted": 146},
+    "tokyonight": {"section": 111, "ok": 114, "warn": 221, "fail": 203, "info": 117, "hint": 146, "muted": 146},
+    "noctalia": {"section": 141, "ok": 110, "warn": 180, "fail": 174, "info": 117, "hint": 146, "muted": 146},
 }
+
+
+def _theme_palette() -> dict[str, int]:
+    return THEME_COLORS.get(os.environ.get("OOOCONF_THEME", "default").lower(), THEME_COLORS["default"])
 
 
 def supports_nerd_font_output() -> bool:
@@ -73,7 +76,9 @@ def icon(name: str) -> str:
 def colorize(text: str, role: str, *, bold: bool = False) -> str:
     if not supports_color_output():
         return text
-    color = ANSI_COLORS.get(role, "")
+    palette = _theme_palette()
+    color_num = palette.get(role)
+    color = f"\033[38;5;{color_num}m" if color_num is not None else ""
     weight = ANSI_BOLD if bold else ""
     return f"{weight}{color}{text}{ANSI_RESET}"
 

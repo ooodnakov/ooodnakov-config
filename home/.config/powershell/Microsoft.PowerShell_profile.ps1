@@ -1,5 +1,6 @@
 $ConfigRoot = Join-Path $HOME ".config/ooodnakov"
-$PromptConfig = Join-Path $HOME ".config/ohmyposh/ooodnakov.omp.json"
+$DefaultPromptConfig = Join-Path $HOME ".config/ohmyposh/ooodnakov.omp.json"
+$PromptConfig = if ($env:OOOCONF_OMP_CONFIG -and (Test-Path $env:OOOCONF_OMP_CONFIG)) { $env:OOOCONF_OMP_CONFIG } else { $DefaultPromptConfig }
 $SharedEnv = Join-Path $ConfigRoot "env/common.ps1"
 $LocalEnv = Join-Path $ConfigRoot "local/env.ps1"
 $LocalBin = Join-Path $HOME ".local/bin"

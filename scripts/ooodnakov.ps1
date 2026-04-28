@@ -17,10 +17,11 @@ $GenerateLockScript = Join-Path $PSScriptRoot "generate_dependency_lock.py"
 $UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
 $RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
 $AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
+$SyncColorThemeScript = Join-Path $PSScriptRoot "sync_color_theme.py"
 $CommandsFile = Join-Path $PSScriptRoot "oooconf-commands.txt"
 
 function Get-KnownCommands {
-    $fallback = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "version", "check", "preview", "upgrade")
+    $fallback = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "color", "version", "check", "preview", "upgrade")
     if (-not (Test-Path $CommandsFile)) {
         return $fallback
     }
@@ -44,6 +45,7 @@ $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $KnownShellAutoUvModes = @("enabled", "quiet", "status")
+$KnownColorThemes = @("default", "catppuccin", "gruvbox", "nord", "tokyonight", "noctalia")
 $KnownKomorebiSubcommands = @("reload", "start", "stop")
 $KnownWmSubcommands = @("status", "set", "start", "stop", "reload", "zebar-config")
 $KnownWmOptions = @("komorebi", "glazewm")
@@ -54,6 +56,8 @@ $TypoHandlingVar = "OOODNAKOV_TYPO_HANDLING_MODE"
 $PsfzfTabVar = "OOODNAKOV_PSFZF_TAB"
 $PsfzfGitVar = "OOODNAKOV_PSFZF_GIT"
 $AutoUvEnvVar = "AUTO_UV_ENV_QUIET"
+$OooconfThemeVar = "OOOCONF_THEME"
+$OooconfOmpConfigVar = "OOOCONF_OMP_CONFIG"
 $UiAscii = @{
     section = "=="
     ok = "[ok]"
@@ -73,12 +77,12 @@ $UiNerd = @{
 $UiAnsi = @{
     Reset = "$([char]27)[0m"
     Bold = "$([char]27)[1m"
-    Section = "$([char]27)[38;5;111m"
-    Ok = "$([char]27)[38;5;78m"
-    Warn = "$([char]27)[38;5;221m"
-    Fail = "$([char]27)[38;5;203m"
-    Info = "$([char]27)[38;5;117m"
-    Muted = "$([char]27)[38;5;245m"
+    Section = ""
+    Ok = ""
+    Warn = ""
+    Fail = ""
+    Info = ""
+    Muted = ""
 }
 
 # Run a Python script, preferring `uv run` when available.
@@ -549,15 +553,16 @@ function Format-UiText {
         [switch]$Bold
     )
     if (-not (Test-UiColor)) { return $Text }
+    $palette = Get-UiThemePalette
     $color = switch ($Role) {
-        "section" { $UiAnsi.Section }
-        "ok" { $UiAnsi.Ok }
-        "warn" { $UiAnsi.Warn }
-        "fail" { $UiAnsi.Fail }
-        "info" { $UiAnsi.Info }
-        "hint" { $UiAnsi.Muted }
-        "muted" { $UiAnsi.Muted }
-        default { $UiAnsi.Muted }
+        "section" { $palette.Section }
+        "ok" { $palette.Ok }
+        "warn" { $palette.Warn }
+        "fail" { $palette.Fail }
+        "info" { $palette.Info }
+        "hint" { $palette.Muted }
+        "muted" { $palette.Muted }
+        default { $palette.Muted }
     }
     $prefix = if ($Bold) { "$($UiAnsi.Bold)$color" } else { $color }
     return "$prefix$Text$($UiAnsi.Reset)"
@@ -785,6 +790,120 @@ function Get-AutoUvEnvMode {
     return "enabled"
 }
 
+function Get-OooconfTheme {
+    if ($env:OOOCONF_THEME) {
+        return $env:OOOCONF_THEME
+    }
+
+    $envPath = Get-LocalEnvZshPath
+    if (Test-Path -LiteralPath $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match "^export $([regex]::Escape($OooconfThemeVar))=""([^""]+)""$") {
+                return $Matches[1]
+            }
+        }
+    }
+    $repoTheme = Get-RepoColorTheme
+    if ($repoTheme) {
+        return $repoTheme
+    }
+    return "default"
+}
+
+function Get-RepoColorTheme {
+    $weztermMain = Join-Path $RepoRoot "home/.config/wezterm/wezterm.lua"
+    if (Test-Path -LiteralPath $weztermMain) {
+        $raw = Get-Content -LiteralPath $weztermMain -Raw
+        if ($raw -match "Noctalia") {
+            return "noctalia"
+        }
+    }
+
+    $weztermGeneral = Join-Path $RepoRoot "home/.config/wezterm/config/general.lua"
+    if (Test-Path -LiteralPath $weztermGeneral) {
+        $raw = Get-Content -LiteralPath $weztermGeneral -Raw
+        if ($raw -match "(?i)catppuccin") {
+            return "catppuccin"
+        }
+    }
+
+    $nvimColors = Join-Path $RepoRoot "home/.config/nvim/lua/plugins/colorscheme.lua"
+    if (Test-Path -LiteralPath $nvimColors) {
+        $raw = Get-Content -LiteralPath $nvimColors -Raw
+        if ($raw -match "(?i)catppuccin") {
+            return "catppuccin"
+        }
+    }
+
+    return $null
+}
+
+function Get-UiThemePalette {
+    $theme = Get-OooconfTheme
+    switch ($theme) {
+        "catppuccin" {
+            return @{
+                Section = "$([char]27)[38;5;111m"
+                Ok = "$([char]27)[38;5;150m"
+                Warn = "$([char]27)[38;5;223m"
+                Fail = "$([char]27)[38;5;203m"
+                Info = "$([char]27)[38;5;117m"
+                Muted = "$([char]27)[38;5;145m"
+            }
+        }
+        "gruvbox" {
+            return @{
+                Section = "$([char]27)[38;5;214m"
+                Ok = "$([char]27)[38;5;142m"
+                Warn = "$([char]27)[38;5;214m"
+                Fail = "$([char]27)[38;5;167m"
+                Info = "$([char]27)[38;5;109m"
+                Muted = "$([char]27)[38;5;248m"
+            }
+        }
+        "nord" {
+            return @{
+                Section = "$([char]27)[38;5;110m"
+                Ok = "$([char]27)[38;5;108m"
+                Warn = "$([char]27)[38;5;180m"
+                Fail = "$([char]27)[38;5;174m"
+                Info = "$([char]27)[38;5;110m"
+                Muted = "$([char]27)[38;5;146m"
+            }
+        }
+        "tokyonight" {
+            return @{
+                Section = "$([char]27)[38;5;111m"
+                Ok = "$([char]27)[38;5;114m"
+                Warn = "$([char]27)[38;5;221m"
+                Fail = "$([char]27)[38;5;203m"
+                Info = "$([char]27)[38;5;117m"
+                Muted = "$([char]27)[38;5;146m"
+            }
+        }
+        "noctalia" {
+            return @{
+                Section = "$([char]27)[38;5;141m"
+                Ok = "$([char]27)[38;5;110m"
+                Warn = "$([char]27)[38;5;180m"
+                Fail = "$([char]27)[38;5;174m"
+                Info = "$([char]27)[38;5;117m"
+                Muted = "$([char]27)[38;5;146m"
+            }
+        }
+        default {
+            return @{
+                Section = "$([char]27)[38;5;111m"
+                Ok = "$([char]27)[38;5;78m"
+                Warn = "$([char]27)[38;5;221m"
+                Fail = "$([char]27)[38;5;203m"
+                Info = "$([char]27)[38;5;117m"
+                Muted = "$([char]27)[38;5;245m"
+            }
+        }
+    }
+}
+
 function Set-AutoUvEnvMode {
     param(
         [Parameter(Mandatory = $true)]
@@ -808,6 +927,31 @@ function Set-AutoUvEnvMode {
     Write-UiLine -Role info -Message "zsh: $envZsh"
     Write-UiLine -Role info -Message "pwsh: $envPs1"
     Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
+}
+
+function Set-OooconfTheme {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Theme
+    )
+
+    if ($Theme -notin $KnownColorThemes) {
+        throw "Invalid theme: $Theme`nExpected one of: $($KnownColorThemes -join ', ')"
+    }
+
+    $envZsh = Get-LocalEnvZshPath
+    $envPs1 = Get-LocalEnvPs1Path
+    $ompConfigPath = Join-Path (Get-ShellConfigHome) "local/ohmyposh/$Theme.omp.json"
+    Set-LocalOverrideLine -Path $envZsh -VariableName $OooconfThemeVar -ReplacementLine "export $OooconfThemeVar=""$Theme"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $OooconfThemeVar -ReplacementLine "`$env:$OooconfThemeVar = '$Theme'"
+    Set-LocalOverrideLine -Path $envZsh -VariableName $OooconfOmpConfigVar -ReplacementLine "export $OooconfOmpConfigVar=""$ompConfigPath"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $OooconfOmpConfigVar -ReplacementLine "`$env:$OooconfOmpConfigVar = '$ompConfigPath'"
+
+    Write-UiLine -Role ok -Message "oooconf theme set to $Theme"
+    Write-UiLine -Role info -Message "zsh: $envZsh"
+    Write-UiLine -Role info -Message "pwsh: $envPs1"
+    Run-Python -ScriptPath $SyncColorThemeScript -ScriptArgs @("apply", "--theme", $Theme)
+    Write-UiLine -Role hint -Message "Open a new shell session to apply the theme globally."
 }
 
 function Set-ForgitAliasMode {
@@ -1188,6 +1332,25 @@ function Invoke-ShellCommand {
     }
 }
 
+function Invoke-ColorCommand {
+    param(
+        [string[]]$ColorArgs
+    )
+
+    $action = if ($ColorArgs.Count -gt 0) { $ColorArgs[0] } else { "status" }
+    switch ($action) {
+        "status" {
+            Write-Output (Get-OooconfTheme)
+            Run-Python -ScriptPath $SyncColorThemeScript -ScriptArgs @("status")
+        }
+        "list" { $KnownColorThemes | ForEach-Object { Write-Output $_ } }
+        "help" { Show-CommandUsage "color" }
+        "-h" { Show-CommandUsage "color" }
+        "--help" { Show-CommandUsage "color" }
+        default { Set-OooconfTheme -Theme $action }
+    }
+}
+
 function Resolve-CommandAlias {
     param(
         [Parameter(Mandatory = $true)]
@@ -1350,13 +1513,15 @@ function Show-Usage {
     Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
     Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
+    Write-UiCommandRow -CommandName "color" -Description "set a unified oooconf CLI color theme"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
     Write-UiCommandRow -CommandName "komorebi" -Description "manage komorebi tiling window manager state"
     Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
     Write-Output @"
     Aliases:
     check -> doctor
-    "@  upgrade -> update
+    preview -> dry-run
+    upgrade -> update
 Note:
   bootstrap is Unix-only in this wrapper.
   On Windows, run `scripts/setup.ps1 install` for initial setup.
@@ -1562,6 +1727,22 @@ Examples:
   oooconf shell psfzf-tab disabled
   oooconf shell psfzf-git status
   oooconf shell auto-uv-env quiet
+"@
+        }
+        "color" {
+            Write-UiHelpBlock @"
+Usage: oooconf color [status|list|<theme>]
+
+Set or inspect the oooconf CLI color theme.
+Themes:
+  default, catppuccin, gruvbox, nord, tokyonight, noctalia
+This also syncs theme-friendly overrides for yazi, wezterm local override, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
+Status output also reports detected nvim and oh-my-posh theme config state.
+Examples:
+  oooconf color status
+  oooconf color list
+  oooconf color catppuccin
+  oooconf color noctalia
 "@
         }
         "komorebi" {
@@ -1834,6 +2015,9 @@ switch ($command) {
     }
     "shell" {
         Invoke-ShellCommand -ShellArgs $remaining
+    }
+    "color" {
+        Invoke-ColorCommand -ColorArgs $remaining
     }
     "agents" {
         Assert-NoDryRun -CommandName "agents"
