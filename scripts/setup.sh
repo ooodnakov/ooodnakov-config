@@ -97,9 +97,7 @@ progress_step() {
 
   printf 'Step: %s\n' "$description"
 
-  local width
-
-  width=24 filled=0 empty=0 percent=0 bar
+  local width=24 filled=0 empty=0 percent=0 bar
   if [ "$PROGRESS_TOTAL" -gt 0 ]; then
     percent=$((PROGRESS_CURRENT * 100 / PROGRESS_TOTAL))
     filled=$((PROGRESS_CURRENT * width / PROGRESS_TOTAL))
