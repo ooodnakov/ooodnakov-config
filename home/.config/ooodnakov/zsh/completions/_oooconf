@@ -31,16 +31,16 @@ oooconf_commands=(
 )
 
 global_opts=(
-  '-C:-C:_files -/'
-  '--repo-root:repo-root:_files -/'
-  '--print-repo-root:print-repo-root'
-  '-h:-h'
-  '--help:help'
-  '-n:-n'
-  '--dry-run:dry-run'
-  '--yes-optional:yes-optional'
-  '-V:-V'
-  '--version:version'
+  '-C:set repo root path:_files -/'
+  '--repo-root:set repo root path:_files -/'
+  '--print-repo-root:print resolved repo root'
+  '-h:show help'
+  '--help:show help'
+  '-n:preview actions without changing files'
+  '--dry-run:preview actions without changing files'
+  '--yes-optional:auto-confirm optional dependency installs'
+  '-V:show version'
+  '--version:show version'
 )
 
 deps_keys=(
@@ -104,16 +104,20 @@ oooconf_aliases['upgrade']='update'
 
 cmd_bootstrap_options=(
 )
+cmd_bootstrap_values=(
+)
 cmd_bootstrap_subcommands=(
 )
 cmd_bootstrap_option_values=(
 )
 
 cmd_install_options=(
-  '--dry-run:dry-run'
-  '--yes-optional:yes-optional'
-  '-h:-h'
-  '--help:help'
+  '--dry-run:preview actions without changing files'
+  '--yes-optional:auto-confirm optional dependency installs'
+  '-h:show help'
+  '--help:show help'
+)
+cmd_install_values=(
 )
 cmd_install_subcommands=(
 )
@@ -121,10 +125,12 @@ cmd_install_option_values=(
 )
 
 cmd_deps_options=(
-  '--dry-run:dry-run'
-  '--yes-optional:yes-optional'
-  '-h:-h'
-  '--help:help'
+  '--dry-run:preview actions without changing files'
+  '--yes-optional:auto-confirm optional dependency installs'
+  '-h:show help'
+  '--help:show help'
+)
+cmd_deps_values=(
 )
 cmd_deps_subcommands=(
 )
@@ -132,10 +138,12 @@ cmd_deps_option_values=(
 )
 
 cmd_update_options=(
-  '--dry-run:dry-run'
-  '--yes-optional:yes-optional'
-  '-h:-h'
-  '--help:help'
+  '--dry-run:preview actions without changing files'
+  '--yes-optional:auto-confirm optional dependency installs'
+  '-h:show help'
+  '--help:show help'
+)
+cmd_update_values=(
 )
 cmd_update_subcommands=(
 )
@@ -144,12 +152,16 @@ cmd_update_option_values=(
 
 cmd_doctor_options=(
 )
+cmd_doctor_values=(
+)
 cmd_doctor_subcommands=(
 )
 cmd_doctor_option_values=(
 )
 
 cmd_dry_run_options=(
+)
+cmd_dry_run_values=(
 )
 cmd_dry_run_subcommands=(
 )
@@ -158,6 +170,8 @@ cmd_dry_run_option_values=(
 
 cmd_delete_options=(
 )
+cmd_delete_values=(
+)
 cmd_delete_subcommands=(
 )
 cmd_delete_option_values=(
@@ -165,12 +179,16 @@ cmd_delete_option_values=(
 
 cmd_remove_options=(
 )
+cmd_remove_values=(
+)
 cmd_remove_subcommands=(
 )
 cmd_remove_option_values=(
 )
 
 cmd_lock_options=(
+)
+cmd_lock_values=(
 )
 cmd_lock_subcommands=(
 )
@@ -180,6 +198,8 @@ cmd_lock_option_values=(
 cmd_update_pins_options=(
   '--apply:apply'
 )
+cmd_update_pins_values=(
+)
 cmd_update_pins_subcommands=(
 )
 cmd_update_pins_option_values=(
@@ -188,12 +208,16 @@ cmd_update_pins_option_values=(
 cmd_completions_options=(
   '--dry-run:dry-run'
 )
+cmd_completions_values=(
+)
 cmd_completions_subcommands=(
 )
 cmd_completions_option_values=(
 )
 
 cmd_agents_options=(
+)
+cmd_agents_values=(
 )
 cmd_agents_subcommands=(
   'detect:detect configured agent CLIs on PATH'
@@ -302,6 +326,8 @@ cmd_agents_option_values=(
 )
 
 cmd_secrets_options=(
+)
+cmd_secrets_values=(
 )
 cmd_secrets_subcommands=(
   'login:log in to Bitwarden/Vaultwarden'
@@ -420,6 +446,8 @@ cmd_secrets_option_values=(
 
 cmd_shell_options=(
 )
+cmd_shell_values=(
+)
 cmd_shell_subcommands=(
   'status:print all shell preference modes'
   'forgit-aliases:toggle plain vs forgit git aliases'
@@ -485,12 +513,16 @@ cmd_shell_option_values=(
 
 cmd_version_options=(
 )
+cmd_version_values=(
+)
 cmd_version_subcommands=(
 )
 cmd_version_option_values=(
 )
 
 cmd_check_options=(
+)
+cmd_check_values=(
 )
 cmd_check_subcommands=(
 )
@@ -499,6 +531,8 @@ cmd_check_option_values=(
 
 cmd_preview_options=(
 )
+cmd_preview_values=(
+)
 cmd_preview_subcommands=(
 )
 cmd_preview_option_values=(
@@ -506,12 +540,16 @@ cmd_preview_option_values=(
 
 cmd_upgrade_options=(
 )
+cmd_upgrade_values=(
+)
 cmd_upgrade_subcommands=(
 )
 cmd_upgrade_option_values=(
 )
 
 cmd_komorebi_options=(
+)
+cmd_komorebi_values=(
 )
 cmd_komorebi_subcommands=(
   'reload:reload'
@@ -540,6 +578,10 @@ cmd_komorebi_option_values=(
 )
 
 cmd_wm_options=(
+)
+cmd_wm_values=(
+  'komorebi:komorebi'
+  'glazewm:glazewm'
 )
 cmd_wm_subcommands=(
   'status:status'
@@ -590,6 +632,8 @@ cmd_wm_option_values=(
 
 cmd_help_options=(
 )
+cmd_help_values=(
+)
 cmd_help_subcommands=(
 )
 cmd_help_option_values=(
@@ -622,8 +666,12 @@ fi
 
 safe_command="${command_name//[^A-Za-z0-9_]/_}"
 if [[ "$safe_command" == <->* ]]; then safe_command="_$safe_command"; fi
-eval "local -a command_options=("${cmd_${safe_command}_options[@]}")"
-eval "local -a command_subcommands=("${cmd_${safe_command}_subcommands[@]}")"
+local var_opts="cmd_${safe_command}_options"
+local -a command_options=("${(@P)var_opts}")
+local var_subs="cmd_${safe_command}_subcommands"
+local -a command_subcommands=("${(@P)var_subs}")
+local var_cmd_values="cmd_${safe_command}_values"
+local -a command_values=("${(@P)var_cmd_values}")
 
 subcommand_name=
 for (( i = 3; i < CURRENT; i++ )); do
@@ -645,6 +693,7 @@ if (( CURRENT > 2 )); then previous_token="$words[CURRENT-1]"; fi
 if [[ -z "$subcommand_name" ]]; then
   _describe -t subcommands 'oooconf subcommand' command_subcommands
   _describe -t options 'oooconf option' command_options
+  _describe -t values 'oooconf value' command_values
   if [[ "$command_name" == install || "$command_name" == deps || "$command_name" == update ]]; then
     _describe -t dependencies 'dependency key' deps_keys
   fi
@@ -653,10 +702,14 @@ fi
 
 safe_subcommand="${subcommand_name//[^A-Za-z0-9_]/_}"
 if [[ "$safe_subcommand" == <->* ]]; then safe_subcommand="_$safe_subcommand"; fi
-eval "local -a sub_options=("${cmd_${safe_command}_${safe_subcommand}_options[@]}")"
-eval "local -a sub_values=("${cmd_${safe_command}_${safe_subcommand}_values[@]}")"
-eval "local -a sub_subcommands=("${cmd_${safe_command}_${safe_subcommand}_subsubcommands[@]}")"
-eval "local -a option_value_entries=("${cmd_${safe_command}_option_values[@]}")"
+local var_sub_opts="cmd_${safe_command}_${safe_subcommand}_options"
+local -a sub_options=("${(@P)var_sub_opts}")
+local var_sub_vals="cmd_${safe_command}_${safe_subcommand}_values"
+local -a sub_values=("${(@P)var_sub_vals}")
+local var_sub_subs="cmd_${safe_command}_${safe_subcommand}_subsubcommands"
+local -a sub_subcommands=("${(@P)var_sub_subs}")
+local var_opt_vals="cmd_${safe_command}_option_values"
+local -a option_value_entries=("${(@P)var_opt_vals}")
 
 subsubcommand_name=
 for (( i = 4; i < CURRENT; i++ )); do
@@ -691,6 +744,7 @@ fi
 
 safe_subsubcommand="${subsubcommand_name//[^A-Za-z0-9_]/_}"
 if [[ "$safe_subsubcommand" == <->* ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi
-eval "local -a subsub_options=("${cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options[@]}")"
+local var_subsub_opts="cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options"
+local -a subsub_options=("${(@P)var_subsub_opts}")
 _describe -t options 'oooconf subsubcommand option' subsub_options
 return 0

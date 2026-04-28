@@ -23,11 +23,15 @@ class CommandSpec:
     subsubcommand_options: dict[str, dict[str, tuple[str, ...]]]
     value_sets: dict[str, tuple[str, ...]]
     values: tuple[str, ...]
+    option_descriptions: dict[str, str]
+    option_completion_types: dict[str, str]
 
 
 @dataclass(frozen=True)
 class CliSpec:
     global_options: tuple[str, ...]
+    global_option_descriptions: dict[str, str]
+    global_option_completion_types: dict[str, str]
     commands: dict[str, CommandSpec]
 
     def command_names(self) -> list[str]:
@@ -117,6 +121,8 @@ def load_cli_spec(path: Path) -> CliSpec:
     if not isinstance(global_table, dict):
         raise ValueError("[global] must be a TOML table")
     global_options = _as_tuple(global_table.get("options", []))
+    global_option_descriptions = _as_mapping_of_strings(global_table.get("option_descriptions"))
+    global_option_completion_types = _as_mapping_of_strings(global_table.get("option_completion_types"))
 
     raw_commands = data.get("commands", {})
     if not isinstance(raw_commands, dict) or not raw_commands:
@@ -151,10 +157,17 @@ def load_cli_spec(path: Path) -> CliSpec:
             subsubcommand_options=_as_mapping_of_mapping_tuples(payload.get("subsubcommand_options")),
             value_sets=_as_mapping_of_tuples(payload.get("value_sets")),
             values=_as_tuple(payload.get("values", [])),
+            option_descriptions=_as_mapping_of_strings(payload.get("option_descriptions")),
+            option_completion_types=_as_mapping_of_strings(payload.get("option_completion_types")),
         )
 
     for command in commands.values():
         if command.alias_for and command.alias_for not in commands:
             raise ValueError(f"Command '{command.name}' aliases unknown command '{command.alias_for}'")
 
-    return CliSpec(global_options=global_options, commands=commands)
+    return CliSpec(
+        global_options=global_options,
+        global_option_descriptions=global_option_descriptions,
+        global_option_completion_types=global_option_completion_types,
+        commands=commands,
+    )

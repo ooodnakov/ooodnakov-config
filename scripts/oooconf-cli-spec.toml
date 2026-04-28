@@ -11,6 +11,8 @@ options = [
   "-V",
   "--version",
 ]
+option_descriptions = { "-C" = "set repo root path", "--repo-root" = "set repo root path", "--print-repo-root" = "print resolved repo root", "-h" = "show help", "--help" = "show help", "-n" = "preview actions without changing files", "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-V" = "show version", "--version" = "show version" }
+option_completion_types = { "-C" = "directory", "--repo-root" = "directory" }
 
 [commands.bootstrap]
 description = "clone or update the repo, then run install"
@@ -18,14 +20,17 @@ description = "clone or update the repo, then run install"
 [commands.install]
 description = "apply managed config"
 options = ["--dry-run", "--yes-optional", "-h", "--help"]
+option_descriptions = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
 
 [commands.deps]
 description = "install optional dependencies only"
 options = ["--dry-run", "--yes-optional", "-h", "--help"]
+option_descriptions = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
 
 [commands.update]
 description = "update the repo, then re-run install"
 options = ["--dry-run", "--yes-optional", "-h", "--help"]
+option_descriptions = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
 
 [commands.doctor]
 description = "validate managed links and tools"

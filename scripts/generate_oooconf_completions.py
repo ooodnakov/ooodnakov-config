@@ -66,12 +66,30 @@ def subcommand_desc(command: CommandSpec, subcommand: str) -> str:
     return command.subcommand_descriptions.get(subcommand, subcommand)
 
 
+def option_desc(option: str, descriptions: dict[str, str]) -> str:
+    return descriptions.get(option, option[2:] if option.startswith("--") else option)
+
+
+def option_completion_suffix(option: str, completion_types: dict[str, str]) -> str:
+    completion_type = completion_types.get(option)
+    if completion_type == "directory":
+        return ":_files -/"
+    if completion_type == "file":
+        return ":_files"
+    return ""
+
+
 def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSpec) -> None:
     safe_command = zsh_safe_name(command)
 
     lines.append(f"cmd_{safe_command}_options=(")
     for option in spec.options:
-        lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option[2:] if option.startswith('--') else option)}'")
+        lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option_desc(option, spec.option_descriptions))}'")
+    lines.append(")")
+
+    lines.append(f"cmd_{safe_command}_values=(")
+    for value in spec.values:
+        lines.append(f"  '{quote_zsh(value)}:{quote_zsh(value)}'")
     lines.append(")")
 
     lines.append(f"cmd_{safe_command}_subcommands=(")
@@ -86,7 +104,7 @@ def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSp
 
         lines.append(f"cmd_{safe_command}_{safe_sub}_options=(")
         for option in options:
-            lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option[2:] if option.startswith('--') else option)}'")
+            lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option_desc(option, spec.option_descriptions))}'")
         lines.append(")")
 
         lines.append(f"cmd_{safe_command}_{safe_sub}_values=(")
@@ -106,7 +124,7 @@ def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSp
             safe_subsub = zsh_safe_name(subsub)
             lines.append(f"cmd_{safe_command}_{safe_sub}_{safe_subsub}_options=(")
             for option in nested_opts.get(subsub, ()):
-                label = option[2:] if option.startswith("--") else option
+                label = option_desc(option, spec.option_descriptions)
                 lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}'")
             lines.append(")")
 
@@ -143,8 +161,8 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
 
     lines.append("global_opts=(")
     for option in spec.global_options:
-        label = option[2:] if option.startswith("--") else option
-        file_suffix = ":_files -/" if option in {"-C", "--repo-root"} else ""
+        label = option_desc(option, spec.global_option_descriptions)
+        file_suffix = option_completion_suffix(option, spec.global_option_completion_types)
         lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}{file_suffix}'")
     lines.append(")")
     lines.append("")
@@ -195,8 +213,12 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
 
     lines.append('safe_command="${command_name//[^A-Za-z0-9_]/_}"')
     lines.append('if [[ "$safe_command" == <->* ]]; then safe_command="_$safe_command"; fi')
-    lines.append('eval "local -a command_options=("${cmd_${safe_command}_options[@]}")"')
-    lines.append('eval "local -a command_subcommands=("${cmd_${safe_command}_subcommands[@]}")"')
+    lines.append('local var_opts="cmd_${safe_command}_options"')
+    lines.append('local -a command_options=("${(@P)var_opts}")')
+    lines.append('local var_subs="cmd_${safe_command}_subcommands"')
+    lines.append('local -a command_subcommands=("${(@P)var_subs}")')
+    lines.append('local var_cmd_values="cmd_${safe_command}_values"')
+    lines.append('local -a command_values=("${(@P)var_cmd_values}")')
     lines.append("")
 
     lines.append("subcommand_name=")
@@ -221,6 +243,7 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
     lines.append('if [[ -z "$subcommand_name" ]]; then')
     lines.append("  _describe -t subcommands 'oooconf subcommand' command_subcommands")
     lines.append("  _describe -t options 'oooconf option' command_options")
+    lines.append("  _describe -t values 'oooconf value' command_values")
     lines.append('  if [[ "$command_name" == install || "$command_name" == deps || "$command_name" == update ]]; then')
     lines.append("    _describe -t dependencies 'dependency key' deps_keys")
     lines.append("  fi")
@@ -230,10 +253,14 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
 
     lines.append('safe_subcommand="${subcommand_name//[^A-Za-z0-9_]/_}"')
     lines.append('if [[ "$safe_subcommand" == <->* ]]; then safe_subcommand="_$safe_subcommand"; fi')
-    lines.append('eval "local -a sub_options=("${cmd_${safe_command}_${safe_subcommand}_options[@]}")"')
-    lines.append('eval "local -a sub_values=("${cmd_${safe_command}_${safe_subcommand}_values[@]}")"')
-    lines.append('eval "local -a sub_subcommands=("${cmd_${safe_command}_${safe_subcommand}_subsubcommands[@]}")"')
-    lines.append('eval "local -a option_value_entries=("${cmd_${safe_command}_option_values[@]}")"')
+    lines.append('local var_sub_opts="cmd_${safe_command}_${safe_subcommand}_options"')
+    lines.append('local -a sub_options=("${(@P)var_sub_opts}")')
+    lines.append('local var_sub_vals="cmd_${safe_command}_${safe_subcommand}_values"')
+    lines.append('local -a sub_values=("${(@P)var_sub_vals}")')
+    lines.append('local var_sub_subs="cmd_${safe_command}_${safe_subcommand}_subsubcommands"')
+    lines.append('local -a sub_subcommands=("${(@P)var_sub_subs}")')
+    lines.append('local var_opt_vals="cmd_${safe_command}_option_values"')
+    lines.append('local -a option_value_entries=("${(@P)var_opt_vals}")')
     lines.append("")
 
     lines.append("subsubcommand_name=")
@@ -272,9 +299,8 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
 
     lines.append('safe_subsubcommand="${subsubcommand_name//[^A-Za-z0-9_]/_}"')
     lines.append('if [[ "$safe_subsubcommand" == <->* ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi')
-    lines.append(
-        'eval "local -a subsub_options=("${cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options[@]}")"'
-    )
+    lines.append('local var_subsub_opts="cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options"')
+    lines.append('local -a subsub_options=("${(@P)var_subsub_opts}")')
     lines.append("_describe -t options 'oooconf subsubcommand option' subsub_options")
     lines.append("return 0")
 
@@ -306,6 +332,7 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: Cl
     aliases: dict[str, list[str]] = {}
     command_options: dict[str, list[str]] = {}
     command_subcommands: dict[str, list[str]] = {}
+    command_values: dict[str, list[str]] = {}
     subcommand_options: dict[str, list[str]] = {}
     subcommand_values: dict[str, list[str]] = {}
     subsubcommands: dict[str, list[str]] = {}
@@ -317,6 +344,7 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: Cl
             aliases[name] = [command.alias_for]
         command_options[name] = list(command.options)
         command_subcommands[name] = list(command.subcommands)
+        command_values[name] = list(command.values)
         for subcommand, options in command.subcommand_options.items():
             subcommand_options[f"{name}:{subcommand}"] = list(options)
         for subcommand, values in command.subcommand_values.items():
@@ -362,6 +390,10 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: Cl
 
     lines.append("    $OooconfCommandSubcommands =")
     lines.extend(format_ps_hashtable(command_subcommands))
+    lines.append("")
+
+    lines.append("    $OooconfCommandValues =")
+    lines.extend(format_ps_hashtable(command_values))
     lines.append("")
 
     lines.append("    $OooconfSubcommandOptions =")
@@ -427,6 +459,9 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: Cl
     lines.append(
         "        $subcommands = if ($OooconfCommandSubcommands.ContainsKey($commandName)) { $OooconfCommandSubcommands[$commandName] } else { @() }"
     )
+    lines.append(
+        "        $commandValues = if ($OooconfCommandValues.ContainsKey($commandName)) { $OooconfCommandValues[$commandName] } else { @() }"
+    )
     lines.append("")
     lines.append("        $subcommandName = $null")
     lines.append("        for ($i = $commandPos + 1; $i -lt $tokens.Length; $i++) {")
@@ -434,7 +469,7 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: Cl
     lines.append("        }")
     lines.append("")
     lines.append("        if ($null -eq $subcommandName) {")
-    lines.append("            $completions = $commandOpts + $subcommands")
+    lines.append("            $completions = $commandOpts + $subcommands + $commandValues")
     lines.append(
         "            if ($commandName -in @('install', 'deps', 'update')) { $completions += $OooconfDepsKeys }"
     )
