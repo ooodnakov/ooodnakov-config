@@ -1,4 +1,4 @@
-return {
+local colors = {
   -- Keep SketchyBar's existing role names, but source the palette from Noctalia.
   TEXT_WHITE = 0xFFFBF1C7,
   TEXT_GREY = 0xFFEBDBB2,
@@ -15,3 +15,17 @@ return {
   HIGHLIGHT_BACKGROUND = 0xCFB8BB26,
   TRANSPARENT = 0x00000000,
 }
+
+local local_override_path = os.getenv("HOME") .. "/.config/ooodnakov/local/sketchybar/colors.lua"
+local handle = io.open(local_override_path, "r")
+if handle then
+  handle:close()
+  local ok, local_colors = pcall(dofile, local_override_path)
+  if ok and type(local_colors) == "table" then
+    for key, value in pairs(local_colors) do
+      colors[key] = value
+    end
+  end
+end
+
+return colors

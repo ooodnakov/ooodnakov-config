@@ -1,3 +1,15 @@
+local theme_map = {
+  default = "catppuccin-mocha",
+  catppuccin = "catppuccin-mocha",
+  gruvbox = "catppuccin-mocha",
+  nord = "catppuccin-mocha",
+  tokyonight = "tokyonight",
+  noctalia = "catppuccin-mocha",
+}
+
+local selected_theme = (vim.env.OOOCONF_THEME or "default"):lower()
+local selected_colorscheme = theme_map[selected_theme] or theme_map.default
+
 return {
   -- 1. Install the colorscheme plugin
   { "catppuccin/nvim", name = "catppuccin", priority = 1000 },
@@ -15,7 +27,7 @@ return {
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "catppuccin-mocha",
+      colorscheme = selected_colorscheme,
     },
   },
 }

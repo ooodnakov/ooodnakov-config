@@ -15,3 +15,9 @@ export BACKGROUND_DARK_RED=0xFF5A2D28
 export BACKGROUND_DARKER=0xFF282828
 export HIGHLIGHT_BACKGROUND=0xCFB8BB26
 export TRANSPARENT=0x00000000
+
+LOCAL_COLORS_SH="${HOME}/.config/ooodnakov/local/sketchybar/colors.sh"
+if [ -f "$LOCAL_COLORS_SH" ]; then
+  # shellcheck disable=SC1090
+  source "$LOCAL_COLORS_SH"
+fi

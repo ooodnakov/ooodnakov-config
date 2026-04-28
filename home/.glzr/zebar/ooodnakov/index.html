@@ -9,6 +9,8 @@
     crossorigin="anonymous"
   ></script>
   <style>
+    @import "./theme-overrides.css";
+
     :root {
       --bg: rgba(28, 32, 35, 0.85);
       --fg: #c0c5ce;
@@ -17,6 +19,13 @@
       --critical: #f2777a;
       --warning: #f99157;
       --success: #99cc99;
+      --workspace-hover-bg: rgba(255, 255, 255, 0.06);
+      --workspace-hover-border: rgba(142, 178, 199, 0.28);
+      --workspace-focused-bg: rgba(142, 178, 199, 0.18);
+      --workspace-focused-border: rgba(142, 178, 199, 0.45);
+      --workspace-focused-shadow: rgba(142, 178, 199, 0.18);
+      --workspace-label-fg: #1c2023;
+      --workspace-label-bg: rgba(192, 197, 206, 0.85);
     }
 
     body {
@@ -86,16 +95,16 @@
 
     .workspace:hover {
       opacity: 1;
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(142, 178, 199, 0.28);
+      background: var(--workspace-hover-bg);
+      border-color: var(--workspace-hover-border);
       transform: translateY(-1px);
     }
 
     .workspace.focused {
       opacity: 1;
-      background: rgba(142, 178, 199, 0.18);
-      border-color: rgba(142, 178, 199, 0.45);
-      box-shadow: 0 0 0 1px rgba(142, 178, 199, 0.18);
+      background: var(--workspace-focused-bg);
+      border-color: var(--workspace-focused-border);
+      box-shadow: 0 0 0 1px var(--workspace-focused-shadow);
     }
 
     .workspace.occupied {
@@ -113,8 +122,8 @@
       line-height: 1;
       font-size: 10px;
       font-weight: 700;
-      color: #1c2023;
-      background: rgba(192, 197, 206, 0.85);
+      color: var(--workspace-label-fg);
+      background: var(--workspace-label-bg);
       flex: 0 0 auto;
     }
 

@@ -158,6 +158,10 @@ psfzf-tab = ["enabled", "disabled", "status"]
 psfzf-git = ["enabled", "disabled", "status"]
 auto-uv-env = ["enabled", "quiet", "status"]
 
+[commands.color]
+description = "set a unified oooconf CLI color theme"
+values = ["status", "list", "default", "catppuccin", "gruvbox", "nord", "tokyonight", "noctalia"]
+
 [commands.help]
 description = "show help"
 
