@@ -20,7 +20,7 @@ PATH_OPTIONS = {"-C", "--repo-root", "--template", "--config"}
 def is_path_option(option: str) -> bool:
     if option in PATH_OPTIONS:
         return True
-    return option.endswith("-path") or option.endswith("-root")
+    return option.endswith("-path")
 
 
 def load_commands(path: Path) -> list[str]:

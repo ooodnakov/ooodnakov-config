@@ -33,7 +33,7 @@ oooconf_commands=(
 global_opts=(
   '-C:-C:_files -/'
   '--repo-root:repo-root:_files -/'
-  '--print-repo-root:print-repo-root:_files -/'
+  '--print-repo-root:print-repo-root'
   '-h:-h'
   '--help:help'
   '-n:-n'

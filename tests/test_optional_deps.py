@@ -15,10 +15,12 @@ from scripts.read_optional_deps import load_deps, output_catalog, output_json
 
 def _bash_syntax_check(script: str) -> subprocess.CompletedProcess[str]:
     """Run bash -n against LF-normalized content so Windows CRLF checkouts still parse."""
-    return _run_normalized_bash_script(script, "-n")
+    return _run_normalized_bash_script(script, syntax_check=True)
 
 
-def _run_normalized_bash_script(script: str, *args: str) -> subprocess.CompletedProcess[str]:
+def _run_normalized_bash_script(
+    script: str, *args: str, syntax_check: bool = False
+) -> subprocess.CompletedProcess[str]:
     """Run a bash command against an LF-normalized temporary copy of a tracked script."""
     source_path = Path(__file__).parent.parent / script
     normalized = source_path.read_text(encoding="utf-8").replace("\r\n", "\n")
@@ -34,8 +36,9 @@ def _run_normalized_bash_script(script: str, *args: str) -> subprocess.Completed
         handle.write(normalized)
         temp_path = Path(handle.name)
     try:
+        command = ["bash", "-n", str(temp_path)] if syntax_check else ["bash", str(temp_path), *args]
         return subprocess.run(
-            ["bash", *args, str(temp_path)],
+            command,
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent,
