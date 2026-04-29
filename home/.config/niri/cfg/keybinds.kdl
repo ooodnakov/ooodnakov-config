@@ -87,7 +87,7 @@ binds {
     Mod+Shift+WheelScrollUp             { focus-column-left; }
     Mod+CTRL+Shift+WheelScrollDown      { move-column-right; }
     Mod+CTRL+Shift+WheelScrollUp        { move-column-left; }
-    
+
 
     Mod+1                               { focus-workspace 1; }
     Mod+2                               { focus-workspace 2; }

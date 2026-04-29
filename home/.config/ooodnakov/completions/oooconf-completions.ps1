@@ -155,6 +155,32 @@ function Get-OooconfCompletions {
         'wm' = @('status', 'set', 'start', 'stop', 'reload', 'zebar-config')
     }
 
+    $OooconfCommandValues =
+    @{
+        'agents' = @()
+        'bootstrap' = @()
+        'check' = @()
+        'completions' = @()
+        'delete' = @()
+        'deps' = @()
+        'doctor' = @()
+        'dry-run' = @()
+        'help' = @()
+        'install' = @()
+        'komorebi' = @()
+        'lock' = @()
+        'minimal' = @()
+        'preview' = @()
+        'remove' = @()
+        'secrets' = @()
+        'shell' = @()
+        'update' = @()
+        'update-pins' = @()
+        'upgrade' = @()
+        'version' = @()
+        'wm' = @('komorebi', 'glazewm')
+    }
+
     $OooconfSubcommandOptions =
     @{
         'agents:detect' = @('--repo-root', '--config', '--json')
@@ -240,6 +266,7 @@ function Get-OooconfCompletions {
         if ($OooconfAliases.ContainsKey($commandName)) { $commandName = $OooconfAliases[$commandName][0] }
         $commandOpts = if ($OooconfCommandOptions.ContainsKey($commandName)) { $OooconfCommandOptions[$commandName] } else { @() }
         $subcommands = if ($OooconfCommandSubcommands.ContainsKey($commandName)) { $OooconfCommandSubcommands[$commandName] } else { @() }
+        $commandValues = if ($OooconfCommandValues.ContainsKey($commandName)) { $OooconfCommandValues[$commandName] } else { @() }
 
         $subcommandName = $null
         for ($i = $commandPos + 1; $i -lt $tokens.Length; $i++) {
@@ -247,7 +274,7 @@ function Get-OooconfCompletions {
         }
 
         if ($null -eq $subcommandName) {
-            $completions = $commandOpts + $subcommands
+            $completions = $commandOpts + $subcommands + $commandValues
             if ($commandName -in @('install', 'deps', 'update')) { $completions += $OooconfDepsKeys }
         } else {
             $lastToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }

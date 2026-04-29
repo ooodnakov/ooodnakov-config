@@ -104,7 +104,7 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
         if ($null -ne (Get-Command fd -ErrorAction SilentlyContinue)) {
             $psFzfArgs.EnableFd = $true
         }
-        
+
         Set-PsFzfOption @psFzfArgs
 
         # Explicitly bind both Ctrl+r and UpArrow to the PSFzf handler

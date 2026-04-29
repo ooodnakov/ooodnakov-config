@@ -32,8 +32,9 @@ PROGRESS_TOTAL=0
 PROGRESS_CURRENT=0
 PROGRESS_TITLE=""
 NEOVIM_MIN_VERSION="${OOODNAKOV_NEOVIM_MIN_VERSION:-0.10.0}"
-NEOVIM_LINUX_VERSION="${OOODNAKOV_NEOVIM_LINUX_VERSION:-0.10.4}"
+NEOVIM_VERSION="${OOODNAKOV_NEOVIM_VERSION:-}"
 
+# shellcheck source=/dev/null
 source "$PYTHON_LIB"
 
 run_python() {
@@ -43,8 +44,10 @@ run_python() {
 # All pins, versions, and managed tools now live in optional-deps.toml ONLY.
 # These variables are deprecated and will be removed. Use get_managed_tool() instead.
 get_managed_tool() {
-  local name="$1"
-  local field="${2:-ref}"
+  local name
+  name="$1"
+  local field
+  field="${2:-ref}"
   run_python scripts/read_optional_deps.py managed-tools | \
     python3 -c '
 import sys, json
@@ -53,6 +56,12 @@ name = sys.argv[1]
 field = sys.argv[2]
 print(data.get(name, {}).get(field, ""))
 ' "$name" "$field"
+}
+
+get_dep_field() {
+  local key="$1"
+  local field="$2"
+  run_python scripts/read_optional_deps.py field "$key" "$field"
 }
 
 is_interactive() {
@@ -83,7 +92,8 @@ progress_init() {
 }
 
 progress_step() {
-  local description="$1"
+  local description
+  description="$1"
   PROGRESS_CURRENT=$((PROGRESS_CURRENT + 1))
 
   if ! is_interactive; then
@@ -121,7 +131,8 @@ EOF
 }
 
 initialize_logging() {
-  local active_log_root="$LOG_ROOT"
+  local active_log_root
+  active_log_root="$LOG_ROOT"
 
   if ! mkdir -p "$active_log_root" 2>/dev/null; then
     active_log_root="${TMPDIR:-/tmp}/ooodnakov-config-logs"
@@ -155,7 +166,8 @@ run_cmd() {
 }
 
 prompt_yes_no() {
-  local prompt="$1"
+  local prompt
+  prompt="$1"
   local reply
 
   case "$INSTALL_OPTIONAL" in
@@ -187,7 +199,8 @@ detect_platform() {
 }
 
 optional_dependency_applicable() {
-  local key="$1"
+  local key
+  key="$1"
   local platform
   platform="$(detect_platform)"
   local info
@@ -210,7 +223,8 @@ optional_dependency_catalog_all() {
 }
 
 optional_dependency_exists() {
-  local expected_key="$1"
+  local expected_key
+  expected_key="$1"
   local key label description
 
   while IFS='|' read -r key label description; do
@@ -222,7 +236,8 @@ optional_dependency_exists() {
 
 optional_dependency_exists_any() {
   # Check if key exists in full catalog (including platform-inapplicable deps).
-  local expected_key="$1"
+  local expected_key
+  expected_key="$1"
   local key label description
 
   while IFS='|' read -r key label description; do
@@ -249,8 +264,10 @@ optional_dependency_keys_all() {
 }
 
 edit_distance() {
-  local left="$1"
-  local right="$2"
+  local left
+  left="$1"
+  local right
+  right="$2"
 
   awk -v left="$left" -v right="$right" '
     BEGIN {
@@ -290,11 +307,15 @@ edit_distance() {
 }
 
 suggest_from_candidates() {
-  local input="$1"
+  local input
+  input="$1"
   shift
 
-  local best_candidate=""
-  local best_distance=999
+  local best_candidate
+
+  best_candidate=""
+  local best_distance
+  best_distance=999
   local candidate distance threshold
 
   for candidate in "$@"; do
@@ -320,8 +341,10 @@ suggest_setup_command() {
 }
 
 suggest_dependency_key() {
-  local input="$1"
-  local keys=()
+  local input
+  input="$1"
+  local keys
+  keys=()
   local key
 
   while IFS= read -r key; do
@@ -332,7 +355,8 @@ suggest_dependency_key() {
 }
 
 optional_dependency_label() {
-  local expected_key="$1"
+  local expected_key
+  expected_key="$1"
   local key label description
 
   while IFS='|' read -r key label description; do
@@ -348,21 +372,26 @@ optional_dependency_label() {
 selected_optional_key_csv="${OOODNAKOV_SELECTED_OPTIONAL_KEYS:-}"
 
 optional_dependency_install_info() {
-  local key="$1"
+  local key
+  key="$1"
   local platform
   platform="$(detect_platform)"
   run_python "$OPTIONAL_DEPS_SCRIPT" install-info "$key" "$platform" 2>/dev/null
 }
 
 optional_dependency_field() {
-  local key="$1"
-  local field="$2"
+  local key
+  key="$1"
+  local field
+  field="$2"
   run_python "$OPTIONAL_DEPS_SCRIPT" field "$key" "$field" 2>/dev/null || true
 }
 
 resolve_package_manager_for_dependency() {
-  local detected_manager="$1"
-  local declared_manager="$2"
+  local detected_manager
+  detected_manager="$1"
+  local declared_manager
+  declared_manager="$2"
 
   case "$declared_manager" in
     apt)
@@ -378,7 +407,8 @@ resolve_package_manager_for_dependency() {
 }
 
 optional_dependency_selected() {
-  local key="$1"
+  local key
+  key="$1"
 
   if [ -z "$selected_optional_key_csv" ]; then
     return 0
@@ -459,7 +489,8 @@ EOF" || return 1
 }
 
 install_gum_package() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   case "$manager" in
     brew|pacman)
@@ -480,7 +511,8 @@ install_gum_package() {
 }
 
 maybe_install_gum() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   if check_dependency_status "gum" "gum"; then
     return 0
@@ -522,7 +554,9 @@ ensure_gum_for_optional_selector() {
     return 1
   fi
 
-  local previous_mode="$INSTALL_OPTIONAL"
+  local previous_mode
+
+  previous_mode="$INSTALL_OPTIONAL"
   INSTALL_OPTIONAL=always
   maybe_install_gum "$manager" >/dev/null 2>&1 || true
   INSTALL_OPTIONAL="$previous_mode"
@@ -628,12 +662,15 @@ choose_optional_dependencies_with_gum() {
     return 3
   fi
 
-  local IFS=,
+  local IFS
+
+  IFS=,
   printf '%s\n' "${selected_keys[*]}"
 }
 
 maybe_install_fastfetch() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   if check_dependency_status "fastfetch" "fastfetch"; then
     return 0
@@ -676,7 +713,8 @@ maybe_install_tectonic() {
 }
 
 install_optional_dependency_if_selected() {
-  local key="$1"
+  local key
+  key="$1"
   shift
 
   optional_dependency_selected "$key" || return 0
@@ -684,14 +722,16 @@ install_optional_dependency_if_selected() {
 }
 
 install_optional_dependency_from_catalog() {
-  local key="$1"
-  local detected_manager="$2"
+  local key
+  key="$1"
+  local detected_manager
+  detected_manager="$2"
   local description info declared_manager package_name command_name winget_id choco_id install_manager handler
 
   description="$(optional_dependency_label "$key")"
   info="$(optional_dependency_install_info "$key" || true)"
   handler="$(optional_dependency_field "$key" "handler")"
-  IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ <<< "$info"
+  IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ platform_url asset_name <<< "$info"
   install_manager="$(resolve_package_manager_for_dependency "$detected_manager" "$declared_manager")"
 
   if [ -n "$handler" ]; then
@@ -727,6 +767,9 @@ install_optional_dependency_from_catalog() {
         fi
       fi
       ;;
+    github-release)
+      maybe_install_github_release "$key" "$description" "$package_name" "$command_name" "$platform_url" "$asset_name"
+      ;;
     "")
       maybe_note_dependency "$command_name" "$description (no package manager declared)"
       ;;
@@ -737,7 +780,8 @@ install_optional_dependency_from_catalog() {
 }
 
 run_with_spinner() {
-  local label="$1"
+  local label
+  label="$1"
   shift
   if [ "$DRY_RUN" -eq 1 ]; then
     printf "[dry-run] %s: %s\n" "$label" "$*"
@@ -796,7 +840,8 @@ run_with_spinner() {
   fi
 
   wait "$pid"
-  local status=$?
+  local status
+  status=$?
 
   if [ $status -eq 0 ]; then
     if is_interactive; then
@@ -820,7 +865,8 @@ run_with_spinner() {
 }
 
 record_failure() {
-  local label="$1"
+  local label
+  label="$1"
   FAILURES+=("$label")
   printf "\r[failed] %s\n" "$label" >&2
 }
@@ -842,7 +888,8 @@ detect_package_manager() {
 }
 
 install_packages() {
-  local manager="$1"
+  local manager
+  manager="$1"
   shift
   case "$manager" in
     apt)
@@ -871,7 +918,8 @@ install_packages() {
 }
 
 apt_package_available() {
-  local package_name="$1"
+  local package_name
+  package_name="$1"
 
   if ! command -v apt-cache >/dev/null 2>&1; then
     return 1
@@ -881,8 +929,10 @@ apt_package_available() {
 }
 
 check_dependency_status() {
-  local command_name="$1"
-  local log_name="${2:-$1}"
+  local command_name
+  command_name="$1"
+  local log_name
+  log_name="${2:-$1}"
 
   if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
     printf "[-] Checking %s...\r" "$log_name" > /dev/tty
@@ -911,10 +961,14 @@ check_dependency_status() {
 }
 
 maybe_install_dependency() {
-  local manager="$1"
-  local command_name="$2"
-  local package_name="$3"
-  local description="$4"
+  local manager
+  manager="$1"
+  local command_name
+  command_name="$2"
+  local package_name
+  package_name="$3"
+  local description
+  description="$4"
 
   if check_dependency_status "$command_name"; then
     return 0
@@ -981,7 +1035,8 @@ maybe_install_dependency() {
 }
 
 normalize_semver() {
-  local version="${1#v}"
+  local version
+  version="${1#v}"
   version="${version%%-*}"
   printf '%s\n' "$version"
 }
@@ -1037,8 +1092,10 @@ have_supported_nvim() {
 }
 
 download_to_file() {
-  local url="$1"
-  local output="$2"
+  local url
+  url="$1"
+  local output
+  output="$2"
 
   if command -v curl >/dev/null 2>&1; then
     run_with_spinner "Downloading $(basename "$output")" curl -fL --retry 3 -o "$output" "$url"
@@ -1050,28 +1107,208 @@ download_to_file() {
   fi
 }
 
-install_pinned_neovim_linux() {
-  local asset_name extracted_dir release_url
+github_release_system() {
+  case "$(uname -s)" in
+    Linux) printf '%s\n' linux ;;
+    Darwin) printf '%s\n' darwin ;;
+    *) return 1 ;;
+  esac
+}
+
+github_release_arch() {
+  case "$(uname -m)" in
+    x86_64|amd64) printf '%s\n' x86_64 ;;
+    aarch64|arm64) printf '%s\n' aarch64 ;;
+    i386|i686) printf '%s\n' i686 ;;
+    *) return 1 ;;
+  esac
+}
+
+expand_github_release_template() {
+  local template="$1"
+  local version="$2"
+  local system="$3"
+  local arch="$4"
+
+  template="${template//\$\{ver\}/$version}"
+  template="${template//\$\{system\}/$system}"
+  template="${template//\$\{arch\}/$arch}"
+  printf '%s\n' "$template"
+}
+
+archive_stem() {
+  local name="$1"
+  name="${name##*/}"
+  case "$name" in
+    *.tar.gz) name="${name%.tar.gz}" ;;
+    *.tgz) name="${name%.tgz}" ;;
+    *.zip) name="${name%.zip}" ;;
+    *.tar.xz) name="${name%.tar.xz}" ;;
+    *.tar.bz2) name="${name%.tar.bz2}" ;;
+    *) name="${name%.*}" ;;
+  esac
+  printf '%s\n' "$name"
+}
+
+maybe_install_github_release() {
+  local key="$1"
+  local description="$2"
+  local repo="$3"
+  local command_name="$4"
+  local url_template="$5"
+  local asset_template="$6"
+  local version system arch asset_name release_url archive_path install_root bin_dir extracted_binary target_binary
+
+  if check_dependency_status "$command_name" "$command_name"; then
+    return 0
+  fi
+
+  version="$(get_dep_field "$key" ver)"
+  if [ -z "$version" ] || [ -z "$repo" ]; then
+    DEPENDENCY_SUMMARY+=("$command_name: missing (github-release metadata incomplete)")
+    return 1
+  fi
+
+  system="$(github_release_system)" || {
+    DEPENDENCY_SUMMARY+=("$command_name: unsupported OS $(uname -s)")
+    return 1
+  }
+  arch="$(github_release_arch)" || {
+    DEPENDENCY_SUMMARY+=("$command_name: unsupported architecture $(uname -m)")
+    return 1
+  }
+
+  if [ -z "$asset_template" ] && [ -z "$url_template" ]; then
+    DEPENDENCY_SUMMARY+=("$command_name: missing (github-release asset metadata incomplete)")
+    return 1
+  fi
+
+  asset_name="$(expand_github_release_template "${asset_template:-${url_template##*/}}" "$version" "$system" "$arch")"
+  if [ -n "$url_template" ]; then
+    release_url="$(expand_github_release_template "$url_template" "$version" "$system" "$arch")"
+  else
+    release_url="https://github.com/${repo}/releases/download/v${version}/${asset_name}"
+  fi
+
+  if ! prompt_yes_no "Install $command_name for $description from the GitHub release archive?"; then
+    DEPENDENCY_SUMMARY+=("$command_name: skipped")
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name installer needs curl or wget. Install curl and retry?"; then
+      install_packages "$PACKAGE_MANAGER" curl
+    else
+      DEPENDENCY_SUMMARY+=("$command_name: missing (requires curl or wget)")
+      return 1
+    fi
+  fi
+
+  case "$asset_name" in
+    *.zip)
+      if ! command -v unzip >/dev/null 2>&1 && ! command -v bsdtar >/dev/null 2>&1; then
+        if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name archive extraction needs unzip or bsdtar. Install unzip and retry?"; then
+          install_packages "$PACKAGE_MANAGER" unzip
+        else
+          DEPENDENCY_SUMMARY+=("$command_name: missing (requires unzip or bsdtar)")
+          return 1
+        fi
+      fi
+      ;;
+    *.tar.gz|*.tgz|*.tar.xz|*.tar.bz2)
+      if ! command -v tar >/dev/null 2>&1; then
+        if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name archive extraction needs tar. Install tar and retry?"; then
+          install_packages "$PACKAGE_MANAGER" tar
+        else
+          DEPENDENCY_SUMMARY+=("$command_name: missing (requires tar)")
+          return 1
+        fi
+      fi
+      ;;
+  esac
+
+  install_root="$STATE_HOME/tools/$key/v${version}"
+  bin_dir="$STATE_HOME/bin"
+  archive_path="${TMPDIR:-/tmp}/${asset_name}"
+  target_binary="$bin_dir/$command_name"
+
+  run_cmd mkdir -p "$install_root" "$bin_dir" || return 1
+
+  if [ ! -x "$target_binary" ]; then
+    download_to_file "$release_url" "$archive_path" || {
+      DEPENDENCY_SUMMARY+=("$command_name: install attempted")
+      return 1
+    }
+
+    case "$asset_name" in
+      *.zip) extract_zip_archive "$archive_path" "$install_root" || return 1 ;;
+      *) run_with_spinner "Extracting $asset_name" tar -xf "$archive_path" -C "$install_root" || return 1 ;;
+    esac
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+      DEPENDENCY_SUMMARY+=("$command_name: install preview via GitHub release")
+      return 0
+    fi
+
+    extracted_binary="$(find "$install_root" -type f -name "$command_name" -perm -u=x 2>/dev/null | head -n 1)"
+    if [ -z "$extracted_binary" ] && [ -f "$install_root/$(archive_stem "$asset_name")/$command_name" ]; then
+      extracted_binary="$install_root/$(archive_stem "$asset_name")/$command_name"
+    fi
+    if [ -z "$extracted_binary" ]; then
+      DEPENDENCY_SUMMARY+=("$command_name: install attempted")
+      return 1
+    fi
+
+    run_cmd chmod u=rwx,go=rx "$extracted_binary" || true
+    run_cmd ln -sfn "$extracted_binary" "$target_binary" || return 1
+  fi
+
+  if command -v "$command_name" >/dev/null 2>&1 || [ -x "$target_binary" ]; then
+    DEPENDENCY_SUMMARY+=("$command_name: installed official v${version}")
+  else
+    DEPENDENCY_SUMMARY+=("$command_name: install attempted")
+  fi
+}
+
+get_neovim_release_version() {
+  local version
+  version="${NEOVIM_VERSION:-$(get_dep_field nvim ver)}"
+  printf '%s\n' "${version:-0.12.1}"
+}
+
+install_pinned_neovim_unix() {
+  local version asset_name extracted_dir release_url os
   local tools_root install_root bin_dir archive_path
 
-  case "$(uname -m)" in
-    x86_64|amd64)
+  version="$(get_neovim_release_version)"
+  os="$(uname -s)"
+
+  case "$os:$(uname -m)" in
+    Linux:x86_64|Linux:amd64)
       asset_name="nvim-linux-x86_64.tar.gz"
       extracted_dir="nvim-linux-x86_64"
       ;;
-    aarch64|arm64)
+    Linux:aarch64|Linux:arm64)
       asset_name="nvim-linux-arm64.tar.gz"
       extracted_dir="nvim-linux-arm64"
       ;;
+    Darwin:x86_64|Darwin:amd64)
+      asset_name="nvim-macos-x86_64.tar.gz"
+      extracted_dir="nvim-macos-x86_64"
+      ;;
+    Darwin:aarch64|Darwin:arm64)
+      asset_name="nvim-macos-arm64.tar.gz"
+      extracted_dir="nvim-macos-arm64"
+      ;;
     *)
-      echo "Unsupported Linux architecture for pinned Neovim install: $(uname -m)" >&2
+      echo "Unsupported platform for pinned Neovim install: $os $(uname -m)" >&2
       return 1
       ;;
   esac
 
-  release_url="https://github.com/neovim/neovim/releases/download/v${NEOVIM_LINUX_VERSION}/${asset_name}"
+  release_url="https://github.com/neovim/neovim/releases/download/v${version}/${asset_name}"
   tools_root="$STATE_HOME/tools/neovim"
-  install_root="$tools_root/v${NEOVIM_LINUX_VERSION}"
+  install_root="$tools_root/v${version}"
   bin_dir="$STATE_HOME/bin"
   archive_path="${TMPDIR:-/tmp}/${asset_name}"
 
@@ -1079,15 +1316,17 @@ install_pinned_neovim_linux() {
 
   if [ ! -x "$install_root/$extracted_dir/bin/nvim" ]; then
     download_to_file "$release_url" "$archive_path" || return 1
-    run_with_spinner "Extracting pinned Neovim v${NEOVIM_LINUX_VERSION}" tar -xzf "$archive_path" -C "$install_root" || return 1
+    run_with_spinner "Extracting pinned Neovim v${version}" tar -xzf "$archive_path" -C "$install_root" || return 1
   fi
 
   run_cmd ln -sfn "$install_root/$extracted_dir/bin/nvim" "$bin_dir/nvim" || return 1
 }
 
 maybe_install_neovim() {
-  local manager="$1"
-  local version_before version_after attempted_package_install=0
+  local _manager="$1"
+  local version version_before version_after
+
+  version="$(get_neovim_release_version)"
 
   if have_supported_nvim; then
     DEPENDENCY_SUMMARY+=("nvim: present ($(get_nvim_version))")
@@ -1099,33 +1338,22 @@ maybe_install_neovim() {
     echo "Detected Neovim $version_before, but LazyVim requires >= $NEOVIM_MIN_VERSION." > /dev/tty
   fi
 
-  if [ "$manager" != "none" ]; then
-    if [ "$manager" = "apt" ] && ! apt_package_available "neovim"; then
-      if is_interactive; then
-        echo "APT package not available: neovim (Neovim runtime for LazyVim); skipping automatic package install." > /dev/tty
+  case "$(uname -s)" in
+    Linux|Darwin)
+      if prompt_yes_no "Install pinned Neovim v${version} from the official GitHub release?"; then
+        if install_pinned_neovim_unix && have_supported_nvim; then
+          DEPENDENCY_SUMMARY+=("nvim: installed official v$(get_nvim_version)")
+          return 0
+        fi
+        DEPENDENCY_SUMMARY+=("nvim: official install attempted")
+        return 1
       fi
-    elif prompt_yes_no "Install neovim package for LazyVim?"; then
-      attempted_package_install=1
-      install_packages "$manager" neovim
-      if have_supported_nvim; then
-        DEPENDENCY_SUMMARY+=("nvim: installed ($(get_nvim_version))")
-        return 0
-      fi
-    else
-      is_verbose && echo "skipping neovim package" >&2
-    fi
-  fi
-
-  if [ "$(uname -s)" = "Linux" ]; then
-    if [ "$attempted_package_install" -eq 1 ] || prompt_yes_no "Install pinned Neovim v${NEOVIM_LINUX_VERSION} from the official release?"; then
-      if install_pinned_neovim_linux && have_supported_nvim; then
-        DEPENDENCY_SUMMARY+=("nvim: installed official v$(get_nvim_version)")
-        return 0
-      fi
-      DEPENDENCY_SUMMARY+=("nvim: official install attempted")
+      ;;
+    *)
+      DEPENDENCY_SUMMARY+=("nvim: missing (unsupported platform for release install)")
       return 1
-    fi
-  fi
+      ;;
+  esac
 
   version_after="$(get_nvim_version 2>/dev/null || true)"
   if [ -n "$version_after" ]; then
@@ -1137,8 +1365,10 @@ maybe_install_neovim() {
 }
 
 maybe_note_dependency() {
-  local command_name="$1"
-  local description="$2"
+  local command_name
+  command_name="$1"
+  local description
+  description="$2"
 
   if command -v "$command_name" >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("$command_name: present")
@@ -1193,7 +1423,7 @@ maybe_install_rtk() {
 
   tmp_dir="$(mktemp -d)"
   run_with_spinner "Downloading and extracting rtk v${rtk_ver}" sh -c "curl -fsSL '$target_url' | tar -xz -C '$tmp_dir'"
-  
+
   if [ -f "$tmp_dir/rtk" ]; then
     run_cmd mkdir -p "$HOME_DIR/.local/bin"
     run_cmd cp "$tmp_dir/rtk" "$HOME_DIR/.local/bin/rtk"
@@ -1283,7 +1513,8 @@ setup_eza_apt_repo() {
 }
 
 maybe_install_eza() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   if check_dependency_status "eza" "eza"; then
     return 0
@@ -1358,7 +1589,8 @@ setup_wezterm_apt_repo() {
 }
 
 maybe_install_wezterm() {
-  local manager="$1"
+  local manager
+  manager="$1"
 
   if check_dependency_status "wezterm" "wezterm"; then
     return 0
@@ -1435,8 +1667,10 @@ setup_q_apt_repo() {
 }
 
 maybe_install_q() {
-  local manager="$1"
-  local aur_helper=""
+  local manager
+  manager="$1"
+  local aur_helper
+  aur_helper=""
 
   if check_dependency_status "q" "q"; then
     return 0
@@ -1494,8 +1728,10 @@ maybe_install_q() {
 }
 
 maybe_install_p7zip() {
-  local manager="$1"
-  local package_name="p7zip"
+  local manager
+  manager="$1"
+  local package_name
+  package_name="p7zip"
 
   if check_dependency_status "7z" "p7zip"; then
     return 0
@@ -1510,8 +1746,10 @@ maybe_install_p7zip() {
 }
 
 maybe_install_poppler() {
-  local manager="$1"
-  local package_name="poppler"
+  local manager
+  manager="$1"
+  local package_name
+  package_name="poppler"
 
   if check_dependency_status "pdftotext" "poppler"; then
     return 0
@@ -1558,8 +1796,10 @@ maybe_install_uv() {
 }
 
 extract_zip_archive() {
-  local archive_path="$1"
-  local destination_dir="$2"
+  local archive_path
+  archive_path="$1"
+  local destination_dir
+  destination_dir="$2"
 
   if command -v unzip >/dev/null 2>&1; then
     run_with_spinner "Extracting $(basename "$archive_path")" unzip -oq "$archive_path" -d "$destination_dir"
@@ -1603,7 +1843,9 @@ maybe_install_bw() {
     fi
   fi
 
-  local bw_ver=$(get_managed_tool bw ver)
+  local bw_ver
+
+  bw_ver=$(get_managed_tool bw ver)
   [ -z "$bw_ver" ] && bw_ver="1.22.1"
   release_url="https://github.com/bitwarden/cli/releases/download/v${bw_ver}/bw-linux-${bw_ver}.zip"
   archive_path="${TMPDIR:-/tmp}/bw-linux-${bw_ver}.zip"
@@ -1642,8 +1884,10 @@ maybe_install_bw() {
 }
 
 maybe_install_dua_cli() {
-  local manager="$1"
-  local repo_url="https://github.com/byron/dua-cli.git"
+  local manager
+  manager="$1"
+  local repo_url
+  repo_url="https://github.com/byron/dua-cli.git"
 
   if command -v dua >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("dua: present")
@@ -1674,7 +1918,8 @@ maybe_install_dua_cli() {
 }
 
 maybe_install_pnpm() {
-  local pnpm_home="${PNPM_HOME:-$HOME_DIR/.local/share/pnpm}"
+  local pnpm_home
+  pnpm_home="${PNPM_HOME:-$HOME_DIR/.local/share/pnpm}"
 
   if command -v pnpm >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("pnpm: present")
@@ -1691,7 +1936,9 @@ maybe_install_pnpm() {
   export PATH="$PNPM_HOME:$PATH"
   run_cmd mkdir -p "$PNPM_HOME"
 
-  local pnpm_ver=$(get_managed_tool pnpm ver)
+  local pnpm_ver
+
+  pnpm_ver=$(get_managed_tool pnpm ver)
   [ -z "$pnpm_ver" ] && pnpm_ver="10.18.3"
 
   if command -v corepack >/dev/null 2>&1; then
@@ -1721,8 +1968,10 @@ maybe_install_pnpm() {
 }
 
 link_file() {
-  local source="$1"
-  local target="$2"
+  local source
+  source="$1"
+  local target
+  target="$2"
   run_cmd mkdir -p "$(dirname "$target")"
   backup_target "$source" "$target" || {
     record_failure "Backing up $target"
@@ -1736,8 +1985,10 @@ link_file() {
 }
 
 backup_target() {
-  local source="$1"
-  local target="$2"
+  local source
+  source="$1"
+  local target
+  target="$2"
   local target_dir target_name backup_dir
 
   if [ -L "$target" ]; then
@@ -1766,9 +2017,12 @@ backup_target() {
 }
 
 sync_repo() {
-  local repo_url="$1"
-  local ref="$2"
-  local target="$3"
+  local repo_url
+  repo_url="$1"
+  local ref
+  ref="$2"
+  local target
+  target="$3"
 
   if [ ! -d "$target/.git" ]; then
     run_with_spinner "Cloning $(basename "$target")" git clone "$repo_url" "$target" || return 1
@@ -1779,7 +2033,8 @@ sync_repo() {
 }
 
 normalize_tree_permissions() {
-  local target="$1"
+  local target
+  target="$1"
 
   [ -e "$target" ] || return 0
 
@@ -1788,7 +2043,8 @@ normalize_tree_permissions() {
 }
 
 restore_git_executable_bits() {
-  local repo_root="$1"
+  local repo_root
+  repo_root="$1"
   local relative_path
 
   [ -d "$repo_root/.git" ] || return 0
@@ -1803,7 +2059,8 @@ restore_git_executable_bits() {
 }
 
 ensure_oh_my_zsh_permissions() {
-  local omz_root="$STATE_HOME/oh-my-zsh"
+  local omz_root
+  omz_root="$STATE_HOME/oh-my-zsh"
   local git_dir
   local repo_root
 
@@ -1826,9 +2083,12 @@ ensure_oh_my_zsh_permissions() {
 }
 
 ensure_ssh_include() {
-  local ssh_dir="$HOME_DIR/.ssh"
-  local ssh_config="$ssh_dir/config"
-  local include_line="Include ~/.config/ooodnakov/ssh/config"
+  local ssh_dir
+  ssh_dir="$HOME_DIR/.ssh"
+  local ssh_config
+  ssh_config="$ssh_dir/config"
+  local include_line
+  include_line="Include ~/.config/ooodnakov/ssh/config"
 
   run_cmd mkdir -p "$ssh_dir"
   run_cmd touch "$ssh_config"
@@ -1851,7 +2111,8 @@ ensure_ssh_include() {
 }
 
 install_fonts() {
-  local source_dir="$REPO_ROOT/fonts/meslo"
+  local source_dir
+  source_dir="$REPO_ROOT/fonts/meslo"
 
   if [ -d "$source_dir" ]; then
     run_cmd mkdir -p "$FONT_TARGET_DIR"
@@ -1863,7 +2124,8 @@ install_fonts() {
 }
 
 generate_autogen_completions() {
-  local target_dir="$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
+  local target_dir
+  target_dir="$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
   local spec binary description output_file completion_cmd
   [ "$DRY_RUN" -eq 1 ] && { echo "[dry-run] Generating autogen completions in $target_dir"; return 0; }
 
@@ -1902,36 +2164,66 @@ generate_oooconf_completions() {
 
 install_managed_tools() {
   # All pins now pulled from optional-deps.toml via get_managed_tool (sole source of truth)
-  local ohmyzsh_repo=$(get_managed_tool oh-my-zsh repo)
-  local ohmyzsh_ref=$(get_managed_tool oh-my-zsh ref)
-  local p10k_repo=$(get_managed_tool powerlevel10k repo)
-  local p10k_ref=$(get_managed_tool powerlevel10k ref)
-  local nvm_repo=$(get_managed_tool nvm repo)
-  local nvm_ref=$(get_managed_tool nvm ref)
-  local k_repo=$(get_managed_tool k repo)
-  local k_ref=$(get_managed_tool k ref)
-  local marker_repo=$(get_managed_tool marker repo)
-  local marker_ref=$(get_managed_tool marker ref)
-  local todo_repo=$(get_managed_tool todo-txt repo)
-  local todo_ref=$(get_managed_tool todo-txt ref)
-  local autosuggestions_repo=$(get_managed_tool zsh-autosuggestions repo)
-  local autosuggestions_ref=$(get_managed_tool zsh-autosuggestions ref)
-  local highlighting_repo=$(get_managed_tool zsh-syntax-highlighting repo)
-  local highlighting_ref=$(get_managed_tool zsh-syntax-highlighting ref)
-  local history_repo=$(get_managed_tool zsh-history-substring-search repo)
-  local history_ref=$(get_managed_tool zsh-history-substring-search ref)
-  local autocomplete_repo=$(get_managed_tool zsh-autocomplete repo)
-  local autocomplete_ref=$(get_managed_tool zsh-autocomplete ref)
-  local fzftab_repo=$(get_managed_tool fzf-tab repo)
-  local fzftab_ref=$(get_managed_tool fzf-tab ref)
-  local forgit_repo=$(get_managed_tool forgit repo)
-  local forgit_ref=$(get_managed_tool forgit ref)
-  local youshoulduse_repo=$(get_managed_tool you-should-use repo)
-  local youshoulduse_ref=$(get_managed_tool you-should-use ref)
-  local autouv_repo=$(get_managed_tool auto-uv-env repo)
-  local autouv_ref=$(get_managed_tool auto-uv-env ref)
+  local ohmyzsh_repo
+  ohmyzsh_repo=$(get_managed_tool oh-my-zsh repo)
+  local ohmyzsh_ref
+  ohmyzsh_ref=$(get_managed_tool oh-my-zsh ref)
+  local p10k_repo
+  p10k_repo=$(get_managed_tool powerlevel10k repo)
+  local p10k_ref
+  p10k_ref=$(get_managed_tool powerlevel10k ref)
+  local nvm_repo
+  nvm_repo=$(get_managed_tool nvm repo)
+  local nvm_ref
+  nvm_ref=$(get_managed_tool nvm ref)
+  local k_repo
+  k_repo=$(get_managed_tool k repo)
+  local k_ref
+  k_ref=$(get_managed_tool k ref)
+  local marker_repo
+  marker_repo=$(get_managed_tool marker repo)
+  local marker_ref
+  marker_ref=$(get_managed_tool marker ref)
+  local todo_repo
+  todo_repo=$(get_managed_tool todo-txt repo)
+  local todo_ref
+  todo_ref=$(get_managed_tool todo-txt ref)
+  local autosuggestions_repo
+  autosuggestions_repo=$(get_managed_tool zsh-autosuggestions repo)
+  local autosuggestions_ref
+  autosuggestions_ref=$(get_managed_tool zsh-autosuggestions ref)
+  local highlighting_repo
+  highlighting_repo=$(get_managed_tool zsh-syntax-highlighting repo)
+  local highlighting_ref
+  highlighting_ref=$(get_managed_tool zsh-syntax-highlighting ref)
+  local history_repo
+  history_repo=$(get_managed_tool zsh-history-substring-search repo)
+  local history_ref
+  history_ref=$(get_managed_tool zsh-history-substring-search ref)
+  local autocomplete_repo
+  autocomplete_repo=$(get_managed_tool zsh-autocomplete repo)
+  local autocomplete_ref
+  autocomplete_ref=$(get_managed_tool zsh-autocomplete ref)
+  local fzftab_repo
+  fzftab_repo=$(get_managed_tool fzf-tab repo)
+  local fzftab_ref
+  fzftab_ref=$(get_managed_tool fzf-tab ref)
+  local forgit_repo
+  forgit_repo=$(get_managed_tool forgit repo)
+  local forgit_ref
+  forgit_ref=$(get_managed_tool forgit ref)
+  local youshoulduse_repo
+  youshoulduse_repo=$(get_managed_tool you-should-use repo)
+  local youshoulduse_ref
+  youshoulduse_ref=$(get_managed_tool you-should-use ref)
+  local autouv_repo
+  autouv_repo=$(get_managed_tool auto-uv-env repo)
+  local autouv_ref
+  autouv_ref=$(get_managed_tool auto-uv-env ref)
 
-  local bin_dir="$STATE_HOME/bin"
+  local bin_dir
+
+  bin_dir="$STATE_HOME/bin"
 
   sync_repo "$ohmyzsh_repo" "$ohmyzsh_ref" "$STATE_HOME/oh-my-zsh" && TOOL_SUMMARY+=("oh-my-zsh: synced") || TOOL_SUMMARY+=("oh-my-zsh: failed")
   sync_repo "$p10k_repo" "$p10k_ref" "$STATE_HOME/powerlevel10k" && TOOL_SUMMARY+=("powerlevel10k: synced") || TOOL_SUMMARY+=("powerlevel10k: failed")
@@ -1970,10 +2262,14 @@ install_managed_tools() {
 }
 
 install_auto_uv_env() {
-  local source_dir="$STATE_HOME/src/auto-uv-env"
-  local legacy_dir="$STATE_HOME/auto-uv-env"
-  local share_dir="$STATE_HOME/auto-uv-env"
-  local bin_dir="$STATE_HOME/bin"
+  local source_dir
+  source_dir="$STATE_HOME/src/auto-uv-env"
+  local legacy_dir
+  legacy_dir="$STATE_HOME/auto-uv-env"
+  local share_dir
+  share_dir="$STATE_HOME/auto-uv-env"
+  local bin_dir
+  bin_dir="$STATE_HOME/bin"
 
   if [ -d "$legacy_dir/.git" ] && [ ! -e "$source_dir" ]; then
     run_cmd mkdir -p "$(dirname "$source_dir")"
@@ -1986,8 +2282,11 @@ install_auto_uv_env() {
     fi
   fi
 
-  local autouv_repo=$(get_managed_tool auto-uv-env repo)
-  local autouv_ref=$(get_managed_tool auto-uv-env ref)
+  local autouv_repo
+
+  autouv_repo=$(get_managed_tool auto-uv-env repo)
+  local autouv_ref
+  autouv_ref=$(get_managed_tool auto-uv-env ref)
   sync_repo "$autouv_repo" "$autouv_ref" "$source_dir" || {
     TOOL_SUMMARY+=("auto-uv-env: failed")
     return 1
@@ -2029,20 +2328,24 @@ print_summary() {
 
   echo
   echo "Dependency summary:"
-  for item in "${DEPENDENCY_SUMMARY[@]}"; do
-    if ! is_verbose && [[ "$item" == *": present" || "$item" == *": skipped" ]]; then
-      continue
-    fi
-    echo "  - $item"
-  done
+  if [ ${#DEPENDENCY_SUMMARY[@]} -gt 0 ]; then
+    for item in "${DEPENDENCY_SUMMARY[@]}"; do
+      if ! is_verbose && [[ "$item" == *": present" || "$item" == *": skipped" ]]; then
+        continue
+      fi
+      echo "  - $item"
+    done
+  fi
 
   echo "Managed tools:"
-  for item in "${TOOL_SUMMARY[@]}"; do
-    if ! is_verbose && [[ "$item" == *": linked" || "$item" == *": synced" || "$item" == "ensured directory: "* || "$item" == *": linked into "* || "$item" == *": permissions normalized" || "$item" == *": install.py succeeded" ]]; then
-       continue
-    fi
-    echo "  - $item"
-  done
+  if [ ${#TOOL_SUMMARY[@]} -gt 0 ]; then
+    for item in "${TOOL_SUMMARY[@]}"; do
+      if ! is_verbose && [[ "$item" == *": linked" || "$item" == *": synced" || "$item" == "ensured directory: "* || "$item" == *": linked into "* || "$item" == *": permissions normalized" || "$item" == *": install.py succeeded" ]]; then
+         continue
+      fi
+      echo "  - $item"
+    done
+  fi
   if [ "${#FAILURES[@]}" -gt 0 ]; then
     echo "Failures:"
     for item in "${FAILURES[@]}"; do
@@ -2056,8 +2359,10 @@ update_repo() {
 }
 
 doctor_check_link() {
-  local source="$1"
-  local target="$2"
+  local source
+  source="$1"
+  local target
+  target="$2"
   if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
     echo "[ok] $target -> $source"
   else
@@ -2067,7 +2372,8 @@ doctor_check_link() {
 }
 
 doctor_check_command() {
-  local name="$1"
+  local name
+  name="$1"
   if command -v "$name" >/dev/null 2>&1; then
     echo "[ok] command: $name"
   else

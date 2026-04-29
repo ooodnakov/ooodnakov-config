@@ -41,6 +41,8 @@ def test_completions_generator_uses_canonical_parser() -> None:
     assert "from read_optional_deps import load_deps" in content
     assert "from oooconf_cli_spec import CliSpec, CommandSpec, load_cli_spec" in content
     assert "def parse_optional_deps" not in content
+    assert 'eval "local -a' not in content
+    assert "${(@P)var_" in content
 
 
 def test_spec_driven_subcommand_options_are_emitted() -> None:
@@ -82,6 +84,18 @@ def test_subsubcommand_metadata_is_emitted_for_zsh_and_powershell() -> None:
     )
     assert "'agents:mcp' = @('sync', 'status')" in pwsh_content
     assert "'agents:mcp:sync' = @('--check')" in pwsh_content
+
+
+def test_top_level_command_values_are_emitted() -> None:
+    zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
+    assert "cmd_wm_values=(" in zsh_content
+    assert "'komorebi:komorebi'" in zsh_content
+    assert "'glazewm:glazewm'" in zsh_content
+
+    pwsh_content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "'wm' = @('komorebi', 'glazewm')" in pwsh_content
 
 
 def test_oooconf_completions_command_wires_generator() -> None:

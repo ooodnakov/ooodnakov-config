@@ -282,3 +282,5 @@ unalias x 2>/dev/null
 [ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.
 unalias h 2>/dev/null
 
+[ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.
+

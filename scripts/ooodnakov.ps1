@@ -911,7 +911,7 @@ function Invoke-WmCommand {
             $active = "none"
             if (Get-Process komorebi -ErrorAction SilentlyContinue) { $active = "komorebi" }
             elseif (Get-Process glazewm -ErrorAction SilentlyContinue) { $active = "glazewm" }
-            
+
             Write-UiLine -Role info -Message "Active Window Manager: $(Format-UiText -Text $active -Role ok -Bold)"
             return
         }
@@ -963,7 +963,7 @@ function Invoke-WmCommand {
                 Write-UiLine -Role warn -Message "Komorebic stop failed, forcing processes to close."
             }
             Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
-            
+
             # Stop GlazeWM
             Stop-Process -Name "glazewm" -ErrorAction SilentlyContinue
             Write-UiLine -Role ok -Message "WM stack stopped."
