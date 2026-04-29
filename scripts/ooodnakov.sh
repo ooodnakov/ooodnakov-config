@@ -148,7 +148,7 @@ ui_colorize() {
     printf '%s' "$text"
     return 0
   fi
-  theme="$(get_oooconf_theme)"
+  theme="${__OOOCONF_THEME_CACHE:=$(get_oooconf_theme)}"
   case "$role" in
     section)
       case "$theme" in

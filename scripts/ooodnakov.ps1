@@ -506,6 +506,8 @@ function Get-UiIcon {
     return $UiAscii[$Name]
 }
 
+$script:OooconfThemePaletteCache = $null
+
 function Get-UiCommandIcon {
     param([Parameter(Mandatory = $true)][string]$Name)
     if (Test-UiNerdFont) {
@@ -553,7 +555,7 @@ function Format-UiText {
         [switch]$Bold
     )
     if (-not (Test-UiColor)) { return $Text }
-    $palette = Get-UiThemePalette
+    $palette = if ($null -ne $script:OooconfThemePaletteCache) { $script:OooconfThemePaletteCache } else { $script:OooconfThemePaletteCache = Get-UiThemePalette }
     $color = switch ($Role) {
         "section" { $palette.Section }
         "ok" { $palette.Ok }
