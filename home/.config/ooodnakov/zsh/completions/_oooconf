@@ -208,7 +208,7 @@ cmd_agents_subcommands=(
   'skills:manage agent skills and extensions'
 )
 cmd_agents_detect_options=(
-  '--repo-root:repo-root'
+  '--repo-root:repo-root:_files -/'
   '--config:config'
   '--json:json'
 )
@@ -217,7 +217,7 @@ cmd_agents_detect_values=(
 cmd_agents_detect_subsubcommands=(
 )
 cmd_agents_sync_options=(
-  '--repo-root:repo-root'
+  '--repo-root:repo-root:_files -/'
   '--config:config'
   '--check:check'
   '--global:global'
@@ -227,7 +227,7 @@ cmd_agents_sync_values=(
 cmd_agents_sync_subsubcommands=(
 )
 cmd_agents_doctor_options=(
-  '--repo-root:repo-root'
+  '--repo-root:repo-root:_files -/'
   '--config:config'
   '--strict-config-paths:strict-config-paths'
 )
@@ -265,7 +265,7 @@ cmd_agents_rtk_init_options=(
   '--check:check'
 )
 cmd_agents_update_options=(
-  '--repo-root:repo-root'
+  '--repo-root:repo-root:_files -/'
   '--config:config'
   '--check:check'
 )
@@ -274,7 +274,7 @@ cmd_agents_update_values=(
 cmd_agents_update_subsubcommands=(
 )
 cmd_agents_install_options=(
-  '--repo-root:repo-root'
+  '--repo-root:repo-root:_files -/'
   '--config:config'
   '--check:check'
 )
@@ -337,7 +337,7 @@ cmd_secrets_unlock_subsubcommands=(
 )
 cmd_secrets_sync_options=(
   '--backend:backend'
-  '--template:template'
+  '--template:template:_files -/'
   '--dry-run:dry-run'
   '--force:force'
 )
@@ -347,14 +347,14 @@ cmd_secrets_sync_subsubcommands=(
 )
 cmd_secrets_doctor_options=(
   '--backend:backend'
-  '--template:template'
+  '--template:template:_files -/'
 )
 cmd_secrets_doctor_values=(
 )
 cmd_secrets_doctor_subsubcommands=(
 )
 cmd_secrets_list_options=(
-  '--template:template'
+  '--template:template:_files -/'
   '--resolved:resolved'
   '--backend:backend'
 )
@@ -363,7 +363,7 @@ cmd_secrets_list_values=(
 cmd_secrets_list_subsubcommands=(
 )
 cmd_secrets_ls_options=(
-  '--template:template'
+  '--template:template:_files -/'
   '--resolved:resolved'
   '--backend:backend'
 )
@@ -372,7 +372,7 @@ cmd_secrets_ls_values=(
 cmd_secrets_ls_subsubcommands=(
 )
 cmd_secrets_status_options=(
-  '--template:template'
+  '--template:template:_files -/'
 )
 cmd_secrets_status_values=(
 )
@@ -385,28 +385,28 @@ cmd_secrets_logout_values=(
 cmd_secrets_logout_subsubcommands=(
 )
 cmd_secrets_add_options=(
-  '--template:template'
+  '--template:template:_files -/'
 )
 cmd_secrets_add_values=(
 )
 cmd_secrets_add_subsubcommands=(
 )
 cmd_secrets_remove_options=(
-  '--template:template'
+  '--template:template:_files -/'
 )
 cmd_secrets_remove_values=(
 )
 cmd_secrets_remove_subsubcommands=(
 )
 cmd_secrets_rm_options=(
-  '--template:template'
+  '--template:template:_files -/'
 )
 cmd_secrets_rm_values=(
 )
 cmd_secrets_rm_subsubcommands=(
 )
 cmd_secrets_del_options=(
-  '--template:template'
+  '--template:template:_files -/'
 )
 cmd_secrets_del_values=(
 )
@@ -621,7 +621,7 @@ if [[ -n "${oooconf_aliases[$command_name]:-}" ]]; then
 fi
 
 safe_command="${command_name//[^A-Za-z0-9_]/_}"
-if [[ "$safe_command" == <->* ]]; then safe_command="_$safe_command"; fi
+if [[ "$safe_command" =~ ^[0-9] ]]; then safe_command="_$safe_command"; fi
 eval "local -a command_options=("${cmd_${safe_command}_options[@]}")"
 eval "local -a command_subcommands=("${cmd_${safe_command}_subcommands[@]}")"
 
@@ -643,6 +643,10 @@ previous_token=
 if (( CURRENT > 2 )); then previous_token="$words[CURRENT-1]"; fi
 
 if [[ -z "$subcommand_name" ]]; then
+  if [[ "$command_name" == help ]]; then
+    _describe -t commands 'oooconf command' oooconf_commands
+    return 0
+  fi
   _describe -t subcommands 'oooconf subcommand' command_subcommands
   _describe -t options 'oooconf option' command_options
   if [[ "$command_name" == install || "$command_name" == deps || "$command_name" == update ]]; then
@@ -652,7 +656,7 @@ if [[ -z "$subcommand_name" ]]; then
 fi
 
 safe_subcommand="${subcommand_name//[^A-Za-z0-9_]/_}"
-if [[ "$safe_subcommand" == <->* ]]; then safe_subcommand="_$safe_subcommand"; fi
+if [[ "$safe_subcommand" =~ ^[0-9] ]]; then safe_subcommand="_$safe_subcommand"; fi
 eval "local -a sub_options=("${cmd_${safe_command}_${safe_subcommand}_options[@]}")"
 eval "local -a sub_values=("${cmd_${safe_command}_${safe_subcommand}_values[@]}")"
 eval "local -a sub_subcommands=("${cmd_${safe_command}_${safe_subcommand}_subsubcommands[@]}")"
@@ -690,7 +694,7 @@ if [[ -z "$subsubcommand_name" ]]; then
 fi
 
 safe_subsubcommand="${subsubcommand_name//[^A-Za-z0-9_]/_}"
-if [[ "$safe_subsubcommand" == <->* ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi
+if [[ "$safe_subsubcommand" =~ ^[0-9] ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi
 eval "local -a subsub_options=("${cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options[@]}")"
 _describe -t options 'oooconf subsubcommand option' subsub_options
 return 0

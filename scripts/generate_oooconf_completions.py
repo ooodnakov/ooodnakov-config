@@ -14,6 +14,7 @@ COMMANDS_FILE = REPO_ROOT / "scripts" / "oooconf-commands.txt"
 CLI_SPEC_FILE = REPO_ROOT / "scripts" / "oooconf-cli-spec.toml"
 ZSH_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf"
 POWERSHELL_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1"
+PATH_OPTIONS = {"-C", "--repo-root", "--template"}
 
 
 def load_commands(path: Path) -> list[str]:
@@ -71,7 +72,9 @@ def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSp
 
     lines.append(f"cmd_{safe_command}_options=(")
     for option in spec.options:
-        lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option[2:] if option.startswith('--') else option)}'")
+        label = option[2:] if option.startswith("--") else option
+        file_suffix = ":_files -/" if option in PATH_OPTIONS else ""
+        lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}{file_suffix}'")
     lines.append(")")
 
     lines.append(f"cmd_{safe_command}_subcommands=(")
@@ -86,7 +89,9 @@ def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSp
 
         lines.append(f"cmd_{safe_command}_{safe_sub}_options=(")
         for option in options:
-            lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option[2:] if option.startswith('--') else option)}'")
+            label = option[2:] if option.startswith("--") else option
+            file_suffix = ":_files -/" if option in PATH_OPTIONS else ""
+            lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}{file_suffix}'")
         lines.append(")")
 
         lines.append(f"cmd_{safe_command}_{safe_sub}_values=(")
@@ -194,7 +199,7 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
     lines.append("")
 
     lines.append('safe_command="${command_name//[^A-Za-z0-9_]/_}"')
-    lines.append('if [[ "$safe_command" == <->* ]]; then safe_command="_$safe_command"; fi')
+    lines.append('if [[ "$safe_command" =~ ^[0-9] ]]; then safe_command="_$safe_command"; fi')
     lines.append('eval "local -a command_options=("${cmd_${safe_command}_options[@]}")"')
     lines.append('eval "local -a command_subcommands=("${cmd_${safe_command}_subcommands[@]}")"')
     lines.append("")
@@ -219,6 +224,10 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
     lines.append("")
 
     lines.append('if [[ -z "$subcommand_name" ]]; then')
+    lines.append('  if [[ "$command_name" == help ]]; then')
+    lines.append("    _describe -t commands 'oooconf command' oooconf_commands")
+    lines.append("    return 0")
+    lines.append("  fi")
     lines.append("  _describe -t subcommands 'oooconf subcommand' command_subcommands")
     lines.append("  _describe -t options 'oooconf option' command_options")
     lines.append('  if [[ "$command_name" == install || "$command_name" == deps || "$command_name" == update ]]; then')
@@ -229,7 +238,7 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
     lines.append("")
 
     lines.append('safe_subcommand="${subcommand_name//[^A-Za-z0-9_]/_}"')
-    lines.append('if [[ "$safe_subcommand" == <->* ]]; then safe_subcommand="_$safe_subcommand"; fi')
+    lines.append('if [[ "$safe_subcommand" =~ ^[0-9] ]]; then safe_subcommand="_$safe_subcommand"; fi')
     lines.append('eval "local -a sub_options=("${cmd_${safe_command}_${safe_subcommand}_options[@]}")"')
     lines.append('eval "local -a sub_values=("${cmd_${safe_command}_${safe_subcommand}_values[@]}")"')
     lines.append('eval "local -a sub_subcommands=("${cmd_${safe_command}_${safe_subcommand}_subsubcommands[@]}")"')
@@ -271,7 +280,7 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
     lines.append("")
 
     lines.append('safe_subsubcommand="${subsubcommand_name//[^A-Za-z0-9_]/_}"')
-    lines.append('if [[ "$safe_subsubcommand" == <->* ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi')
+    lines.append('if [[ "$safe_subsubcommand" =~ ^[0-9] ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi')
     lines.append(
         'eval "local -a subsub_options=("${cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options[@]}")"'
     )
