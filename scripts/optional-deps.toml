@@ -428,6 +428,40 @@ windows.winget_id = "JesseDuffield.lazygit"
 windows.package = "lazygit"
 
 [[deps]]
+key = "lazydocker"
+display = "lazydocker"
+description = "terminal UI for managing containers and images (s=stop, r=start/restart, ?=help)"
+linux.manager = "brew"
+linux.package = "lazydocker"
+macos.manager = "brew"
+macos.package = "lazydocker"
+windows.manager = "winget"
+windows.winget_id = "JesseDuffield.lazydocker"
+windows.package = "lazydocker"
+
+[[deps]]
+key = "impala"
+display = "Impala"
+description = "TUI for managing Wi-Fi networks (tab sections, space select, enter connect)"
+linux.manager = "cargo"
+linux.package = "impala"
+macos.manager = "custom"
+macos.command = "not available on macOS"
+windows.manager = "custom"
+windows.command = "not available on Windows"
+
+[[deps]]
+key = "bluetui"
+display = "BlueTUI"
+description = "TUI for managing Bluetooth connections"
+linux.manager = "cargo"
+linux.package = "bluetui"
+macos.manager = "custom"
+macos.command = "not available on macOS"
+windows.manager = "custom"
+windows.command = "not available on Windows"
+
+[[deps]]
 key = "uv"
 display = "uv"
 description = "Python package manager via official installer"
