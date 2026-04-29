@@ -210,6 +210,9 @@ def test_completions_generator():
 
 def test_shell_scripts_syntax_and_dry_run():
     """Test .sh and .ps1 files for syntax and basic dry-run (no full PS1 execution if pwsh missing)."""
+    if sys.platform == "win32":
+        pytest.skip("Bash shell-script validation runs in the Unix CI jobs")
+
     # Bash syntax (only .sh files; Python is tested via pytest/ruff)
     for script in ["scripts/setup.sh", "scripts/ooodnakov.sh", "scripts/delete.sh"]:
         result = _bash_syntax_check(script)
