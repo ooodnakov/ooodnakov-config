@@ -33,7 +33,7 @@ oooconf_commands=(
 global_opts=(
   '-C:-C:_files -/'
   '--repo-root:repo-root:_files -/'
-  '--print-repo-root:print-repo-root'
+  '--print-repo-root:print-repo-root:_files -/'
   '-h:-h'
   '--help:help'
   '-n:-n'
@@ -209,7 +209,7 @@ cmd_agents_subcommands=(
 )
 cmd_agents_detect_options=(
   '--repo-root:repo-root:_files -/'
-  '--config:config'
+  '--config:config:_files -/'
   '--json:json'
 )
 cmd_agents_detect_values=(
@@ -218,7 +218,7 @@ cmd_agents_detect_subsubcommands=(
 )
 cmd_agents_sync_options=(
   '--repo-root:repo-root:_files -/'
-  '--config:config'
+  '--config:config:_files -/'
   '--check:check'
   '--global:global'
 )
@@ -228,7 +228,7 @@ cmd_agents_sync_subsubcommands=(
 )
 cmd_agents_doctor_options=(
   '--repo-root:repo-root:_files -/'
-  '--config:config'
+  '--config:config:_files -/'
   '--strict-config-paths:strict-config-paths'
 )
 cmd_agents_doctor_values=(
@@ -266,7 +266,7 @@ cmd_agents_rtk_init_options=(
 )
 cmd_agents_update_options=(
   '--repo-root:repo-root:_files -/'
-  '--config:config'
+  '--config:config:_files -/'
   '--check:check'
 )
 cmd_agents_update_values=(
@@ -275,7 +275,7 @@ cmd_agents_update_subsubcommands=(
 )
 cmd_agents_install_options=(
   '--repo-root:repo-root:_files -/'
-  '--config:config'
+  '--config:config:_files -/'
   '--check:check'
 )
 cmd_agents_install_values=(

@@ -14,7 +14,13 @@ COMMANDS_FILE = REPO_ROOT / "scripts" / "oooconf-commands.txt"
 CLI_SPEC_FILE = REPO_ROOT / "scripts" / "oooconf-cli-spec.toml"
 ZSH_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf"
 POWERSHELL_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1"
-PATH_OPTIONS = {"-C", "--repo-root", "--template"}
+PATH_OPTIONS = {"-C", "--repo-root", "--template", "--config"}
+
+
+def is_path_option(option: str) -> bool:
+    if option in PATH_OPTIONS:
+        return True
+    return option.endswith("-path") or option.endswith("-root")
 
 
 def load_commands(path: Path) -> list[str]:
@@ -73,7 +79,7 @@ def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSp
     lines.append(f"cmd_{safe_command}_options=(")
     for option in spec.options:
         label = option[2:] if option.startswith("--") else option
-        file_suffix = ":_files -/" if option in PATH_OPTIONS else ""
+        file_suffix = ":_files -/" if is_path_option(option) else ""
         lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}{file_suffix}'")
     lines.append(")")
 
@@ -90,7 +96,7 @@ def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSp
         lines.append(f"cmd_{safe_command}_{safe_sub}_options=(")
         for option in options:
             label = option[2:] if option.startswith("--") else option
-            file_suffix = ":_files -/" if option in PATH_OPTIONS else ""
+            file_suffix = ":_files -/" if is_path_option(option) else ""
             lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}{file_suffix}'")
         lines.append(")")
 
@@ -149,7 +155,7 @@ def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) 
     lines.append("global_opts=(")
     for option in spec.global_options:
         label = option[2:] if option.startswith("--") else option
-        file_suffix = ":_files -/" if option in {"-C", "--repo-root"} else ""
+        file_suffix = ":_files -/" if is_path_option(option) else ""
         lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}{file_suffix}'")
     lines.append(")")
     lines.append("")
