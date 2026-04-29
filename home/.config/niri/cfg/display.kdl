@@ -11,7 +11,14 @@ output "HDMI-A-2" {
 }
 
 output "DP-1" {
-    mode "2560x1440@144"
+    mode "2560x1440@144.000"
+    position x=2560 y=0
+    scale 1.0
+    variable-refresh-rate
+}
+
+output "HDMI-A-1" {
+    mode "4096x2160@119.880"
     position x=2560 y=0
     scale 1.0
     variable-refresh-rate
