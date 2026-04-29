@@ -1,0 +1,170 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "blocks": [
+    {
+      "alignment": "left",
+      "type": "prompt",
+      "segments": [
+        {
+          "foreground": "#6c6c6c",
+          "style": "plain",
+          "template": "\u256d\u2500",
+          "type": "text"
+        },
+        {
+          "background": "#3c3836",
+          "foreground": "#ebdbb2",
+          "style": "plain",
+          "template": " {{ .Icon }} ",
+          "type": "os"
+        },
+        {
+          "background": "#3c3836",
+          "foreground": "#83a598",
+          "style": "plain",
+          "template": "<#949494>\u2502</> {{ .Path }} ",
+          "properties": {
+            "style": "full",
+            "home_icon": "\uf015 ~",
+            "folder_icon": "\uf07c"
+          },
+          "type": "path"
+        },
+        {
+          "background": "#3c3836",
+          "foreground": "#b8bb26",
+          "foreground_templates": [
+            "{{ if or (.Working.Changed) (.Staging.Changed) }}#fabd2f{{ end }}"
+          ],
+          "properties": {
+            "fetch_status": true,
+            "fetch_upstream_icon": true
+          },
+          "style": "plain",
+          "template": "<#949494>\u2502 </>{{ .HEAD }}{{ if gt .Ahead 0 }} \uf062 {{ .Ahead }}{{ end }}{{ if gt .Behind 0 }} \uf063{{ .Behind }}{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0 }} \ueb4b {{ .StashCount }}{{ end }} ",
+          "type": "git"
+        },
+        {
+          "background": "transparent",
+          "foreground": "#3c3836",
+          "style": "plain",
+          "template": "\ue0b0",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "alignment": "right",
+      "filler": "<#6c6c6c>\u00b7</>",
+      "type": "prompt",
+      "segments": [
+        {
+          "background": "transparent",
+          "foreground": "#3c3836",
+          "style": "plain",
+          "template": "\ue0b2",
+          "type": "text"
+        },
+        {
+          "background": "#3c3836",
+          "foreground": "#d70000",
+          "foreground_templates": [
+            "{{ if eq .Code 0 }}#5faf00{{ end }}"
+          ],
+          "properties": {
+            "always_enabled": true
+          },
+          "style": "plain",
+          "template": " {{ if gt .Code 0 }}\uf00d{{ else }}\uf00c{{ end }} ",
+          "type": "status"
+        },
+        {
+          "background": "#3c3836",
+          "foreground": "#a8a8a8",
+          "style": "plain",
+          "template": "<#949494>\u2502</> {{ .FormattedMs }}\uf252 ",
+          "type": "executiontime"
+        },
+        {
+          "background": "#3c3836",
+          "foreground": "#fabd2f",
+          "style": "plain",
+          "template": "{{ if .Env.DIRENV_FILE }}<#949494>\u2502</> \u25bc {{ end }}",
+          "type": "text"
+        },
+        {
+          "background": "#3c3836",
+          "foreground": "#00afaf",
+          "style": "plain",
+          "template": "{{ if .Venv }}<#949494>\u2502</> \ue235 {{ .Venv }} {{ end }}",
+          "type": "python",
+          "properties": {
+            "display_mode": "context",
+            "fetch_virtual_env": true
+          }
+        },
+        {
+          "background": "#3c3836",
+          "foreground": "#5f8787",
+          "style": "plain",
+          "template": "<#949494>\u2502</> <#a8a8a8>at </>{{ .CurrentDate | date \"15:04:05\" }} \uf017 ",
+          "type": "time"
+        },
+        {
+          "foreground": "#6c6c6c",
+          "style": "plain",
+          "template": " \u2500\u256e ",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "alignment": "left",
+      "type": "prompt",
+      "newline": true,
+      "segments": [
+        {
+          "foreground": "#6c6c6c",
+          "style": "plain",
+          "template": "\u2570\u2500",
+          "type": "text"
+        },
+        {
+          "foreground": "#b8bb26",
+          "foreground_templates": [
+            "{{ if gt .Code 0 }}#ff0000{{ end }}"
+          ],
+          "properties": {
+            "always_enabled": true
+          },
+          "style": "plain",
+          "template": "\u276f ",
+          "type": "status"
+        }
+      ]
+    },
+    {
+      "alignment": "right",
+      "type": "rprompt",
+      "segments": [
+        {
+          "foreground": "#6c6c6c",
+          "style": "plain",
+          "template": "\u2500\u256f ",
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "console_title_template": "{{if .Root}}root :: {{end}}{{.Shell}} :: {{.Folder}}",
+  "final_space": false,
+  "transient_prompt": {
+    "background": "transparent",
+    "foreground": "#b8bb26",
+    "foreground_templates": [
+      "{{ if gt .Code 0 }}#ff0000{{ end }}"
+    ],
+    "template": "\u276f "
+  },
+  "version": 3
+}
