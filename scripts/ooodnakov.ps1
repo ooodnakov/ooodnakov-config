@@ -1763,10 +1763,16 @@ function Invoke-SetupCommand {
             throw "--dry-run is not supported for $SetupCommand"
         }
         & $SetupScript $SetupCommand -DryRun @RemainingArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
+        }
         return
     }
 
     & $SetupScript $SetupCommand @RemainingArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
+    }
 }
 
 function Assert-NoDryRun {

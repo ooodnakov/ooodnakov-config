@@ -2764,6 +2764,6 @@ try {
     Stop-SetupLogging
 }
 
-if ($script:Failures.Count -gt 0 -and $Command -ne "doctor") {
+if ($script:Failures.Count -gt 0) {
     exit 1
 }

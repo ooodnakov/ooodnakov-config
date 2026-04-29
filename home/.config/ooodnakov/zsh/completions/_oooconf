@@ -665,7 +665,7 @@ if [[ -n "${oooconf_aliases[$command_name]:-}" ]]; then
 fi
 
 safe_command="${command_name//[^A-Za-z0-9_]/_}"
-if [[ "$safe_command" == <->* ]]; then safe_command="_$safe_command"; fi
+if [[ "$safe_command" =~ ^[0-9] ]]; then safe_command="_$safe_command"; fi
 local var_opts="cmd_${safe_command}_options"
 local -a command_options=("${(@P)var_opts}")
 local var_subs="cmd_${safe_command}_subcommands"
@@ -691,6 +691,10 @@ previous_token=
 if (( CURRENT > 2 )); then previous_token="$words[CURRENT-1]"; fi
 
 if [[ -z "$subcommand_name" ]]; then
+  if [[ "$command_name" == help ]]; then
+    _describe -t commands 'oooconf command' oooconf_commands
+    return 0
+  fi
   _describe -t subcommands 'oooconf subcommand' command_subcommands
   _describe -t options 'oooconf option' command_options
   _describe -t values 'oooconf value' command_values
@@ -701,7 +705,7 @@ if [[ -z "$subcommand_name" ]]; then
 fi
 
 safe_subcommand="${subcommand_name//[^A-Za-z0-9_]/_}"
-if [[ "$safe_subcommand" == <->* ]]; then safe_subcommand="_$safe_subcommand"; fi
+if [[ "$safe_subcommand" =~ ^[0-9] ]]; then safe_subcommand="_$safe_subcommand"; fi
 local var_sub_opts="cmd_${safe_command}_${safe_subcommand}_options"
 local -a sub_options=("${(@P)var_sub_opts}")
 local var_sub_vals="cmd_${safe_command}_${safe_subcommand}_values"
@@ -743,7 +747,7 @@ if [[ -z "$subsubcommand_name" ]]; then
 fi
 
 safe_subsubcommand="${subsubcommand_name//[^A-Za-z0-9_]/_}"
-if [[ "$safe_subsubcommand" == <->* ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi
+if [[ "$safe_subsubcommand" =~ ^[0-9] ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi
 local var_subsub_opts="cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options"
 local -a subsub_options=("${(@P)var_subsub_opts}")
 _describe -t options 'oooconf subsubcommand option' subsub_options

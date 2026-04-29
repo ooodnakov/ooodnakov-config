@@ -55,13 +55,10 @@ def _as_tuple(values: object) -> tuple[str, ...]:
 
 
 def _as_mapping_of_tuples(values: object) -> dict[str, tuple[str, ...]]:
-    if values is None:
-        return {}
-    if not isinstance(values, dict):
-        raise ValueError(f"Expected table mapping, got {type(values).__name__}")
+    data = _ensure_dict(values)
 
     result: dict[str, tuple[str, ...]] = {}
-    for key, entry in values.items():
+    for key, entry in data.items():
         if not isinstance(key, str):
             raise ValueError("Command mapping keys must be strings")
         result[key] = _as_tuple(entry)
@@ -69,13 +66,10 @@ def _as_mapping_of_tuples(values: object) -> dict[str, tuple[str, ...]]:
 
 
 def _as_mapping_of_strings(values: object) -> dict[str, str]:
-    if values is None:
-        return {}
-    if not isinstance(values, dict):
-        raise ValueError(f"Expected table mapping, got {type(values).__name__}")
+    data = _ensure_dict(values)
 
     result: dict[str, str] = {}
-    for key, entry in values.items():
+    for key, entry in data.items():
         if not isinstance(key, str):
             raise ValueError("Command mapping keys must be strings")
         if not isinstance(entry, str):
@@ -85,12 +79,9 @@ def _as_mapping_of_strings(values: object) -> dict[str, str]:
 
 
 def _as_mapping_of_mapping_tuples(values: object) -> dict[str, dict[str, tuple[str, ...]]]:
-    if values is None:
-        return {}
-    if not isinstance(values, dict):
-        raise ValueError(f"Expected table mapping, got {type(values).__name__}")
+    data = _ensure_dict(values)
     result: dict[str, dict[str, tuple[str, ...]]] = {}
-    for key, entry in values.items():
+    for key, entry in data.items():
         if not isinstance(key, str):
             raise ValueError("Command mapping keys must be strings")
         if not isinstance(entry, dict):
@@ -100,18 +91,23 @@ def _as_mapping_of_mapping_tuples(values: object) -> dict[str, dict[str, tuple[s
 
 
 def _as_mapping_of_mapping_strings(values: object) -> dict[str, dict[str, str]]:
-    if values is None:
-        return {}
-    if not isinstance(values, dict):
-        raise ValueError(f"Expected table mapping, got {type(values).__name__}")
+    data = _ensure_dict(values)
     result: dict[str, dict[str, str]] = {}
-    for key, entry in values.items():
+    for key, entry in data.items():
         if not isinstance(key, str):
             raise ValueError("Command mapping keys must be strings")
         if not isinstance(entry, dict):
             raise ValueError("Expected table mapping for nested command entries")
         result[key] = _as_mapping_of_strings(entry)
     return result
+
+
+def _ensure_dict(values: object) -> dict[object, object]:
+    if values is None:
+        return {}
+    if not isinstance(values, dict):
+        raise ValueError(f"Expected table mapping, got {type(values).__name__}")
+    return values
 
 
 def load_cli_spec(path: Path) -> CliSpec:

@@ -42,7 +42,7 @@ def test_completions_generator_uses_canonical_parser() -> None:
     assert "from oooconf_cli_spec import CliSpec, CommandSpec, load_cli_spec" in content
     assert "def parse_optional_deps" not in content
     assert 'eval "local -a' not in content
-    assert '${(@P)var_' in content
+    assert "${(@P)var_" in content
 
 
 def test_spec_driven_subcommand_options_are_emitted() -> None:

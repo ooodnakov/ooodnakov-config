@@ -121,7 +121,12 @@ Primary commands:
 - `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
 - `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
 - `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content
+- `oooconf agents mcp sync|status`: manage tracked MCP server clones/install state
+- `oooconf agents rtk init`: run RTK global init for detected agents
+- `oooconf agents skills sync`: synchronize configured agent skill specs
 - `oooconf agents update`: update installed agent CLIs using their preferred package manager (pnpm-based tools are updated via `pnpm`)
+- `oooconf agents install <agent>`: install one specific agent CLI
+- `oooconf agents install-scripts-build`: rebuild standalone install scripts for agents
 
 The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts will run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`). If `uv` is missing, they fall back to the system `python3`.
 
@@ -150,6 +155,7 @@ Shell completion:
   - Alias completions also work: `o <Tab>`
   - Complete options: `oooconf install --<Tab>`
   - Complete secrets subcommands: `oooconf secrets <Tab>`
+  - Complete nested agent subcommands: `oooconf agents mcp <Tab>`
   - Complete shell values: `oooconf secrets unlock --shell <Tab>`
 - **Zsh**: completion is provided via fzf-tab integration
   - Regenerate tracked completions: `oooconf completions`
@@ -185,7 +191,13 @@ Agent policy management:
 oooconf agents detect
 oooconf agents sync
 oooconf agents doctor
+oooconf agents mcp sync
+oooconf agents mcp status
+oooconf agents rtk init
+oooconf agents skills sync
 oooconf agents update
+oooconf agents install codex
+oooconf agents install-scripts-build
 ```
 
 The shared AGENTS policy snippets are configured in:
