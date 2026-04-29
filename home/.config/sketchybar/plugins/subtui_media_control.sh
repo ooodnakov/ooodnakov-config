@@ -4,13 +4,13 @@ action="$1"
 
 case "$action" in
   playpause)
-    osascript -e 'tell application "System Events" to key code 16'
+    osascript -e 'tell application "Music" to playpause'
     ;;
   previous)
-    osascript -e 'tell application "System Events" to key code 18'
+    osascript -e 'tell application "Music" to previous track'
     ;;
   next)
-    osascript -e 'tell application "System Events" to key code 19'
+    osascript -e 'tell application "Music" to next track'
     ;;
   *)
     exit 1

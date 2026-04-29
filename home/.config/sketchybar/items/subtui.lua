@@ -10,7 +10,7 @@ local subtui = sbar.add("item", "subtui", {
 		font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",
 		padding_left = 4,
 		padding_right = 2,
-		color = colors.TEXT_CYAN,
+		color = colors.TEXT_SPOTIFY_GREEN,
 	},
 	label = {
 		font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",

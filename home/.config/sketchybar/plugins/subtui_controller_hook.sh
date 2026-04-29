@@ -2,25 +2,24 @@
 
 source "$HOME/.config/sketchybar/plugins/colors.sh"
 
-if ! command -v playerctl >/dev/null 2>&1; then
-  sketchybar --set subtui drawing=off
-  exit 0
-fi
-
-state="$(playerctl --player=subtui status 2>/dev/null | tr '[:upper:]' '[:lower:]')"
-artist="$(playerctl --player=subtui metadata xesam:artist 2>/dev/null | head -n1)"
-title="$(playerctl --player=subtui metadata xesam:title 2>/dev/null)"
+# Expected to be triggered by an external subtui hook service.
+# - SUBTUI_STATE: playing, paused, stopped
+# - SUBTUI_ARTIST: Artist name
+# - SUBTUI_TITLE: Track title
+state="${SUBTUI_STATE:-}"
+artist="${SUBTUI_ARTIST:-}"
+title="${SUBTUI_TITLE:-}"
 
 if [ -z "$title" ]; then
   sketchybar --set subtui drawing=off
   exit 0
 fi
 
-label="$artist – $title"
+label="${artist:+$artist – }$title"
 
 if [ "$state" = "paused" ] || [ "$state" = "stopped" ]; then
   sketchybar --set subtui drawing=on icon.color="$TEXT_GREY" label="$label"
   exit 0
 fi
 
-sketchybar --set subtui drawing=on icon.color="$TEXT_CYAN" label="$label"
+sketchybar --set subtui drawing=on icon.color="$TEXT_SPOTIFY_GREEN" label="$label"
