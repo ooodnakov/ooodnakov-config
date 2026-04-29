@@ -23,7 +23,8 @@
             "org.kde.dolphin",
             "org.telegram.desktop",
             "net.lutris.Lutris",
-            "vesktop"
+            "vesktop",
+            "steam"
         ],
         "position": "center",
         "screenshotAnnotationTool": "",
