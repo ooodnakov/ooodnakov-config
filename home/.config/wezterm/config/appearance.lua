@@ -50,7 +50,7 @@ return {
 		left = '0.5cell',
 		right = '0.5cell',
 		top = '0.5cell',
-		bottom = '1cell',
+		bottom = '2cell',
 	},
 	adjust_window_size_when_changing_font_size = false,
 	window_close_confirmation = "NeverPrompt",

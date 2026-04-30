@@ -37,8 +37,8 @@
     "audio": {
         "mprisBlacklist": [
         ],
-        "preferredPlayer": "",
-        "spectrumFrameRate": 30,
+        "preferredPlayer": "spotify",
+        "spectrumFrameRate": 144,
         "spectrumMirrored": true,
         "visualizerType": "linear",
         "volumeFeedback": false,
@@ -67,6 +67,7 @@
         "middleClickCommand": "",
         "middleClickFollowMouse": false,
         "monitors": [
+            "DP-1"
         ],
         "mouseWheelAction": "none",
         "mouseWheelWrap": true,
@@ -105,6 +106,19 @@
                     "showBadge": false,
                     "showLabelsOnlyWhenOccupied": false,
                     "unfocusedIconsOpacity": 1
+                },
+                {
+                    "colorizeIcons": false,
+                    "hideMode": "hidden",
+                    "iconScale": 0.8,
+                    "id": "Taskbar",
+                    "maxTaskbarWidth": 40,
+                    "onlyActiveWorkspaces": true,
+                    "onlySameOutput": true,
+                    "showPinnedApps": true,
+                    "showTitle": false,
+                    "smartWidth": true,
+                    "titleWidth": 120
                 }
             ],
             "left": [
@@ -185,61 +199,6 @@
                     "width": 200
                 },
                 {
-                    "blacklist": [
-                    ],
-                    "chevronColor": "none",
-                    "colorizeIcons": false,
-                    "drawerEnabled": true,
-                    "hidePassive": false,
-                    "id": "Tray",
-                    "pinned": [
-                        "Telegram Desktop",
-                        "steam",
-                        "Vesktop"
-                    ]
-                },
-                {
-                    "hideWhenZero": false,
-                    "hideWhenZeroUnread": false,
-                    "iconColor": "none",
-                    "id": "NotificationHistory",
-                    "showUnreadBadge": true,
-                    "unreadBadgeColor": "primary"
-                },
-                {
-                    "deviceNativePath": "__default__",
-                    "displayMode": "graphic-clean",
-                    "hideIfIdle": false,
-                    "hideIfNotDetected": true,
-                    "id": "Battery",
-                    "showNoctaliaPerformance": false,
-                    "showPowerProfiles": false
-                },
-                {
-                    "displayMode": "onhover",
-                    "iconColor": "none",
-                    "id": "Volume",
-                    "middleClickCommand": "pwvucontrol || pavucontrol",
-                    "textColor": "none"
-                },
-                {
-                    "applyToAllMonitors": false,
-                    "displayMode": "onhover",
-                    "iconColor": "none",
-                    "id": "Brightness",
-                    "textColor": "none"
-                },
-                {
-                    "colorizeDistroLogo": false,
-                    "colorizeSystemIcon": "primary",
-                    "colorizeSystemText": "none",
-                    "customIconPath": "",
-                    "enableColorization": true,
-                    "icon": "noctalia",
-                    "id": "ControlCenter",
-                    "useDistroLogo": false
-                },
-                {
                     "defaultSettings": {
                         "colorHistory": [
                         ],
@@ -270,57 +229,6 @@
                         }
                     },
                     "id": "plugin:niri-auto-tile"
-                },
-                {
-                    "defaultSettings": {
-                        "autoPaste": false,
-                        "autoPasteDelay": 300,
-                        "autoPasteOnRightClick": false,
-                        "cardColors": {
-                        },
-                        "customColors": {
-                        },
-                        "enableTodoIntegration": false,
-                        "fullscreenMode": false,
-                        "hidePanelBackground": false,
-                        "notecardsEnabled": true,
-                        "panelHeight": 0,
-                        "panelWidth": 1450,
-                        "pincardsEnabled": true,
-                        "showCloseButton": true
-                    },
-                    "id": "plugin:clipper"
-                },
-                {
-                    "defaultSettings": {
-                        "boldText": true,
-                        "boldVer": true,
-                        "checkCmd": "(checkupdates; paru -Qua) 2>/dev/null",
-                        "closeButton": false,
-                        "customIconPath": "",
-                        "desktopTip": true,
-                        "enableColorization": false,
-                        "flatpak": true,
-                        "hideOnEmpty": false,
-                        "iconColor": "none",
-                        "iconName": "arrow-big-down-lines",
-                        "noctalia": true,
-                        "refreshInterval": 120,
-                        "refreshTimer": true,
-                        "toast": true,
-                        "tooltip": true,
-                        "updateCmd": "ghostty -e bash -c 'echo \"Updating System...\";paru; flatpak update; read -n 1 -p \"Press any key to exit...\"'",
-                        "useDistroLogo": false
-                    },
-                    "id": "plugin:arch-updater"
-                },
-                {
-                    "defaultSettings": {
-                        "animationsFolder": "~/.config/niri/animations",
-                        "iconColor": "none",
-                        "targetFile": "~/.config/niri/config.kdl"
-                    },
-                    "id": "plugin:niri-animation-picker"
                 },
                 {
                     "defaultSettings": {
@@ -362,6 +270,29 @@
                 },
                 {
                     "defaultSettings": {
+                        "boldText": true,
+                        "boldVer": true,
+                        "checkCmd": "(checkupdates; paru -Qua) 2>/dev/null",
+                        "closeButton": false,
+                        "customIconPath": "",
+                        "desktopTip": true,
+                        "enableColorization": false,
+                        "flatpak": true,
+                        "hideOnEmpty": false,
+                        "iconColor": "none",
+                        "iconName": "arrow-big-down-lines",
+                        "noctalia": true,
+                        "refreshInterval": 120,
+                        "refreshTimer": true,
+                        "toast": true,
+                        "tooltip": true,
+                        "updateCmd": "ghostty -e bash -c 'echo \"Updating System...\";paru; flatpak update; read -n 1 -p \"Press any key to exit...\"'",
+                        "useDistroLogo": false
+                    },
+                    "id": "plugin:arch-updater"
+                },
+                {
+                    "defaultSettings": {
                         "audioCodec": "opus",
                         "audioSource": "default_output",
                         "colorRange": "limited",
@@ -386,16 +317,90 @@
                 },
                 {
                     "defaultSettings": {
-                        "activeColor": "primary",
-                        "camFilterRegex": "",
-                        "enableToast": true,
-                        "hideInactive": false,
-                        "iconSpacing": 4,
-                        "inactiveColor": "none",
-                        "micFilterRegex": "",
-                        "removeMargins": false
+                        "autoPaste": false,
+                        "autoPasteDelay": 300,
+                        "autoPasteOnRightClick": false,
+                        "cardColors": {
+                        },
+                        "customColors": {
+                        },
+                        "enableTodoIntegration": false,
+                        "fullscreenMode": false,
+                        "hidePanelBackground": false,
+                        "notecardsEnabled": true,
+                        "panelHeight": 0,
+                        "panelWidth": 1450,
+                        "pincardsEnabled": true,
+                        "showCloseButton": true
                     },
-                    "id": "plugin:privacy-indicator"
+                    "id": "plugin:clipper"
+                },
+                {
+                    "blacklist": [
+                    ],
+                    "chevronColor": "none",
+                    "colorizeIcons": false,
+                    "drawerEnabled": true,
+                    "hidePassive": false,
+                    "id": "Tray",
+                    "pinned": [
+                        "Telegram Desktop",
+                        "steam",
+                        "Vesktop"
+                    ]
+                },
+                {
+                    "hideWhenZero": false,
+                    "hideWhenZeroUnread": false,
+                    "iconColor": "none",
+                    "id": "NotificationHistory",
+                    "showUnreadBadge": true,
+                    "unreadBadgeColor": "primary"
+                },
+                {
+                    "deviceNativePath": "__default__",
+                    "displayMode": "graphic-clean",
+                    "hideIfIdle": false,
+                    "hideIfNotDetected": true,
+                    "id": "Battery",
+                    "showNoctaliaPerformance": false,
+                    "showPowerProfiles": false
+                },
+                {
+                    "displayMode": "onhover",
+                    "iconColor": "none",
+                    "id": "Bluetooth",
+                    "textColor": "none"
+                },
+                {
+                    "displayMode": "onhover",
+                    "iconColor": "none",
+                    "id": "Volume",
+                    "middleClickCommand": "pwvucontrol || pavucontrol",
+                    "textColor": "none"
+                },
+                {
+                    "applyToAllMonitors": false,
+                    "displayMode": "onhover",
+                    "iconColor": "none",
+                    "id": "Brightness",
+                    "textColor": "none"
+                },
+                {
+                    "colorizeDistroLogo": false,
+                    "colorizeSystemIcon": "primary",
+                    "colorizeSystemText": "none",
+                    "customIconPath": "",
+                    "enableColorization": true,
+                    "icon": "noctalia",
+                    "id": "ControlCenter",
+                    "useDistroLogo": false
+                },
+                {
+                    "displayMode": "onhover",
+                    "iconColor": "none",
+                    "id": "Network",
+                    "textColor": "none"
                 }
             ]
         }
@@ -650,7 +655,7 @@
         "bluetoothRssiPollingEnabled": false,
         "disableDiscoverability": false,
         "networkPanelView": "ethernet",
-        "wifiDetailsViewMode": "list"
+        "wifiDetailsViewMode": "grid"
     },
     "nightLight": {
         "autoSchedule": true,
