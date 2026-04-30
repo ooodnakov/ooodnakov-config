@@ -36,9 +36,7 @@ def _run_normalized_bash_script(script: str, *args: str) -> subprocess.Completed
     try:
         bash_temp_path = temp_path.as_posix()
         command = (
-            ["bash", "-n", bash_temp_path, *args[1:]]
-            if args and args[0] == "-n"
-            else ["bash", bash_temp_path, *args]
+            ["bash", "-n", bash_temp_path, *args[1:]] if args and args[0] == "-n" else ["bash", bash_temp_path, *args]
         )
         return subprocess.run(
             command,

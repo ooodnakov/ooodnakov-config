@@ -17,12 +17,54 @@ WEZTERM_SCHEME_BY_THEME = {
 }
 
 KOMOREBI_THEME_BY_THEME = {
-    "default": {"palette": "Base16", "name": "Ashes", "active_border": "Base0D", "unfocused_border": "Base03", "bar_accent": "Base0D", "accent": "Base0D"},
-    "catppuccin": {"palette": "Catppuccin", "name": "Mocha", "active_border": "Blue", "unfocused_border": "Surface0", "bar_accent": "Blue", "accent": "Blue"},
-    "gruvbox": {"palette": "Gruvbox", "name": "DarkHard", "active_border": "BrightBlue", "unfocused_border": "Bg2", "bar_accent": "BrightBlue", "accent": "BrightBlue"},
-    "nord": {"palette": "Nord", "name": "PolarNight", "active_border": "Frost3", "unfocused_border": "PolarNight3", "bar_accent": "Frost3", "accent": "Frost3"},
-    "tokyonight": {"palette": "TokyoNight", "name": "Night", "active_border": "Blue", "unfocused_border": "TerminalBlack", "bar_accent": "Blue", "accent": "Blue"},
-    "noctalia": {"palette": "Noctalia", "name": "Noctalia", "active_border": "Accent", "unfocused_border": "Panel", "bar_accent": "Accent", "accent": "Accent"},
+    "default": {
+        "palette": "Base16",
+        "name": "Ashes",
+        "active_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
+    },
+    "catppuccin": {
+        "palette": "Catppuccin",
+        "name": "Mocha",
+        "active_border": "Blue",
+        "unfocused_border": "Surface0",
+        "bar_accent": "Blue",
+        "accent": "Blue",
+    },
+    "gruvbox": {
+        "palette": "Gruvbox",
+        "name": "DarkHard",
+        "active_border": "BrightBlue",
+        "unfocused_border": "Bg2",
+        "bar_accent": "BrightBlue",
+        "accent": "BrightBlue",
+    },
+    "nord": {
+        "palette": "Nord",
+        "name": "PolarNight",
+        "active_border": "Frost3",
+        "unfocused_border": "PolarNight3",
+        "bar_accent": "Frost3",
+        "accent": "Frost3",
+    },
+    "tokyonight": {
+        "palette": "TokyoNight",
+        "name": "Night",
+        "active_border": "Blue",
+        "unfocused_border": "TerminalBlack",
+        "bar_accent": "Blue",
+        "accent": "Blue",
+    },
+    "noctalia": {
+        "palette": "Noctalia",
+        "name": "Noctalia",
+        "active_border": "Accent",
+        "unfocused_border": "Panel",
+        "bar_accent": "Accent",
+        "accent": "Accent",
+    },
 }
 
 SKETCHYBAR_COLORS_BY_THEME: dict[str, dict[str, str]] = {
@@ -126,50 +168,140 @@ SKETCHYBAR_COLORS_BY_THEME: dict[str, dict[str, str]] = {
 
 ZEBAR_VARS_BY_THEME: dict[str, dict[str, str]] = {
     "default": {
-        "bg": "rgba(28, 32, 35, 0.85)", "fg": "#c0c5ce", "accent": "#8eb2c7", "critical": "#f2777a", "warning": "#f99157", "success": "#99cc99",
-        "workspace_hover_bg": "rgba(255, 255, 255, 0.06)", "workspace_hover_border": "rgba(142, 178, 199, 0.28)",
-        "workspace_focused_bg": "rgba(142, 178, 199, 0.18)", "workspace_focused_border": "rgba(142, 178, 199, 0.45)",
-        "workspace_focused_shadow": "rgba(142, 178, 199, 0.18)", "workspace_label_fg": "#1c2023", "workspace_label_bg": "rgba(192, 197, 206, 0.85)",
+        "bg": "rgba(28, 32, 35, 0.85)",
+        "fg": "#c0c5ce",
+        "accent": "#8eb2c7",
+        "critical": "#f2777a",
+        "warning": "#f99157",
+        "success": "#99cc99",
+        "workspace_hover_bg": "rgba(255, 255, 255, 0.06)",
+        "workspace_hover_border": "rgba(142, 178, 199, 0.28)",
+        "workspace_focused_bg": "rgba(142, 178, 199, 0.18)",
+        "workspace_focused_border": "rgba(142, 178, 199, 0.45)",
+        "workspace_focused_shadow": "rgba(142, 178, 199, 0.18)",
+        "workspace_label_fg": "#1c2023",
+        "workspace_label_bg": "rgba(192, 197, 206, 0.85)",
     },
     "catppuccin": {
-        "bg": "rgba(30, 30, 46, 0.85)", "fg": "#cdd6f4", "accent": "#89b4fa", "critical": "#f38ba8", "warning": "#fab387", "success": "#a6e3a1",
-        "workspace_hover_bg": "rgba(255, 255, 255, 0.08)", "workspace_hover_border": "rgba(137, 180, 250, 0.35)",
-        "workspace_focused_bg": "rgba(137, 180, 250, 0.22)", "workspace_focused_border": "rgba(137, 180, 250, 0.50)",
-        "workspace_focused_shadow": "rgba(137, 180, 250, 0.25)", "workspace_label_fg": "#11111b", "workspace_label_bg": "rgba(205, 214, 244, 0.85)",
+        "bg": "rgba(30, 30, 46, 0.85)",
+        "fg": "#cdd6f4",
+        "accent": "#89b4fa",
+        "critical": "#f38ba8",
+        "warning": "#fab387",
+        "success": "#a6e3a1",
+        "workspace_hover_bg": "rgba(255, 255, 255, 0.08)",
+        "workspace_hover_border": "rgba(137, 180, 250, 0.35)",
+        "workspace_focused_bg": "rgba(137, 180, 250, 0.22)",
+        "workspace_focused_border": "rgba(137, 180, 250, 0.50)",
+        "workspace_focused_shadow": "rgba(137, 180, 250, 0.25)",
+        "workspace_label_fg": "#11111b",
+        "workspace_label_bg": "rgba(205, 214, 244, 0.85)",
     },
     "gruvbox": {
-        "bg": "rgba(40, 40, 40, 0.85)", "fg": "#ebdbb2", "accent": "#83a598", "critical": "#fb4934", "warning": "#fe8019", "success": "#b8bb26",
-        "workspace_hover_bg": "rgba(255, 255, 255, 0.06)", "workspace_hover_border": "rgba(131, 165, 152, 0.32)",
-        "workspace_focused_bg": "rgba(131, 165, 152, 0.20)", "workspace_focused_border": "rgba(131, 165, 152, 0.45)",
-        "workspace_focused_shadow": "rgba(131, 165, 152, 0.20)", "workspace_label_fg": "#1d2021", "workspace_label_bg": "rgba(235, 219, 178, 0.88)",
+        "bg": "rgba(40, 40, 40, 0.85)",
+        "fg": "#ebdbb2",
+        "accent": "#83a598",
+        "critical": "#fb4934",
+        "warning": "#fe8019",
+        "success": "#b8bb26",
+        "workspace_hover_bg": "rgba(255, 255, 255, 0.06)",
+        "workspace_hover_border": "rgba(131, 165, 152, 0.32)",
+        "workspace_focused_bg": "rgba(131, 165, 152, 0.20)",
+        "workspace_focused_border": "rgba(131, 165, 152, 0.45)",
+        "workspace_focused_shadow": "rgba(131, 165, 152, 0.20)",
+        "workspace_label_fg": "#1d2021",
+        "workspace_label_bg": "rgba(235, 219, 178, 0.88)",
     },
     "nord": {
-        "bg": "rgba(46, 52, 64, 0.85)", "fg": "#eceff4", "accent": "#88c0d0", "critical": "#bf616a", "warning": "#d08770", "success": "#a3be8c",
-        "workspace_hover_bg": "rgba(255, 255, 255, 0.07)", "workspace_hover_border": "rgba(136, 192, 208, 0.32)",
-        "workspace_focused_bg": "rgba(136, 192, 208, 0.20)", "workspace_focused_border": "rgba(136, 192, 208, 0.46)",
-        "workspace_focused_shadow": "rgba(136, 192, 208, 0.20)", "workspace_label_fg": "#2e3440", "workspace_label_bg": "rgba(236, 239, 244, 0.88)",
+        "bg": "rgba(46, 52, 64, 0.85)",
+        "fg": "#eceff4",
+        "accent": "#88c0d0",
+        "critical": "#bf616a",
+        "warning": "#d08770",
+        "success": "#a3be8c",
+        "workspace_hover_bg": "rgba(255, 255, 255, 0.07)",
+        "workspace_hover_border": "rgba(136, 192, 208, 0.32)",
+        "workspace_focused_bg": "rgba(136, 192, 208, 0.20)",
+        "workspace_focused_border": "rgba(136, 192, 208, 0.46)",
+        "workspace_focused_shadow": "rgba(136, 192, 208, 0.20)",
+        "workspace_label_fg": "#2e3440",
+        "workspace_label_bg": "rgba(236, 239, 244, 0.88)",
     },
     "tokyonight": {
-        "bg": "rgba(26, 27, 38, 0.85)", "fg": "#c0caf5", "accent": "#7aa2f7", "critical": "#f7768e", "warning": "#ff9e64", "success": "#9ece6a",
-        "workspace_hover_bg": "rgba(255, 255, 255, 0.08)", "workspace_hover_border": "rgba(122, 162, 247, 0.34)",
-        "workspace_focused_bg": "rgba(122, 162, 247, 0.22)", "workspace_focused_border": "rgba(122, 162, 247, 0.48)",
-        "workspace_focused_shadow": "rgba(122, 162, 247, 0.22)", "workspace_label_fg": "#1a1b26", "workspace_label_bg": "rgba(192, 202, 245, 0.86)",
+        "bg": "rgba(26, 27, 38, 0.85)",
+        "fg": "#c0caf5",
+        "accent": "#7aa2f7",
+        "critical": "#f7768e",
+        "warning": "#ff9e64",
+        "success": "#9ece6a",
+        "workspace_hover_bg": "rgba(255, 255, 255, 0.08)",
+        "workspace_hover_border": "rgba(122, 162, 247, 0.34)",
+        "workspace_focused_bg": "rgba(122, 162, 247, 0.22)",
+        "workspace_focused_border": "rgba(122, 162, 247, 0.48)",
+        "workspace_focused_shadow": "rgba(122, 162, 247, 0.22)",
+        "workspace_label_fg": "#1a1b26",
+        "workspace_label_bg": "rgba(192, 202, 245, 0.86)",
     },
     "noctalia": {
-        "bg": "rgba(28, 32, 35, 0.85)", "fg": "#c0c5ce", "accent": "#8eb2c7", "critical": "#f2777a", "warning": "#f99157", "success": "#99cc99",
-        "workspace_hover_bg": "rgba(255, 255, 255, 0.06)", "workspace_hover_border": "rgba(142, 178, 199, 0.28)",
-        "workspace_focused_bg": "rgba(142, 178, 199, 0.18)", "workspace_focused_border": "rgba(142, 178, 199, 0.45)",
-        "workspace_focused_shadow": "rgba(142, 178, 199, 0.18)", "workspace_label_fg": "#1c2023", "workspace_label_bg": "rgba(192, 197, 206, 0.85)",
+        "bg": "rgba(28, 32, 35, 0.85)",
+        "fg": "#c0c5ce",
+        "accent": "#8eb2c7",
+        "critical": "#f2777a",
+        "warning": "#f99157",
+        "success": "#99cc99",
+        "workspace_hover_bg": "rgba(255, 255, 255, 0.06)",
+        "workspace_hover_border": "rgba(142, 178, 199, 0.28)",
+        "workspace_focused_bg": "rgba(142, 178, 199, 0.18)",
+        "workspace_focused_border": "rgba(142, 178, 199, 0.45)",
+        "workspace_focused_shadow": "rgba(142, 178, 199, 0.18)",
+        "workspace_label_fg": "#1c2023",
+        "workspace_label_bg": "rgba(192, 197, 206, 0.85)",
     },
 }
 
 OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
-    "default": {"#444444": "#444444", "#eeeeee": "#eeeeee", "#0087af": "#0087af", "#5fdf00": "#5fdf00", "#dfaf00": "#dfaf00"},
-    "catppuccin": {"#444444": "#313244", "#eeeeee": "#cdd6f4", "#0087af": "#89b4fa", "#5fdf00": "#a6e3a1", "#dfaf00": "#f9e2af"},
-    "gruvbox": {"#444444": "#3c3836", "#eeeeee": "#ebdbb2", "#0087af": "#83a598", "#5fdf00": "#b8bb26", "#dfaf00": "#fabd2f"},
-    "nord": {"#444444": "#3b4252", "#eeeeee": "#eceff4", "#0087af": "#88c0d0", "#5fdf00": "#a3be8c", "#dfaf00": "#ebcb8b"},
-    "tokyonight": {"#444444": "#2f3549", "#eeeeee": "#c0caf5", "#0087af": "#7aa2f7", "#5fdf00": "#9ece6a", "#dfaf00": "#e0af68"},
-    "noctalia": {"#444444": "#2a3036", "#eeeeee": "#c0c5ce", "#0087af": "#8eb2c7", "#5fdf00": "#99cc99", "#dfaf00": "#f99157"},
+    "default": {
+        "#444444": "#444444",
+        "#eeeeee": "#eeeeee",
+        "#0087af": "#0087af",
+        "#5fdf00": "#5fdf00",
+        "#dfaf00": "#dfaf00",
+    },
+    "catppuccin": {
+        "#444444": "#313244",
+        "#eeeeee": "#cdd6f4",
+        "#0087af": "#89b4fa",
+        "#5fdf00": "#a6e3a1",
+        "#dfaf00": "#f9e2af",
+    },
+    "gruvbox": {
+        "#444444": "#3c3836",
+        "#eeeeee": "#ebdbb2",
+        "#0087af": "#83a598",
+        "#5fdf00": "#b8bb26",
+        "#dfaf00": "#fabd2f",
+    },
+    "nord": {
+        "#444444": "#3b4252",
+        "#eeeeee": "#eceff4",
+        "#0087af": "#88c0d0",
+        "#5fdf00": "#a3be8c",
+        "#dfaf00": "#ebcb8b",
+    },
+    "tokyonight": {
+        "#444444": "#2f3549",
+        "#eeeeee": "#c0caf5",
+        "#0087af": "#7aa2f7",
+        "#5fdf00": "#9ece6a",
+        "#dfaf00": "#e0af68",
+    },
+    "noctalia": {
+        "#444444": "#2a3036",
+        "#eeeeee": "#c0c5ce",
+        "#0087af": "#8eb2c7",
+        "#5fdf00": "#99cc99",
+        "#dfaf00": "#f99157",
+    },
 }
 
 
@@ -183,8 +315,8 @@ def set_yazi_theme(theme: str) -> str:
     path.write_text(
         "# Generated by `oooconf color`.\n"
         "# Local override for Yazi theme selection.\n"
-        f"dark = \"{theme}\"\n"
-        f"light = \"{theme}\"\n",
+        f'dark = "{theme}"\n'
+        f'light = "{theme}"\n',
         encoding="utf-8",
     )
     return f"yazi: wrote local override ({path})"
@@ -308,7 +440,9 @@ def current_status() -> list[str]:
         text = yazi.read_text(encoding="utf-8")
         dark = re.search(r'(?m)^dark\s*=\s*"([^"]+)"', text)
         light = re.search(r'(?m)^light\s*=\s*"([^"]+)"', text)
-        lines.append(f"yazi: dark={dark.group(1) if dark else 'unknown'}, light={light.group(1) if light else 'unknown'}")
+        lines.append(
+            f"yazi: dark={dark.group(1) if dark else 'unknown'}, light={light.group(1) if light else 'unknown'}"
+        )
     wez = config_home() / "ooodnakov" / "local" / "wezterm.lua"
     lines.append(f"wezterm local override: {'present' if wez.exists() else 'missing'} ({wez})")
     wezterm_main = config_home() / "wezterm" / "wezterm.lua"
@@ -331,9 +465,13 @@ def current_status() -> list[str]:
     oh_my_posh = config_home() / "ohmyposh" / "ooodnakov.omp.json"
     lines.append(f"oh-my-posh config: {'present' if oh_my_posh.exists() else 'missing'} ({oh_my_posh})")
     oh_my_posh_local = config_home() / "ooodnakov" / "local" / "ohmyposh"
-    lines.append(f"oh-my-posh local themes: {'present' if oh_my_posh_local.exists() else 'missing'} ({oh_my_posh_local})")
+    lines.append(
+        f"oh-my-posh local themes: {'present' if oh_my_posh_local.exists() else 'missing'} ({oh_my_posh_local})"
+    )
     sketchybar_local = config_home() / "ooodnakov" / "local" / "sketchybar" / "colors.lua"
-    lines.append(f"sketchybar local override: {'present' if sketchybar_local.exists() else 'missing'} ({sketchybar_local})")
+    lines.append(
+        f"sketchybar local override: {'present' if sketchybar_local.exists() else 'missing'} ({sketchybar_local})"
+    )
     zebar_local = Path.home() / ".glzr" / "zebar" / "ooodnakov" / "theme-overrides.css"
     lines.append(f"zebar theme override: {'present' if zebar_local.exists() else 'missing'} ({zebar_local})")
     return lines
