@@ -331,17 +331,14 @@ def common_data_path(repo_root: Path, config: dict[str, Any]) -> Path:
 
 def write_common_data(repo_root: Path, config: dict[str, Any], data: dict[str, Any]) -> None:
     path = common_data_path(repo_root, config)
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def normalize_mcp_command(config: dict[str, Any]) -> dict[str, Any]:
     updated = dict(config)
     command = str(updated.get("command", "")).strip()
     args = [str(arg) for arg in updated.get("args", [])]
-    if command in {"npx", "npm"} and args[:2] == ["-y", "@doomscrollr/mcp-server"]:
-        updated["command"] = "pnpm"
-        updated["args"] = ["dlx", *args[1:]]
-    elif command == "npx" and args[:1] == ["-y"]:
+    if command in {"npx", "npm"} and args[:1] == ["-y"]:
         updated["command"] = "pnpm"
         updated["args"] = ["dlx", *args[1:]]
     return updated
@@ -398,7 +395,8 @@ def parse_mcp_json_inputs(payload: str, *, allow_multi: bool = False) -> dict[st
     try:
         obj = json.loads(raw if raw.startswith("{") else "{" + raw + "}")
     except json.JSONDecodeError:
-        obj = json.loads(raw.replace("'", '"') if "'" in raw and '"' not in raw else raw)
+        fixed = raw.replace("'", '"') if "'" in raw and '"' not in raw else raw
+        obj = json.loads(fixed if fixed.startswith("{") else "{" + fixed + "}")
     if not isinstance(obj, dict):
         raise ValueError("MCP payload must be a JSON object.")
     normalized: dict[str, dict[str, Any]] = {}
@@ -629,14 +627,24 @@ def check_common_entries(content: str, common_data: dict[str, Any], fmt: str) ->
     return missing_mcp, missing_skills
 
 
-def check_config_shape(target: AgentConfigTarget, content: str) -> list[str]:
+def check_config_shape(target: AgentConfigTarget, content: str, parsed_obj: dict[str, Any] | None = None) -> list[str]:
     issues: list[str] = []
-    lowered = content.lower()
-    if target.name == "OpenCode" and '"mcp"' not in lowered:
+
+    def has_top_level_key(key: str) -> bool:
+        if parsed_obj is not None:
+            return key in parsed_obj
+        lowered = content.lower()
+        key_lower = re.escape(key.lower())
+        return bool(
+            re.search(rf'["\']{key_lower}["\']\s*:', lowered)
+            or re.search(rf'\[{key_lower}(?:[.\]])', lowered)
+        )
+
+    if target.name == "OpenCode" and not has_top_level_key("mcp"):
         issues.append('expected top-level "mcp" object')
-    if target.name in {"Gemini CLI", "Claude Code"} and "mcpservers" not in lowered:
+    if target.name in {"Gemini CLI", "Claude Code"} and not has_top_level_key("mcpServers"):
         issues.append('expected "mcpServers" object')
-    if target.name == "OpenAI Codex CLI" and "mcp_servers" not in lowered:
+    if target.name == "OpenAI Codex CLI" and not has_top_level_key("mcp_servers"):
         issues.append('expected "mcp_servers" tables')
     return issues
 
@@ -676,7 +684,15 @@ def inspect_agent_configs(
             continue
 
         missing_mcp, missing_skills = check_common_entries(search_space, common_data, target.format)
-        shape_issues = check_config_shape(target, search_space)
+        parsed_obj: dict[str, Any] | None = None
+        if target.format == "json":
+            try:
+                parsed = json.loads(existing.read_text(encoding="utf-8"))
+                if isinstance(parsed, dict):
+                    parsed_obj = parsed
+            except Exception:
+                parsed_obj = None
+        shape_issues = check_config_shape(target, search_space, parsed_obj)
         if missing_mcp or missing_skills:
             has_failures = True
         if shape_issues:
@@ -1348,7 +1364,8 @@ def cmd_mcp_add(
     elif not sys.stdin.isatty():
         payload = sys.stdin.read()
     else:
-        print("Paste single MCP JSON object and press Ctrl-D:", file=sys.stderr)
+        prompt = "multiple MCP JSON entries" if allow_multi else "single MCP JSON object"
+        print(f"Paste {prompt} and press Ctrl-D:", file=sys.stderr)
         payload = sys.stdin.read()
     if not payload.strip():
         print_status_line("fail", "No MCP JSON payload provided.")
@@ -1357,7 +1374,16 @@ def cmd_mcp_add(
         print_status_line("fail", "--name cannot be combined with --multi.")
         return 1
 
-    parsed_entries = parse_mcp_json_inputs(payload, allow_multi=allow_multi)
+    single_named_payload = payload
+    if not allow_multi and name:
+        try:
+            parsed_payload = json.loads(payload)
+            if isinstance(parsed_payload, dict) and "command" in parsed_payload:
+                single_named_payload = json.dumps({name: parsed_payload})
+        except json.JSONDecodeError:
+            pass
+
+    parsed_entries = parse_mcp_json_inputs(single_named_payload, allow_multi=allow_multi)
     data = read_json(repo_root, config["common_data_file"])
     mcp_servers = data.setdefault("mcp_servers", {})
     planned: list[str] = []
@@ -1373,7 +1399,7 @@ def cmd_mcp_add(
     if preview:
         path = common_data_path(repo_root, config)
         before = path.read_text(encoding="utf-8")
-        after = json.dumps(data, indent=2) + "\n"
+        after = json.dumps(data, indent=2, sort_keys=True) + "\n"
         diff = "\n".join(
             difflib.unified_diff(
                 before.splitlines(), after.splitlines(), fromfile="before", tofile="after", lineterm=""
@@ -1473,7 +1499,14 @@ def build_mcp_env(
         env[name] = value if (value is not None and materialize_secrets) else f"{{{name}}}"
 
     for key, value in config.get("env", {}).items():
-        env[key] = render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root) if isinstance(value, str) else value
+        if isinstance(value, str):
+            env[key] = (
+                render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root)
+                if materialize_secrets
+                else value
+            )
+        else:
+            env[key] = value
 
     return env
 
