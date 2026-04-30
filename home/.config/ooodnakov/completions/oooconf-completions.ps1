@@ -193,7 +193,7 @@ function Get-OooconfCompletions {
         'agents:detect' = @('--repo-root', '--config', '--json')
         'agents:doctor' = @('--repo-root', '--config', '--strict-config-paths')
         'agents:install' = @('--repo-root', '--config', '--check')
-        'agents:sync' = @('--repo-root', '--config', '--check', '--global')
+        'agents:sync' = @('--repo-root', '--config', '--check', '--global', '--materialize-secrets')
         'agents:update' = @('--repo-root', '--config', '--check')
         'secrets:add' = @('--template')
         'secrets:del' = @('--template')
@@ -219,17 +219,20 @@ function Get-OooconfCompletions {
 
     $OooconfSubsubcommands =
     @{
-        'agents:mcp' = @('sync', 'status')
+        'agents:mcp' = @('sync', 'status', 'add')
         'agents:rtk' = @('init')
-        'agents:skills' = @('sync')
+        'agents:skills' = @('sync', 'view', 'add')
     }
 
     $OooconfSubsubcommandOptions =
     @{
+        'agents:mcp:add' = @('--name', '--json', '--multi', '--preview', '--sync-now', '--check')
         'agents:mcp:status' = @()
         'agents:mcp:sync' = @('--check')
         'agents:rtk:init' = @('--check')
+        'agents:skills:add' = @('--agent', '--sync-now', '--check')
         'agents:skills:sync' = @('--check')
+        'agents:skills:view' = @('--check', '--json')
     }
 
     $OooconfOptionValues =

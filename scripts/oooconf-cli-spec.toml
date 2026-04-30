@@ -73,35 +73,41 @@ skills = "manage agent skills and extensions"
 
 [commands.agents.subcommand_options]
 detect = ["--repo-root", "--config", "--json"]
-sync = ["--repo-root", "--config", "--check", "--global"]
+sync = ["--repo-root", "--config", "--check", "--global", "--materialize-secrets"]
 doctor = ["--repo-root", "--config", "--strict-config-paths"]
 update = ["--repo-root", "--config", "--check"]
 install = ["--repo-root", "--config", "--check"]
 
 [commands.agents.subsubcommands]
-mcp = ["sync", "status"]
+mcp = ["sync", "status", "add"]
 rtk = ["init"]
-skills = ["sync"]
+skills = ["sync", "view", "add"]
 
 [commands.agents.subsubcommand_descriptions.mcp]
 sync = "synchronize managed MCP servers"
 status = "show managed MCP status"
+add = "add one MCP JSON entry into common-data and optionally sync"
 
 [commands.agents.subsubcommand_descriptions.rtk]
 init = "run 'rtk init --global' for detected agents"
 
 [commands.agents.subsubcommand_descriptions.skills]
 sync = "synchronize configured skill specs across agents"
+view = "view shared skills catalog via pnpm dlx"
+add = "add one shared skill source and optionally sync"
 
 [commands.agents.subsubcommand_options.mcp]
 sync = ["--check"]
 status = []
+add = ["--name", "--json", "--multi", "--preview", "--sync-now", "--check"]
 
 [commands.agents.subsubcommand_options.rtk]
 init = ["--check"]
 
 [commands.agents.subsubcommand_options.skills]
 sync = ["--check"]
+view = ["--check", "--json"]
+add = ["--agent", "--sync-now", "--check"]
 
 [commands.secrets]
 description = "sync or validate local secret env files"
