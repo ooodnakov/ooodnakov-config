@@ -8,17 +8,20 @@ Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 
 | Key | Repository | Reason |
 | --- | --- | --- |
-| `oh_my_zsh` | ohmyzsh/ohmyzsh | Zsh framework required by tracked `.zshrc` |
-| `p10k` | romkatv/powerlevel10k | Prompt theme required by tracked config |
-| `zsh_autosuggestions` | zsh-users/zsh-autosuggestions | Zsh plugin tracked by `.zshrc` |
-| `zsh_highlighting` | zsh-users/zsh-syntax-highlighting | Zsh plugin tracked by `.zshrc` |
-| `zsh_history` | zsh-users/zsh-history-substring-search | Zsh plugin tracked by `.zshrc` |
-| `zsh_autocomplete` | marlonrichert/zsh-autocomplete | Zsh plugin tracked by `.zshrc` |
-| `fzf_tab` | Aloxaf/fzf-tab | Zsh plugin tracked by `.zshrc` |
+| `oh-my-zsh` | ohmyzsh/ohmyzsh | Zsh framework required by tracked `.zshrc` |
+| `powerlevel10k` | romkatv/powerlevel10k | Prompt theme required by tracked config |
+| `zsh-autosuggestions` | zsh-users/zsh-autosuggestions | Zsh plugin tracked by `.zshrc` |
+| `zsh-syntax-highlighting` | zsh-users/zsh-syntax-highlighting | Zsh plugin tracked by `.zshrc` |
+| `zsh-history-substring-search` | zsh-users/zsh-history-substring-search | Zsh plugin tracked by `.zshrc` |
+| `zsh-autocomplete` | marlonrichert/zsh-autocomplete | Zsh plugin tracked by `.zshrc` |
+| `fzf-tab` | Aloxaf/fzf-tab | Zsh plugin tracked by `.zshrc` |
 | `forgit` | wfxr/forgit | Zsh plugin tracked by `.zshrc` |
-| `zsh_you_should_use` | MichaelAquilina/zsh-you-should-use | Zsh plugin tracked by `.zshrc` |
-| `auto_uv_env` | ashwch/auto-uv-env | uv environment setup script |
+| `you-should-use` | MichaelAquilina/zsh-you-should-use | Zsh plugin tracked by `.zshrc` |
+| `auto-uv-env` | ashwch/auto-uv-env | uv environment setup script |
 | `k` | supercrabtree/k | Standalone k command for directory jumping |
+| `marker` | jotyGill/marker | Git branch management UI |
+| `nvm` | nvm-sh/nvm | Node version manager (lazy-loaded) |
+| `todo-txt` | todotxt/todo.txt-cli | Plain-text todo manager |
 
 All decisions, categories, versions, install methods, pins, and reasons are **defined exclusively** in `scripts/optional-deps.toml` (see `[managed-tools]` section and per-entry comments).
 
@@ -44,7 +47,7 @@ Run `oooconf lock` after editing the TOML.
    - `install_optional_dependency_from_catalog()` in `scripts/setup.sh`
    - `Install-OptionalDependencyFromSpec` in `scripts/setup.ps1`
 4. Run `oooconf lock` to regenerate lock artifacts.
-5. Regenerate tracked completions: `python3 scripts/generate_oooconf_completions.py`
+5. Regenerate tracked completions: `uv run python3 scripts/generate_oooconf_completions.py completions`
 6. Run drift checks so generated/consumer metadata stays aligned:
    - `uv run pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py`
    - `bash tests/test_shell.sh`

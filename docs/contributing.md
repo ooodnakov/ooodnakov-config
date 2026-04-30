@@ -26,7 +26,7 @@ After changing bootstrap logic, helper scripts, or Python configuration, run the
 - **Shell scripts (.sh):** Check syntax and lint using `bash -n` and `shellcheck`.
   ```bash
   bash -n scripts/setup.sh
-  shellcheck scripts/*.sh
+  shellcheck scripts/setup.sh scripts/ooodnakov.sh scripts/delete.sh scripts/update-pins.sh bootstrap.sh
   ```
 - **PowerShell scripts (.ps1):** Validate using PSScriptAnalyzer via `pwsh`.
   ```powershell
