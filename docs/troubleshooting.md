@@ -81,3 +81,20 @@ Check the template entry at `home/.config/ooodnakov/secrets/env.template`. The `
 | `Template not found`                   | Repo root resolved incorrectly   | Pass `--repo-root /path/to/repo` explicitly             |
 
 Run `oooconf secrets doctor` for a full prerequisite check.
+
+## Cross-platform WM modifiers (Win/Cmd) for komorebi + OmniWM
+
+### Windows (komorebi)
+
+- `whkd` can bind `lwin` combos directly (for example `lwin + h/j/k/l`).
+- If your keyboard/IME/tooling eats Win combinations, run komorebi with AutoHotkey instead of whkd:
+  - stop: `komorebic stop --whkd`
+  - start with AHK: `komorebic start --ahk`
+- AutoHotkey is optional; use it when Win hotkeys are unreliable on your machine.
+
+### macOS (OmniWM)
+
+- macOS has no AutoHotkey-equivalent requirement for OmniWM hotkeys.
+- OmniWM captures shortcuts via macOS Accessibility permissions and its own hotkey system.
+- For reliable multi-monitor/workspace behavior, turn **off** “Displays have separate Spaces” and log out/in after changing it.
+- If you want hardware-level key remaps (outside OmniWM), use Karabiner-Elements as an optional separate layer.

@@ -23,33 +23,95 @@
     "bar_accent": "Base0D"
   },
   "float_rules": [
-    { "kind": "Class", "id": "SunAwtDialog", "matching_strategy": "Equals" },
-    { "kind": "Class", "id": "TaskManagerWindow", "matching_strategy": "Equals" },
-    { "kind": "Class", "id": "ApplicationFrameWindow", "matching_strategy": "Equals" },
-    { "kind": "Exe", "id": "CalculatorApp.exe", "matching_strategy": "Equals" },
-    { "kind": "Exe", "id": "ControlPanel.exe", "matching_strategy": "Equals" }
+    {
+      "kind": "Class",
+      "id": "SunAwtDialog",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Class",
+      "id": "TaskManagerWindow",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Class",
+      "id": "ApplicationFrameWindow",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Exe",
+      "id": "CalculatorApp.exe",
+      "matching_strategy": "Equals"
+    },
+    {
+      "kind": "Exe",
+      "id": "ControlPanel.exe",
+      "matching_strategy": "Equals"
+    }
   ],
   "monitors": [
     {
       "workspaces": [
-        { "name": "󰈹", "layout": "BSP" },
-        { "name": "", "layout": "VerticalStack" },
-        { "name": "󰙯", "layout": "HorizontalStack" },
-        { "name": "󰓓", "layout": "UltrawideVerticalStack" },
-        { "name": "󱓷", "layout": "Rows" },
-        { "name": "󰉋", "layout": "Grid" },
-        { "name": "󰊫", "layout": "RightMainVerticalStack" }
+        {
+          "name": "\udb80\ude39",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\uf120",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb81\ude6f",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb81\udcd3",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb85\udcf7",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb80\ude4b",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb80\udeab",
+          "layout": "Scrolling"
+        }
       ]
     },
     {
       "workspaces": [
-        { "name": "󰈹", "layout": "BSP" },
-        { "name": "", "layout": "VerticalStack" },
-        { "name": "󰙯", "layout": "HorizontalStack" },
-        { "name": "󰓓", "layout": "UltrawideVerticalStack" },
-        { "name": "󱓷", "layout": "Rows" },
-        { "name": "󰉋", "layout": "Grid" },
-        { "name": "󰊫", "layout": "RightMainVerticalStack" }
+        {
+          "name": "\udb80\ude39",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\uf120",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb81\ude6f",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb81\udcd3",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb85\udcf7",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb80\ude4b",
+          "layout": "Scrolling"
+        },
+        {
+          "name": "\udb80\udeab",
+          "layout": "Scrolling"
+        }
       ]
     }
   ]
