@@ -10,11 +10,13 @@ lwin + m                 : komorebic minimize
 lwin + shift + space     : komorebic toggle-float
 lwin + f                 : komorebic toggle-monocle
 lwin + shift + r         : komorebic retile
+lwin + i                 : komorebic toggle-shortcuts
+lwin + p                 : komorebic toggle-pause
 
 # Scrolling layout controls
 lwin + c                 : komorebic change-layout scrolling
-lwin + equal             : komorebic scrolling-layout-columns increase
-lwin + minus             : komorebic scrolling-layout-columns decrease
+lwin + equal             : komorebic scrolling-layout-columns 3
+lwin + minus             : komorebic scrolling-layout-columns 1
 
 # Focus windows (shared hjkl model)
 lwin + h                 : komorebic focus left
@@ -32,14 +34,14 @@ lwin + shift + return    : komorebic promote
 # Monitor focus/move
 lwin + comma             : komorebic cycle-monitor previous
 lwin + period            : komorebic cycle-monitor next
-lwin + shift + comma     : komorebic move-to-monitor previous
-lwin + shift + period    : komorebic move-to-monitor next
+lwin + shift + comma     : komorebic cycle-move-to-monitor previous
+lwin + shift + period    : komorebic cycle-move-to-monitor next
 
 # Resize
-lwin + ctrl + h          : komorebic resize left
-lwin + ctrl + j          : komorebic resize down
-lwin + ctrl + k          : komorebic resize up
-lwin + ctrl + l          : komorebic resize right
+lwin + ctrl + h          : komorebic resize-edge left decrease
+lwin + ctrl + j          : komorebic resize-edge down increase
+lwin + ctrl + k          : komorebic resize-edge up decrease
+lwin + ctrl + l          : komorebic resize-edge right increase
 
 # Workspaces
 lwin + 1                 : komorebic focus-workspace 0
