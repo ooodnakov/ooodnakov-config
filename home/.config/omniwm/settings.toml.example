@@ -1,0 +1,54 @@
+# OmniWM settings template
+#
+# IMPORTANT:
+# - OmniWM writes canonical config to: ~/.config/omniwm/settings.toml
+# - Generate that file from OmniWM UI first (Settings -> Create/Open Settings File)
+# - Then copy the hotkey intents below into the generated format.
+#
+# This repository keeps a template/intents file because OmniWM key schema is evolving rapidly.
+
+[hotkey_intents]
+primary_modifier = "cmd" # macOS-native main modifier
+
+# Shared actions to mirror Linux/Windows setups
+focus_left = "cmd+h"
+focus_down = "cmd+j"
+focus_up = "cmd+k"
+focus_right = "cmd+l"
+
+move_left = "cmd+shift+h"
+move_down = "cmd+shift+j"
+move_up = "cmd+shift+k"
+move_right = "cmd+shift+l"
+
+workspace_prev = "cmd+shift+tab"
+workspace_next = "cmd+tab"
+
+monitor_prev = "cmd+comma"
+monitor_next = "cmd+period"
+move_to_monitor_prev = "cmd+shift+comma"
+move_to_monitor_next = "cmd+shift+period"
+
+workspace_1 = "cmd+alt+1"
+workspace_2 = "cmd+alt+2"
+workspace_3 = "cmd+alt+3"
+workspace_4 = "cmd+alt+4"
+workspace_5 = "cmd+alt+5"
+workspace_6 = "cmd+alt+6"
+workspace_7 = "cmd+alt+7"
+workspace_8 = "cmd+alt+8"
+workspace_9 = "cmd+alt+9"
+
+send_to_workspace_1 = "cmd+alt+shift+1"
+send_to_workspace_2 = "cmd+alt+shift+2"
+send_to_workspace_3 = "cmd+alt+shift+3"
+send_to_workspace_4 = "cmd+alt+shift+4"
+send_to_workspace_5 = "cmd+alt+shift+5"
+send_to_workspace_6 = "cmd+alt+shift+6"
+send_to_workspace_7 = "cmd+alt+shift+7"
+send_to_workspace_8 = "cmd+alt+shift+8"
+send_to_workspace_9 = "cmd+alt+shift+9"
+
+toggle_float = "cmd+shift+space"
+toggle_fullscreen = "cmd+ctrl+f"
+close_window = "cmd+q"
