@@ -4,7 +4,7 @@
   "font_size": 14,
   "theme": {
     "palette": "Base16",
-    "name": "Ashes",
+    "name": "GruvboxDarkHard",
     "accent": "Base0D"
   },
   "transparency": true,
@@ -60,7 +60,7 @@
       "Date": {
         "enable": true,
         "format": {
-          "Custom": "󰃭 %a, %b %d"
+          "Custom": "\udb80\udced %a, %b %d"
         }
       }
     },
@@ -68,7 +68,7 @@
       "Time": {
         "enable": true,
         "format": {
-          "Custom": "󱑒 %H:%M"
+          "Custom": "\udb85\udc52 %H:%M"
         }
       }
     },

@@ -1,0 +1,15 @@
+:root {
+  --bg: rgba(40, 40, 40, 0.85);
+  --fg: #ebdbb2;
+  --accent: #83a598;
+  --critical: #fb4934;
+  --warning: #fe8019;
+  --success: #b8bb26;
+  --workspace_hover_bg: rgba(255, 255, 255, 0.06);
+  --workspace_hover_border: rgba(131, 165, 152, 0.32);
+  --workspace_focused_bg: rgba(131, 165, 152, 0.20);
+  --workspace_focused_border: rgba(131, 165, 152, 0.45);
+  --workspace_focused_shadow: rgba(131, 165, 152, 0.20);
+  --workspace_label_fg: #1d2021;
+  --workspace_label_bg: rgba(235, 219, 178, 0.88);
+}

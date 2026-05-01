@@ -1,8 +1,8 @@
-.shell powershell
+.shell pwsh
 
 # Reload wm stack
 lwin + shift + o         : komorebic reload-configuration
-lwin + alt + o           : taskkill /f /im whkd.exe; Start-Process whkd -WindowStyle hidden
+alt + lwin + o           : taskkill /f /im whkd.exe; Start-Process whkd -windowstyle hidden
 
 # WM controls
 lwin + q                 : komorebic close
@@ -15,8 +15,8 @@ lwin + p                 : komorebic toggle-pause
 
 # Scrolling layout controls
 lwin + c                 : komorebic change-layout scrolling
-lwin + equal             : komorebic scrolling-layout-columns 3
-lwin + minus             : komorebic scrolling-layout-columns 1
+lwin + oem_plus          : komorebic scrolling-layout-columns 3
+lwin + oem_minus         : komorebic scrolling-layout-columns 1
 
 # Focus windows (shared hjkl model)
 lwin + h                 : komorebic focus left
@@ -32,10 +32,10 @@ lwin + shift + l         : komorebic move right
 lwin + shift + return    : komorebic promote
 
 # Monitor focus/move
-lwin + comma             : komorebic cycle-monitor previous
-lwin + period            : komorebic cycle-monitor next
-lwin + shift + comma     : komorebic cycle-move-to-monitor previous
-lwin + shift + period    : komorebic cycle-move-to-monitor next
+lwin + oem_comma         : komorebic cycle-monitor previous
+lwin + oem_period        : komorebic cycle-monitor next
+lwin + shift + oem_comma : komorebic cycle-move-to-monitor previous
+lwin + shift + oem_period: komorebic cycle-move-to-monitor next
 
 # Resize
 lwin + ctrl + h          : komorebic resize-edge left decrease

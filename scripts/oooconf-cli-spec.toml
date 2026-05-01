@@ -189,11 +189,25 @@ alias_for = "update"
 [commands.minimal]
 description = "run minimal setup"
 
-[commands.komorebi]
-description = "manage komorebi tiling window manager state"
-subcommands = ["reload", "start", "stop"]
-
 [commands.wm]
 description = "switch or manage window managers"
-subcommands = ["status", "set", "start", "stop", "reload", "zebar-config"]
+subcommands = ["status", "set", "start", "stop", "reload", "bar", "komorebi"]
 values = ["komorebi", "glazewm"]
+
+[commands.wm.bar]
+description = "manage bar and zebar"
+subcommands = ["set", "zebar-config", "stop", "start", "reload"]
+
+[commands.wm.bar.subcommand_descriptions]
+set = "set default bar type (zebar, yabs)"
+zebar-config = "manage zebar configs (status, list, set, install)"
+stop = "stop zebar and komorebi-bar (keep komorebi running)"
+start = "start zebar with configured settings"
+reload = "restart zebar (stop then start)"
+
+[commands.wm.bar.subcommand_options]
+set = []
+zebar-config = []
+
+[commands.wm.bar.values]
+bar_types = ["zebar", "yabs"]

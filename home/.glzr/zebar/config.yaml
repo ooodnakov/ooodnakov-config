@@ -1,6 +1,7 @@
 # Zebar Configuration (ooodnakov-config)
 # https://github.com/nwinch/zebar
 
+default_bar_type: zebar
 window:
   # Whether the window should be shown in the taskbar.
   show_in_taskbar: false
@@ -32,3 +33,10 @@ providers:
 
 # Path to the HTML template for the bar.
 template_path: "ooodnakov/index.html"
+
+
+
+
+
+
+

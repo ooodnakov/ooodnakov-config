@@ -635,10 +635,7 @@ def check_config_shape(target: AgentConfigTarget, content: str, parsed_obj: dict
             return key in parsed_obj
         lowered = content.lower()
         key_lower = re.escape(key.lower())
-        return bool(
-            re.search(rf'["\']{key_lower}["\']\s*:', lowered)
-            or re.search(rf'\[{key_lower}(?:[.\]])', lowered)
-        )
+        return bool(re.search(rf'["\']{key_lower}["\']\s*:', lowered) or re.search(rf"\[{key_lower}(?:[.\]])", lowered))
 
     if target.name == "OpenCode" and not has_top_level_key("mcp"):
         issues.append('expected top-level "mcp" object')
@@ -1500,11 +1497,7 @@ def build_mcp_env(
 
     for key, value in config.get("env", {}).items():
         if isinstance(value, str):
-            env[key] = (
-                render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root)
-                if materialize_secrets
-                else value
-            )
+            env[key] = render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root) if materialize_secrets else value
         else:
             env[key] = value
 

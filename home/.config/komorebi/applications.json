@@ -3234,7 +3234,12 @@
           "id": "zen.exe",
           "matching_strategy": "Equals"
         }
-      ]
+      ],
+      {
+        "kind": "Title",
+        "id": "Sign in – Google accounts — Zen Twilight",
+        "matching_strategy": "Equals"
+      }
     ],
     "tray_and_multi_window": [
       {

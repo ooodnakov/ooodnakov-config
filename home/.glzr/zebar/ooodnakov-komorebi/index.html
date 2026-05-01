@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ooodnakov Zebar - Komorebi</title>
+  <script
+    src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"
+    crossorigin="anonymous"
+  ></script>
+  <style>
+    @import "../ooodnakov/theme-overrides.css";
+
+    :root {
+      --bg: rgba(28, 32, 35, 0.85);
+      --fg: #c0c5ce;
+      --accent: #83a598;
+      --font: "MesloLGSDZ Nerd Font Mono", sans-serif;
+      --critical: #f2777a;
+      --warning: #f99157;
+      --success: #99cc99;
+      --workspace-hover-bg: rgba(255, 255, 255, 0.06);
+      --workspace-hover-border: rgba(142, 178, 199, 0.28);
+      --workspace-focused-bg: rgba(142, 178, 199, 0.18);
+      --workspace-focused-border: rgba(142, 178, 199, 0.45);
+      --workspace-focused-shadow: rgba(142, 178, 199, 0.18);
+      --workspace-label-fg: #1c2023;
+      --workspace-label-bg: rgba(192, 197, 206, 0.85);
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      color: var(--fg);
+      overflow: hidden;
+    }
+
+    #bar {
+      display: flex;
+      align-items: center;
+      height: 32px;
+      margin: 10px;
+      padding: 0 15px;
+      gap: 12px;
+      background: var(--bg);
+      backdrop-filter: blur(12px);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #left {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    #right {
+      margin-left: auto;
+      flex: 0 1 auto;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    #workspaces {
+      gap: 6px;
+      min-width: 0;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+
+    .workspace {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      max-width: 132px;
+      padding: 3px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--fg);
+      font: inherit;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+      opacity: 0.78;
+    }
+
+    .workspace:hover {
+      opacity: 1;
+      background: var(--workspace-hover-bg);
+      border-color: var(--workspace-hover-border);
+      transform: translateY(-1px);
+    }
+
+    .workspace.focused {
+      opacity: 1;
+      background: var(--workspace-focused-bg);
+      border-color: var(--workspace-focused-border);
+      box-shadow: 0 0 0 1px var(--workspace-focused-shadow);
+    }
+
+    .workspace.occupied {
+      opacity: 0.94;
+    }
+
+    .workspace-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 3px;
+      border-radius: 999px;
+      line-height: 1;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--workspace-label-fg);
+      background: var(--workspace-label-bg);
+      flex: 0 0 auto;
+    }
+
+    .workspace.focused .workspace-label {
+      background: var(--accent);
+    }
+
+    .workspace-apps {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .workspace-app {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 12px;
+      height: 14px;
+      font-size: 11px;
+      color: var(--fg);
+      opacity: 0.92;
+      flex: 0 0 auto;
+    }
+
+    .workspace-app.more {
+      width: auto;
+      min-width: 18px;
+      font-size: 11px;
+      color: var(--accent);
+      opacity: 1;
+    }
+
+    /* Window Title */
+    #window-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      max-width: 280px;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--fg);
+      opacity: 0.8;
+    }
+
+    #window-title-icon {
+      color: var(--accent);
+      font-size: 13px;
+      flex: 0 0 auto;
+    }
+
+    #window-title-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Widgets */
+    .widget {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+      font-size: 12px;
+    }
+
+    .icon {
+      color: var(--accent);
+      font-size: 13px;
+    }
+
+    #net-text,
+    #date,
+    #time {
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    #net-text {
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .critical { color: var(--critical); }
+    .warning { color: var(--warning); }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <div class="group" id="left">
+      <div class="group" id="workspaces"></div>
+      <div id="window-title">
+        <span id="window-title-icon">󰍹</span>
+        <span id="window-title-text">Ready</span>
+      </div>
+    </div>
+
+    <div class="group" id="right">
+      <div class="widget" id="net-widget">
+        <span class="icon" id="net-icon">󰤨</span>
+        <span id="net-text">--</span>
+      </div>
+      <div class="widget">
+        <span class="icon"></span>
+        <span id="cpu">0%</span>
+      </div>
+      <div class="widget">
+        <span class="icon"></span>
+        <span id="memory">0%</span>
+      </div>
+      <div class="widget" id="bat-widget">
+        <span class="icon" id="bat-icon">󰁹</span>
+        <span id="bat-text">--%</span>
+      </div>
+      <div class="widget">
+        <span class="icon">󱑒</span>
+        <span id="time">00:00</span>
+      </div>
+      <div class="widget">
+        <span class="icon">󰃭</span>
+        <span id="date">Mon, Jan 01</span>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/babel" data-type="module">
+    import * as zebar from 'https://esm.sh/zebar@3.0';
+
+    const providers = zebar.createProviderGroup({
+      network: { type: 'network' },
+      komorebi: { type: 'komorebi' },
+      cpu: { type: 'cpu' },
+      date: { type: 'date', formatting: 'EEE d MMM t' },
+      battery: { type: 'battery' },
+      memory: { type: 'memory' },
+    });
+
+    const processIcons = {
+      chrome: '󰊯',
+      msedge: '󰇩',
+      msedgewebview2: '󰇩',
+      firefox: '󰈹',
+      zen: '󰰶',
+      brave: '󰖟',
+      explorer: '󰉋',
+      wezterm: '',
+      weztermgui: '',
+      alacritty: '',
+      windowsterminal: '',
+      code: '󰨞',
+      codeinsiders: '󰨞',
+      cursor: '󰚩',
+      codex: '󱜙',
+      notepad: '󰈙',
+      discord: '󰙯',
+      telegram: '',
+      slack: '󰒱',
+      spotify: '󰓇',
+      steam: '󰓓',
+      obs64: '󰐾',
+      obsidian: '󰎚',
+      devenv: '󰪮',
+      rider64: '󱘗',
+      idea64: '󱈙',
+      clion64: '󱃖',
+      pycharm64: '󱃖',
+      datagrip64: '󰆼',
+      excel: '󰈛',
+      winword: '󰈭',
+      powerpnt: '󰈧',
+      teams: '󰊻',
+      taskmgr: '󰄪',
+      calc: '󰃬',
+      notepadplusplus: '󰈙',
+    };
+
+    const titleIcons = [
+      [/zen/i, '󰰶'],
+      [/chrome|google chrome/i, '󰊯'],
+      [/edge|microsoft edge/i, '󰇩'],
+      [/firefox/i, '󰈹'],
+      [/discord/i, '󰙯'],
+      [/telegram/i, ''],
+      [/slack/i, '󰒱'],
+      [/spotify/i, '󰓇'],
+      [/steam/i, '󰓓'],
+      [/obsidian/i, '󰎚'],
+      [/cursor/i, '󰚩'],
+      [/visual studio code|vscode|code/i, '󰨞'],
+      [/wezterm|terminal|powershell|pwsh|cmd/i, ''],
+      [/explorer|files/i, '󰉋'],
+      [/excel/i, '󰈛'],
+      [/word/i, '󰈭'],
+      [/powerpoint/i, '󰈧'],
+      [/task manager/i, '󰄪'],
+      [/calculator/i, '󰃬'],
+    ];
+
+    const titleCase = value => value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+
+    function normalizeAppName(value) {
+      return (value || '')
+        .toLowerCase()
+        .replace(/\.exe$/, '')
+        .replace(/[^a-z0-9]+/g, '');
+    }
+
+    function getWindowProcessName(window) {
+      return [
+        window?.processName,
+        window?.process_name,
+        window?.windowProcess,
+        window?.window_process,
+        window?.process,
+      ].find(Boolean) || '';
+    }
+
+    function getWindowTitle(window) {
+      return [
+        window?.title,
+        window?.windowTitle,
+        window?.window_title,
+      ].find(Boolean) || '';
+    }
+
+    function getAppVisual(window) {
+      const rawProcessName = getWindowProcessName(window);
+      const processName = normalizeAppName(rawProcessName);
+      const fromMap = processIcons[processName];
+      if (fromMap) {
+        return { icon: fromMap, label: rawProcessName || processName };
+      }
+
+      if (processName) {
+        return { icon: titleCase((rawProcessName || processName)[0]), label: rawProcessName || processName };
+      }
+
+      const title = getWindowTitle(window).trim();
+      const titleIcon = titleIcons.find(([pattern]) => pattern.test(title));
+      if (titleIcon) {
+        return { icon: titleIcon[1], label: title };
+      }
+
+      if (title) {
+        return { icon: title[0].toUpperCase(), label: title };
+      }
+
+      return { icon: '•', label: 'App' };
+    }
+
+    function renderWorkspace(workspace, focusedWorkspace, komorebiOutput) {
+      const button = document.createElement('button');
+      const label = document.createElement('span');
+      const apps = document.createElement('span');
+      const windows = workspace.windows || [];
+      const appVisuals = [];
+      const seen = new Set();
+      const focused = workspace.name === focusedWorkspace?.name;
+      const occupied = windows.length > 0;
+
+      windows.forEach(window => {
+        const visual = getAppVisual(window);
+        const key = `${visual.icon}:${visual.label}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          appVisuals.push(visual);
+        }
+      });
+
+      button.type = 'button';
+      button.className = 'workspace' + (focused ? ' focused' : '') + (occupied ? ' occupied' : '');
+      button.title = workspace.displayName || `Workspace ${workspace.name}`;
+      button.onclick = () => komorebiOutput.runCommand(`focus workspace ${workspace.name}`);
+
+      label.className = 'workspace-label';
+      label.innerText = workspace.name;
+
+      apps.className = 'workspace-apps';
+
+      if (appVisuals.length === 0) {
+        const empty = document.createElement('span');
+        empty.className = 'workspace-app';
+        empty.innerText = workspace.name;
+        apps.appendChild(empty);
+      } else {
+        appVisuals.slice(0, 4).forEach(visual => {
+          const chip = document.createElement('span');
+          chip.className = 'workspace-app';
+          chip.innerText = visual.icon;
+          chip.title = visual.label;
+          apps.appendChild(chip);
+        });
+
+        if (appVisuals.length > 4) {
+          const extra = document.createElement('span');
+          extra.className = 'workspace-app more';
+          extra.innerText = `+${appVisuals.length - 4}`;
+          apps.appendChild(extra);
+        }
+      }
+
+      button.appendChild(label);
+      if (appVisuals.length > 0) {
+        button.appendChild(apps);
+      }
+      return button;
+    }
+
+    function render(output) {
+      if (output.date?.formatted) {
+        const formatted = output.date.formatted;
+        const lastSpace = formatted.lastIndexOf(' ');
+        if (lastSpace > 0) {
+          document.getElementById('date').innerText = formatted.slice(0, lastSpace);
+          document.getElementById('time').innerText = formatted.slice(lastSpace + 1);
+        } else {
+          document.getElementById('time').innerText = formatted;
+        }
+      }
+
+      if (output.cpu) {
+        document.getElementById('cpu').innerText = Math.round(output.cpu.usage) + '%';
+      }
+
+      if (output.memory) {
+        document.getElementById('memory').innerText = Math.round(output.memory.usage) + '%';
+      }
+
+      if (output.battery) {
+        document.getElementById('bat-widget').style.display = '';
+        const text = document.getElementById('bat-text');
+        const icon = document.getElementById('bat-icon');
+        const charge = Math.round(output.battery.chargePercent);
+
+        text.innerText = charge + '%';
+        text.classList.remove('critical');
+
+        if (output.battery.isCharging) {
+          icon.innerText = '󰂄';
+        } else if (charge < 20) {
+          icon.innerText = '󰂃';
+          text.classList.add('critical');
+        } else {
+          icon.innerText = '󰁹';
+        }
+      } else {
+        document.getElementById('bat-widget').style.display = 'none';
+      }
+
+      if (output.network) {
+        const icon = document.getElementById('net-icon');
+        const text = document.getElementById('net-text');
+        const type = output.network.defaultInterface?.type;
+
+        if (type === 'wifi') {
+          text.innerText = output.network.defaultGateway?.ssid || 'Wifi';
+          icon.innerText = '󰤨';
+        } else if (type === 'ethernet') {
+          text.innerText = 'Eth';
+          icon.innerText = '󰈀';
+        } else {
+          text.innerText = 'Offline';
+          icon.innerText = '󰤭';
+        }
+      }
+
+      if (output.komorebi) {
+        const wsContainer = document.getElementById('workspaces');
+        const titleEl = document.getElementById('window-title-text');
+        const titleIconEl = document.getElementById('window-title-icon');
+        const workspaces = output.komorebi.workspaces || [];
+        const focusedWorkspace = output.komorebi.focusedWorkspace;
+        const focusedContainer = output.komorebi.focusedWindow;
+        const focusedVisual = focusedContainer ? getAppVisual(focusedContainer) : { icon: '•', label: 'Desktop' };
+
+        wsContainer.innerHTML = '';
+
+        workspaces.forEach(workspace => {
+          wsContainer.appendChild(renderWorkspace(workspace, focusedWorkspace, output.komorebi));
+        });
+
+        titleIconEl.innerText = focusedVisual.icon;
+        titleEl.innerText = focusedContainer?.title || 'Desktop';
+      }
+    }
+
+    providers.onOutput(() => render(providers.outputMap));
+    render(providers.outputMap);
+  </script>
+</body>
+</html>

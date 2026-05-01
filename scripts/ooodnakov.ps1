@@ -46,9 +46,10 @@ $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $KnownShellAutoUvModes = @("enabled", "quiet", "status")
 $KnownColorThemes = @("default", "catppuccin", "gruvbox", "nord", "tokyonight", "noctalia")
-$KnownKomorebiSubcommands = @("reload", "start", "stop")
-$KnownWmSubcommands = @("status", "set", "start", "stop", "reload", "zebar-config")
+$KnownWmSubcommands = @("status", "set", "start", "stop", "reload", "bar", "komorebi")
 $KnownWmOptions = @("komorebi", "glazewm")
+$KnownBarSubcommands = @("set", "zebar-config", "stop", "start", "reload")
+$KnownBarTypes = @("zebar", "yabs")
 $LocalOverridesStart = "# --- LOCAL OVERRIDES START ---"
 $LocalOverridesEnd = "# --- LOCAL OVERRIDES END ---"
 $ForgitAliasVar = "OOODNAKOV_FORGIT_ALIAS_MODE"
@@ -524,7 +525,6 @@ function Get-UiCommandIcon {
             "shell" { return [char]::ConvertFromUtf32(0xF1183) }
             "secrets" { return [char]::ConvertFromUtf32(0xF082E) }
             "agents" { return [char]::ConvertFromUtf32(0xF0B79) }
-            "komorebi" { return [char]::ConvertFromUtf32(0xF074E) }
             "wm" { return [char]::ConvertFromUtf32(0xF030F) }
             default { return [char]::ConvertFromUtf32(0xF060D) }
         }
@@ -542,7 +542,6 @@ function Get-UiCommandIcon {
         "shell" { return "[sh]" }
         "secrets" { return "[sec]" }
         "agents" { return "[agt]" }
-        "komorebi" { return "[komo]" }
         "wm" { return "[wm]" }
         default { return "[cmd]" }
     }
@@ -1075,7 +1074,14 @@ function Invoke-WmCommand {
             Start-Sleep -Milliseconds 500
 
             if ($choice -eq "komorebi") {
-                & "$PSScriptRoot/ooodnakov.ps1" komorebi start
+                Write-UiLine -Role info -Message "Starting Komorebi..."
+                $barType = Get-DefaultBarType
+                $startArgs = @("start", "--whkd")
+                if ($barType -eq "zebar") { $startArgs += "--bar" }
+                komorebic @startArgs 2>$null
+                Start-Sleep -Milliseconds 500
+                Write-UiLine -Role ok -Message "Komorebi started."
+                return
             } elseif ($choice -eq "glazewm") {
                 $glazeWmCommand = Resolve-GlazeWmCommand
                 if (-not $glazeWmCommand) {
@@ -1090,11 +1096,14 @@ function Invoke-WmCommand {
             return
         }
         "start" {
-            # Start the one that is currently active/linked?
-            # For now, default to komorebi if nothing is running
             if (Get-Process glazewm -ErrorAction SilentlyContinue) { Write-UiLine -Role info -Message "GlazeWM is already running." }
             elseif (Get-Process komorebi -ErrorAction SilentlyContinue) { Write-UiLine -Role info -Message "Komorebi is already running." }
-            else { & "$PSScriptRoot/ooodnakov.ps1" wm set komorebi }
+            else {
+                Write-UiLine -Role info -Message "Starting Komorebi..."
+                komorebic start --whkd 2>$null
+                Start-Sleep -Milliseconds 500
+                Write-UiLine -Role ok -Message "Komorebi started."
+            }
             return
         }
         "stop" {
@@ -1116,7 +1125,11 @@ function Invoke-WmCommand {
             return
         }
         "reload" {
-            if (Get-Process komorebi -ErrorAction SilentlyContinue) { & "$PSScriptRoot/ooodnakov.ps1" komorebi reload }
+            if (Get-Process komorebi -ErrorAction SilentlyContinue) {
+                Write-UiLine -Role info -Message "Reloading Komorebi..."
+                komorebic reload-configuration
+                return
+            }
             elseif (Get-Process glazewm -ErrorAction SilentlyContinue) {
                 $glazeWmCommand = Resolve-GlazeWmCommand
                 if (-not $glazeWmCommand) {
@@ -1134,11 +1147,165 @@ function Invoke-WmCommand {
             }
             return
         }
+        "komorebi" {
+            $remainingArgs = if ($WmArgs.Count -gt 1) { $WmArgs[1..($WmArgs.Count - 1)] } else { @() }
+            $barMode = $false
+            $subcommand = ""
+            foreach ($arg in $remainingArgs) {
+                if ($arg -eq "--bar") { $barMode = $true }
+                elseif ($arg -in @("reload", "start", "stop")) { $subcommand = $arg }
+            }
+            if (-not $subcommand) {
+                Write-UiLine -Role fail -Message "Missing komorebi subcommand (reload, start, stop)"
+                return
+            }
+            if ($barMode) {
+                Write-UiLine -Role info -Message "Komorebi $subcommand with bar..."
+                komorebic stop --bar 2>$null
+                Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 300
+                if ($subcommand -in @("start", "reload")) {
+                    Start-Process komorebic -ArgumentList "start", "--whkd", "--bar" -WindowStyle Hidden
+                }
+            } else {
+                Write-UiLine -Role info -Message "Komorebi $subcommand (no bar)..."
+                komorebic stop 2>$null
+                Stop-Process -Name "komorebi", "whkd" -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 300
+                if ($subcommand -in @("start", "reload")) {
+                    Start-Process komorebic -ArgumentList "start", "--whkd" -WindowStyle Hidden
+                }
+            }
+            Write-UiLine -Role ok -Message "Komorebi $subcommand complete."
+            return
+        }
+        "bar" {
+            $remainingArgs = if ($WmArgs.Count -gt 1) { $WmArgs[1..($WmArgs.Count - 1)] } else { @() }
+            Invoke-BarCommand -BarArgs $remainingArgs
+            return
+        }
         default {
             $suggestion = Get-SuggestionFromList -InputValue $subcommand -Candidates $KnownWmSubcommands
             Write-UnknownCommandMessage -Message "Unknown wm subcommand: $subcommand" -Suggestion $suggestion -Scope wm
             throw "Unknown wm subcommand: $subcommand"
         }
+    }
+}
+
+function Invoke-BarCommand {
+    param([string[]]$BarArgs)
+    $action = if ($BarArgs.Count -gt 0) { $BarArgs[0] } else { "" }
+    $remainingArgs = if ($BarArgs.Count -gt 1) { $BarArgs[1..($BarArgs.Count - 1)] } else { @() }
+    switch ($action) {
+        "" {
+            Write-UiHelpBlock @"
+Usage: oooconf wm bar set <type>
+       oooconf wm bar zebar-config status
+       oooconf wm bar zebar-config list
+       oooconf wm bar zebar-config set <name>
+
+Set or inspect the default bar type (zebar/yabs) used when activating a WM.
+Bar type determines which bar loads on wm start:
+  zebar  - loads komorebi-bar with zebar provider (default)
+  yabs   - future replacement bar (not implemented yet)
+
+Subcommands:
+  set           set or show default bar type
+  zebar-config  manage zebar configs (status, list, set)
+Examples:
+  oooconf wm bar set              # show current bar type
+  oooconf wm bar set zebar        # set to zebar
+  oooconf wm bar set yabs         # set to yabs (future)
+  oooconf wm bar zebar-config list
+"@
+            return
+        }
+        "set" {
+            Invoke-BarSetCommand $remainingArgs
+            return
+        }
+        "zebar-config" { Invoke-ZebarConfigCommand -ZebarArgs $remainingArgs; return }
+        "stop" {
+            Stop-Process -Name "komorebi-bar" -ErrorAction SilentlyContinue
+            Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
+            Write-UiLine -Role ok -Message "Bar stopped."
+            return
+        }
+        "start" {
+            $zebarCommand = Get-Command zebar -ErrorAction SilentlyContinue
+            if (-not $zebarCommand) {
+                Write-UiLine -Role warn -Message "Zebar is not installed. Run 'oooconf deps zebar' first."
+                return
+            }
+            & $zebarCommand.Source startup *> $null
+            Write-UiLine -Role ok -Message "Bar started."
+            return
+        }
+        "reload" {
+            Stop-Process -Name "komorebi-bar" -ErrorAction SilentlyContinue
+            Stop-Process -Name "zebar" -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 500
+            $zebarCommand = Get-Command zebar -ErrorAction SilentlyContinue
+            if ($zebarCommand) {
+                & $zebarCommand.Source startup *> $null
+            }
+            Write-UiLine -Role ok -Message "Bar reloaded."
+            return
+        }
+        default {
+            $suggestion = Get-SuggestionFromList -InputValue $action -Candidates $KnownBarSubcommands
+            Write-UnknownCommandMessage -Message "Unknown bar subcommand: $action" -Suggestion $suggestion -Scope "wm bar"
+            throw "Unknown bar subcommand: $action"
+        }
+    }
+}
+
+function Get-DefaultBarType {
+    $configPath = Get-ZebarConfigRoot
+    $settingsPath = Join-Path $configPath "config.yaml"
+    if (-not (Test-Path $settingsPath)) {
+        return "zebar"  # default
+    }
+    $content = Get-Content -Path $settingsPath -Raw
+    if ($content -match 'default_bar_type:\s*(\S+)') {
+        return $matches[1]
+    }
+    return "zebar"  # default
+}
+
+function Set-DefaultBarType {
+    param([string]$Type)
+    if ($Type -notin $KnownBarTypes) {
+        Write-UiLine -Role fail -Message "Unknown bar type: $Type. Available: $($KnownBarTypes -join ', ')"
+        return $false
+    }
+    $configPath = Get-ZebarConfigRoot
+    $settingsPath = Join-Path $configPath "config.yaml"
+    if (-not (Test-Path $settingsPath)) {
+        Write-UiLine -Role fail -Message "Zebar config.yaml not found at $settingsPath."
+        return $false
+    }
+    $content = Get-Content -Path $settingsPath -Raw
+    if ($content -match 'default_bar_type:\s*\S+') {
+        $content = $content -replace 'default_bar_type:\s*\S+', "default_bar_type: $Type"
+    } else {
+        $content = $content -replace '(?m)^(window:)', ("default_bar_type: $Type`n`$1")
+    }
+    Set-Content -Path $settingsPath -Value $content
+    return $true
+}
+
+function Invoke-BarSetCommand {
+    if ($Args.Count -eq 0 -or $Args[0] -notin $KnownBarTypes) {
+        $current = Get-DefaultBarType
+        Write-UiLine -Role info -Message "Current default bar type: $current"
+        Write-UiLine -Role hint -Message "Usage: wm bar set <type>  (available: $($KnownBarTypes -join ', '))"
+        return
+    }
+    $type = $Args[0]
+    $result = Set-DefaultBarType -Type $type
+    if ($result) {
+        Write-UiLine -Role ok -Message "Default bar type set to $type."
     }
 }
 
@@ -1148,62 +1315,6 @@ function Show-ShellStatus {
     Write-UiLine -Role info -Message "psfzf-tab: $(Get-PsfzfTabMode)"
     Write-UiLine -Role info -Message "psfzf-git: $(Get-PsfzfGitMode)"
     Write-UiLine -Role info -Message "auto-uv-env: $(Get-AutoUvEnvMode)"
-}
-
-function Invoke-KomorebiCommand {
-    param(
-        [string[]]$KomorebiArgs
-    )
-
-    $subcommand = if ($KomorebiArgs.Count -gt 0) { $KomorebiArgs[0] } else { "" }
-
-    switch ($subcommand) {
-        "" { Show-CommandUsage "komorebi"; return }
-        "help" { Show-CommandUsage "komorebi"; return }
-        "-h" { Show-CommandUsage "komorebi"; return }
-        "--help" { Show-CommandUsage "komorebi"; return }
-        "reload" {
-            if ($IsWindows) {
-                Write-UiLine -Role info -Message "Reloading Komorebi configuration..."
-                # Use a fresh start for reload to ensure clean state
-                & "$PSScriptRoot/ooodnakov.ps1" komorebi stop
-                Start-Sleep -Milliseconds 500
-                & "$PSScriptRoot/ooodnakov.ps1" komorebi start
-            } else {
-                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
-            }
-            return
-        }
-        "start" {
-            if ($IsWindows) {
-                Write-UiLine -Role info -Message "Starting Komorebi, whkd, and bar..."
-                # Ensure clean state
-                Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
-                Start-Process komorebic -ArgumentList "start --whkd --bar" -WindowStyle Hidden
-                Write-UiLine -Role ok -Message "Komorebi stack started."
-            } else {
-                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
-            }
-            return
-        }
-        "stop" {
-            if ($IsWindows) {
-                Write-UiLine -Role info -Message "Stopping Komorebi stack..."
-                # Suppress errors if daemon is already unresponsive
-                komorebic stop --bar 2>$null
-                Stop-Process -Name "komorebi", "whkd", "komorebi-bar" -ErrorAction SilentlyContinue
-                Write-UiLine -Role ok -Message "Komorebi stack stopped."
-            } else {
-                Write-UiLine -Role fail -Message "Komorebi is only supported on Windows."
-            }
-            return
-        }
-        default {
-            $suggestion = Get-SuggestionFromList -InputValue $subcommand -Candidates $KnownKomorebiSubcommands
-            Write-UnknownCommandMessage -Message "Unknown komorebi subcommand: $subcommand" -Suggestion $suggestion -Scope komorebi
-            throw "Unknown komorebi subcommand: $subcommand"
-        }
-    }
 }
 
 function Write-UnknownCommandMessage {
@@ -1754,21 +1865,6 @@ Examples:
   oooconf color noctalia
 "@
         }
-        "komorebi" {
-            Write-UiHelpBlock @"
-Usage: oooconf komorebi reload
-       oooconf komorebi start
-       oooconf komorebi stop
-
-Manage komorebi tiling window manager state.
-Subcommands:
-  reload  reloads the komorebi configuration
-  start   starts komorebi, whkd, and the status bar
-  stop    stops the komorebi stack
-Examples:
-  oooconf komorebi reload
-"@
-        }
         "wm" {
             Write-UiHelpBlock @"
 Usage: oooconf wm status
@@ -1776,9 +1872,13 @@ Usage: oooconf wm status
        oooconf wm start
        oooconf wm stop
        oooconf wm reload
-       oooconf wm zebar-config status
-       oooconf wm zebar-config list
-       oooconf wm zebar-config set <name>
+       oooconf wm bar set zebar <name>
+       oooconf wm bar zebar-config status
+       oooconf wm bar zebar-config list
+       oooconf wm bar zebar-config set <name>
+       oooconf wm komorebi reload
+       oooconf wm komorebi start [--bar]
+       oooconf wm komorebi stop [--bar]
 
 Switch between or manage window managers.
 Subcommands:
@@ -1787,13 +1887,17 @@ Subcommands:
   start          starts the default WM (komorebi)
   stop           stops any running WM stack
   reload         reloads the configuration of the active WM
-  zebar-config   manages which local Zebar widget pack is used on startup
+  bar            manage bar and zebar (set, zebar-config)
+  komorebi       manage komorebi (reload, start, stop) with optional --bar
 Examples:
   oooconf wm status
   oooconf wm set glazewm
   oooconf wm reload
-  oooconf wm zebar-config list
-  oooconf wm zebar-config set overline-zebar
+  oooconf wm bar set zebar overline-zebar-komorebi
+  oooconf wm bar zebar-config list
+  oooconf wm bar zebar-config set overline-zebar-komorebi
+  oooconf wm komorebi start --bar
+  oooconf wm komorebi stop --bar
 "@
         }
         "" { Show-Usage }
@@ -2036,9 +2140,6 @@ switch ($command) {
         }
         Require-PythonRuntime
         Run-Python -ScriptPath $AgentsToolScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
-    }
-    "komorebi" {
-        Invoke-KomorebiCommand -KomorebiArgs $remaining
     }
     "wm" {
         Invoke-WmCommand -WmArgs $remaining

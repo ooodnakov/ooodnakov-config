@@ -5,24 +5,31 @@
   "cross_monitor_move_behaviour": "Insert",
   "default_workspace_padding": 10,
   "default_container_padding": 10,
+  "global_work_area_offset": {
+    "top": 20,
+    "bottom": 8,
+    "left": 2,
+    "right": 2
+  },
   "border": true,
-  "border_width": 10,
+  "border_width": 8,
   "border_offset": -1,
-  "focus_follows_mouse": "Komorebi",
   "mouse_follows_focus": true,
   "animation": {
     "enabled": true,
-    "duration": 150,
-    "fps": 120
+    "duration": 250,
+    "fps": 120,
+    "style": "EaseOutSine"
   },
   "theme": {
     "palette": "Base16",
-    "name": "Ashes",
+    "name": "GruvboxDarkHard",
     "single_border": "Base0D",
     "unfocused_border": "Base03",
-    "bar_accent": "Base0D"
+    "bar_accent": "Base0D",
+    "monocle_border": null
   },
-  "float_rules": [
+  "ignore_rules": [
     {
       "kind": "Class",
       "id": "SunAwtDialog",
@@ -54,31 +61,73 @@
       "workspaces": [
         {
           "name": "\udb80\ude39",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\uf120",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb81\ude6f",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb81\udcd3",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb85\udcf7",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb80\ude4b",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb80\udeab",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         }
       ]
     },
@@ -86,33 +135,149 @@
       "workspaces": [
         {
           "name": "\udb80\ude39",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\uf120",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb81\ude6f",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb81\udcd3",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb85\udcf7",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb80\ude4b",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         },
         {
           "name": "\udb80\udeab",
-          "layout": "Scrolling"
+          "layout": "Scrolling",
+          "layout_options": {
+            "scrolling": {
+              "columns": "2",
+              "center_focused_column": true
+            }
+          }
         }
       ]
     }
+    // {
+    //   "workspaces": [
+    //     {
+    //       "name": "\udb80\ude39",
+    //       "layout": "Scrolling",
+    //       "layout_options": {
+    //         "scrolling": {
+    //           "columns": "2",
+    //           "center_focused_column": true
+    //         }
+    //       }
+    //     },
+    //     {
+    //       "name": "\uf120",
+    //       "layout": "Scrolling",
+    //       "layout_options": {
+    //         "scrolling": {
+    //           "columns": "2",
+    //           "center_focused_column": true
+    //         }
+    //       }
+    //     },
+    //     {
+    //       "name": "\udb81\ude6f",
+    //       "layout": "Scrolling",
+    //       "layout_options": {
+    //         "scrolling": {
+    //           "columns": "2",
+    //           "center_focused_column": true
+    //         }
+    //       }
+    //     },
+    //     {
+    //       "name": "\udb81\udcd3",
+    //       "layout": "Scrolling",
+    //       "layout_options": {
+    //         "scrolling": {
+    //           "columns": "2",
+    //           "center_focused_column": true
+    //         }
+    //       }
+    //     },
+    //     {
+    //       "name": "\udb85\udcf7",
+    //       "layout": "Scrolling",
+    //       "layout_options": {
+    //         "scrolling": {
+    //           "columns": "2",
+    //           "center_focused_column": true
+    //         }
+    //       }
+    //     },
+    //     {
+    //       "name": "\udb80\ude4b",
+    //       "layout": "Scrolling",
+    //       "layout_options": {
+    //         "scrolling": {
+    //           "columns": "2",
+    //           "center_focused_column": true
+    //         }
+    //       }
+    //     },
+    //     {
+    //       "name": "\udb80\udeab",
+    //       "layout": "Scrolling",
+    //       "layout_options": {
+    //         "scrolling": {
+    //           "columns": "2",
+    //           "center_focused_column": true
+    //         }
+    //       }
+    //     }
+    //   ]
+    // }
   ]
 }
