@@ -24,6 +24,7 @@ home/.config/ooodnakov/local/*.ssh
 home/.config/ooodnakov/local/agents/data.json
 home/.config/ooodnakov/cache/*
 home/.config/nvim/.neoconf.json
+home/.config/omniwm/runtime-state.json
 home/.config/zsh/.zsh_history
 home/.config/zsh/.zshenv
 home/.config/zsh/.zcompdump*
