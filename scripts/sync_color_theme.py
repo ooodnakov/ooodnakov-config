@@ -259,6 +259,105 @@ ZEBAR_VARS_BY_THEME: dict[str, dict[str, str]] = {
     },
 }
 
+OVERLINE_ZEBAR_VARS_BY_THEME: dict[str, dict[str, str]] = {
+    "default": {
+        "border": "#343b47",
+        "background": "#1e2228",
+        "background-deeper": "#090b0f",
+        "button": "#353b45",
+        "button-border": "#4e5663",
+        "primary": "#5d7287",
+        "primary-border": "#718aa3",
+        "primary-text": "#edeef0",
+        "text": "#edeef0",
+        "text-muted": "#caced4",
+        "icon": "#a9aeb8",
+        "success": "#a3be8c",
+        "danger": "#bf616a",
+        "warning": "#d08770",
+    },
+    "catppuccin": {
+        "border": "#45475a",
+        "background": "#1e1e2e",
+        "background-deeper": "#11111b",
+        "button": "#45475a",
+        "button-border": "#45475a",
+        "primary": "#89b4fa",
+        "primary-border": "#b4befe",
+        "primary-text": "#1e1e2e",
+        "text": "#cdd6f4",
+        "text-muted": "#a6adc8",
+        "icon": "#bac2de",
+        "success": "#a6e3a1",
+        "danger": "#f38ba8",
+        "warning": "#fab387",
+    },
+    "gruvbox": {
+        "border": "#504945",
+        "background": "#282828",
+        "background-deeper": "#1d2021",
+        "button": "#3c3836",
+        "button-border": "#665c54",
+        "primary": "#83a598",
+        "primary-border": "#8ec07c",
+        "primary-text": "#1d2021",
+        "text": "#ebdbb2",
+        "text-muted": "#d5c4a1",
+        "icon": "#bdae93",
+        "success": "#b8bb26",
+        "danger": "#fb4934",
+        "warning": "#fe8019",
+    },
+    "nord": {
+        "border": "#4c566a",
+        "background": "#2e3440",
+        "background-deeper": "#242933",
+        "button": "#3b4252",
+        "button-border": "#4c566a",
+        "primary": "#88c0d0",
+        "primary-border": "#81a1c1",
+        "primary-text": "#2e3440",
+        "text": "#eceff4",
+        "text-muted": "#d8dee9",
+        "icon": "#e5e9f0",
+        "success": "#a3be8c",
+        "danger": "#bf616a",
+        "warning": "#d08770",
+    },
+    "tokyonight": {
+        "border": "#414868",
+        "background": "#1a1b26",
+        "background-deeper": "#11121b",
+        "button": "#2f3549",
+        "button-border": "#414868",
+        "primary": "#7aa2f7",
+        "primary-border": "#bb9af7",
+        "primary-text": "#1a1b26",
+        "text": "#c0caf5",
+        "text-muted": "#a9b1d6",
+        "icon": "#c0caf5",
+        "success": "#9ece6a",
+        "danger": "#f7768e",
+        "warning": "#ff9e64",
+    },
+    "noctalia": {
+        "border": "#2a3036",
+        "background": "#1c2023",
+        "background-deeper": "#101316",
+        "button": "#2a3036",
+        "button-border": "#39434a",
+        "primary": "#8eb2c7",
+        "primary-border": "#a7c6d8",
+        "primary-text": "#101316",
+        "text": "#c0c5ce",
+        "text-muted": "#bac3d0",
+        "icon": "#d8dee9",
+        "success": "#99cc99",
+        "danger": "#f2777a",
+        "warning": "#f99157",
+    },
+}
+
 OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
     "default": {
         "#444444": "#444444",
@@ -397,15 +496,59 @@ def set_sketchybar_theme(theme: str) -> str:
     return f"sketchybar: wrote local overrides ({lua_path}, {sh_path})"
 
 
-def set_zebar_theme(theme: str) -> str:
-    vars_map = ZEBAR_VARS_BY_THEME.get(theme, ZEBAR_VARS_BY_THEME["default"])
-    zebar_path = Path.home() / ".glzr" / "zebar" / "ooodnakov" / "theme-overrides.css"
-    zebar_path.parent.mkdir(parents=True, exist_ok=True)
+def _css_var_lines(vars_map: dict[str, str], *, important: bool = False) -> list[str]:
     lines = [":root {"]
-    lines.extend([f"  --{key}: {value};" for key, value in vars_map.items()])
+    suffix = " !important" if important else ""
+    lines.extend([f"  --{key}: {value}{suffix};" for key, value in vars_map.items()])
     lines.append("}")
-    zebar_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return f"zebar: wrote theme overrides ({zebar_path})"
+    return lines
+
+
+def _zebar_vars_for_css(theme: str, *, kebab_case: bool) -> dict[str, str]:
+    vars_map = ZEBAR_VARS_BY_THEME.get(theme, ZEBAR_VARS_BY_THEME["default"])
+    out = {"font": '"MesloLGSDZ Nerd Font Mono", sans-serif'}
+    for key, value in vars_map.items():
+        out[key.replace("_", "-") if kebab_case else key] = value
+    return out
+
+
+def _write_css_vars(path: Path, vars_map: dict[str, str], *, important: bool = False) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(_css_var_lines(vars_map, important=important)) + "\n", encoding="utf-8")
+
+
+def set_zebar_theme(theme: str) -> str:
+    zebar_root = Path.home() / ".glzr" / "zebar"
+    targets = [
+        (zebar_root / "ooodnakov" / "theme-overrides.css", _zebar_vars_for_css(theme, kebab_case=True)),
+        (zebar_root / "ooodnakov-komorebi" / "theme-overrides.css", _zebar_vars_for_css(theme, kebab_case=True)),
+    ]
+    for path, vars_map in targets:
+        _write_css_vars(path, vars_map)
+    paths = ", ".join(str(path) for path, _ in targets)
+    return f"zebar: wrote theme overrides ({paths})"
+
+
+def set_overline_zebar_theme(theme: str) -> str:
+    vars_map = OVERLINE_ZEBAR_VARS_BY_THEME.get(theme, OVERLINE_ZEBAR_VARS_BY_THEME["default"])
+    zebar_root = Path.home() / ".glzr" / "zebar"
+    if not zebar_root.exists():
+        return f"overline-zebar: skipped ({zebar_root} not found)"
+
+    targets: list[Path] = []
+    for pack_path in sorted(zebar_root.glob("overline-zebar*")):
+        theme_path = pack_path / "packages" / "ui" / "src" / "theme.css"
+        if theme_path.exists():
+            targets.append(theme_path)
+
+    if not targets:
+        return "overline-zebar: skipped (no installed overline-zebar pack found)"
+
+    for path in targets:
+        _write_css_vars(path, vars_map, important=True)
+
+    paths = ", ".join(str(path) for path in targets)
+    return f"overline-zebar: wrote oooconf theme overrides ({paths})"
 
 
 def _replace_hex_values(value: Any, replacements: dict[str, str]) -> Any:
@@ -476,6 +619,12 @@ def current_status() -> list[str]:
     )
     zebar_local = Path.home() / ".glzr" / "zebar" / "ooodnakov" / "theme-overrides.css"
     lines.append(f"zebar theme override: {'present' if zebar_local.exists() else 'missing'} ({zebar_local})")
+    overline_targets = sorted((Path.home() / ".glzr" / "zebar").glob("overline-zebar*/packages/ui/src/theme.css"))
+    lines.append(
+        "overline-zebar theme override targets: "
+        f"{len(overline_targets)} found"
+        + (f" ({', '.join(str(path) for path in overline_targets)})" if overline_targets else "")
+    )
     return lines
 
 
@@ -496,6 +645,7 @@ def main() -> int:
         print(line)
     print(set_sketchybar_theme(args.theme))
     print(set_zebar_theme(args.theme))
+    print(set_overline_zebar_theme(args.theme))
     print(set_oh_my_posh_theme(args.theme))
     return 0
 
