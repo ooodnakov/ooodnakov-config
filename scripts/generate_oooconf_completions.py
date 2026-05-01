@@ -479,12 +479,12 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: Cl
     )
     lines.append("        } else {")
     lines.append("            $lastToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }")
-    lines.append('            $valueKey = "$commandName:$lastToken"')
+    lines.append('            $valueKey = "${commandName}:$lastToken"')
     lines.append("            if ($OooconfOptionValues.ContainsKey($valueKey)) {")
     lines.append("                $completions = $OooconfOptionValues[$valueKey]")
     lines.append("            } else {")
-    lines.append('                $optKey = "$commandName:$subcommandName"')
-    lines.append('                $subsubKey = "$commandName:$subcommandName"')
+    lines.append('                $optKey = "${commandName}:$subcommandName"')
+    lines.append('                $subsubKey = "${commandName}:$subcommandName"')
     lines.append(
         "                $subsubCommands = if ($OooconfSubsubcommands.ContainsKey($subsubKey)) { $OooconfSubsubcommands[$subsubKey] } else { @() }"
     )
@@ -502,7 +502,7 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: Cl
     )
     lines.append("                    $completions += $subsubCommands")
     lines.append("                } else {")
-    lines.append('                    $subsubOptKey = "$commandName:$subcommandName:$subsubcommandName"')
+    lines.append('                    $subsubOptKey = "${commandName}:${subcommandName}:$subsubcommandName"')
     lines.append(
         "                    if ($OooconfSubsubcommandOptions.ContainsKey($subsubOptKey)) { $completions += $OooconfSubsubcommandOptions[$subsubOptKey] }"
     )

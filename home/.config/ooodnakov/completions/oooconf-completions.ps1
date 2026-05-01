@@ -288,12 +288,12 @@ function Get-OooconfCompletions {
             if ($commandName -in @('install', 'deps', 'update')) { $completions += $OooconfDepsKeys }
         } else {
             $lastToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }
-            $valueKey = "$commandName:$lastToken"
+            $valueKey = "${commandName}:$lastToken"
             if ($OooconfOptionValues.ContainsKey($valueKey)) {
                 $completions = $OooconfOptionValues[$valueKey]
             } else {
-                $optKey = "$commandName:$subcommandName"
-                $subsubKey = "$commandName:$subcommandName"
+                $optKey = "${commandName}:$subcommandName"
+                $subsubKey = "${commandName}:$subcommandName"
                 $subsubCommands = if ($OooconfSubsubcommands.ContainsKey($subsubKey)) { $OooconfSubsubcommands[$subsubKey] } else { @() }
                 $subsubcommandName = $null
                 for ($j = $commandPos + 2; $j -lt $tokens.Length; $j++) {
@@ -305,7 +305,7 @@ function Get-OooconfCompletions {
                     if ($OooconfSubcommandValues.ContainsKey($optKey)) { $completions += $OooconfSubcommandValues[$optKey] }
                     $completions += $subsubCommands
                 } else {
-                    $subsubOptKey = "$commandName:$subcommandName:$subsubcommandName"
+                    $subsubOptKey = "${commandName}:${subcommandName}:$subsubcommandName"
                     if ($OooconfSubsubcommandOptions.ContainsKey($subsubOptKey)) { $completions += $OooconfSubsubcommandOptions[$subsubOptKey] }
                 }
             }
