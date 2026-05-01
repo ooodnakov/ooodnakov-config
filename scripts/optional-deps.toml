@@ -445,10 +445,6 @@ display = "Impala"
 description = "TUI for managing Wi-Fi networks (tab sections, space select, enter connect)"
 linux.manager = "cargo"
 linux.package = "impala"
-macos.manager = "custom"
-macos.command = "not available on macOS"
-windows.manager = "custom"
-windows.command = "not available on Windows"
 
 [[deps]]
 key = "bluetui"
@@ -456,10 +452,6 @@ display = "BlueTUI"
 description = "TUI for managing Bluetooth connections"
 linux.manager = "cargo"
 linux.package = "bluetui"
-macos.manager = "custom"
-macos.command = "not available on macOS"
-windows.manager = "custom"
-windows.command = "not available on Windows"
 
 [[deps]]
 key = "uv"
