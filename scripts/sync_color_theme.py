@@ -20,7 +20,7 @@ KOMOREBI_THEME_BY_THEME = {
     "default": {
         "palette": "Base16",
         "name": "Ashes",
-        "active_border": "Base0D",
+        "single_border": "Base0D",
         "unfocused_border": "Base03",
         "bar_accent": "Base0D",
         "accent": "Base0D",
@@ -28,42 +28,42 @@ KOMOREBI_THEME_BY_THEME = {
     "catppuccin": {
         "palette": "Catppuccin",
         "name": "Mocha",
-        "active_border": "Blue",
+        "single_border": "Blue",
         "unfocused_border": "Surface0",
         "bar_accent": "Blue",
         "accent": "Blue",
     },
     "gruvbox": {
-        "palette": "Gruvbox",
-        "name": "DarkHard",
-        "active_border": "BrightBlue",
-        "unfocused_border": "Bg2",
-        "bar_accent": "BrightBlue",
-        "accent": "BrightBlue",
+        "palette": "Base16",
+        "name": "GruvboxDarkHard",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
     },
     "nord": {
-        "palette": "Nord",
-        "name": "PolarNight",
-        "active_border": "Frost3",
-        "unfocused_border": "PolarNight3",
-        "bar_accent": "Frost3",
-        "accent": "Frost3",
+        "palette": "Base16",
+        "name": "Nord",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
     },
     "tokyonight": {
-        "palette": "TokyoNight",
-        "name": "Night",
-        "active_border": "Blue",
-        "unfocused_border": "TerminalBlack",
-        "bar_accent": "Blue",
-        "accent": "Blue",
+        "palette": "Base16",
+        "name": "TokyoNightDark",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
     },
     "noctalia": {
-        "palette": "Noctalia",
-        "name": "Noctalia",
-        "active_border": "Accent",
-        "unfocused_border": "Panel",
-        "bar_accent": "Accent",
-        "accent": "Accent",
+        "palette": "Base16",
+        "name": "Ashes",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
     },
 }
 
@@ -343,18 +343,20 @@ def _set_komorebi_theme_file(path: Path, theme: str) -> str:
     data = json.loads(path.read_text(encoding="utf-8"))
     theme_spec = KOMOREBI_THEME_BY_THEME.get(theme, KOMOREBI_THEME_BY_THEME["default"])
     if isinstance(data, dict):
-        data.setdefault("theme", {})
-        if isinstance(data["theme"], dict):
-            if path.name.endswith(".bar.json"):
-                data["theme"]["palette"] = theme_spec["palette"]
-                data["theme"]["name"] = theme_spec["name"]
-                data["theme"]["accent"] = theme_spec["accent"]
-            else:
-                data["theme"]["palette"] = theme_spec["palette"]
-                data["theme"]["name"] = theme_spec["name"]
-                data["theme"]["active_border"] = theme_spec["active_border"]
-                data["theme"]["unfocused_border"] = theme_spec["unfocused_border"]
-                data["theme"]["bar_accent"] = theme_spec["bar_accent"]
+        if path.name.endswith(".bar.json"):
+            data["theme"] = {
+                "palette": theme_spec["palette"],
+                "name": theme_spec["name"],
+                "accent": theme_spec["accent"],
+            }
+        else:
+            data["theme"] = {
+                "palette": theme_spec["palette"],
+                "name": theme_spec["name"],
+                "single_border": theme_spec["single_border"],
+                "unfocused_border": theme_spec["unfocused_border"],
+                "bar_accent": theme_spec["bar_accent"],
+            }
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return f"{path.name}: set theme -> {theme_spec['palette']}/{theme_spec['name']}"
 
