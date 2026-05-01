@@ -1190,15 +1190,23 @@ EOF
       ;;
     agents)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf agents <detect|sync|doctor|update> [options]
+Usage: oooconf agents <detect|sync|doctor|update|skills> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
   detect [--json]       detect configured agent CLIs on PATH
-  sync [--check]        append/update shared AGENTS.md managed block
+  sync [--check] [--materialize-secrets]
+                        append/update shared AGENTS.md managed block
   doctor [--strict-config-paths]
                         verify AGENTS.md managed block and default agent config paths
   update [--check]      update installed agent CLIs (pnpm-based tools use pnpm)
+  mcp add [--name N] [--json JSON] [--multi] [--preview] [--sync-now]
+                        add one MCP JSON server entry to shared config
+  skills sync [--check] sync configured skill specs across agents
+  skills view [--check] [--json]
+                        view shared skills catalog via pnpm dlx
+  skills add <source> [--agent gemini] [--sync-now]
+                        add one shared skill source (e.g. vercel-labs/agent-skills)
 EOF
       ;;
     secrets)

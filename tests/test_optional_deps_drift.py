@@ -68,7 +68,7 @@ def test_spec_driven_subcommand_descriptions_are_emitted() -> None:
     spec_content = (REPO_ROOT / "scripts/oooconf-cli-spec.toml").read_text(encoding="utf-8")
     assert "[commands.agents.subcommand_descriptions]" in spec_content
     assert "[commands.agents.subsubcommands]" in spec_content
-    assert 'mcp = ["sync", "status"]' in spec_content
+    assert 'mcp = ["sync", "status", "add"]' in spec_content
     assert "[commands.shell.subcommand_descriptions]" in spec_content
 
 
@@ -82,7 +82,7 @@ def test_subsubcommand_metadata_is_emitted_for_zsh_and_powershell() -> None:
     pwsh_content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(
         encoding="utf-8"
     )
-    assert "'agents:mcp' = @('sync', 'status')" in pwsh_content
+    assert "'agents:mcp' = @('sync', 'status', 'add')" in pwsh_content
     assert "'agents:mcp:sync' = @('--check')" in pwsh_content
 
 

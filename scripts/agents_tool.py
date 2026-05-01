@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import os
 import re
@@ -133,6 +134,7 @@ class DoctorConfigResult:
     missing_mcp: list[str]
     missing_skills: list[str]
     parse_error: str = ""
+    shape_issues: list[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +161,11 @@ def parse_args() -> argparse.Namespace:
     sync_parser = subparsers.add_parser("sync", help="Append/update a managed common block in AGENTS.md files.")
     sync_parser.add_argument("--check", action="store_true", help="Validate only; do not write files.")
     sync_parser.add_argument(
+        "--materialize-secrets",
+        action="store_true",
+        help="Materialize env vars into generated global MCP configs (otherwise keep placeholders).",
+    )
+    sync_parser.add_argument(
         "--global", dest="global_sync", action="store_true", help="Also sync MCP servers to global agent configs."
     )
 
@@ -175,6 +182,17 @@ def parse_args() -> argparse.Namespace:
     mcp_subparsers = mcp_parser.add_subparsers(dest="subcommand", required=True)
     mcp_sync_parser = mcp_subparsers.add_parser("sync", help="Synchronize (clone/pull/install) managed MCP servers.")
     mcp_sync_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
+    mcp_add_parser = mcp_subparsers.add_parser("add", help="Add an MCP server entry to common-data.json.")
+    mcp_add_parser.add_argument("--name", help="Optional MCP server name (otherwise inferred from JSON key).")
+    mcp_add_parser.add_argument(
+        "--json",
+        dest="json_payload",
+        help="MCP JSON object payload. If omitted, read from stdin or interactive prompt.",
+    )
+    mcp_add_parser.add_argument("--sync-now", action="store_true", help="Run agents sync --global after adding.")
+    mcp_add_parser.add_argument("--multi", action="store_true", help="Allow multiple MCP entries in one JSON payload.")
+    mcp_add_parser.add_argument("--preview", action="store_true", help="Show diff preview before writing.")
+    mcp_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
     subparsers.add_parser("status", help="Show status of managed MCP servers.")
 
     rtk_parser = subparsers.add_parser("rtk", help="Manage RTK (Rust Token Killer) integration.")
@@ -220,6 +238,17 @@ def parse_args() -> argparse.Namespace:
     skills_sync_parser.add_argument(
         "--check", action="store_true", help="Print planned skill installs without executing."
     )
+    skills_view_parser = skills_subparsers.add_parser(
+        "view",
+        help="View available skills from the shared pnpm skills catalog.",
+    )
+    skills_view_parser.add_argument("--json", action="store_true", help="Request JSON output from the skills catalog.")
+    skills_view_parser.add_argument("--check", action="store_true", help="Print planned command without executing.")
+    skills_add_parser = skills_subparsers.add_parser("add", help="Add a shared skill source to common-data.json.")
+    skills_add_parser.add_argument("source", help="Skill source (e.g. vercel-labs/agent-skills).")
+    skills_add_parser.add_argument("--agent", default="gemini", help="Agent sync target for this skill spec.")
+    skills_add_parser.add_argument("--sync-now", action="store_true", help="Run agents skills sync after adding.")
+    skills_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
 
     return parser.parse_args()
 
@@ -294,6 +323,112 @@ def load_common_data(repo_root: Path, config: dict[str, Any], include_local: boo
             print(f"warning: failed to load local agent data: {exc}", file=sys.stderr)
 
     return common_data
+
+
+def common_data_path(repo_root: Path, config: dict[str, Any]) -> Path:
+    return (repo_root / config["common_data_file"]).resolve()
+
+
+def write_common_data(repo_root: Path, config: dict[str, Any], data: dict[str, Any]) -> None:
+    path = common_data_path(repo_root, config)
+    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def normalize_mcp_command(config: dict[str, Any]) -> dict[str, Any]:
+    updated = dict(config)
+    command = str(updated.get("command", "")).strip()
+    args = [str(arg) for arg in updated.get("args", [])]
+    if command in {"npx", "npm"} and args[:1] == ["-y"]:
+        updated["command"] = "pnpm"
+        updated["args"] = ["dlx", *args[1:]]
+    return updated
+
+
+def parse_mcp_json_input(payload: str) -> tuple[str, dict[str, Any]]:
+    raw = payload.strip()
+    candidates = [raw]
+
+    # Heuristics for common paste mistakes:
+    # 1) User pastes `"name": {...}` without outer braces.
+    # 2) User pastes object with trailing comma.
+    # 3) User pastes single-quoted JSON-like dict.
+    if raw and not raw.startswith("{") and ":" in raw:
+        candidates.append("{" + raw + "}")
+    if raw.endswith(","):
+        candidates.append(raw[:-1])
+    if "'" in raw and '"' not in raw:
+        candidates.append(raw.replace("'", '"'))
+        if not raw.startswith("{") and ":" in raw:
+            candidates.append("{" + raw.replace("'", '"') + "}")
+
+    parse_errors: list[str] = []
+    obj: dict[str, Any] | None = None
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+            if isinstance(parsed, dict):
+                obj = parsed
+                break
+        except json.JSONDecodeError as exc:
+            parse_errors.append(str(exc))
+
+    if obj is None:
+        hint = 'Ensure the input is a JSON object, e.g. {"name": {"command": "pnpm", "args": ["dlx", "pkg"]}}.'
+        details = parse_errors[0] if parse_errors else "Invalid JSON payload."
+        raise ValueError(f"{details} {hint}")
+
+    if len(obj) != 1:
+        raise ValueError("MCP JSON input must contain exactly one top-level server entry.")
+    name, cfg = next(iter(obj.items()))
+    if not isinstance(cfg, dict):
+        raise ValueError("MCP server config must be a JSON object.")
+    if "command" not in cfg:
+        raise ValueError("MCP server config must include 'command'.")
+    return str(name), cfg
+
+
+def parse_mcp_json_inputs(payload: str, *, allow_multi: bool = False) -> dict[str, dict[str, Any]]:
+    if not allow_multi:
+        name, cfg = parse_mcp_json_input(payload)
+        return {name: cfg}
+    raw = payload.strip()
+    try:
+        obj = json.loads(raw if raw.startswith("{") else "{" + raw + "}")
+    except json.JSONDecodeError:
+        fixed = raw.replace("'", '"') if "'" in raw and '"' not in raw else raw
+        obj = json.loads(fixed if fixed.startswith("{") else "{" + fixed + "}")
+    if not isinstance(obj, dict):
+        raise ValueError("MCP payload must be a JSON object.")
+    normalized: dict[str, dict[str, Any]] = {}
+    for key, value in obj.items():
+        if not isinstance(value, dict):
+            raise ValueError(f"MCP entry '{key}' must be an object.")
+        if "command" not in value:
+            raise ValueError(f"MCP entry '{key}' must include 'command'.")
+        normalized[str(key)] = value
+    return normalized
+
+
+def validate_mcp_entry(name: str, entry: dict[str, Any]) -> None:
+    if not isinstance(entry.get("command"), str) or not entry["command"].strip():
+        raise ValueError(f"MCP entry '{name}' has invalid command.")
+    args = entry.get("args", [])
+    if args is not None and not isinstance(args, list):
+        raise ValueError(f"MCP entry '{name}' args must be a list.")
+    if "env" in entry and not isinstance(entry["env"], dict):
+        raise ValueError(f"MCP entry '{name}' env must be an object.")
+
+
+def canonicalize_skill_source(source: str) -> str:
+    src = source.strip()
+    if src.startswith("https://github.com/"):
+        src = src.rstrip("/")
+        if src.endswith(".git"):
+            src = src[:-4]
+        return src
+    if "://" in src:
+        return src.rstrip("/")
+    return f"https://github.com/{src.rstrip('/')}"
 
 
 def discover_agent_files(repo_root: Path, configured_files: list[str], include_missing: bool = False) -> list[Path]:
@@ -492,6 +627,28 @@ def check_common_entries(content: str, common_data: dict[str, Any], fmt: str) ->
     return missing_mcp, missing_skills
 
 
+def check_config_shape(target: AgentConfigTarget, content: str, parsed_obj: dict[str, Any] | None = None) -> list[str]:
+    issues: list[str] = []
+
+    def has_top_level_key(key: str) -> bool:
+        if parsed_obj is not None:
+            return key in parsed_obj
+        lowered = content.lower()
+        key_lower = re.escape(key.lower())
+        return bool(
+            re.search(rf'["\']{key_lower}["\']\s*:', lowered)
+            or re.search(rf'\[{key_lower}(?:[.\]])', lowered)
+        )
+
+    if target.name == "OpenCode" and not has_top_level_key("mcp"):
+        issues.append('expected top-level "mcp" object')
+    if target.name in {"Gemini CLI", "Claude Code"} and not has_top_level_key("mcpServers"):
+        issues.append('expected "mcpServers" object')
+    if target.name == "OpenAI Codex CLI" and not has_top_level_key("mcp_servers"):
+        issues.append('expected "mcp_servers" tables')
+    return issues
+
+
 def inspect_agent_configs(
     targets: list[AgentConfigTarget], common_data: dict[str, Any]
 ) -> tuple[list[DoctorConfigResult], bool]:
@@ -527,7 +684,18 @@ def inspect_agent_configs(
             continue
 
         missing_mcp, missing_skills = check_common_entries(search_space, common_data, target.format)
+        parsed_obj: dict[str, Any] | None = None
+        if target.format == "json":
+            try:
+                parsed = json.loads(existing.read_text(encoding="utf-8"))
+                if isinstance(parsed, dict):
+                    parsed_obj = parsed
+            except Exception:
+                parsed_obj = None
+        shape_issues = check_config_shape(target, search_space, parsed_obj)
         if missing_mcp or missing_skills:
+            has_failures = True
+        if shape_issues:
             has_failures = True
 
         results.append(
@@ -536,6 +704,7 @@ def inspect_agent_configs(
                 existing_path=existing,
                 missing_mcp=missing_mcp,
                 missing_skills=missing_skills,
+                shape_issues=shape_issues,
             )
         )
 
@@ -543,7 +712,12 @@ def inspect_agent_configs(
 
 
 def sync_global_configs(
-    repo_root: Path, targets: list[AgentConfigTarget], common_data: dict[str, Any], managed_block: str, check_only: bool
+    repo_root: Path,
+    targets: list[AgentConfigTarget],
+    common_data: dict[str, Any],
+    managed_block: str,
+    check_only: bool,
+    materialize_secrets: bool = False,
 ) -> tuple[int, list[Path]]:
     changed: list[Path] = []
 
@@ -591,7 +765,9 @@ def sync_global_configs(
                         if "command" not in config:
                             continue
 
-                        entry = render_mcp_server_entry(target, name, config, repo_root)
+                        entry = render_mcp_server_entry(
+                            target, name, config, repo_root, materialize_secrets=materialize_secrets
+                        )
 
                         # Basic TOML injection (appending to end of file)
                         block = (
@@ -624,7 +800,7 @@ def sync_global_configs(
 
             # Standard MCP injection (Claude/Gemini format)
             mcp_servers = common_data.get("mcp_servers", {})
-            if mcp_servers:
+            if mcp_servers and target.name != "OpenCode":
                 if "mcpServers" not in data:
                     data["mcpServers"] = {}
 
@@ -633,7 +809,24 @@ def sync_global_configs(
                         if "command" not in config:
                             continue
 
-                        data["mcpServers"][name] = render_mcp_server_entry(target, name, config, repo_root)
+                        data["mcpServers"][name] = render_mcp_server_entry(
+                            target, name, config, repo_root, materialize_secrets=materialize_secrets
+                        )
+                        needs_update = True
+
+            # OpenCode uses a top-level "mcp" object keyed by server name.
+            if mcp_servers and target.name == "OpenCode":
+                if "mcp" not in data or not isinstance(data.get("mcp"), dict):
+                    data["mcp"] = {}
+                    needs_update = True
+
+                for name, config in mcp_servers.items():
+                    if name not in data["mcp"]:
+                        if "command" not in config:
+                            continue
+                        data["mcp"][name] = render_opencode_mcp_entry(
+                            target, name, config, repo_root, materialize_secrets=materialize_secrets
+                        )
                         needs_update = True
 
             # Gemini-specific context config sync
@@ -699,7 +892,13 @@ def get_platform_common_text(repo_root: Path, config: dict[str, Any]) -> str:
     return common_text
 
 
-def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_sync: bool) -> int:
+def cmd_sync(
+    repo_root: Path,
+    config: dict[str, Any],
+    check_only: bool,
+    global_sync: bool,
+    materialize_secrets: bool = False,
+) -> int:
     common_text = get_platform_common_text(repo_root, config)
 
     print_section("AGENTS Sync")
@@ -711,7 +910,14 @@ def cmd_sync(repo_root: Path, config: dict[str, Any], check_only: bool, global_s
         merged_data = load_common_data(repo_root, config, include_local=True)
         managed_block_global = render_markdown_block(common_text, merged_data)
         config_targets = parse_agent_targets(config["agent_configs"])
-        g_count, g_files = sync_global_configs(repo_root, config_targets, merged_data, managed_block_global, check_only)
+        g_count, g_files = sync_global_configs(
+            repo_root,
+            config_targets,
+            merged_data,
+            managed_block_global,
+            check_only,
+            materialize_secrets=materialize_secrets,
+        )
         print(f"Global configs scanned: {len(config_targets)}")
         print(f"Global configs needing updates: {g_count}")
         if g_files:
@@ -763,6 +969,10 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
                 print(f"  missing MCPs: {', '.join(result.missing_mcp)}")
             if result.missing_skills:
                 print(f"  missing skills: {', '.join(result.missing_skills)}")
+            continue
+        if result.shape_issues:
+            print_status_line("fail", f"{target.name}: config shape mismatch in {result.existing_path}")
+            print(f"  issues: {', '.join(result.shape_issues)}")
             continue
 
         print_status_line("ok", f"{target.name}: required MCP/skills markers found in {result.existing_path}")
@@ -1101,6 +1311,144 @@ def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -
     return 1 if failed else 0
 
 
+def cmd_skills_view(json_output: bool, check_only: bool) -> int:
+    command = ["pnpm", "dlx", "skills", "view"]
+    if json_output:
+        command.append("--json")
+    fallback = ["pnpm", "dlx", "skills", "list"]
+    command_display = shlex.join(command)
+    print_section("Agent Skills View")
+    if check_only:
+        print_status_line("ok", "Plan: view shared skills catalog")
+        print(f"  command: {command_display}")
+        return 0
+
+    if not shutil.which("pnpm"):
+        print_status_line("missing", "pnpm not found; cannot run skills catalog view.")
+        print("  install pnpm first, then rerun: oooconf agents skills view")
+        return 1
+
+    print_status_line("info", "Opening shared skills catalog via pnpm dlx")
+    print(f"  command: {command_display}")
+    result = subprocess.run(command, shell=os.name == "nt")
+    if result.returncode != 0:
+        print_status_line("warn", "skills view command failed; trying fallback `skills list`.")
+        print(f"  command: {shlex.join(fallback)}")
+        fallback_result = subprocess.run(fallback, shell=os.name == "nt")
+        if fallback_result.returncode != 0:
+            print_status_line("fail", "skills view fallback failed.")
+            print("  ensure the `skills` package is reachable from pnpm dlx in your environment.")
+            return fallback_result.returncode
+    return 0
+
+
+def prompt_yes_no(question: str) -> bool:
+    if shutil.which("gum") and sys.stdin.isatty():
+        result = subprocess.run(["gum", "confirm", question], shell=False)
+        return result.returncode == 0
+    return False
+
+
+def cmd_mcp_add(
+    repo_root: Path,
+    config: dict[str, Any],
+    name: str | None,
+    json_payload: str | None,
+    check_only: bool,
+    sync_now: bool,
+    allow_multi: bool = False,
+    preview: bool = False,
+) -> int:
+    if json_payload:
+        payload = json_payload
+    elif not sys.stdin.isatty():
+        payload = sys.stdin.read()
+    else:
+        prompt = "multiple MCP JSON entries" if allow_multi else "single MCP JSON object"
+        print(f"Paste {prompt} and press Ctrl-D:", file=sys.stderr)
+        payload = sys.stdin.read()
+    if not payload.strip():
+        print_status_line("fail", "No MCP JSON payload provided.")
+        return 1
+    if allow_multi and name:
+        print_status_line("fail", "--name cannot be combined with --multi.")
+        return 1
+
+    single_named_payload = payload
+    if not allow_multi and name:
+        try:
+            parsed_payload = json.loads(payload)
+            if isinstance(parsed_payload, dict) and "command" in parsed_payload:
+                single_named_payload = json.dumps({name: parsed_payload})
+        except json.JSONDecodeError:
+            pass
+
+    parsed_entries = parse_mcp_json_inputs(single_named_payload, allow_multi=allow_multi)
+    data = read_json(repo_root, config["common_data_file"])
+    mcp_servers = data.setdefault("mcp_servers", {})
+    planned: list[str] = []
+    for parsed_name, entry in parsed_entries.items():
+        key = name or parsed_name
+        normalized = normalize_mcp_command(entry)
+        validate_mcp_entry(key, normalized)
+        mcp_servers[key] = normalized
+        planned.append(key)
+    if check_only:
+        print_status_line("ok", f"Plan: add MCP(s) {', '.join(planned)} to {config['common_data_file']}")
+        return 0
+    if preview:
+        path = common_data_path(repo_root, config)
+        before = path.read_text(encoding="utf-8")
+        after = json.dumps(data, indent=2, sort_keys=True) + "\n"
+        diff = "\n".join(
+            difflib.unified_diff(
+                before.splitlines(), after.splitlines(), fromfile="before", tofile="after", lineterm=""
+            )
+        )
+        if diff:
+            print(diff)
+    write_common_data(repo_root, config, data)
+    print_status_line("ok", f"Added MCP(s) {', '.join(planned)} to {config['common_data_file']}")
+    should_sync = sync_now or prompt_yes_no("Sync global agent configs now?")
+    if should_sync:
+        return cmd_sync(repo_root, config, check_only=False, global_sync=True)
+    return 0
+
+
+def cmd_skills_add(
+    repo_root: Path, config: dict[str, Any], source: str, agent: str, check_only: bool, sync_now: bool
+) -> int:
+    data = read_json(repo_root, config["common_data_file"])
+    skill_specs = data.setdefault("skill_specs", [])
+    source_url = canonicalize_skill_source(source)
+    name = source.rstrip("/").split("/")[-1]
+    spec = {
+        "name": name,
+        "agent": agent,
+        "source": source_url,
+        "description": f"Added via oooconf agents skills add ({source})",
+    }
+    exists = any(
+        canonicalize_skill_source(str(s.get("source", ""))) == source_url and s.get("agent") == agent
+        for s in skill_specs
+    )
+    if not exists:
+        skill_specs.append(spec)
+    skills = data.setdefault("skills", [])
+    label = f"{name} ({agent})"
+    if label not in skills:
+        skills.append(label)
+    if check_only:
+        print_status_line("ok", f"Plan: add skill spec '{source_url}' for {agent}")
+        return 0
+    write_common_data(repo_root, config, data)
+    print_status_line("ok", f"Added skill spec '{source_url}' for {agent}")
+    should_sync = sync_now or prompt_yes_no("Sync skills to local agents now?")
+    if should_sync:
+        return cmd_skills_sync(repo_root, config, check_only=False)
+    return 0
+
+
 def resolve_mcp_path(repo_root: Path, name: str) -> Path:
     base = Path("~/.local/share/ooodnakov-config/mcp").expanduser()
     return (base / name).resolve()
@@ -1142,14 +1490,23 @@ def build_mcp_env(
     *,
     mcp_dir: Path,
     repo_root: Path,
+    materialize_secrets: bool = False,
 ) -> dict[str, Any]:
     env: dict[str, Any] = {}
 
     for name in config.get("env_vars", []):
-        env[name] = resolve_env_reference(name) or f"{{{name}}}"
+        value = resolve_env_reference(name)
+        env[name] = value if (value is not None and materialize_secrets) else f"{{{name}}}"
 
     for key, value in config.get("env", {}).items():
-        env[key] = render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root) if isinstance(value, str) else value
+        if isinstance(value, str):
+            env[key] = (
+                render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root)
+                if materialize_secrets
+                else value
+            )
+        else:
+            env[key] = value
 
     return env
 
@@ -1159,6 +1516,8 @@ def render_mcp_server_entry(
     name: str,
     config: dict[str, Any],
     repo_root: Path,
+    *,
+    materialize_secrets: bool = False,
 ) -> dict[str, Any]:
     mcp_dir = resolve_mcp_path(repo_root, name)
     entry = {
@@ -1170,11 +1529,30 @@ def render_mcp_server_entry(
         "args": [render_mcp_value(arg, mcp_dir=mcp_dir, repo_root=repo_root) for arg in config.get("args", [])],
     }
 
-    env = build_mcp_env(config, mcp_dir=mcp_dir, repo_root=repo_root)
+    env = build_mcp_env(config, mcp_dir=mcp_dir, repo_root=repo_root, materialize_secrets=materialize_secrets)
     if env:
         entry["env"] = env
 
     return entry
+
+
+def render_opencode_mcp_entry(
+    target: AgentConfigTarget,
+    name: str,
+    config: dict[str, Any],
+    repo_root: Path,
+    *,
+    materialize_secrets: bool = False,
+) -> dict[str, Any]:
+    entry = render_mcp_server_entry(target, name, config, repo_root, materialize_secrets=materialize_secrets)
+    mapped: dict[str, Any] = {
+        "type": "local",
+        "command": [entry["command"], *entry.get("args", [])],
+        "enabled": True,
+    }
+    if "env" in entry and isinstance(entry["env"], dict) and entry["env"]:
+        mapped["environment"] = entry["env"]
+    return mapped
 
 
 def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
@@ -1340,12 +1718,33 @@ if __name__ == "__main__":
     if args.command == "detect":
         raise SystemExit(cmd_detect(cfg, json_output=args.json))
     if args.command == "sync":
-        raise SystemExit(cmd_sync(root, cfg, check_only=args.check, global_sync=args.global_sync))
+        raise SystemExit(
+            cmd_sync(
+                root,
+                cfg,
+                check_only=args.check,
+                global_sync=args.global_sync,
+                materialize_secrets=args.materialize_secrets,
+            )
+        )
     if args.command == "doctor":
         raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths))
     if args.command == "mcp":
         if args.subcommand == "sync":
             raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check))
+        if args.subcommand == "add":
+            raise SystemExit(
+                cmd_mcp_add(
+                    root,
+                    cfg,
+                    name=args.name,
+                    json_payload=args.json_payload,
+                    check_only=args.check,
+                    sync_now=args.sync_now,
+                    allow_multi=args.multi,
+                    preview=args.preview,
+                )
+            )
         if args.subcommand == "status":
             raise SystemExit(cmd_mcp_status(root, cfg))
     if args.command == "rtk":
@@ -1360,4 +1759,17 @@ if __name__ == "__main__":
     if args.command == "skills":
         if args.subcommand == "sync":
             raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check))
+        if args.subcommand == "view":
+            raise SystemExit(cmd_skills_view(json_output=args.json, check_only=args.check))
+        if args.subcommand == "add":
+            raise SystemExit(
+                cmd_skills_add(
+                    root,
+                    cfg,
+                    source=args.source,
+                    agent=args.agent,
+                    check_only=args.check,
+                    sync_now=args.sync_now,
+                )
+            )
     raise SystemExit(1)

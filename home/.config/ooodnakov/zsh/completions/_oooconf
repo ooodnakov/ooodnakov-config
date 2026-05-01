@@ -249,6 +249,7 @@ cmd_agents_sync_options=(
   '--config:config'
   '--check:check'
   '--global:global'
+  '--materialize-secrets:materialize-secrets'
 )
 cmd_agents_sync_values=(
 )
@@ -270,11 +271,20 @@ cmd_agents_mcp_values=(
 cmd_agents_mcp_subsubcommands=(
   'sync:synchronize managed MCP servers'
   'status:show managed MCP status'
+  'add:add one MCP JSON entry into common-data and optionally sync'
 )
 cmd_agents_mcp_sync_options=(
   '--check:check'
 )
 cmd_agents_mcp_status_options=(
+)
+cmd_agents_mcp_add_options=(
+  '--name:name'
+  '--json:json'
+  '--multi:multi'
+  '--preview:preview'
+  '--sync-now:sync-now'
+  '--check:check'
 )
 cmd_agents_status_options=(
 )
@@ -322,8 +332,19 @@ cmd_agents_skills_values=(
 )
 cmd_agents_skills_subsubcommands=(
   'sync:synchronize configured skill specs across agents'
+  'view:view shared skills catalog via pnpm dlx'
+  'add:add one shared skill source and optionally sync'
 )
 cmd_agents_skills_sync_options=(
+  '--check:check'
+)
+cmd_agents_skills_view_options=(
+  '--check:check'
+  '--json:json'
+)
+cmd_agents_skills_add_options=(
+  '--agent:agent'
+  '--sync-now:sync-now'
   '--check:check'
 )
 cmd_agents_option_values=(

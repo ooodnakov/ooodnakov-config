@@ -122,8 +122,11 @@ Primary commands:
 - `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
 - `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content
 - `oooconf agents mcp sync|status`: manage tracked MCP server clones/install state
+- `oooconf agents mcp add`: add one or many MCP JSON entries to shared common-data (`--multi`), with optional `--preview`, and normalize `npx -y` to `pnpm dlx`
 - `oooconf agents rtk init`: run RTK global init for detected agents
 - `oooconf agents skills sync`: synchronize configured agent skill specs
+- `oooconf agents skills view`: view the shared skills catalog via `pnpm dlx skills view` (add `--json` for machine output)
+- `oooconf agents skills add <source>`: add one shared skill source (e.g. `vercel-labs/agent-skills`) and optionally sync
 - `oooconf agents update`: update installed agent CLIs using their preferred package manager (pnpm-based tools are updated via `pnpm`)
 - `oooconf agents install <agent>`: install one specific agent CLI
 - `oooconf agents install-scripts-build`: rebuild standalone install scripts for agents
@@ -196,6 +199,7 @@ oooconf agents mcp sync
 oooconf agents mcp status
 oooconf agents rtk init
 oooconf agents skills sync
+oooconf agents skills view
 oooconf agents update
 oooconf agents install codex
 oooconf agents install-scripts-build
@@ -206,6 +210,7 @@ The shared AGENTS policy snippets are configured in:
 - `home/.config/ooodnakov/agents/config.json`
 - `home/.config/ooodnakov/agents/common-text.md`
 - `home/.config/ooodnakov/agents/common-data.json` (structured MCP + skills data)
+- `docs/agents-config-research.md` (cross-agent config model comparison and rationale)
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
 `oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all pnpm-preferred agents through `pnpm add -g <package>@latest`.
