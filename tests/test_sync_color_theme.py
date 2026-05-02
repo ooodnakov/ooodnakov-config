@@ -5,9 +5,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.sync_color_theme import (
+    CSS_MANAGED_BEGIN,
+    CSS_MANAGED_END,
     KOMOREBI_THEME_BY_THEME,
+    _css_var_block,
     _css_var_lines,
     _set_komorebi_theme_file,
+    _write_managed_css_vars,
     _zebar_vars_for_css,
     set_overline_zebar_theme,
     set_zebar_theme,
@@ -109,6 +113,41 @@ def test_css_var_lines_can_mark_values_important() -> None:
     ]
 
 
+def test_css_var_block_can_wrap_managed_marker() -> None:
+    block = _css_var_block({"background": "#282828"}, important=True, managed=True)
+
+    assert block == (
+        f"{CSS_MANAGED_BEGIN}\n"
+        ":root {\n"
+        "  --background: #282828 !important;\n"
+        "}\n"
+        f"{CSS_MANAGED_END}\n"
+    )
+
+
+def test_write_managed_css_vars_replaces_existing_block(tmp_path: Path) -> None:
+    path = tmp_path / "index.css"
+    path.write_text(
+        "body{margin:0}\n"
+        f"{CSS_MANAGED_BEGIN}\n"
+        ":root {\n"
+        "  --background: #111111 !important;\n"
+        "}\n"
+        f"{CSS_MANAGED_END}\n"
+        ".bar{height:34px}\n",
+        encoding="utf-8",
+    )
+
+    _write_managed_css_vars(path, {"background": "#282828"}, important=True)
+
+    text = path.read_text(encoding="utf-8")
+    assert text.count(CSS_MANAGED_BEGIN) == 1
+    assert "--background: #282828 !important;" in text
+    assert "--background: #111111 !important;" not in text
+    assert "body{margin:0}" in text
+    assert ".bar{height:34px}" in text
+
+
 def test_set_zebar_theme_writes_managed_variants(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
@@ -132,3 +171,23 @@ def test_set_overline_zebar_theme_writes_installed_pack_theme_css(tmp_path: Path
     assert "--background: #1e1e2e !important;" in text
     assert "--primary: #89b4fa !important;" in text
     assert "--danger: #f38ba8 !important;" in text
+
+
+def test_set_overline_zebar_theme_patches_built_css_when_present(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    pack_path = tmp_path / ".glzr" / "zebar" / "overline-zebar-komorebi"
+    source_theme = pack_path / "packages" / "ui" / "src" / "theme.css"
+    built_css = pack_path / "widgets" / "main" / "dist" / "assets" / "index.css"
+    source_theme.parent.mkdir(parents=True)
+    built_css.parent.mkdir(parents=True)
+    source_theme.write_text(":root {}\n", encoding="utf-8")
+    built_css.write_text("body{margin:0}\n", encoding="utf-8")
+
+    result = set_overline_zebar_theme("gruvbox")
+
+    assert "source=1, built-css=1" in result
+    built_text = built_css.read_text(encoding="utf-8")
+    assert "body{margin:0}" in built_text
+    assert CSS_MANAGED_BEGIN in built_text
+    assert "--background: #282828 !important;" in built_text
+    assert "--primary: #83a598 !important;" in built_text
