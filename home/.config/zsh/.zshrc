@@ -12,6 +12,10 @@ export ZSH_COMPDUMP="$OOODNAKOV_CACHE_HOME/zsh/.zcompdump-${HOST%%.*}-${ZSH_VERS
 export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=30
 export ZSH_AUTOSUGGEST_USE_ASYNC=1
 
+if [[ -f "$OOODNAKOV_CONFIG_HOME/env/common.sh" ]]; then
+  source "$OOODNAKOV_CONFIG_HOME/env/common.sh"
+fi
+
 if [[ -f "$OOODNAKOV_CONFIG_HOME/local/env.zsh" ]]; then
   source "$OOODNAKOV_CONFIG_HOME/local/env.zsh"
   export OOODNAKOV_LOCAL_ENV_LOADED=1
@@ -283,4 +287,3 @@ unalias x 2>/dev/null
 unalias h 2>/dev/null
 
 [ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.
-

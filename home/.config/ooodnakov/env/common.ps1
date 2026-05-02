@@ -40,6 +40,12 @@ $pnpmHome = if ($env:PNPM_HOME) { $env:PNPM_HOME } else { Join-Path $HOME ".loca
 $env:PNPM_HOME = $pnpmHome
 Add-PathEntry -PathEntry $pnpmHome
 
+if (-not (Get-Command o -ErrorAction SilentlyContinue) -and (Get-Command oooconf -ErrorAction SilentlyContinue)) {
+    function global:o {
+        oooconf @args
+    }
+}
+
 function Get-DirenvConfigRoot {
     if ($env:XDG_CONFIG_HOME) {
         return Join-Path $env:XDG_CONFIG_HOME "direnv"

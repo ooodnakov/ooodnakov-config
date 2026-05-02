@@ -3,22 +3,32 @@ export VISUAL="${VISUAL:-$EDITOR}"
 export PAGER="${PAGER:-less}"
 export LESS="-FRX"
 
+path_prepend() {
+  case ":$PATH:" in
+    *":$1:"*) ;;
+    *) export PATH="$1:$PATH" ;;
+  esac
+}
+
 if [ -f "$HOME/.local/bin/env" ]; then
   . "$HOME/.local/bin/env"
 fi
 
-export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/bin:$PATH"
+path_prepend "$HOME/.local/bin"
+path_prepend "$HOME/.cargo/bin"
+path_prepend "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/bin"
 
 NPM_PACKAGES="$HOME/.npm"
-export PATH="$NPM_PACKAGES/bin:$PATH"
+path_prepend "$NPM_PACKAGES/bin"
 
 export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
+path_prepend "$PNPM_HOME"
+
+if ! command -v o >/dev/null 2>&1 && command -v oooconf >/dev/null 2>&1; then
+  o() {
+    oooconf "$@"
+  }
+fi
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
@@ -27,3 +37,5 @@ export NVM_DIR="$HOME/.nvm"
 if [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/marker/marker.sh" ]; then
   . "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/marker/marker.sh"
 fi
+
+unset -f path_prepend
