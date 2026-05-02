@@ -79,6 +79,16 @@ def test_komorebi_theme_sync_writes_schema_safe_bar_theme(tmp_path: Path) -> Non
         assert "active_border" not in data["theme"]
 
 
+def test_komorebi_theme_sync_skips_invalid_json(tmp_path: Path) -> None:
+    path = tmp_path / "komorebi.json"
+    path.write_text('{"theme": {"name": "Ashes"} // comment\n}', encoding="utf-8")
+
+    result = _set_komorebi_theme_file(path, "gruvbox")
+
+    assert result.startswith("komorebi.json: skipped (invalid JSON at line 1, column")
+    assert path.read_text(encoding="utf-8") == '{"theme": {"name": "Ashes"} // comment\n}'
+
+
 def test_zebar_theme_vars_use_css_variable_names() -> None:
     vars_map = _zebar_vars_for_css("gruvbox", kebab_case=True)
 

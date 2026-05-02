@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
@@ -439,7 +440,10 @@ def set_wezterm_theme(theme: str) -> str:
 def _set_komorebi_theme_file(path: Path, theme: str) -> str:
     if not path.exists():
         return f"{path.name}: skipped ({path} not found)"
-    data = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except JSONDecodeError as exc:
+        return f"{path.name}: skipped (invalid JSON at line {exc.lineno}, column {exc.colno}: {path})"
     theme_spec = KOMOREBI_THEME_BY_THEME.get(theme, KOMOREBI_THEME_BY_THEME["default"])
     if isinstance(data, dict):
         if path.name.endswith(".bar.json"):
