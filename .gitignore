@@ -37,6 +37,7 @@ home/.glzr/zebar/errors.log
 .codex
 .qwen
 .gemini
+.claude
 
 home/.config/ooodnakov/local/bw-session
 pwsh_dir/
@@ -47,3 +48,7 @@ config.sublime-project
 
 home/.config/noctalia/plugins/*
 home/.config/niri/animations/*
+
+
+home/.glzr/zebar/ooodnakov/theme-overrides.css
+home/.glzr/zebar/ooodnakov-komorebi/theme-overrides.css
