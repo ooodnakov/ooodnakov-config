@@ -614,6 +614,11 @@ def set_oh_my_posh_theme(theme: str) -> str:
     output = config_home() / "ooodnakov" / "local" / "ohmyposh" / f"{theme}.omp.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(themed, indent=2) + "\n", encoding="utf-8")
+
+    # Invalidate the cached oh-my-posh init script so the next shell picks up the new theme.
+    cache = config_home() / "ooodnakov" / "cache" / "oh-my-posh.ps1"
+    if cache.exists():
+        cache.unlink()
     return f"oh-my-posh: wrote themed config ({output})"
 
 
