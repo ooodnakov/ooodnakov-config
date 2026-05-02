@@ -26,7 +26,7 @@ oooconf_commands=(
   'check:alias for doctor'
   'preview:alias for dry-run'
   'upgrade:alias for update'
-  'komorebi:manage komorebi tiling window manager state'
+  'komorebi:command'
   'wm:switch or manage window managers'
   'help:show help'
 )
@@ -589,36 +589,6 @@ cmd_upgrade_subcommands=(
 cmd_upgrade_option_values=(
 )
 
-cmd_komorebi_options=(
-)
-cmd_komorebi_values=(
-)
-cmd_komorebi_subcommands=(
-  'reload:reload'
-  'start:start'
-  'stop:stop'
-)
-cmd_komorebi_reload_options=(
-)
-cmd_komorebi_reload_values=(
-)
-cmd_komorebi_reload_subsubcommands=(
-)
-cmd_komorebi_start_options=(
-)
-cmd_komorebi_start_values=(
-)
-cmd_komorebi_start_subsubcommands=(
-)
-cmd_komorebi_stop_options=(
-)
-cmd_komorebi_stop_values=(
-)
-cmd_komorebi_stop_subsubcommands=(
-)
-cmd_komorebi_option_values=(
-)
-
 cmd_wm_options=(
 )
 cmd_wm_values=(
@@ -631,7 +601,8 @@ cmd_wm_subcommands=(
   'start:start'
   'stop:stop'
   'reload:reload'
-  'zebar-config:zebar-config'
+  'bar:bar'
+  'komorebi:komorebi'
 )
 cmd_wm_status_options=(
 )
@@ -663,11 +634,17 @@ cmd_wm_reload_values=(
 )
 cmd_wm_reload_subsubcommands=(
 )
-cmd_wm_zebar_config_options=(
+cmd_wm_bar_options=(
 )
-cmd_wm_zebar_config_values=(
+cmd_wm_bar_values=(
 )
-cmd_wm_zebar_config_subsubcommands=(
+cmd_wm_bar_subsubcommands=(
+)
+cmd_wm_komorebi_options=(
+)
+cmd_wm_komorebi_values=(
+)
+cmd_wm_komorebi_subsubcommands=(
 )
 cmd_wm_option_values=(
 )

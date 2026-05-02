@@ -8,6 +8,9 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
 
+CSS_MANAGED_BEGIN = "/* oooconf color:start */"
+CSS_MANAGED_END = "/* oooconf color:end */"
+
 WEZTERM_SCHEME_BY_THEME = {
     "default": "Noctalia",
     "catppuccin": "Catppuccin Mocha",
@@ -508,6 +511,13 @@ def _css_var_lines(vars_map: dict[str, str], *, important: bool = False) -> list
     return lines
 
 
+def _css_var_block(vars_map: dict[str, str], *, important: bool = False, managed: bool = False) -> str:
+    lines = _css_var_lines(vars_map, important=important)
+    if managed:
+        lines = [CSS_MANAGED_BEGIN, *lines, CSS_MANAGED_END]
+    return "\n".join(lines) + "\n"
+
+
 def _zebar_vars_for_css(theme: str, *, kebab_case: bool) -> dict[str, str]:
     vars_map = ZEBAR_VARS_BY_THEME.get(theme, ZEBAR_VARS_BY_THEME["default"])
     out = {"font": '"MesloLGSDZ Nerd Font Mono", sans-serif'}
@@ -518,7 +528,24 @@ def _zebar_vars_for_css(theme: str, *, kebab_case: bool) -> dict[str, str]:
 
 def _write_css_vars(path: Path, vars_map: dict[str, str], *, important: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(_css_var_lines(vars_map, important=important)) + "\n", encoding="utf-8")
+    path.write_text(_css_var_block(vars_map, important=important), encoding="utf-8")
+
+
+def _write_managed_css_vars(path: Path, vars_map: dict[str, str], *, important: bool = False) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    block = _css_var_block(vars_map, important=important, managed=True)
+    if not path.exists():
+        path.write_text(block, encoding="utf-8")
+        return
+
+    text = path.read_text(encoding="utf-8")
+    pattern = re.compile(rf"{re.escape(CSS_MANAGED_BEGIN)}.*?{re.escape(CSS_MANAGED_END)}\s*", re.DOTALL)
+    if pattern.search(text):
+        text = pattern.sub(block, text, count=1)
+    else:
+        separator = "\n" if text.endswith("\n") else "\n\n"
+        text = f"{text}{separator}{block}"
+    path.write_text(text, encoding="utf-8")
 
 
 def set_zebar_theme(theme: str) -> str:
@@ -539,20 +566,28 @@ def set_overline_zebar_theme(theme: str) -> str:
     if not zebar_root.exists():
         return f"overline-zebar: skipped ({zebar_root} not found)"
 
-    targets: list[Path] = []
+    source_targets: list[Path] = []
+    dist_targets: list[Path] = []
     for pack_path in sorted(zebar_root.glob("overline-zebar*")):
         theme_path = pack_path / "packages" / "ui" / "src" / "theme.css"
         if theme_path.exists():
-            targets.append(theme_path)
+            source_targets.append(theme_path)
+        dist_targets.extend(sorted(pack_path.glob("widgets/*/dist/assets/*.css")))
 
-    if not targets:
+    if not source_targets and not dist_targets:
         return "overline-zebar: skipped (no installed overline-zebar pack found)"
 
-    for path in targets:
+    for path in source_targets:
         _write_css_vars(path, vars_map, important=True)
+    for path in dist_targets:
+        _write_managed_css_vars(path, vars_map, important=True)
 
-    paths = ", ".join(str(path) for path in targets)
-    return f"overline-zebar: wrote oooconf theme overrides ({paths})"
+    source_summary = f"source={len(source_targets)}"
+    dist_summary = f"built-css={len(dist_targets)}"
+    if not dist_targets:
+        dist_summary += " (run pnpm build once for build-free live color updates)"
+    paths = ", ".join(str(path) for path in [*source_targets, *dist_targets])
+    return f"overline-zebar: wrote oooconf theme overrides ({source_summary}, {dist_summary}: {paths})"
 
 
 def _replace_hex_values(value: Any, replacements: dict[str, str]) -> Any:

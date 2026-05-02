@@ -148,6 +148,20 @@ Secrets commands:
 - `oooconf shell auto-uv-env [enabled|quiet|status]`: control Python virtualenv activation message verbosity
 - `oooconf color [status|list|<theme>]`: select a unified CLI color theme (`default`, `catppuccin`, `gruvbox`, `nord`, `tokyonight`, `noctalia`). When unset, `oooconf` prefers existing tracked tool themes (WezTerm/Neovim) before falling back to `default`; theme changes sync local overrides for Yazi, WezTerm, Komorebi (including bar config), SketchyBar colors, Zebar CSS vars, and a themed Oh My Posh config under `~/.config/ooodnakov/local/ohmyposh/`, and `status` reports detected Neovim/Oh My Posh config state.
 
+Window manager commands (Windows):
+
+- `oooconf wm status`: shows the currently running window manager (komorebi or glazewm)
+- `oooconf wm set [komorebi|glazewm]`: stops the current WM and starts the specified one
+- `oooconf wm start`: starts the default WM (komorebi with whkd)
+- `oooconf wm stop`: stops any running WM stack (komorebi, whkd, komorebi-bar, glazewm)
+- `oooconf wm reload`: reloads the configuration of the active WM
+- `oooconf wm bar set [zebar|yabs]`: set or show the default bar type used on WM start
+- `oooconf wm bar zebar-config [status|list|set <name>|install <source>]`: manage zebar widget configs
+- `oooconf wm bar [stop|start|reload]`: stop, start, or restart the zebar bar (keeps komorebi running)
+- `oooconf wm komorebi [reload|start|stop] [--bar]`: low-level komorebi control with optional bar flag
+
+The `default_bar_type` setting in `home/.glzr/zebar/config.yaml` controls whether `oooconf wm start` or `oooconf wm set komorebi` also launches the bar. Use `oooconf wm bar set zebar` or `oooconf wm bar set yabs` to change it.
+
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
 The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.

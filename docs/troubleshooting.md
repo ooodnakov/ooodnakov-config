@@ -88,8 +88,9 @@ Run `oooconf secrets doctor` for a full prerequisite check.
 
 - `whkd` can bind `lwin` combos directly (for example `lwin + h/j/k/l`).
 - If your keyboard/IME/tooling eats Win combinations, run komorebi with AutoHotkey instead of whkd:
-  - stop: `komorebic stop --whkd`
-  - start with AHK: `komorebic start --ahk`
+  - `oooconf wm komorebi stop --bar` stops the full stack
+  - `oooconf wm komorebi start --bar --ahk` starts with AutoHotkey instead of whkd
+  - Or manually: `komorebic stop --whkd` / `komorebic start --ahk`
 - AutoHotkey is optional; use it when Win hotkeys are unreliable on your machine.
 
 ### macOS (OmniWM)

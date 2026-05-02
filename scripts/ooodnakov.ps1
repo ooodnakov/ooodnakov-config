@@ -148,7 +148,7 @@ function Get-ZebarExternalRoot {
 function Normalize-ZebarConfigName {
     param([string]$Value)
 
-    return (($Value ?? "") -replace "[^a-zA-Z0-9]+", "").ToLowerInvariant()
+    return ([string]$Value -replace "[^a-zA-Z0-9]+", "").ToLowerInvariant()
 }
 
 function Get-ZebarWidgetPacks {
@@ -1197,6 +1197,8 @@ function Invoke-BarCommand {
     $action = if ($BarArgs.Count -gt 0) { $BarArgs[0] } else { "" }
     $remainingArgs = if ($BarArgs.Count -gt 1) { $BarArgs[1..($BarArgs.Count - 1)] } else { @() }
     switch ($action) {
+        "-h" { $action = "help" }
+        "--help" { $action = "help" }
         "" {
             Write-UiHelpBlock @"
 Usage: oooconf wm bar set <type>
@@ -1250,6 +1252,23 @@ Examples:
                 & $zebarCommand.Source startup *> $null
             }
             Write-UiLine -Role ok -Message "Bar reloaded."
+            return
+        }
+        "help" {
+            Write-UiHelpBlock @"
+Usage: oooconf wm bar set <type>
+       oooconf wm bar zebar-config status
+       oooconf wm bar zebar-config list
+       oooconf wm bar zebar-config set <name>
+
+Subcommands:
+  set           set or show default bar type
+  zebar-config  manage zebar configs (status, list, set)
+  stop          stop zebar and komorebi-bar (keep komorebi running)
+  start         start zebar with configured settings
+  reload        restart zebar (stop then start)
+  help          show this help
+"@
             return
         }
         default {
@@ -1900,6 +1919,34 @@ Examples:
   oooconf wm komorebi stop --bar
 "@
         }
+        "wm bar" {
+            Write-UiHelpBlock @"
+Usage: oooconf wm bar set <type>
+       oooconf wm bar zebar-config status
+       oooconf wm bar zebar-config list
+       oooconf wm bar zebar-config set <name>
+       oooconf wm bar stop
+       oooconf wm bar start
+       oooconf wm bar reload
+       oooconf wm bar help
+
+Subcommands:
+  set           set or show default bar type
+  zebar-config  manage zebar configs (status, list, set)
+  stop          stop zebar and komorebi-bar (keep komorebi running)
+  start         start zebar with configured settings
+  reload        restart zebar (stop then start)
+  help          show this help
+Examples:
+  oooconf wm bar set              # show current bar type
+  oooconf wm bar set zebar        # set to zebar
+  oooconf wm bar zebar-config list
+  oooconf wm bar zebar-config set overline-zebar-komorebi
+  oooconf wm bar stop
+  oooconf wm bar start
+  oooconf wm bar reload
+"@
+        }
         "" { Show-Usage }
         "help" { Show-Usage }
         "-h" { Show-Usage }
@@ -2142,6 +2189,14 @@ switch ($command) {
         Run-Python -ScriptPath $AgentsToolScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
     }
     "wm" {
+        if ($remaining.Count -ge 2 -and $remaining[0] -eq "bar" -and $remaining[1] -in @("-h", "--help")) {
+            Show-CommandUsage "wm bar"
+            exit 0
+        }
+        if ($remaining.Count -ge 1 -and $remaining[0] -in @("-h", "--help")) {
+            Show-CommandUsage "wm"
+            exit 0
+        }
         Invoke-WmCommand -WmArgs $remaining
     }
     default {

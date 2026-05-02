@@ -120,7 +120,6 @@ function Get-OooconfCompletions {
         'dry-run' = @()
         'help' = @()
         'install' = @('--dry-run', '--yes-optional', '-h', '--help')
-        'komorebi' = @()
         'lock' = @()
         'minimal' = @()
         'preview' = @()
@@ -147,7 +146,6 @@ function Get-OooconfCompletions {
         'dry-run' = @()
         'help' = @()
         'install' = @()
-        'komorebi' = @('reload', 'start', 'stop')
         'lock' = @()
         'minimal' = @()
         'preview' = @()
@@ -158,7 +156,7 @@ function Get-OooconfCompletions {
         'update-pins' = @()
         'upgrade' = @()
         'version' = @()
-        'wm' = @('status', 'set', 'start', 'stop', 'reload', 'zebar-config')
+        'wm' = @('status', 'set', 'start', 'stop', 'reload', 'bar', 'komorebi')
     }
 
     $OooconfCommandValues =
@@ -174,7 +172,6 @@ function Get-OooconfCompletions {
         'dry-run' = @()
         'help' = @()
         'install' = @()
-        'komorebi' = @()
         'lock' = @()
         'minimal' = @()
         'preview' = @()
