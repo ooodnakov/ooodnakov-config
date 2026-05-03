@@ -90,21 +90,21 @@ binds {
     Mod+CTRL+Shift+WheelScrollUp        { move-column-left; }
 
 
-    Mod+1                               { focus-workspace 1; }
-    Mod+2                               { focus-workspace 2; }
-    Mod+3                               { focus-workspace 3; }
-    Mod+4                               { focus-workspace 4; }
-    Mod+5                               { focus-workspace 5; }
+    Mod+1                               { focus-workspace "browser"; }
+    Mod+2                               { focus-workspace "coding"; }
+    Mod+3                               { focus-workspace "chat"; }
+    Mod+4                               { focus-workspace "gaming"; }
+    Mod+5                               { focus-workspace "media"; }
     Mod+6                               { focus-workspace 6; }
     Mod+7                               { focus-workspace 7; }
     Mod+8                               { focus-workspace 8; }
     Mod+9                               { focus-workspace 9; }
 
-    Mod+CTRL+1                          { move-column-to-workspace 1; }
-    Mod+CTRL+2                          { move-column-to-workspace 2; }
-    Mod+CTRL+3                          { move-column-to-workspace 3; }
-    Mod+CTRL+4                          { move-column-to-workspace 4; }
-    Mod+CTRL+5                          { move-column-to-workspace 5; }
+    Mod+CTRL+1                          { move-column-to-workspace "browser"; }
+    Mod+CTRL+2                          { move-column-to-workspace "coding"; }
+    Mod+CTRL+3                          { move-column-to-workspace "chat"; }
+    Mod+CTRL+4                          { move-column-to-workspace "gaming"; }
+    Mod+CTRL+5                          { move-column-to-workspace "media"; }
     Mod+CTRL+6                          { move-column-to-workspace 6; }
     Mod+CTRL+7                          { move-column-to-workspace 7; }
     Mod+CTRL+8                          { move-column-to-workspace 8; }

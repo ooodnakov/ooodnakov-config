@@ -2,4 +2,4 @@
 // https://github.com/YaLTeR/niri/wiki/Configuration:-Miscellaneous#spawn-sh-at-startup
 
     spawn-sh-at-startup "qs -c noctalia-shell"
-    spawn-sh-at-startup "niri msg action move-workspace-to-index --reference scratch 99"
+    spawn-sh-at-startup "$HOME/.config/ooodnakov/local/scripts/niri-order-workspaces.sh"
