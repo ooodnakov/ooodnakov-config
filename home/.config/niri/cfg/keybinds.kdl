@@ -38,7 +38,7 @@ binds {
     XF86MonBrightnessDown               allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call brightness decrease"; }
 
     // Window movement and focus.
-    Mod+Q                               { close-window; }
+    Mod+Q                               { spawn-sh "$HOME/.config/ooodnakov/local/scripts/niri-close-window.sh"; }
 
     Mod+Left                            { focus-column-left; }
     Mod+H                               { focus-column-left; }

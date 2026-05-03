@@ -1,3 +1,5 @@
+    workspace "scratch"
+
     window-rule {
         geometry-corner-radius 20
         clip-to-geometry true
@@ -17,6 +19,13 @@
 
     window-rule {
         match app-id=r#"^org\.wezfurlong\.wezterm$"#
+        default-column-width {}
+        draw-border-with-background false
+    }
+
+    window-rule {
+        match app-id="scratch-term"
+        open-on-workspace "scratch"
         default-column-width {}
         draw-border-with-background false
     }
