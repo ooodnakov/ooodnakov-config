@@ -24,7 +24,8 @@
             "org.telegram.desktop",
             "net.lutris.Lutris",
             "vesktop",
-            "steam"
+            "steam",
+            "org.prismlauncher.PrismLauncher"
         ],
         "position": "center",
         "screenshotAnnotationTool": "",
