@@ -2302,11 +2302,16 @@ function Generate-AutogenCompletions {
         }
 
         Invoke-ActionWithSpinner -Description $description -Action {
-            param($lineToRun, $targetFile)
-            $content = @(Invoke-Expression $lineToRun)
-            $normalized = [string]::Join("`n", $content) + "`n"
-            [System.IO.File]::WriteAllText($targetFile, $normalized, (New-Object System.Text.UTF8Encoding $false))
-        } -ArgumentList $commandLine, $outputFile
+            param($lineToRun, $targetFile, $workingDirectory)
+            Push-Location $workingDirectory
+            try {
+                $content = @(Invoke-Expression $lineToRun)
+                $normalized = [string]::Join("`n", $content) + "`n"
+                [System.IO.File]::WriteAllText($targetFile, $normalized, (New-Object System.Text.UTF8Encoding $false))
+            } finally {
+                Pop-Location
+            }
+        } -ArgumentList $commandLine, $outputFile, $RepoRoot
     }
 }
 

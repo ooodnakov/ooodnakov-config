@@ -2142,7 +2142,7 @@ generate_autogen_completions() {
     esac
     IFS='|' read -r binary description output_file completion_cmd <<< "$spec"
     if command -v "$binary" >/dev/null 2>&1; then
-      run_with_spinner "$description" sh -c "$completion_cmd > '$target_dir/$output_file'"
+      run_with_spinner "$description" sh -c "cd '$REPO_ROOT' && $completion_cmd > '$target_dir/$output_file'"
     fi
   done < "$AUTOGEN_COMPLETIONS_MANIFEST"
 }
