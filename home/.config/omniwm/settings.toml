@@ -2,7 +2,6 @@ monitorBarOverrides = []
 monitorDwindleOverrides = []
 monitorNiriOverrides = []
 monitorOrientationOverrides = []
-version = 5
 
 [appearance]
 mode = "dark"
@@ -59,11 +58,14 @@ axis = "horizontal"
 margin = 3
 
 [[mouseWarp.monitorOrder]]
-displayId = 1
+displayUUID = "37D8832A-2D66-02CA-B9F7-8F30A301B230"
 name = "Built-in Retina Display"
 
+[[mouseWarp.monitorOrder]]
+name = "G27P6M"
+
 [niri]
-alwaysCenterSingleColumn = true
+alwaysCenterSingleColumn = false
 centerFocusedColumn = "never"
 columnWidthPresets = [0.3333333333333333, 0.5, 0.66]
 infiniteLoop = false
@@ -73,14 +75,14 @@ singleWindowAspectRatio = "4:3"
 
 [quakeTerminal]
 animationDuration = 0.2
-autoHide = false
+autoHide = true
 enabled = true
-heightPercent = 50.0
+heightPercent = 70.0
 monitorMode = "focusedWindow"
-opacity = 1.0
+opacity = 0.85
 position = "center"
 useCustomFrame = false
-widthPercent = 50.0
+widthPercent = 70.0
 
 [state]
 commandPaletteLastMode = "windows"
@@ -546,7 +548,7 @@ binding = "Unassigned"
 id = "rescueOffscreenWindows"
 
 [[hotkeys]]
-binding = "Command+T"
+binding = "Option+T"
 id = "toggleFocusedWindowFloating"
 
 [[hotkeys]]
@@ -574,7 +576,7 @@ id = "toggleQuakeTerminal"
 
 [hotkeys.binding]
 keyCode = 10
-modifiers = 256
+modifiers = 2048
 
 [[hotkeys]]
 binding = "Option+Shift+L"
