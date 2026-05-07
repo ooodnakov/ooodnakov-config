@@ -3,6 +3,11 @@ export VISUAL="${VISUAL:-$EDITOR}"
 export PAGER="${PAGER:-less}"
 export LESS="-FRX"
 
+export SUDO_EDITOR="${SUDO_EDITOR:-$EDITOR}"
+snvim() {
+  sudo -E "$SUDO_EDITOR" "$@"
+}
+
 path_prepend() {
   case ":$PATH:" in
     *":$1:"*) ;;

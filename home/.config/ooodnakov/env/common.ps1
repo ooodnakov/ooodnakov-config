@@ -1,6 +1,7 @@
 $env:EDITOR = if ($env:EDITOR) { $env:EDITOR } else { "nvim" }
 $env:VISUAL = if ($env:VISUAL) { $env:VISUAL } else { $env:EDITOR }
 $env:PAGER = if ($env:PAGER) { $env:PAGER } else { "less" }
+# Unix-only: SUDO_EDITOR + snvim alias live in common.sh
 $env:XDG_CONFIG_HOME = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME ".config" }
 $env:XDG_DATA_HOME = if ($env:XDG_DATA_HOME) { $env:XDG_DATA_HOME } else { Join-Path $HOME ".local/share" }
 $env:XDG_STATE_HOME = if ($env:XDG_STATE_HOME) { $env:XDG_STATE_HOME } else { Join-Path $HOME ".local/state" }
