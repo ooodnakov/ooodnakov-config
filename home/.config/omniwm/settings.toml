@@ -67,7 +67,7 @@ name = "G27P6M"
 [niri]
 alwaysCenterSingleColumn = false
 centerFocusedColumn = "never"
-columnWidthPresets = [0.3333333333333333, 0.5, 0.66]
+columnWidthPresets = [0.33, 0.5, 0.66, 1.0]
 infiniteLoop = false
 maxVisibleColumns = 2
 maxWindowsPerColumn = 3
@@ -400,11 +400,11 @@ binding = "Unassigned"
 id = "toggleNativeFullscreen"
 
 [[hotkeys]]
-binding = "Control+Option+Shift+Left Arrow"
+binding = "Option+Shift+H"
 id = "moveColumn.left"
 
 [[hotkeys]]
-binding = "Control+Option+Shift+Right Arrow"
+binding = "Option+Shift+L"
 id = "moveColumn.right"
 
 [[hotkeys]]
@@ -579,7 +579,7 @@ keyCode = 10
 modifiers = 2048
 
 [[hotkeys]]
-binding = "Option+Shift+L"
+binding = "Unassigned"
 id = "toggleWorkspaceLayout"
 
 [[hotkeys]]
