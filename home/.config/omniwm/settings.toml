@@ -65,10 +65,10 @@ name = "Built-in Retina Display"
 name = "G27P6M"
 
 [niri]
-alwaysCenterSingleColumn = false
+alwaysCenterSingleColumn = true
 centerFocusedColumn = "never"
 columnWidthPresets = [0.33, 0.5, 0.66, 1.0]
-infiniteLoop = false
+infiniteLoop = true
 maxVisibleColumns = 2
 maxWindowsPerColumn = 3
 singleWindowAspectRatio = "4:3"
@@ -272,7 +272,7 @@ binding = "Control+Option+9"
 id = "moveToWorkspace.8"
 
 [[hotkeys]]
-binding = "Control+Option+Tab"
+binding = "Unassigned"
 id = "workspaceBackAndForth"
 
 [[hotkeys]]
@@ -364,7 +364,7 @@ binding = "Unassigned"
 id = "moveColumnToWorkspace.8"
 
 [[hotkeys]]
-binding = "Control+Option+H"
+binding = "Unassigned"
 id = "move.left"
 
 [[hotkeys]]
@@ -376,11 +376,11 @@ binding = "Control+Option+K"
 id = "move.up"
 
 [[hotkeys]]
-binding = "Control+Option+L"
+binding = "Unassigned"
 id = "move.right"
 
 [[hotkeys]]
-binding = "Control+Command+Tab"
+binding = "Control+Option+Tab"
 id = "focusMonitorNext"
 
 [[hotkeys]]
@@ -400,11 +400,11 @@ binding = "Unassigned"
 id = "toggleNativeFullscreen"
 
 [[hotkeys]]
-binding = "Option+Shift+H"
+binding = "Control+Option+H"
 id = "moveColumn.left"
 
 [[hotkeys]]
-binding = "Option+Shift+L"
+binding = "Control+Option+L"
 id = "moveColumn.right"
 
 [[hotkeys]]
@@ -464,7 +464,7 @@ binding = "Control+Option+-"
 id = "cycleColumnWidthBackward"
 
 [[hotkeys]]
-binding = "Option+F"
+binding = "Option+Shift+F"
 id = "toggleColumnFullWidth"
 
 [[hotkeys]]
