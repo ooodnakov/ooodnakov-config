@@ -115,6 +115,14 @@ function Run-Python {
     }
 }
 
+
+function Get-PythonCommand {
+    foreach ($candidate in @("python3", "python", "py")) {
+        if (Get-Command $candidate -ErrorAction SilentlyContinue) { return $candidate }
+    }
+    return $null
+}
+
 function Get-EditDistance {
     param(
         [Parameter(Mandatory = $true)]
@@ -714,6 +722,7 @@ function Install-OptionalDependencyFromSpec {
     $wingetId = if ($platformConfig.winget_id) { [string]$platformConfig.winget_id } elseif ($manager -eq "winget") { $packageName } else { "" }
     $chocoId = if ($platformConfig.choco_id) { [string]$platformConfig.choco_id } elseif ($manager -eq "choco") { $packageName } else { "" }
     $cargoGitUrl = if ($manager -eq "cargo") { $packageName } else { "" }
+    $scoopPackage = if ($manager -eq "scoop") { $packageName } else { "" }
 
     switch ($manager) {
         "custom" {
@@ -733,6 +742,9 @@ function Install-OptionalDependencyFromSpec {
         "cargo" {
             return (Install-PackageIfMissing -CommandNames $commandNames -CargoGitUrl $cargoGitUrl -Description $description -SummaryName $summaryName)
         }
+        "scoop" {
+            return (Install-PackageIfMissing -CommandNames $commandNames -ScoopPackage $scoopPackage -Description $description -SummaryName $summaryName)
+        }
         "pnpm" {
             $res = (Invoke-ActionWithSpinner -Description "Installing $description via pnpm" -Action {
                 param($pkg)
@@ -746,10 +758,22 @@ function Install-OptionalDependencyFromSpec {
             return (Install-GitHubReleaseDependencyIfMissing -Spec $Spec -PlatformConfig $platformConfig -CommandNames $commandNames -Description $description -SummaryName $summaryName)
         }
         "pip" {
+            if (Test-DependencyStatus -CommandName $commandNames[0] -SummaryName $summaryName) { return $true }
+
+            $pythonCommand = Get-PythonCommand
+            if (-not $pythonCommand) {
+                Add-DependencySummary "${summaryName}: missing (Python unavailable for pip)"
+                return $false
+            }
+
             $res = (Invoke-ActionWithSpinner -Description "Installing $description via pip" -Action {
-                param($pkg)
-                python3 -m pip install --upgrade $pkg | Out-Null
-            } -ArgumentList $packageName)
+                param($pkg, $pythonExe)
+                if ($pythonExe -eq "py") {
+                    & $pythonExe -3 -m pip install --upgrade $pkg | Out-Null
+                } else {
+                    & $pythonExe -m pip install --upgrade $pkg | Out-Null
+                }
+            } -ArgumentList $packageName, $pythonCommand)
             Update-SessionEnvironment
             if ($res) { Add-NewlyAvailableCommand -CommandNames $commandNames }
             return $res
@@ -1457,6 +1481,7 @@ function Install-PackageIfMissing {
         [string]$WingetId,
         [string]$ChocoId,
         [string]$CargoGitUrl,
+        [string]$ScoopPackage,
         [Parameter(Mandatory = $true)]
         [string]$Description,
         [Parameter(Mandatory = $true)]
@@ -1516,6 +1541,35 @@ function Install-PackageIfMissing {
             }
 
             Add-DependencySummary "${SummaryName}: install attempted via choco"
+            return $false
+        }
+
+        Add-DependencySummary "${SummaryName}: skipped"
+        return $false
+    }
+
+    if ($ScoopPackage -and (Get-Command scoop -ErrorAction SilentlyContinue)) {
+        if (Confirm-Install "Install $Description with Scoop?") {
+            if ($DryRun) {
+                Write-Output "[dry-run] scoop install $ScoopPackage"
+                Add-DependencySummary "${SummaryName}: install preview via scoop"
+                return $false
+            }
+
+            Invoke-ActionWithSpinner -Description "Installing $Description via scoop" -Action {
+                param($pkg)
+                scoop install $pkg | Out-Null
+            } -ArgumentList $ScoopPackage
+
+            Update-SessionEnvironment
+
+            if (Test-AnyCommand -Names $CommandNames) {
+                Add-DependencySummary "${SummaryName}: installed via scoop"
+                Add-NewlyAvailableCommand -CommandNames $CommandNames
+                return $true
+            }
+
+            Add-DependencySummary "${SummaryName}: install attempted via scoop"
             return $false
         }
 

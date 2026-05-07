@@ -26,7 +26,7 @@ After changing bootstrap logic, helper scripts, or Python configuration, run the
 - **Shell scripts (.sh):** Check syntax and lint using `bash -n` and `shellcheck`.
   ```bash
   bash -n scripts/setup.sh
-  shellcheck scripts/setup.sh scripts/ooodnakov.sh scripts/delete.sh scripts/update-pins.sh bootstrap.sh
+  shellcheck scripts/setup.sh scripts/ooodnakov.sh scripts/delete.sh scripts/update-pins.sh scripts/minimal-setup.sh bootstrap.sh
   ```
 - **PowerShell scripts (.ps1):** Validate using PSScriptAnalyzer via `pwsh`.
   ```powershell
@@ -37,6 +37,7 @@ After changing bootstrap logic, helper scripts, or Python configuration, run the
   uv run ruff check --select I --fix
   uv run ruff check
   uv run ruff format
+  uv run pytest
   ```
 
 ## Keeping README, docs/, and AGENTS.md Aligned

@@ -9,7 +9,7 @@ This note proposes low-risk CI checks for managed terminal/editor config under:
 
 - Neovim config bootstraps `lazy.nvim` by cloning from GitHub if missing, then loads plugin spec/imports via LazyVim.
 - WezTerm config is modular Lua, with dynamic event/module loading and optional local override from `~/.config/ooodnakov/local/wezterm.lua`.
-- The current CI workflow does not run dedicated checks for `home/.config/nvim` or `home/.config/wezterm`.
+- The CI workflow runs static smoke checks for managed Neovim and WezTerm config on Linux, macOS, and Windows.
 
 ## Definitely safe now (low flake risk)
 
@@ -71,9 +71,9 @@ These checks are deterministic and do not depend on GUI/session state.
 3. **Plugin functional behavior requiring external tools**
    - Example: lazygit plugin behavior depends on `lazygit`, git repo state, terminal semantics.
 
-## Recommended minimal first implementation
+## Implemented minimal checks
 
-Start with **static, deterministic checks only** in CI:
+CI starts with **static, deterministic checks only**:
 
 1. Validate Neovim JSON files (`lazy-lock.json`, `lazyvim.json`).
 2. Verify core Neovim/WezTerm managed entrypoint files exist.
@@ -85,6 +85,6 @@ Why this first:
 - Catches accidental deletes/corruption quickly.
 - Preserves reproducibility goals while keeping CI fast.
 
-## Suggested second phase
+## Suggested next phase
 
 After the first phase stabilizes, add **optional/non-blocking** headless startup checks behind a separate job or matrix entry, so regressions are visible without making every PR flaky.

@@ -239,7 +239,7 @@ def main() -> int:
         data = load_deps()
         for d in data["deps"]:
             print(d.get("key", ""))
-    elif cmd == "minimal":
+    elif cmd in {"minimal", "minimal-keys"}:
         data = load_deps()
         minimal = data.get("minimal", {}).get("keys", [])
         print(" ".join(minimal))

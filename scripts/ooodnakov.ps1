@@ -1788,6 +1788,11 @@ Subcommands:
   skills view [--check] [--json] view shared skills catalog via pnpm dlx
   skills add <source> [--agent gemini] [--sync-now]
                                   add one shared skill source
+Examples:
+  oooconf agents detect                 # list available agent CLIs
+  oooconf agents sync --check           # verify AGENTS.md managed sections
+  oooconf agents mcp status             # show managed MCP server status
+  oooconf agents skills view --json     # show shared skills catalog as JSON
 "@
         }
         "secrets" {

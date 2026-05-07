@@ -1,6 +1,7 @@
 """Tests for the central optional-deps.toml parser (sole source of truth)."""
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,8 @@ import pytest
 # Make scripts importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.read_optional_deps import load_deps, output_catalog, output_json
+
+SUBPROCESS_TIMEOUT_SECONDS = int(os.environ.get("OOOCONF_TEST_TIMEOUT", "180"))
 
 
 def _bash_syntax_check(script: str) -> subprocess.CompletedProcess[str]:
@@ -43,6 +46,7 @@ def _run_normalized_bash_script(script: str, *args: str) -> subprocess.Completed
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
         )
     finally:
         temp_path.unlink(missing_ok=True)
@@ -180,27 +184,43 @@ def test_defaults_loading():
     assert defaults["bin_dir"] == "~/.local/bin"
 
 
+def test_minimal_keys_command_and_legacy_alias(capsys):
+    """Test minimal key output and the legacy alias used by older setup scripts."""
+    from scripts.read_optional_deps import main
+
+    expected = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
+    original_argv = sys.argv[:]
+    try:
+        sys.argv = ["read_optional_deps.py", "minimal"]
+        assert main() == 0
+        assert capsys.readouterr().out.split() == expected
+
+        sys.argv = ["read_optional_deps.py", "minimal-keys"]
+        assert main() == 0
+        assert capsys.readouterr().out.split() == expected
+    finally:
+        sys.argv = original_argv
+
+
 def test_invalid_key_handling():
     """Test graceful handling of unknown keys."""
-    import subprocess
-
     result = subprocess.run(
         ["uv", "run", "scripts/read_optional_deps.py", "get", "nonexistentkey"],
         capture_output=True,
         text=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
     )
     assert result.returncode != 0, "Expected non-zero exit for invalid key"
 
 
 def test_completions_generator():
     """Test that completions generator uses the central parser without hard-coded lists."""
-    import subprocess
-
     result = subprocess.run(
         ["uv", "run", "scripts/generate_oooconf_completions.py"],
         capture_output=True,
         text=True,
         cwd=Path(__file__).parent.parent,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
     )
     assert result.returncode == 0, f"Completions generator failed: {result.stderr}"
     assert "updated:" in result.stdout.lower()
@@ -221,6 +241,11 @@ def test_shell_scripts_syntax_and_dry_run():
     assert result.returncode == 0, f"dry-run failed: {result.stderr}"
     assert any(k in result.stdout.lower() for k in ["dry-run", "rtk", "dependency summary", "complete"])
 
+    result = _run_normalized_bash_script("scripts/ooodnakov.sh", "deps", "--minimal", "--dry-run")
+    assert result.returncode == 0, f"minimal dry-run failed: {result.stderr}"
+    assert "oh-my-posh" in result.stdout
+    assert "dependency summary" in result.stdout.lower()
+
     # PowerShell syntax (if pwsh available)
     if Path("/usr/bin/pwsh").exists() or Path("/usr/local/bin/pwsh").exists():
         result = subprocess.run(
@@ -232,6 +257,7 @@ def test_shell_scripts_syntax_and_dry_run():
             ],
             capture_output=True,
             text=True,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
         )
         # Ignore if analyzer not installed; just check parse
         assert "syntax error" not in result.stderr.lower()

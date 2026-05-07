@@ -116,13 +116,7 @@ def test_css_var_lines_can_mark_values_important() -> None:
 def test_css_var_block_can_wrap_managed_marker() -> None:
     block = _css_var_block({"background": "#282828"}, important=True, managed=True)
 
-    assert block == (
-        f"{CSS_MANAGED_BEGIN}\n"
-        ":root {\n"
-        "  --background: #282828 !important;\n"
-        "}\n"
-        f"{CSS_MANAGED_END}\n"
-    )
+    assert block == (f"{CSS_MANAGED_BEGIN}\n:root {{\n  --background: #282828 !important;\n}}\n{CSS_MANAGED_END}\n")
 
 
 def test_write_managed_css_vars_replaces_existing_block(tmp_path: Path) -> None:

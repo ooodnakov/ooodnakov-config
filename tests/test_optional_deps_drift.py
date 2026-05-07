@@ -9,7 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.read_optional_deps import load_deps  # noqa: E402
+from scripts.read_optional_deps import load_deps, normalized_deps  # noqa: E402
 
 
 def _catalog_keys() -> list[str]:
@@ -151,3 +151,54 @@ def test_unix_handlers_have_setup_sh_implementations() -> None:
             missing.append(f"{dep.get('key')} -> {fn_name}")
 
     assert not missing, f"Missing setup.sh handler implementations: {', '.join(missing)}"
+
+
+def test_documented_optional_dependency_examples_exist_in_catalog() -> None:
+    """Ensure README examples do not mention dependency keys missing from the catalog."""
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    catalog = set(_catalog_keys())
+    documented: set[str] = set()
+
+    for match in re.finditer(r"oooconf deps (?P<args>[^`\n]+)", readme):
+        args = match.group("args").split()
+        for arg in args:
+            if arg.startswith("-") or arg.startswith("<") or arg.endswith("..."):
+                continue
+            documented.add(arg.strip(",."))
+
+    assert documented
+    assert documented <= catalog, f"README references unknown optional deps: {sorted(documented - catalog)}"
+
+
+def test_minimal_dependency_keys_exist_in_catalog() -> None:
+    """Ensure the documented minimal set stays backed by real optional dependency records."""
+    data = load_deps()
+    minimal_keys = data.get("minimal", {}).get("keys", [])
+    assert minimal_keys == ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
+    assert set(minimal_keys) <= set(_catalog_keys())
+
+
+def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
+    """Validate every manager used in optional-deps.toml has an installer or explicit path."""
+    unix_managers = {dep["manager"] for platform in ("linux", "macos") for dep in normalized_deps(platform)}
+    windows_managers = {dep["manager"] for dep in normalized_deps("windows")}
+
+    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
+    setup_ps1 = (REPO_ROOT / "scripts/setup.ps1").read_text(encoding="utf-8")
+
+    expected_unix = {"", "apt", "brew", "cargo", "curl", "custom", "download", "github-release", "pip", "pnpm"}
+    expected_windows = {"", "cargo", "choco", "custom", "download", "github-release", "pip", "pnpm", "scoop", "winget"}
+    assert unix_managers == expected_unix
+    assert windows_managers == expected_windows
+
+    for pattern in ["custom|curl)", "pnpm)", "pip)", "github-release)", '"")']:
+        assert pattern in setup_sh
+    for manager in ["apt", "brew", "cargo"]:
+        assert f'if [ "$manager" = "{manager}" ]' in setup_sh or f"{manager})" in setup_sh
+    assert "maybe_install_bw()" in setup_sh  # download manager is handled by the bw handler.
+    assert "python3 unavailable for pip" in setup_sh
+
+    for manager in ["custom", "curl", "winget", "choco", "cargo", "scoop", "pnpm", "github-release", "pip"]:
+        assert f'"{manager}" {{' in setup_ps1
+    assert '"bw" { return (Install-BitwardenCliIfMissing) }' in setup_ps1  # download manager handler.
+    assert "function Get-PythonCommand" in setup_ps1

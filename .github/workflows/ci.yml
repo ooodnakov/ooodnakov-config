@@ -26,13 +26,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.12"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install Python test tooling
-        run: python3 -m pip install --upgrade pip pytest
+      - name: Python lint and format checks
+        run: |
+          uv run ruff check
+          uv run ruff format --check
 
       - name: Install shellcheck (Ubuntu)
         if: runner.os == 'Linux'
@@ -48,15 +50,16 @@ jobs:
           bash -n scripts/ooodnakov.sh
           bash -n scripts/delete.sh
           bash -n scripts/update-pins.sh
+          bash -n scripts/minimal-setup.sh
           bash -n bootstrap.sh
 
       - name: Shellcheck
         run: |
-          shellcheck scripts/setup.sh scripts/ooodnakov.sh scripts/delete.sh scripts/update-pins.sh bootstrap.sh
+          shellcheck scripts/setup.sh scripts/ooodnakov.sh scripts/delete.sh scripts/update-pins.sh scripts/minimal-setup.sh bootstrap.sh
 
       - name: Validate lock artifacts are reproducible
         run: |
-          python3 scripts/generate_dependency_lock.py
+          uv run python scripts/generate_dependency_lock.py
           git diff --exit-code deps.lock.json docs/dependency-lock.md
 
       - name: Managed Neovim/WezTerm config smoke checks
@@ -85,7 +88,7 @@ jobs:
 
       - name: Optional deps parser/drift tests
         run: |
-          python3 -m pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py
+          uv run pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py tests/test_static_smoke.py
           bash tests/test_shell.sh
 
   powershell-validation:
@@ -98,15 +101,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.12"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install Python test tooling
+      - name: Python lint and format checks
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip pytest
+          uv run ruff check
+          uv run ruff format --check
 
       - name: Validate PowerShell syntax
         shell: pwsh
@@ -189,4 +193,4 @@ jobs:
       - name: Optional deps parser/drift tests
         shell: pwsh
         run: |
-          python -m pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py
+          uv run pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py tests/test_static_smoke.py

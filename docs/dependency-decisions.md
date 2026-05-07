@@ -47,9 +47,9 @@ Run `oooconf lock` after editing the TOML.
    - `install_optional_dependency_from_catalog()` in `scripts/setup.sh`
    - `Install-OptionalDependencyFromSpec` in `scripts/setup.ps1`
 4. Run `oooconf lock` to regenerate lock artifacts.
-5. Regenerate tracked completions: `uv run python3 scripts/generate_oooconf_completions.py completions`
+5. Regenerate tracked completions: `uv run python scripts/generate_oooconf_completions.py`
 6. Run drift checks so generated/consumer metadata stays aligned:
-   - `uv run pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py`
+   - `uv run pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py tests/test_static_smoke.py`
    - `bash tests/test_shell.sh`
 7. Document the decision in this file under the appropriate table.
 

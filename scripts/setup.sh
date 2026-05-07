@@ -767,6 +767,23 @@ install_optional_dependency_from_catalog() {
         fi
       fi
       ;;
+    pip)
+      if check_dependency_status "$command_name"; then
+        return 0
+      fi
+      if ! command -v python3 >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("$command_name: missing (python3 unavailable for pip)")
+        return 0
+      fi
+      if optional_dependency_selected "$key"; then
+        run_with_spinner "Installing $description via pip" python3 -m pip install --user --upgrade "$package_name"
+        if check_dependency_status "$command_name"; then
+          DEPENDENCY_SUMMARY+=("$command_name: installed via pip")
+        else
+          DEPENDENCY_SUMMARY+=("$command_name: install attempted via pip")
+        fi
+      fi
+      ;;
     github-release)
       maybe_install_github_release "$key" "$description" "$package_name" "$command_name" "$platform_url" "$asset_name"
       ;;
@@ -2520,7 +2537,7 @@ case "$COMMAND" in
   doctor) run_doctor; exit $? ;;
   deps)
     if [ "$MINIMAL" = 1 ]; then
-      selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal-keys" | tr ' ' ',')
+      selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')
     fi
     if [ -z "$selected_optional_key_csv" ] && is_interactive; then
       if selected_optional_key_csv="$(choose_optional_dependencies_with_gum)"; then
