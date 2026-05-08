@@ -25,7 +25,7 @@ Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 
 All decisions, categories, versions, install methods, pins, and reasons are **defined exclusively** in `scripts/optional-deps.toml` (see `[managed-tools]` section and per-entry comments).
 
-Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`.
+Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`. The `docker` entry is intentionally a configuration helper: it does not install Docker Engine, but on systemd Linux it enables and starts existing Docker and containerd units.
 
 - Automated: handled via `[managed-tools]` + `install_managed_tools()`.
 - Optional: offered by `oooconf deps` (interactive picker or `--yes-optional`).

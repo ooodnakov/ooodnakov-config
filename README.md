@@ -268,6 +268,7 @@ Use `oooconf deps` to install optional tools interactively or specifically:
 - `oooconf deps` — Interactive picker (requires `gum`).
 - `oooconf deps --minimal` — Install core minimal setup (git, zsh, uv, oh-my-posh, gum, rg, fd, bat).
 - `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
+- `oooconf deps docker` — On systemd Linux, enable and start existing Docker/containerd units at boot.
 - `oooconf deps --dry-run` — Preview without installing.
 
 All metadata is in `scripts/optional-deps.toml` (sole source of truth). Run `oooconf lock` after editing.

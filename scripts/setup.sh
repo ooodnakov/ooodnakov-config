@@ -706,6 +706,63 @@ maybe_install_tectonic() {
   maybe_install_dependency "$1" tectonic tectonic "Modern LaTeX engine (required by Snacks.image for LaTeX)"
 }
 
+systemd_unit_exists() {
+  local unit
+  unit="$1"
+
+  command -v systemctl >/dev/null 2>&1 || return 1
+  systemctl list-unit-files "$unit" --no-legend 2>/dev/null | awk '{ print $1 }' | grep -Fxq "$unit"
+}
+
+enable_docker_systemd_unit() {
+  local unit
+  unit="$1"
+
+  if ! systemd_unit_exists "$unit"; then
+    DEPENDENCY_SUMMARY+=("$unit: skipped (systemd unit not found)")
+    return 0
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    run_with_spinner "Enabling $unit at boot" sudo systemctl enable --now "$unit"
+    DEPENDENCY_SUMMARY+=("$unit: enable preview")
+    return 0
+  fi
+
+  if run_with_spinner "Enabling $unit at boot" sudo systemctl enable --now "$unit"; then
+    DEPENDENCY_SUMMARY+=("$unit: enabled and started")
+    return 0
+  fi
+
+  DEPENDENCY_SUMMARY+=("$unit: enable attempted")
+  return 1
+}
+
+maybe_install_docker() {
+  local _manager
+  _manager="$1"
+
+  if [ "$(detect_platform)" != "linux" ]; then
+    DEPENDENCY_SUMMARY+=("docker: skipped (Docker daemon auto-start is managed here only on systemd Linux)")
+    return 0
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("docker: missing (install Docker Engine first)")
+    return 0
+  fi
+
+  DEPENDENCY_SUMMARY+=("docker: present")
+
+  if ! command -v systemctl >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("docker daemon: skipped (systemctl unavailable)")
+    return 0
+  fi
+
+  enable_docker_systemd_unit docker.service || true
+  enable_docker_systemd_unit containerd.service || true
+}
+
 install_optional_dependency_if_selected() {
   local key
   key="$1"

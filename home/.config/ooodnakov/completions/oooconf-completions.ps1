@@ -77,6 +77,7 @@ function Get-OooconfCompletions {
         'python3',
         'lazygit',
         'lazydocker',
+        'docker',
         'impala',
         'bluetui',
         'uv',

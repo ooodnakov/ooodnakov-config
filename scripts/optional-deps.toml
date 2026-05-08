@@ -440,6 +440,19 @@ windows.winget_id = "JesseDuffield.lazydocker"
 windows.package = "lazydocker"
 
 [[deps]]
+key = "docker"
+display = "Docker"
+description = "Docker CLI and daemon; enables Docker and containerd systemd units on Linux"
+handler = "docker"
+check = "docker info"
+linux.manager = "custom"
+linux.command = "sudo systemctl enable --now docker.service containerd.service"
+macos.manager = "custom"
+macos.command = "install Docker Desktop manually"
+windows.manager = "custom"
+windows.command = "install Docker Desktop or Docker Engine manually"
+
+[[deps]]
 key = "impala"
 display = "Impala"
 description = "TUI for managing Wi-Fi networks (tab sections, space select, enter connect)"
