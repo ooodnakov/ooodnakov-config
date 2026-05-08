@@ -2002,11 +2002,103 @@ maybe_install_dua_cli() {
   fi
 }
 
+source_nvm_if_available() {
+  export NVM_DIR="${NVM_DIR:-$HOME_DIR/.nvm}"
+  if [ -s "$NVM_DIR/nvm.sh" ]; then
+    # shellcheck disable=SC1090
+    . "$NVM_DIR/nvm.sh"
+    return 0
+  fi
+  return 1
+}
+
+ensure_nvm_checkout() {
+  export NVM_DIR="${NVM_DIR:-$HOME_DIR/.nvm}"
+  if [ -s "$NVM_DIR/nvm.sh" ]; then
+    return 0
+  fi
+
+  local nvm_repo nvm_ref
+  nvm_repo=$(get_managed_tool nvm repo)
+  nvm_ref=$(get_managed_tool nvm ref)
+
+  if [ -z "$nvm_repo" ] || [ -z "$nvm_ref" ]; then
+    return 1
+  fi
+
+  sync_repo "$nvm_repo" "$nvm_ref" "$NVM_DIR" >/dev/null 2>&1 || return 1
+  [ -s "$NVM_DIR/nvm.sh" ]
+}
+
+maybe_install_node() {
+  local node_ver
+  node_ver=$(get_dep_field node ver 2>/dev/null || true)
+  [ -z "$node_ver" ] && node_ver="24.15.0"
+
+  source_nvm_if_available >/dev/null 2>&1 || true
+
+  if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("node: present")
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install Node.js $node_ver with npm via nvm?"; then
+    is_verbose && echo "skipping Node.js" >&2
+    DEPENDENCY_SUMMARY+=("node: skipped")
+    return 1
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] nvm install $node_ver"
+    echo "[dry-run] nvm alias default $node_ver"
+    echo "[dry-run] nvm use default"
+    DEPENDENCY_SUMMARY+=("node: install preview via nvm")
+    return 0
+  fi
+
+  if ! ensure_nvm_checkout; then
+    DEPENDENCY_SUMMARY+=("node: missing (nvm unavailable)")
+    return 1
+  fi
+
+  if ! source_nvm_if_available >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("node: missing (nvm could not be loaded)")
+    return 1
+  fi
+
+  run_with_spinner "Installing Node.js $node_ver via nvm" nvm install "$node_ver"
+  run_with_spinner "Setting Node.js $node_ver as nvm default" nvm alias default "$node_ver"
+  nvm use default >/dev/null 2>&1 || nvm use "$node_ver" >/dev/null 2>&1 || true
+
+  if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("node: installed")
+    return 0
+  fi
+
+  DEPENDENCY_SUMMARY+=("node: install attempted")
+  return 1
+}
+
+ensure_node_available_for_pnpm() {
+  source_nvm_if_available >/dev/null 2>&1 || true
+
+  if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    return 0
+  fi
+
+  maybe_install_node custom || true
+  if [ "$DRY_RUN" -eq 1 ]; then
+    return 0
+  fi
+  source_nvm_if_available >/dev/null 2>&1 || true
+  command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1
+}
+
 maybe_install_pnpm() {
   local pnpm_home
   pnpm_home="${PNPM_HOME:-$HOME_DIR/.local/share/pnpm}"
 
-  if command -v pnpm >/dev/null 2>&1; then
+  if resolve_pnpm_command >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("pnpm: present")
     return 0
   fi
@@ -2017,14 +2109,26 @@ maybe_install_pnpm() {
     return 0
   fi
 
+  if ! ensure_node_available_for_pnpm; then
+    DEPENDENCY_SUMMARY+=("pnpm: missing (requires Node.js/npm; try oooconf deps node pnpm)")
+    return 0
+  fi
+
   export PNPM_HOME="$pnpm_home"
   export PATH="$PNPM_HOME:$PATH"
   run_cmd mkdir -p "$PNPM_HOME"
 
   local pnpm_ver
 
-  pnpm_ver=$(get_managed_tool pnpm ver)
+  pnpm_ver=$(get_dep_field pnpm ver 2>/dev/null || true)
   [ -z "$pnpm_ver" ] && pnpm_ver="10.18.3"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] corepack enable --install-directory $PNPM_HOME pnpm"
+    echo "[dry-run] corepack prepare pnpm@$pnpm_ver --activate"
+    DEPENDENCY_SUMMARY+=("pnpm: install preview via corepack")
+    return 0
+  fi
 
   if command -v corepack >/dev/null 2>&1; then
     run_with_spinner "Enabling pnpm@$pnpm_ver via corepack" \
@@ -2041,11 +2145,11 @@ maybe_install_pnpm() {
       run_cmd ln -sfn "$PNPM_HOME/bin/pnpx" "$PNPM_HOME/pnpx"
     fi
   else
-    DEPENDENCY_SUMMARY+=("pnpm: missing (requires corepack)")
+    DEPENDENCY_SUMMARY+=("pnpm: missing (requires corepack or npm)")
     return 0
   fi
 
-  if command -v pnpm >/dev/null 2>&1 || [ -x "$PNPM_HOME/pnpm" ] || [ -x "$PNPM_HOME/bin/pnpm" ]; then
+  if resolve_pnpm_command >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("pnpm: installed")
   else
     DEPENDENCY_SUMMARY+=("pnpm: install attempted")

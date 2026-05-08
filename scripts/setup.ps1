@@ -665,6 +665,7 @@ function Install-OptionalDependencyFromSpec {
         "posh-git" { return (Install-PoshGitIfMissing) }
         "psfzf" { return (Install-PSFzfIfMissing) }
         "bw" { return (Install-BitwardenCliIfMissing) }
+        "node" { return (Install-NodeIfMissing) }
         "pnpm" { return (Install-PnpmIfMissing) }
         "cargo" { return (Install-CargoIfMissing) }
         "dua" { return (Install-DuaIfMissing) }
@@ -1781,11 +1782,103 @@ function Install-GitHubReleaseDependencyIfMissing {
     return $false
 }
 
+function Resolve-PnpmCommand {
+    $cmd = Get-Command pnpm -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    $pnpmHome = if ($env:PNPM_HOME) { $env:PNPM_HOME } else { Join-Path $HomeDir ".local/share/pnpm" }
+    $candidates = @(
+        (Join-Path $pnpmHome "pnpm.cmd"),
+        (Join-Path $pnpmHome "pnpm.ps1"),
+        (Join-Path $pnpmHome "pnpm"),
+        (Join-Path $pnpmHome "bin/pnpm.cmd"),
+        (Join-Path $pnpmHome "bin/pnpm.ps1"),
+        (Join-Path $pnpmHome "bin/pnpm")
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) { return $candidate }
+    }
+    return ""
+}
+
+function Install-NodeIfMissing {
+    if ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+        Add-DependencySummary "node: present"
+        return $true
+    }
+
+    $nodeVer = (Get-DepInfo "node").ver
+    if (-not $nodeVer) { $nodeVer = "24.15.0" }
+
+    if (-not (Confirm-Install "Install Node.js $nodeVer with bundled npm?")) {
+        Add-DependencySummary "node: skipped"
+        return $false
+    }
+
+    $nvmCommand = Get-Command nvm -ErrorAction SilentlyContinue
+    if ($nvmCommand) {
+        if ($DryRun) {
+            Write-Output "[dry-run] nvm install $nodeVer"
+            Write-Output "[dry-run] nvm use $nodeVer"
+            Add-DependencySummary "node: install preview via nvm"
+            return $true
+        }
+
+        Invoke-ActionWithSpinner -Description "Installing Node.js $nodeVer via nvm" -Action {
+            param($version)
+            nvm install $version | Out-Null
+            nvm use $version | Out-Null
+        } -ArgumentList $nodeVer
+        Update-SessionEnvironment
+    } elseif ($IsWindows -and (Get-Command winget -ErrorAction SilentlyContinue)) {
+        if ($DryRun) {
+            Write-Output "[dry-run] winget install --exact --id OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent"
+            Add-DependencySummary "node: install preview via winget"
+            return $true
+        }
+
+        Invoke-ActionWithSpinner -Description "Installing Node.js LTS via winget" -Action {
+            winget install --exact --id OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent | Out-Null
+        }
+        Update-SessionEnvironment
+    } else {
+        Add-DependencySummary "node: missing (requires nvm or winget)"
+        return $false
+    }
+
+    if ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+        Add-DependencySummary "node: installed"
+        Add-NewlyAvailableCommand -CommandNames @("node", "npm")
+        return $true
+    }
+
+    Add-DependencySummary "node: install attempted"
+    return $false
+}
+
+function Ensure-NodeForPnpm {
+    if ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm -ErrorAction SilentlyContinue)) {
+        return $true
+    }
+
+    $nodeInstalled = Install-NodeIfMissing
+    if ($DryRun -and $nodeInstalled) { return $true }
+    return ((Get-Command node -ErrorAction SilentlyContinue) -and (Get-Command npm -ErrorAction SilentlyContinue))
+}
+
 function Install-PnpmIfMissing {
-    if (Test-DependencyStatus -CommandName "pnpm" -SummaryName "pnpm") { return $true }
+    if (Resolve-PnpmCommand) {
+        Add-DependencySummary "pnpm: present"
+        return $true
+    }
 
     if (-not (Confirm-Install "Install pnpm package manager?")) {
         Add-DependencySummary "pnpm: skipped"
+        return $false
+    }
+
+    if (-not (Ensure-NodeForPnpm)) {
+        Add-DependencySummary "pnpm: missing (requires Node.js/npm; try oooconf deps node pnpm)"
         return $false
     }
 
@@ -1803,6 +1896,13 @@ function Install-PnpmIfMissing {
 
     $pnpmVer = (Get-DepInfo "pnpm").ver
     if (-not $pnpmVer) { $pnpmVer = "10.18.3" }  # fallback only during transition
+
+    if ($DryRun) {
+        Write-Output "[dry-run] corepack enable --install-directory $pnpmHome pnpm"
+        Write-Output "[dry-run] corepack prepare pnpm@$pnpmVer --activate"
+        Add-DependencySummary "pnpm: install preview via corepack"
+        return $false
+    }
 
     if (Get-Command corepack -ErrorAction SilentlyContinue) {
         if ($DryRun) {
@@ -1829,11 +1929,11 @@ function Install-PnpmIfMissing {
             npm install --global "pnpm@$version" --prefix $homeDir | Out-Null
         } -ArgumentList $pnpmHome, $pnpmVer
     } else {
-        Add-DependencySummary "pnpm: missing (requires corepack)"
+        Add-DependencySummary "pnpm: missing (requires corepack or npm)"
         return $false
     }
 
-    if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+    if (Resolve-PnpmCommand) {
         Add-DependencySummary "pnpm: installed"
         Add-NewlyAvailableCommand -CommandNames @("pnpm")
         return $true

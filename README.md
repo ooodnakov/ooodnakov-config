@@ -163,7 +163,7 @@ Window manager commands (Windows):
 The `default_bar_type` setting in `home/.glzr/zebar/config.yaml` controls whether `oooconf wm start` or `oooconf wm set komorebi` also launches the bar. Use `oooconf wm bar set zebar` or `oooconf wm bar set yabs` to change it.
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
-The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, nvm-backed Node.js, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 Shell completion:

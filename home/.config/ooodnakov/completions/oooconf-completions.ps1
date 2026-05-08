@@ -81,6 +81,7 @@ function Get-OooconfCompletions {
         'bluetui',
         'uv',
         'bw',
+        'node',
         'pnpm',
         'rtk',
         'imagemagick',
