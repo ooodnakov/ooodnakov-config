@@ -65,3 +65,15 @@ Why this matters for `oooconf`:
 - Claude directory layout: https://code.claude.com/docs/en/claude-directory
 - Gemini CLI settings docs: https://geminicli.com/docs/cli/settings/
 - Gemini CLI MCP docs: https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md
+- OpenCode provider docs: https://opencode.ai/docs/providers
+- MiniMax coding tools guide: https://platform.minimax.io/docs/guides/text-ai-coding-tools
+
+## MiniMax-M2.7 provider backend notes (May 2026)
+
+MiniMax documents MiniMax-M2.7 integrations for multiple coding agents. The managed `oooconf agents provider sync minimax` command covers the agent CLIs currently configured in this repo that support file-based or CLI-provider MiniMax setup:
+
+- Claude Code: writes `env` overrides in `~/.claude/settings.json`, including `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, and the MiniMax model aliases expected by Claude Code. Keep `MINIMAX_API_KEY` in a local env file by default; only use `--materialize-secrets` on private machine config.
+- OpenCode: writes a `minimax` provider and selects `minimax/MiniMax-M2.7` in `~/.config/opencode/opencode.json`. OpenCode's own docs also support storing credentials via `opencode auth login --provider minimax`, so `oooconf` does not write the key unless `--materialize-secrets` is requested.
+- OpenAI Codex CLI: appends `[model_providers.minimax]` and `[profiles.minimax]` to `~/.codex/config.toml`, loading credentials from `MINIMAX_API_KEY`. The MiniMax guide marks Codex as not recommended and suggests `codex --profile minimax` for this backend.
+
+Other tools listed by MiniMax (Cursor, TRAE, Kilo Code, Cline, Roo Code, Droid, Zed, Grok CLI, Hermes Agent, OpenClaw) are GUI-first, outside the current tracked CLI list, or do not have a stable dotfile target in this repo yet. Add them later only with documented, secret-safe config paths.

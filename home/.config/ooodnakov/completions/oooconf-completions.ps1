@@ -135,7 +135,7 @@ function Get-OooconfCompletions {
 
     $OooconfCommandSubcommands =
     @{
-        'agents' = @('detect', 'sync', 'doctor', 'mcp', 'status', 'rtk', 'update', 'install', 'install-scripts-build', 'skills')
+        'agents' = @('detect', 'sync', 'doctor', 'mcp', 'status', 'rtk', 'provider', 'update', 'install', 'install-scripts-build', 'skills')
         'bootstrap' = @()
         'check' = @()
         'color' = @()
@@ -217,6 +217,7 @@ function Get-OooconfCompletions {
     $OooconfSubsubcommands =
     @{
         'agents:mcp' = @('sync', 'status', 'add')
+        'agents:provider' = @('sync')
         'agents:rtk' = @('init')
         'agents:skills' = @('sync', 'view', 'add')
     }
@@ -226,6 +227,7 @@ function Get-OooconfCompletions {
         'agents:mcp:add' = @('--name', '--json', '--multi', '--preview', '--sync-now', '--check')
         'agents:mcp:status' = @()
         'agents:mcp:sync' = @('--check')
+        'agents:provider:sync' = @('--check', '--materialize-secrets', '--region')
         'agents:rtk:init' = @('--check')
         'agents:skills:add' = @('--agent', '--sync-now', '--check')
         'agents:skills:sync' = @('--check')
@@ -234,6 +236,7 @@ function Get-OooconfCompletions {
 
     $OooconfOptionValues =
     @{
+        'agents:--region' = @('global', 'china')
         'secrets:--backend' = @('bw')
         'secrets:--method' = @('auto', 'password', 'apikey')
         'secrets:--shell' = @('sh', 'zsh', 'bash', 'pwsh', 'fish')

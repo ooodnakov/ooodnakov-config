@@ -146,3 +146,32 @@ def test_cmd_mcp_add_multi_writes_entries(tmp_path, monkeypatch):
     assert set(data["mcp_servers"].keys()) == {"a", "b"}
     assert data["mcp_servers"]["a"]["command"] == "pnpm"
     assert data["mcp_servers"]["a"]["args"][0] == "dlx"
+
+
+def test_provider_sync_minimax_writes_supported_configs(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    cfg = {
+        "agent_configs": [
+            {"name": "Claude Code", "format": "json", "default_paths": ["~/.claude/settings.json"]},
+            {"name": "OpenCode", "format": "json", "default_paths": ["~/.config/opencode/opencode.json"]},
+            {"name": "OpenAI Codex CLI", "format": "toml", "default_paths": ["~/.codex/config.toml"]},
+        ]
+    }
+
+    rc = agents_tool.cmd_provider_sync(cfg, "minimax", check_only=False, materialize_secrets=False, region="global")
+
+    assert rc == 0
+    claude = json.loads((home / ".claude/settings.json").read_text(encoding="utf-8"))
+    assert claude["env"]["ANTHROPIC_BASE_URL"] == "https://api.minimax.io/anthropic"
+    assert claude["env"]["ANTHROPIC_AUTH_TOKEN"] == "{MINIMAX_API_KEY}"
+
+    opencode = json.loads((home / ".config/opencode/opencode.json").read_text(encoding="utf-8"))
+    assert opencode["model"] == "minimax/MiniMax-M2.7"
+    assert opencode["provider"]["minimax"]["options"]["baseURL"] == "https://api.minimax.io/anthropic/v1"
+    assert "apiKey" not in opencode["provider"]["minimax"]["options"]
+
+    codex = (home / ".codex/config.toml").read_text(encoding="utf-8")
+    assert "[model_providers.minimax]" in codex
+    assert 'env_key = "MINIMAX_API_KEY"' in codex
+    assert "[profiles.minimax]" in codex

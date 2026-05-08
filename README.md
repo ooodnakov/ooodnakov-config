@@ -124,6 +124,7 @@ Primary commands:
 - `oooconf agents mcp sync|status`: manage tracked MCP server clones/install state
 - `oooconf agents mcp add`: add one or many MCP JSON entries to shared common-data (`--multi`), with optional `--preview`, and normalize `npx -y` to `pnpm dlx`
 - `oooconf agents rtk init`: run RTK global init for detected agents
+- `oooconf agents provider sync minimax`: configure MiniMax-M2.7 provider backends for Claude Code, OpenCode, and Codex CLI
 - `oooconf agents skills sync`: synchronize configured agent skill specs
 - `oooconf agents skills view`: view the shared skills catalog via `pnpm dlx skills view` (add `--json` for machine output)
 - `oooconf agents skills add <source>`: add one shared skill source (e.g. `vercel-labs/agent-skills`) and optionally sync
@@ -212,6 +213,7 @@ oooconf agents doctor
 oooconf agents mcp sync
 oooconf agents mcp status
 oooconf agents rtk init
+oooconf agents provider sync minimax
 oooconf agents skills sync
 oooconf agents skills view
 oooconf agents update
@@ -228,7 +230,7 @@ The shared AGENTS policy snippets are configured in:
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
 `oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all pnpm-preferred agents through `pnpm add -g <package>@latest`.
-`oooconf agents sync --global` now understands MCP `env_vars` shorthands and resolves `{env_var}` placeholders from the current environment when generating Codex, Claude, and Gemini MCP configs.
+`oooconf agents sync --global` now understands MCP `env_vars` shorthands and resolves `{env_var}` placeholders from the current environment when generating Codex, Claude, and Gemini MCP configs. `oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in local environment by default; use `--materialize-secrets` only when you intentionally want the current key value written into JSON configs.
 
 ## Prerequisites
 

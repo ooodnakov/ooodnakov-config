@@ -1773,7 +1773,7 @@ Examples:
         }
         "agents" {
             Write-UiHelpBlock @"
-Usage: oooconf agents <detect|sync|doctor|update|skills> [options]
+Usage: oooconf agents <detect|sync|doctor|provider|update|skills> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
@@ -1782,6 +1782,8 @@ Subcommands:
                                   append/update shared AGENTS.md managed block
   doctor [--strict-config-paths] verify AGENTS.md managed block and default agent config paths
   update [--check]               update installed agent CLIs (pnpm-based tools use pnpm)
+  provider sync minimax [--check] [--region global|china] [--materialize-secrets]
+                                  configure MiniMax-M2.7 backends for Claude Code, OpenCode, and Codex CLI
   mcp add [--name N] [--json J] [--multi] [--preview] [--sync-now]
                                   add one MCP JSON server entry to shared config
   skills sync [--check]          sync configured skill specs across agents
@@ -1792,6 +1794,7 @@ Examples:
   oooconf agents detect                 # list available agent CLIs
   oooconf agents sync --check           # verify AGENTS.md managed sections
   oooconf agents mcp status             # show managed MCP server status
+  oooconf agents provider sync minimax   # configure MiniMax-M2.7 provider backends
   oooconf agents skills view --json     # show shared skills catalog as JSON
 "@
         }

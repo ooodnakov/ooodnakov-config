@@ -18,7 +18,7 @@ oooconf_commands=(
   'lock:regenerate dependency lock artifacts'
   'update-pins:check or update pinned refs'
   'completions:regenerate tracked completion files'
-  'agents:detect/sync/doctor/update AGENTS.md policy blocks'
+  'agents:detect/sync/doctor/provider/update AGENTS.md workflows'
   'secrets:sync or validate local secret env files'
   'shell:manage local shell preferences'
   'color:set a unified oooconf CLI color theme'
@@ -230,6 +230,7 @@ cmd_agents_subcommands=(
   'mcp:manage Model Context Protocol (MCP) servers'
   'status:show status of managed MCP servers'
   'rtk:manage RTK integration across agents'
+  'provider:configure model/API providers for agent CLIs'
   'update:update installed agent CLIs'
   'install:install one specific agent CLI'
   'install-scripts-build:build standalone install scripts for agents'
@@ -302,6 +303,18 @@ cmd_agents_rtk_subsubcommands=(
 cmd_agents_rtk_init_options=(
   '--check:check'
 )
+cmd_agents_provider_options=(
+)
+cmd_agents_provider_values=(
+)
+cmd_agents_provider_subsubcommands=(
+  'sync:sync a provider backend into supported agent configs'
+)
+cmd_agents_provider_sync_options=(
+  '--check:check'
+  '--materialize-secrets:materialize-secrets'
+  '--region:region'
+)
 cmd_agents_update_options=(
   '--repo-root:repo-root'
   '--config:config'
@@ -348,6 +361,7 @@ cmd_agents_skills_add_options=(
   '--check:check'
 )
 cmd_agents_option_values=(
+  '--region:global china'
 )
 
 cmd_secrets_options=(

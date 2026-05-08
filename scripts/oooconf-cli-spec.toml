@@ -56,8 +56,8 @@ description = "regenerate tracked completion files"
 options = ["--dry-run"]
 
 [commands.agents]
-description = "detect/sync/doctor/update AGENTS.md policy blocks"
-subcommands = ["detect", "sync", "doctor", "mcp", "status", "rtk", "update", "install", "install-scripts-build", "skills"]
+description = "detect/sync/doctor/provider/update AGENTS.md workflows"
+subcommands = ["detect", "sync", "doctor", "mcp", "status", "rtk", "provider", "update", "install", "install-scripts-build", "skills"]
 
 [commands.agents.subcommand_descriptions]
 detect = "detect configured agent CLIs on PATH"
@@ -66,6 +66,7 @@ doctor = "verify AGENTS.md shared block is current"
 mcp = "manage Model Context Protocol (MCP) servers"
 status = "show status of managed MCP servers"
 rtk = "manage RTK integration across agents"
+provider = "configure model/API providers for agent CLIs"
 update = "update installed agent CLIs"
 install = "install one specific agent CLI"
 install-scripts-build = "build standalone install scripts for agents"
@@ -81,6 +82,7 @@ install = ["--repo-root", "--config", "--check"]
 [commands.agents.subsubcommands]
 mcp = ["sync", "status", "add"]
 rtk = ["init"]
+provider = ["sync"]
 skills = ["sync", "view", "add"]
 
 [commands.agents.subsubcommand_descriptions.mcp]
@@ -90,6 +92,9 @@ add = "add one MCP JSON entry into common-data and optionally sync"
 
 [commands.agents.subsubcommand_descriptions.rtk]
 init = "run 'rtk init --global' for detected agents"
+
+[commands.agents.subsubcommand_descriptions.provider]
+sync = "sync a provider backend into supported agent configs"
 
 [commands.agents.subsubcommand_descriptions.skills]
 sync = "synchronize configured skill specs across agents"
@@ -104,10 +109,16 @@ add = ["--name", "--json", "--multi", "--preview", "--sync-now", "--check"]
 [commands.agents.subsubcommand_options.rtk]
 init = ["--check"]
 
+[commands.agents.subsubcommand_options.provider]
+sync = ["--check", "--materialize-secrets", "--region"]
+
 [commands.agents.subsubcommand_options.skills]
 sync = ["--check"]
 view = ["--check", "--json"]
 add = ["--agent", "--sync-now", "--check"]
+
+[commands.agents.value_sets]
+region = ["global", "china"]
 
 [commands.secrets]
 description = "sync or validate local secret env files"
