@@ -1773,7 +1773,7 @@ Examples:
         }
         "agents" {
             Write-UiHelpBlock @"
-Usage: oooconf agents <detect|sync|doctor|update|skills> [options]
+Usage: oooconf agents <detect|sync|doctor|install|update|mcp|rtk|skills> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
@@ -1781,7 +1781,11 @@ Subcommands:
   sync [--check] [--materialize-secrets]
                                   append/update shared AGENTS.md managed block
   doctor [--strict-config-paths] verify AGENTS.md managed block and default agent config paths
+  install [<agent> ...] [--all|--missing] [--check]
+                                  install missing, selected, or all configured agent CLIs
   update [--check]               update installed agent CLIs (pnpm-based tools use pnpm)
+  mcp sync|status                synchronize or inspect managed MCP servers
+  rtk init [--check]             initialize RTK hooks for detected agents
   mcp add [--name N] [--json J] [--multi] [--preview] [--sync-now]
                                   add one MCP JSON server entry to shared config
   skills sync [--check]          sync configured skill specs across agents
@@ -1791,6 +1795,8 @@ Subcommands:
 Examples:
   oooconf agents detect                 # list available agent CLIs
   oooconf agents sync --check           # verify AGENTS.md managed sections
+  oooconf agents install --check        # preview missing agent CLI installs
+  oooconf agents install codex gemini   # install selected agent CLIs
   oooconf agents mcp status             # show managed MCP server status
   oooconf agents skills view --json     # show shared skills catalog as JSON
 "@

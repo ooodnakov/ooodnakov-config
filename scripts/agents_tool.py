@@ -212,16 +212,27 @@ def parse_args() -> argparse.Namespace:
 
     install_parser = subparsers.add_parser(
         "install",
-        help="Install a specific agent CLI.",
+        help="Install configured agent CLIs.",
     )
     install_parser.add_argument(
-        "agent",
-        help="The agent key or name to install (e.g., claude, gemini, aider).",
+        "agents",
+        nargs="*",
+        help="Agent keys or names to install (e.g., claude, gemini, aider). Defaults to missing agents.",
+    )
+    install_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Install or upgrade every configured agent CLI.",
+    )
+    install_parser.add_argument(
+        "--missing",
+        action="store_true",
+        help="Install only configured agent CLIs that are missing from PATH (default when no agent is given).",
     )
     install_parser.add_argument(
         "--check",
         action="store_true",
-        help="Print planned install command without executing it.",
+        help="Print planned install commands without executing them.",
     )
 
     subparsers.add_parser(
@@ -1042,42 +1053,138 @@ def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
     return 0
 
 
-def cmd_install(repo_root: Path, config: dict[str, Any], agent_query: str, check_only: bool) -> int:
-    specs = parse_agent_update_specs(config.get("agent_updates", []))
-    spec = next((s for s in specs if s.command == agent_query or s.name.lower() == agent_query.lower()), None)
+def agent_matches_query(spec: AgentUpdateSpec, query: str) -> bool:
+    normalized_query = query.strip().lower()
+    aliases = {
+        spec.command.lower(),
+        spec.name.lower(),
+        spec.name.lower().replace(" ", "-"),
+        spec.name.lower().replace(" ", ""),
+        spec.package.lower(),
+    }
+    return normalized_query in aliases
 
-    if not spec:
-        print_status_line("fail", f"No agent update/install spec found for '{agent_query}'.")
-        return 1
 
-    print_section(f"Installing {spec.name}")
-    print(f"Mode: {'check' if check_only else 'install'}")
+def select_install_specs(
+    specs: list[AgentUpdateSpec],
+    queries: list[str],
+    *,
+    install_all: bool,
+    missing_only: bool,
+) -> tuple[list[AgentUpdateSpec], list[str]]:
+    if install_all and queries:
+        return [], ["--all cannot be combined with explicit agent names."]
+    if install_all and missing_only:
+        return [], ["--all and --missing are mutually exclusive."]
 
+    if install_all:
+        return specs, []
+
+    if queries:
+        selected: list[AgentUpdateSpec] = []
+        errors: list[str] = []
+        for query in queries:
+            matches = [spec for spec in specs if agent_matches_query(spec, query)]
+            if not matches:
+                errors.append(f"No agent update/install spec found for '{query}'.")
+                continue
+            selected.extend(matches)
+
+        deduped: list[AgentUpdateSpec] = []
+        seen: set[str] = set()
+        for spec in selected:
+            if spec.command in seen:
+                continue
+            seen.add(spec.command)
+            deduped.append(spec)
+        if missing_only:
+            deduped = [spec for spec in deduped if not shutil.which(spec.command)]
+        return deduped, errors
+
+    return [spec for spec in specs if not shutil.which(spec.command)], []
+
+
+def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, bool]:
     try:
         command, runner = resolve_update_command(spec)
     except RuntimeError as exc:
         print_status_line("fail", f"{spec.name}: {exc}")
-        return 1
+        return False, False
 
     command_display = shlex.join(command)
     if check_only:
         print_status_line("ok", f"Plan: install {spec.name} via {runner}")
         print(f"  command: {command_display}")
-        return 0
+        return True, False
 
     resolved_runner = shutil.which(command[0])
     if not resolved_runner:
-        print_status_line("fail", f"Required runner '{command[0]}' is not installed.")
-        return 1
+        print_status_line("fail", f"{spec.name}: required installer '{command[0]}' is not installed.")
+        return False, False
 
-    print_status_line("info", f"Executing: {command_display}")
+    command_exec = [resolved_runner, *command[1:]]
+    print_status_line("info", f"Installing {spec.name} via {runner}")
+    print(f"  command: {command_display}")
     try:
-        subprocess.run(command, check=True)
+        subprocess.run(command_exec, check=True)
         print_status_line("ok", f"Successfully installed {spec.name}")
-        return 0
+        return True, True
     except subprocess.CalledProcessError as exc:
         print_status_line("fail", f"Failed to install {spec.name}: {exc}")
+        return False, False
+
+
+def cmd_install(
+    repo_root: Path,
+    config: dict[str, Any],
+    agent_queries: list[str],
+    *,
+    check_only: bool,
+    install_all: bool,
+    missing_only: bool,
+) -> int:
+    specs = parse_agent_update_specs(config.get("agent_updates", []))
+    if not specs:
+        print("No agent_updates configured.", file=sys.stderr)
         return 1
+
+    selected, errors = select_install_specs(specs, agent_queries, install_all=install_all, missing_only=missing_only)
+    for error in errors:
+        print_status_line("fail", error)
+    if errors:
+        return 1
+
+    print_section("Agent CLI Installation")
+    if install_all:
+        scope = "all configured agents"
+    elif agent_queries:
+        scope = ", ".join(agent_queries)
+        if missing_only:
+            scope = f"missing selected agents ({scope})"
+    else:
+        scope = "missing configured agents"
+    print(f"Mode: {'check' if check_only else 'install'}")
+    print(f"Scope: {scope}")
+
+    if not selected:
+        print_status_line("ok", "No matching agents require installation.")
+        return 0
+
+    attempted = 0
+    planned_or_installed = 0
+    failed = 0
+    for spec in selected:
+        attempted += 1
+        ok, installed = run_install_spec(spec, check_only)
+        if ok:
+            planned_or_installed += 1 if check_only or installed else 0
+        else:
+            failed += 1
+
+    print("")
+    action = "planned" if check_only else "installed"
+    print(f"Summary: {action} {planned_or_installed}/{attempted} agents; failed {failed}.")
+    return 1 if failed else 0
 
 
 def get_command_version(command: str) -> str | None:
@@ -1746,7 +1853,16 @@ if __name__ == "__main__":
     if args.command == "update":
         raise SystemExit(cmd_update(root, cfg, check_only=args.check))
     if args.command == "install":
-        raise SystemExit(cmd_install(root, cfg, args.agent, check_only=args.check))
+        raise SystemExit(
+            cmd_install(
+                root,
+                cfg,
+                args.agents,
+                check_only=args.check,
+                install_all=args.all,
+                missing_only=args.missing,
+            )
+        )
     if args.command == "install-scripts-build":
         raise SystemExit(cmd_install_scripts_build(root, cfg))
     if args.command == "skills":

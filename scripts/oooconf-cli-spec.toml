@@ -76,7 +76,10 @@ detect = ["--repo-root", "--config", "--json"]
 sync = ["--repo-root", "--config", "--check", "--global", "--materialize-secrets"]
 doctor = ["--repo-root", "--config", "--strict-config-paths"]
 update = ["--repo-root", "--config", "--check"]
-install = ["--repo-root", "--config", "--check"]
+install = ["--repo-root", "--config", "--all", "--missing", "--check"]
+
+[commands.agents.subcommand_values]
+install = ["codex", "claude", "gemini", "qwen", "cursor-agent", "opencode", "aider"]
 
 [commands.agents.subsubcommands]
 mcp = ["sync", "status", "add"]
