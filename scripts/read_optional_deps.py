@@ -194,6 +194,13 @@ def get_dep_field(key: str, field: str) -> None:
     sys.exit(1)
 
 
+def get_managed_tool_field(name: str, field: str) -> None:
+    """Print one field from [managed-tools], or an empty string when absent."""
+    data = load_deps()
+    value = data["managed_tools"].get(name, {}).get(field, "")
+    print("" if value is None else value)
+
+
 def get_install_info(key: str, platform: str) -> None:
     """Print pipe-delimited install info. Now includes new rich fields."""
     data = load_deps()
@@ -246,6 +253,8 @@ def main() -> int:
     elif cmd == "managed-tools":
         data = load_deps()
         print(json.dumps(data["managed_tools"], indent=2))
+    elif cmd == "managed-tool-field" and len(sys.argv) >= 4:
+        get_managed_tool_field(sys.argv[2], sys.argv[3])
     elif cmd == "normalized-json":
         platform = sys.argv[2] if len(sys.argv) >= 3 else None
         print(json.dumps(normalized_deps(platform), indent=2))

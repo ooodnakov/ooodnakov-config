@@ -48,14 +48,8 @@ get_managed_tool() {
   name="$1"
   local field
   field="${2:-ref}"
-  run_python scripts/read_optional_deps.py managed-tools | \
-    python3 -c '
-import sys, json
-data = json.load(sys.stdin)
-name = sys.argv[1]
-field = sys.argv[2]
-print(data.get(name, {}).get(field, ""))
-' "$name" "$field"
+
+  run_python "$OPTIONAL_DEPS_SCRIPT" managed-tool-field "$name" "$field" 2>/dev/null || true
 }
 
 get_dep_field() {
@@ -721,6 +715,50 @@ install_optional_dependency_if_selected() {
   "$@"
 }
 
+resolve_pnpm_command() {
+  if command -v pnpm >/dev/null 2>&1; then
+    command -v pnpm
+    return 0
+  fi
+
+  local pnpm_home
+  pnpm_home="${PNPM_HOME:-$HOME_DIR/.local/share/pnpm}"
+  if [ -x "$pnpm_home/pnpm" ]; then
+    printf '%s\n' "$pnpm_home/pnpm"
+    return 0
+  fi
+  if [ -x "$pnpm_home/bin/pnpm" ]; then
+    printf '%s\n' "$pnpm_home/bin/pnpm"
+    return 0
+  fi
+
+  return 1
+}
+
+ensure_pnpm_available() {
+  local pnpm_cmd
+  pnpm_cmd="$(resolve_pnpm_command 2>/dev/null || true)"
+  if [ -n "$pnpm_cmd" ]; then
+    printf '%s\n' "$pnpm_cmd"
+    return 0
+  fi
+
+  maybe_install_pnpm "custom" >/dev/null 2>&1 || true
+  pnpm_cmd="$(resolve_pnpm_command 2>/dev/null || true)"
+  if [ -n "$pnpm_cmd" ]; then
+    printf '%s\n' "$pnpm_cmd"
+    return 0
+  fi
+
+  return 1
+}
+
+python_has_pip() {
+  local python_cmd
+  python_cmd="$1"
+  "$python_cmd" -m pip --version >/dev/null 2>&1
+}
+
 install_optional_dependency_from_catalog() {
   local key
   key="$1"
@@ -759,7 +797,12 @@ install_optional_dependency_from_catalog() {
       ;;
     pnpm)
       if optional_dependency_selected "$key"; then
-        run_with_spinner "Installing $description via pnpm" pnpm add -g "$package_name"
+        local pnpm_cmd
+        if ! pnpm_cmd="$(ensure_pnpm_available)"; then
+          DEPENDENCY_SUMMARY+=("$command_name: missing (pnpm unavailable; install pnpm first)")
+          return 0
+        fi
+        run_with_spinner "Installing $description via pnpm" "$pnpm_cmd" add -g "$package_name"
         if command -v "$command_name" >/dev/null 2>&1; then
           DEPENDENCY_SUMMARY+=("$command_name: installed via pnpm")
         else
@@ -772,9 +815,13 @@ install_optional_dependency_from_catalog() {
       python_cmd="python3"
       if ! command -v "$python_cmd" >/dev/null 2>&1; then
         DEPENDENCY_SUMMARY+=("$command_name: missing (python3 unavailable for pip)")
-        return 1
+        return 0
       fi
       if check_pip_dependency_status "$command_name" "$python_cmd"; then
+        return 0
+      fi
+      if ! python_has_pip "$python_cmd"; then
+        DEPENDENCY_SUMMARY+=("$command_name: missing (pip unavailable for $python_cmd)")
         return 0
       fi
       if optional_dependency_selected "$key"; then
@@ -2066,6 +2113,11 @@ sync_repo() {
   local target
   target="$3"
 
+  if [ -z "$repo_url" ] || [ -z "$ref" ]; then
+    record_failure "Resolving managed tool metadata for $(basename "$target")"
+    return 1
+  fi
+
   if [ ! -d "$target/.git" ]; then
     run_with_spinner "Cloning $(basename "$target")" git clone "$repo_url" "$target" || return 1
   fi
@@ -2668,11 +2720,10 @@ install_optional_dependencies
 
 progress_step "Syncing shell framework repositories"
 install_managed_tools
-install_auto_uv_env
 ensure_oh_my_zsh_permissions || true
 
-progress_step "Installing managed tool checkouts"
-install_managed_tools
+progress_step "Installing managed utility checkouts"
+install_auto_uv_env
 
 progress_step "Linking managed config files"
 managed_link_pairs=(

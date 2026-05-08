@@ -95,3 +95,31 @@ def test_powershell_completion_file_loads() -> None:
     )
     assert result.returncode == 0, result.stderr
     assert "loaded" in result.stdout
+
+
+def test_managed_zshrc_tolerates_missing_oh_my_zsh(tmp_path: Path) -> None:
+    """A failed/partial bootstrap should not leave new shells with source errors."""
+    if sys.platform == "win32" or not shutil.which("zsh"):
+        pytest.skip("zsh is not available")
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOME": str(tmp_path),
+            "XDG_CONFIG_HOME": str(REPO_ROOT / "home/.config"),
+            "XDG_DATA_HOME": str(tmp_path / "share"),
+            "XDG_STATE_HOME": str(tmp_path / "state"),
+            "XDG_CACHE_HOME": str(tmp_path / "cache"),
+        }
+    )
+    result = subprocess.run(
+        ["zsh", "-dfc", "source home/.config/zsh/.zshrc"],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "no such file or directory" not in result.stderr
+    assert "oh-my-zsh is missing" in result.stderr
