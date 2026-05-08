@@ -127,7 +127,7 @@ binds {
     Mod+W                               { toggle-column-tabbed-display; }
 
     // Screenshots.
-    ALT+Shift+S                         { screenshot; }
+    Mod+Shift+S                         { screenshot; }
     CTRL+Shift+2                        { screenshot-screen; }
     CTRL+Shift+3                        { screenshot-window; }
 

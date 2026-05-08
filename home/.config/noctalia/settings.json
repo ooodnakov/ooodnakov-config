@@ -41,7 +41,7 @@
         "preferredPlayer": "spotify",
         "spectrumFrameRate": 144,
         "spectrumMirrored": true,
-        "visualizerType": "linear",
+        "visualizerType": "wave",
         "volumeFeedback": false,
         "volumeFeedbackSoundFile": "",
         "volumeOverdrive": false,
@@ -347,7 +347,8 @@
                     "pinned": [
                         "Telegram Desktop",
                         "steam",
-                        "Vesktop"
+                        "Vesktop",
+                        "Cachy-Update"
                     ]
                 },
                 {
@@ -656,7 +657,7 @@
         "bluetoothRssiPollingEnabled": false,
         "disableDiscoverability": false,
         "networkPanelView": "ethernet",
-        "wifiDetailsViewMode": "grid"
+        "wifiDetailsViewMode": "list"
     },
     "nightLight": {
         "autoSchedule": true,
