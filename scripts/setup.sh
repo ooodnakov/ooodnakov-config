@@ -114,7 +114,7 @@ Usage: ./scripts/setup.sh [install|update|doctor|deps|completions] [--dry-run] [
 Commands:
   install   apply managed config and dependencies
   update    git pull this repo, then run install flow
-  doctor    validate managed links and required tools
+  doctor    validate managed links, shell runtimes, and required tools
   deps      install optional dependencies only
   completions  regenerate tracked shell completion files (autogen + oooconf)
 
@@ -867,7 +867,9 @@ run_with_spinner() {
         printf "[failed] %s\n" "$label" >&2
       fi
       cat "$logfile" >&2
-      FAILURES+=("$label")
+      if [ "${OOODNAKOV_RECORD_SPINNER_FAILURES:-1}" != "0" ]; then
+        FAILURES+=("$label")
+      fi
     else
       if is_interactive; then
         printf "\r[ok] %s\n" "$label" > /dev/tty
@@ -919,11 +921,64 @@ run_with_spinner() {
       printf "\r[failed] %s\n" "$label"
     fi
     cat "$logfile" >&2
-    FAILURES+=("$label")
+    if [ "${OOODNAKOV_RECORD_SPINNER_FAILURES:-1}" != "0" ]; then
+      FAILURES+=("$label")
+    fi
   fi
 
   rm -f "$logfile"
   return $status
+}
+
+retry_attempt_count() {
+  local attempts
+  attempts="${OOODNAKOV_GIT_SYNC_ATTEMPTS:-3}"
+
+  case "$attempts" in
+    ""|*[!0-9]*) attempts=3 ;;
+  esac
+
+  if [ "$attempts" -lt 1 ]; then
+    attempts=1
+  fi
+
+  printf '%s\n' "$attempts"
+}
+
+run_with_retry() {
+  local label
+  label="$1"
+  shift
+
+  local attempts
+  attempts="$(retry_attempt_count)"
+  local attempt
+  local status
+  local retry_delay
+
+  attempt=1
+  status=1
+
+  while [ "$attempt" -le "$attempts" ]; do
+    if [ "$attempts" -gt 1 ]; then
+      OOODNAKOV_RECORD_SPINNER_FAILURES=0 run_with_spinner "$label (attempt $attempt/$attempts)" "$@" && return 0
+    else
+      OOODNAKOV_RECORD_SPINNER_FAILURES=0 run_with_spinner "$label" "$@" && return 0
+    fi
+
+    status=$?
+    if [ "$attempt" -lt "$attempts" ]; then
+      retry_delay="$attempt"
+      printf '[retry] %s after %ss\n' "$label" "$retry_delay" >&2
+      sleep "$retry_delay"
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  if [ "${OOODNAKOV_RECORD_RETRY_FAILURES:-1}" != "0" ]; then
+    FAILURES+=("$label")
+  fi
+  return "$status"
 }
 
 record_failure() {
@@ -2101,6 +2156,88 @@ backup_target() {
   echo "backed up $target -> $backup_dir/${target_name}.${TIMESTAMP}"
 }
 
+backup_incomplete_checkout() {
+  local target
+  target="$1"
+
+  if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+    return 0
+  fi
+
+  if [ -d "$target/.git" ]; then
+    return 0
+  fi
+
+  local target_dir target_name backup_dir backup_path backup_index first_child
+  target_dir="$(dirname "$target")"
+  target_name="$(basename "$target")"
+
+  if [ -d "$target" ]; then
+    first_child="$(find "$target" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null || true)"
+    if [ -z "$first_child" ]; then
+      run_cmd rmdir "$target" || return 1
+      return 0
+    fi
+  fi
+
+  backup_dir="$BACKUP_ROOT$target_dir"
+  backup_path="$backup_dir/${target_name}.${TIMESTAMP}"
+  backup_index=1
+  while [ -e "$backup_path" ] || [ -L "$backup_path" ]; do
+    backup_path="$backup_dir/${target_name}.${TIMESTAMP}.$backup_index"
+    backup_index=$((backup_index + 1))
+  done
+
+  run_cmd mkdir -p "$backup_dir" || return 1
+  run_cmd mv "$target" "$backup_path" || return 1
+  echo "backed up incomplete checkout $target -> $backup_path"
+}
+
+clone_repo_with_fallbacks() {
+  local repo_url
+  repo_url="$1"
+  local target
+  target="$2"
+  local name
+  name="$(basename "$target")"
+  local label
+  label="Cloning $name"
+
+  backup_incomplete_checkout "$target" || return 1
+  OOODNAKOV_RECORD_RETRY_FAILURES=0 run_with_retry "$label" git clone "$repo_url" "$target" && return 0
+  [ -d "$target/.git" ] && return 0
+
+  backup_incomplete_checkout "$target" || return 1
+  OOODNAKOV_RECORD_RETRY_FAILURES=0 run_with_retry "$label with HTTP/1.1" \
+    git -c http.version=HTTP/1.1 clone "$repo_url" "$target" && return 0
+  [ -d "$target/.git" ] && return 0
+
+  backup_incomplete_checkout "$target" || return 1
+  OOODNAKOV_RECORD_RETRY_FAILURES=0 run_with_retry "$label with blobless fallback" \
+    git -c http.version=HTTP/1.1 clone --filter=blob:none "$repo_url" "$target" && return 0
+
+  FAILURES+=("$label")
+  return 1
+}
+
+fetch_repo_ref_with_fallbacks() {
+  local target
+  target="$1"
+  local ref
+  ref="$2"
+  local name
+  name="$(basename "$target")"
+  local label
+  label="Updating $name"
+
+  OOODNAKOV_RECORD_RETRY_FAILURES=0 run_with_retry "$label" git -C "$target" fetch origin "$ref" && return 0
+  OOODNAKOV_RECORD_RETRY_FAILURES=0 run_with_retry "$label with HTTP/1.1" \
+    git -c http.version=HTTP/1.1 -C "$target" fetch origin "$ref" && return 0
+
+  FAILURES+=("$label")
+  return 1
+}
+
 sync_repo() {
   local repo_url
   repo_url="$1"
@@ -2115,11 +2252,11 @@ sync_repo() {
   fi
 
   if [ ! -d "$target/.git" ]; then
-    run_with_spinner "Cloning $(basename "$target")" git clone "$repo_url" "$target" || return 1
+    clone_repo_with_fallbacks "$repo_url" "$target" || return 1
   fi
 
-  run_with_spinner "Updating $(basename "$target")" git -C "$target" fetch origin "$ref" || return 1
-  run_with_spinner "Pinning $(basename "$target")" git -c advice.detachedHead=false -C "$target" checkout "$ref" || return 1
+  fetch_repo_ref_with_fallbacks "$target" "$ref" || return 1
+  run_with_retry "Pinning $(basename "$target")" git -c advice.detachedHead=false -C "$target" checkout "$ref" || return 1
 }
 
 normalize_tree_permissions() {
@@ -2490,6 +2627,42 @@ doctor_check_nvim() {
   fi
 }
 
+doctor_check_managed_repo() {
+  local name
+  name="$1"
+  local target
+  target="$2"
+  local required_file
+  required_file="$3"
+  local expected_ref
+  expected_ref="$(get_managed_tool "$name" ref)"
+  local actual_ref
+
+  if [ ! -d "$target/.git" ]; then
+    echo "[missing] managed repo: $name ($target)"
+    echo "          repair: oooconf install"
+    FAILURES+=("doctor managed repo $name")
+    return 1
+  fi
+
+  if [ ! -f "$target/$required_file" ]; then
+    echo "[missing] managed repo file: $name/$required_file"
+    echo "          repair: oooconf install"
+    FAILURES+=("doctor managed repo file $name")
+    return 1
+  fi
+
+  actual_ref="$(git -C "$target" rev-parse HEAD 2>/dev/null || true)"
+  if [ -n "$expected_ref" ] && [ "$actual_ref" != "$expected_ref" ]; then
+    echo "[missing] managed repo ref: $name (expected $expected_ref, found ${actual_ref:-unknown})"
+    echo "          repair: oooconf install"
+    FAILURES+=("doctor managed repo ref $name")
+    return 1
+  fi
+
+  echo "[ok] managed repo: $name (${actual_ref:-unknown})"
+}
+
 run_doctor() {
   echo "Running doctor checks..."
   doctor_check_link "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
@@ -2511,6 +2684,16 @@ run_doctor() {
   doctor_check_nvim
   doctor_check_command oooconf
   doctor_check_command o
+  doctor_check_managed_repo "oh-my-zsh" "$STATE_HOME/oh-my-zsh" "oh-my-zsh.sh"
+  doctor_check_managed_repo "powerlevel10k" "$STATE_HOME/powerlevel10k" "powerlevel10k.zsh-theme"
+  doctor_check_managed_repo "k" "$STATE_HOME/oh-my-zsh/custom/plugins/k" "k.sh"
+  doctor_check_managed_repo "zsh-autosuggestions" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions.zsh"
+  doctor_check_managed_repo "zsh-syntax-highlighting" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting.zsh"
+  doctor_check_managed_repo "zsh-history-substring-search" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" "zsh-history-substring-search.zsh"
+  doctor_check_managed_repo "zsh-autocomplete" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" "zsh-autocomplete.plugin.zsh"
+  doctor_check_managed_repo "fzf-tab" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" "fzf-tab.plugin.zsh"
+  doctor_check_managed_repo "forgit" "$STATE_HOME/oh-my-zsh/custom/plugins/forgit" "forgit.plugin.zsh"
+  doctor_check_managed_repo "you-should-use" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" "you-should-use.plugin.zsh"
   if [ -d "$FONT_TARGET_DIR" ]; then
     echo "[ok] fonts dir: $FONT_TARGET_DIR"
   else
@@ -2520,6 +2703,7 @@ run_doctor() {
 
   if [ "${#FAILURES[@]}" -gt 0 ]; then
     echo "Doctor found ${#FAILURES[@]} issue(s)."
+    echo "Run 'oooconf install' to retry missing managed checkouts and repair links."
     return 1
   fi
   echo "Doctor checks passed."

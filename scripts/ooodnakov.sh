@@ -1002,7 +1002,7 @@ EOF
   ui_command_row "deps" "install optional dependencies only"
   ui_command_row "update" "pull repo with --ff-only, then re-run install"
   printf '  %s\n' "$(ui_colorize "hint" "Inspect & Validate:")"
-  ui_command_row "doctor" "validate managed symlinks and required commands"
+  ui_command_row "doctor" "validate managed symlinks, shell runtimes, and required commands"
   ui_command_row "dry-run" "preview install flow without mutating filesystem"
   ui_command_row "version" "print CLI version and repo root"
   printf '  %s\n' "$(ui_colorize "hint" "Manage State:")"
@@ -1111,9 +1111,9 @@ EOF
       cat <<'EOF' | ui_render_help_block
 Usage: oooconf doctor
 
-Validate managed symlinks and required commands.
-Checks that all managed config links point to valid targets and that
-key tools (git, zsh, wezterm, yazi, nvim, etc.) are available on PATH.
+Validate managed symlinks, shell runtimes, and required commands.
+Checks that managed config links point to valid targets, key tools are
+available on PATH, and pinned zsh runtime checkouts are complete.
 Examples:
   oooconf doctor                       # run all checks
 EOF
