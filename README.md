@@ -398,8 +398,8 @@ OOODNAKOV_WEZTERM_WORKSPACE=project-x OOODNAKOV_WEZTERM_CWD=$HOME/src/project-x 
 ## CI/CD
 
 - CI runs on pushes to `main` and pull requests
-- Linux and macOS jobs run Bash syntax validation, `shellcheck`, lockfile reproducibility checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
-- Windows jobs run PowerShell parser validation plus `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
+- Linux and macOS jobs run Python lint/format checks, Bash syntax validation, `shellcheck`, lockfile reproducibility checks, static Neovim/WezTerm smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
+- Windows jobs run Python lint/format checks, PowerShell parser validation, static Neovim/WezTerm smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
 - tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases
 
 ## Upstream and Audit References
@@ -433,3 +433,5 @@ uv tool install pre-commit
 pre-commit install
 pre-commit run --all-files
 ```
+
+The pre-commit hooks mirror the main local checks: Bash syntax, `shellcheck`, Ruff lint/format checks, and dependency lock reproducibility.

@@ -767,6 +767,25 @@ install_optional_dependency_from_catalog() {
         fi
       fi
       ;;
+    pip)
+      local python_cmd
+      python_cmd="python3"
+      if ! command -v "$python_cmd" >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("$command_name: missing (python3 unavailable for pip)")
+        return 1
+      fi
+      if check_pip_dependency_status "$command_name" "$python_cmd"; then
+        return 0
+      fi
+      if optional_dependency_selected "$key"; then
+        run_with_spinner "Installing $description via pip" "$python_cmd" -m pip install --user --upgrade "$package_name"
+        if check_pip_dependency_status "$command_name" "$python_cmd"; then
+          DEPENDENCY_SUMMARY+=("$command_name: installed via pip")
+        else
+          DEPENDENCY_SUMMARY+=("$command_name: install attempted via pip")
+        fi
+      fi
+      ;;
     github-release)
       maybe_install_github_release "$key" "$description" "$package_name" "$command_name" "$platform_url" "$asset_name"
       ;;
@@ -926,6 +945,29 @@ apt_package_available() {
   fi
 
   apt-cache show "$package_name" >/dev/null 2>&1
+}
+
+check_pip_dependency_status() {
+  local command_name
+  command_name="$1"
+  local python_cmd
+  python_cmd="$2"
+  local check_cmd
+
+  check_cmd=$(run_python scripts/read_optional_deps.py "check-command" "$command_name" 2>/dev/null || echo "command -v $command_name")
+  if [[ "$check_cmd" == python\ * ]]; then
+    check_cmd="$python_cmd ${check_cmd#python }"
+  fi
+
+  if eval "$check_cmd" >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ]; then
+      printf "[ok] %s is present.\n" "$command_name"
+    fi
+    DEPENDENCY_SUMMARY+=("$command_name: present")
+    return 0
+  fi
+
+  return 1
 }
 
 check_dependency_status() {
@@ -2520,7 +2562,7 @@ case "$COMMAND" in
   doctor) run_doctor; exit $? ;;
   deps)
     if [ "$MINIMAL" = 1 ]; then
-      selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal-keys" | tr ' ' ',')
+      selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')
     fi
     if [ -z "$selected_optional_key_csv" ] && is_interactive; then
       if selected_optional_key_csv="$(choose_optional_dependencies_with_gum)"; then

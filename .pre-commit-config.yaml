@@ -6,18 +6,30 @@ repos:
         entry: bash -n
         language: system
         types: [shell]
-        files: ^(scripts/(setup|ooodnakov|delete|update-pins)\.sh|bootstrap\.sh)$
+        files: ^(scripts/(setup|ooodnakov|delete|update-pins|minimal-setup)\.sh|bootstrap\.sh)$
 
       - id: shellcheck
         name: Shellcheck
         entry: shellcheck
         language: system
         types: [shell]
-        files: ^(scripts/(setup|ooodnakov|delete|update-pins)\.sh|bootstrap\.sh)$
+        files: ^(scripts/(setup|ooodnakov|delete|update-pins|minimal-setup)\.sh|bootstrap\.sh)$
+
+      - id: ruff-check
+        name: Ruff lint
+        entry: uv run ruff check
+        language: system
+        pass_filenames: false
+
+      - id: ruff-format-check
+        name: Ruff format check
+        entry: uv run ruff format --check
+        language: system
+        pass_filenames: false
 
       - id: lockfile-reproducibility
         name: Lockfile reproducibility
-        entry: bash -c 'python3 scripts/generate_dependency_lock.py && git diff --exit-code deps.lock.json docs/dependency-lock.md'
+        entry: bash -c 'uv run python scripts/generate_dependency_lock.py && git diff --exit-code deps.lock.json docs/dependency-lock.md'
         language: system
         pass_filenames: false
         always_run: true
