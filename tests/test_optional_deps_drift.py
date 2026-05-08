@@ -197,7 +197,9 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
         assert f'if [ "$manager" = "{manager}" ]' in setup_sh or f"{manager})" in setup_sh
     assert "maybe_install_bw()" in setup_sh  # download manager is handled by the bw handler.
     assert "python3 unavailable for pip" in setup_sh
-    assert "return 1" in setup_sh.split("python3 unavailable for pip", 1)[1].split("check_pip_dependency_status", 1)[0]
+    assert 'pnpm_cmd="$(ensure_pnpm_available)' not in setup_sh
+    assert "pip unavailable for $python_cmd" in setup_sh
+    assert "return 0" in setup_sh.split("python3 unavailable for pip", 1)[1].split("check_pip_dependency_status", 1)[0]
     assert 'check_pip_dependency_status "$command_name" "$python_cmd"' in setup_sh
     assert 'check_cmd="$python_cmd ${check_cmd#python }"' in setup_sh
 

@@ -100,7 +100,11 @@ for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
   source "$file"
 done
 
-source "$ZSH/oh-my-zsh.sh"
+if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
+  source "$ZSH/oh-my-zsh.sh"
+else
+  print -u2 "oooconf: oh-my-zsh is missing at $ZSH; run 'oooconf install' to restore managed shell plugins."
+fi
 
 if [ -f "$ZSH_CUSTOM/plugins/k/k.sh" ]; then
   source "$ZSH_CUSTOM/plugins/k/k.sh"
@@ -224,7 +228,7 @@ if (( $+commands[direnv] )); then
 fi
 
 # Enable completions for optional tools when installed.
-if (( $+commands[uv] )); then
+if (( $+commands[uv] )) && (( $+functions[compdef] )); then
   eval "$(uv generate-shell-completion zsh)"
   # uvx is equivalent to 'uv tool run'. We wrap _uv to simulate this.
   _uvx() {
@@ -247,8 +251,10 @@ fi
 alias k='k -h'
 
 zmodload zsh/complist 2>/dev/null
-bindkey -M menuselect '^M' .accept-line
-bindkey -M menuselect '\r' .accept-line
+if bindkey -M menuselect >/dev/null 2>&1; then
+  bindkey -M menuselect '^M' .accept-line
+  bindkey -M menuselect '\r' .accept-line
+fi
 
 if [ -f "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme" ]; then
   source "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme"
