@@ -736,21 +736,12 @@ resolve_pnpm_command() {
 }
 
 ensure_pnpm_available() {
-  local pnpm_cmd
-  pnpm_cmd="$(resolve_pnpm_command 2>/dev/null || true)"
-  if [ -n "$pnpm_cmd" ]; then
-    printf '%s\n' "$pnpm_cmd"
+  if resolve_pnpm_command >/dev/null 2>&1; then
     return 0
   fi
 
   maybe_install_pnpm "custom" >/dev/null 2>&1 || true
-  pnpm_cmd="$(resolve_pnpm_command 2>/dev/null || true)"
-  if [ -n "$pnpm_cmd" ]; then
-    printf '%s\n' "$pnpm_cmd"
-    return 0
-  fi
-
-  return 1
+  resolve_pnpm_command >/dev/null 2>&1
 }
 
 python_has_pip() {
@@ -798,7 +789,12 @@ install_optional_dependency_from_catalog() {
     pnpm)
       if optional_dependency_selected "$key"; then
         local pnpm_cmd
-        if ! pnpm_cmd="$(ensure_pnpm_available)"; then
+        if ! ensure_pnpm_available; then
+          DEPENDENCY_SUMMARY+=("$command_name: missing (pnpm unavailable; install pnpm first)")
+          return 0
+        fi
+        pnpm_cmd="$(resolve_pnpm_command 2>/dev/null || true)"
+        if [ -z "$pnpm_cmd" ]; then
           DEPENDENCY_SUMMARY+=("$command_name: missing (pnpm unavailable; install pnpm first)")
           return 0
         fi
@@ -2113,8 +2109,8 @@ sync_repo() {
   local target
   target="$3"
 
-  if [ -z "$repo_url" ] || [ -z "$ref" ]; then
-    record_failure "Resolving managed tool metadata for $(basename "$target")"
+  if [ -z "$repo_url" ] || [ -z "$ref" ] || [ -z "$target" ]; then
+    record_failure "Resolving managed tool metadata for $(basename "${target:-unknown}")"
     return 1
   fi
 
