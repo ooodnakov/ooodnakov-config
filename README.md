@@ -214,8 +214,11 @@ oooconf agents mcp status
 oooconf agents rtk init
 oooconf agents skills sync
 oooconf agents skills view
+oooconf agents install --check
+oooconf agents install
+oooconf agents install codex gemini
+oooconf agents install --all
 oooconf agents update
-oooconf agents install codex
 oooconf agents install-scripts-build
 ```
 
@@ -227,6 +230,7 @@ The shared AGENTS policy snippets are configured in:
 - `docs/agents-config-research.md` (cross-agent config model comparison and rationale)
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
+`oooconf agents install` installs missing configured agent CLIs by default. Pass one or more agent keys such as `codex gemini`, `--missing` for explicit missing-only mode, or `--all` to install or upgrade every configured agent CLI. `--check` previews the installer commands without running them.
 `oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all pnpm-preferred agents through `pnpm add -g <package>@latest`.
 `oooconf agents sync --global` now understands MCP `env_vars` shorthands and resolves `{env_var}` placeholders from the current environment when generating Codex, Claude, and Gemini MCP configs.
 

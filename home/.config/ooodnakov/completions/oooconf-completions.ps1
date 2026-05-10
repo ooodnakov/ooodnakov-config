@@ -191,7 +191,7 @@ function Get-OooconfCompletions {
     @{
         'agents:detect' = @('--repo-root', '--config', '--json')
         'agents:doctor' = @('--repo-root', '--config', '--strict-config-paths')
-        'agents:install' = @('--repo-root', '--config', '--check')
+        'agents:install' = @('--repo-root', '--config', '--all', '--missing', '--check')
         'agents:sync' = @('--repo-root', '--config', '--check', '--global', '--materialize-secrets')
         'agents:update' = @('--repo-root', '--config', '--check')
         'secrets:add' = @('--template')
@@ -209,6 +209,7 @@ function Get-OooconfCompletions {
 
     $OooconfSubcommandValues =
     @{
+        'agents:install' = @('codex', 'claude', 'gemini', 'qwen', 'cursor-agent', 'opencode', 'aider')
         'shell:auto-uv-env' = @('enabled', 'quiet', 'status')
         'shell:forgit-aliases' = @('plain', 'forgit', 'status')
         'shell:psfzf-git' = @('enabled', 'disabled', 'status')

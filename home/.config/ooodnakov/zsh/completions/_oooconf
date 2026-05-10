@@ -316,9 +316,18 @@ cmd_agents_update_subsubcommands=(
 cmd_agents_install_options=(
   '--repo-root:repo-root'
   '--config:config'
+  '--all:all'
+  '--missing:missing'
   '--check:check'
 )
 cmd_agents_install_values=(
+  'codex:codex'
+  'claude:claude'
+  'gemini:gemini'
+  'qwen:qwen'
+  'cursor-agent:cursor-agent'
+  'opencode:opencode'
+  'aider:aider'
 )
 cmd_agents_install_subsubcommands=(
 )
