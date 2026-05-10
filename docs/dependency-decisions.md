@@ -39,7 +39,7 @@ Run `oooconf lock` after editing the TOML.
 
 1. Append a `[[deps]]` block to `scripts/optional-deps.toml` with the key, display name, description, and per-platform install info (`linux.manager`, `macos.manager`, `windows.manager`, plus `package`, `command`, `winget_id`, `choco_id`, `url`, or `asset` as needed).
    - For GitHub release archives, use `manager = "github-release"`, `package = "owner/repo"`, `ver`, `bin`, and platform `asset` templates with `${ver}`, `${system}`, and `${arch}` placeholders.
-   - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`).
+   - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`). The `node` and `pnpm` handlers are intentionally paired so a fresh machine with only `nvm` can bootstrap Node.js, npm, and pnpm in one optional dependency run.
 2. Add/adjust presence checks:
    - `optional_dependency_present()` in `scripts/setup.sh`
    - `Get-OptionalDependencyCommandNames` / `Test-OptionalDependencyPresent` in `scripts/setup.ps1`
