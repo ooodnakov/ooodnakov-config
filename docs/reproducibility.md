@@ -71,7 +71,8 @@ Fonts are also manual for now. The tracked defaults assume a Nerd Font is instal
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.
 
 For Neovim, setup validates `nvim >= 0.10.0` for LazyVim. If Neovim is missing or too old, setup installs the pinned official Neovim GitHub release archive into the repo-managed data tree and links or copies `nvim` from there instead of using an OS package manager.
-For `pnpm`, the tracked shell environment reserves `PNPM_HOME`, and setup installs a pinned version through `corepack` when available or through `pnpm` into that path otherwise.
+For Node.js, setup can install the pinned Node.js LTS version through an available `nvm` checkout, including the bundled `npm`. On Unix, the bootstrap can sync the managed `nvm` checkout first when only the repository-managed `nvm` tree is missing.
+For `pnpm`, the tracked shell environment reserves `PNPM_HOME`; setup first ensures Node.js/npm are available, then installs the pinned pnpm version through `corepack` when available or through `npm` into that path otherwise.
 
 ## Bootstrap trust model
 
@@ -111,6 +112,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 - `oooconf agents detect` to detect configured AI coding agent CLIs available on `PATH`
 - `oooconf agents sync` to update managed shared AGENTS.md policy sections from tracked snippets
 - `oooconf agents doctor` to verify AGENTS.md managed sections and check common MCP/skills markers in default agent config paths
+- `oooconf agents install [<agent> ...] [--all|--missing] [--check]` to install missing, selected, or all configured agent CLIs through their preferred package managers
 - `oooconf agents update` to update installed agent CLIs; pnpm-preferred agents are updated through `pnpm`
 - `oooconf agents provider sync minimax` to configure MiniMax-M2.7 provider backends for Claude Code, OpenCode, and Codex CLI without committing API keys
 - `oooconf agents doctor --strict-config-paths` to fail when expected agent default config files are missing

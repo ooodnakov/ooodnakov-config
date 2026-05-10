@@ -164,7 +164,7 @@ Window manager commands (Windows):
 The `default_bar_type` setting in `home/.glzr/zebar/config.yaml` controls whether `oooconf wm start` or `oooconf wm set komorebi` also launches the bar. Use `oooconf wm bar set zebar` or `oooconf wm bar set yabs` to change it.
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
-The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, nvm-backed Node.js, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 Shell completion:
@@ -216,8 +216,11 @@ oooconf agents rtk init
 oooconf agents provider sync minimax
 oooconf agents skills sync
 oooconf agents skills view
+oooconf agents install --check
+oooconf agents install
+oooconf agents install codex gemini
+oooconf agents install --all
 oooconf agents update
-oooconf agents install codex
 oooconf agents install-scripts-build
 ```
 
@@ -229,6 +232,7 @@ The shared AGENTS policy snippets are configured in:
 - `docs/agents-config-research.md` (cross-agent config model comparison and rationale)
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
+`oooconf agents install` installs missing configured agent CLIs by default. Pass one or more agent keys such as `codex gemini`, `--missing` for explicit missing-only mode, or `--all` to install or upgrade every configured agent CLI. `--check` previews the installer commands without running them.
 `oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all pnpm-preferred agents through `pnpm add -g <package>@latest`.
 `oooconf agents sync --global` now understands MCP `env_vars` shorthands and resolves `{env_var}` placeholders from the current environment when generating Codex, Claude, and Gemini MCP configs. `oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in local environment by default for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is intentionally used on private machine config.
 
@@ -270,6 +274,7 @@ Use `oooconf deps` to install optional tools interactively or specifically:
 - `oooconf deps` — Interactive picker (requires `gum`).
 - `oooconf deps --minimal` — Install core minimal setup (git, zsh, uv, oh-my-posh, gum, rg, fd, bat).
 - `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
+- `oooconf deps docker` — On systemd Linux, enable and start existing Docker/containerd units at boot.
 - `oooconf deps --dry-run` — Preview without installing.
 
 All metadata is in `scripts/optional-deps.toml` (sole source of truth). Run `oooconf lock` after editing.

@@ -123,3 +123,4 @@ def test_managed_zshrc_tolerates_missing_oh_my_zsh(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert "no such file or directory" not in result.stderr
     assert "oh-my-zsh is missing" in result.stderr
+    assert "powerlevel10k is missing" in result.stderr

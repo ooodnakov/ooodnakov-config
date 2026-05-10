@@ -4,22 +4,23 @@
 // https://github.com/YaLTeR/niri/wiki/Configuration:-Outputs
 
 output "HDMI-A-2" {
-    mode "2560x1440@239.970"
+    mode "2560x1440@143.995"
     position x=0 y=0
     scale 1.0
-    variable-refresh-rate on-demand=true
+    variable-refresh-rate
 }
 
 output "DP-1" {
-    mode "2560x1440@144.000"
+    mode "2560x1440@279.961"
     position x=2560 y=0
     scale 1.0
     variable-refresh-rate
 }
 
 output "HDMI-A-1" {
-    mode "4096x2160@119.880"
-    position x=2560 y=0
-    scale 1.0
-    variable-refresh-rate
+    off
+    // mode "4096x2160@119.880"
+    // position x=2560 y=0
+    // scale 1.0
+    // variable-refresh-rate
 }

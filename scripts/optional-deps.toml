@@ -440,6 +440,19 @@ windows.winget_id = "JesseDuffield.lazydocker"
 windows.package = "lazydocker"
 
 [[deps]]
+key = "docker"
+display = "Docker"
+description = "Docker CLI and daemon; enables Docker and containerd systemd units on Linux"
+handler = "docker"
+check = "docker info"
+linux.manager = "custom"
+linux.command = "sudo systemctl enable --now docker.service containerd.service"
+macos.manager = "custom"
+macos.command = "install Docker Desktop manually"
+windows.manager = "custom"
+windows.command = "install Docker Desktop or Docker Engine manually"
+
+[[deps]]
 key = "impala"
 display = "Impala"
 description = "TUI for managing Wi-Fi networks (tab sections, space select, enter connect)"
@@ -483,9 +496,20 @@ windows.manager = "download"
 windows.url = "https://github.com/bitwarden/cli/releases/download/v${ver}/bw-windows-${ver}.zip"
 
 [[deps]]
+key = "node"
+display = "Node.js"
+description = "Node.js runtime with bundled npm, installed through nvm when needed"
+handler = "node"
+ver = "24.15.0"
+check = "node --version && npm --version"
+linux.manager = "custom"
+macos.manager = "custom"
+windows.manager = "custom"
+
+[[deps]]
 key = "pnpm"
 display = "pnpm"
-description = "Node.js package manager via corepack or npm fallback"
+description = "Node.js package manager via corepack or npm fallback; bootstraps Node.js through nvm when needed"
 handler = "pnpm"
 ver = "10.18.3"
 check = "pnpm --version"

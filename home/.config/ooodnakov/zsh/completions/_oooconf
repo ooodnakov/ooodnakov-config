@@ -79,11 +79,13 @@ deps_keys=(
   'python3:Python runtime and helper scripts'
   'lazygit:simple terminal UI for git commands'
   'lazydocker:terminal UI for managing containers and images (s=stop, r=start/restart, ?=help)'
+  'docker:Docker CLI and daemon; enables Docker and containerd systemd units on Linux'
   'impala:TUI for managing Wi-Fi networks (tab sections, space select, enter connect)'
   'bluetui:TUI for managing Bluetooth connections'
   'uv:Python package manager via official installer'
   'bw:Bitwarden CLI via official native archive'
-  'pnpm:Node.js package manager via corepack or npm fallback'
+  'node:Node.js runtime with bundled npm, installed through nvm when needed'
+  'pnpm:Node.js package manager via corepack or npm fallback; bootstraps Node.js through nvm when needed'
   'rtk:token-optimized command proxy for AI CLI workflows'
   'imagemagick:Image processing library (required by Snacks.image)'
   'ghostscript:PostScript and PDF interpreter (required by Snacks.image for PDFs)'
@@ -327,9 +329,18 @@ cmd_agents_update_subsubcommands=(
 cmd_agents_install_options=(
   '--repo-root:repo-root'
   '--config:config'
+  '--all:all'
+  '--missing:missing'
   '--check:check'
 )
 cmd_agents_install_values=(
+  'codex:codex'
+  'claude:claude'
+  'gemini:gemini'
+  'qwen:qwen'
+  'cursor-agent:cursor-agent'
+  'opencode:opencode'
+  'aider:aider'
 )
 cmd_agents_install_subsubcommands=(
 )

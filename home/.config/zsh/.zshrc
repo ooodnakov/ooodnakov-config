@@ -256,9 +256,20 @@ if bindkey -M menuselect >/dev/null 2>&1; then
   bindkey -M menuselect '\r' .accept-line
 fi
 
-if [ -f "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme" ]; then
-  source "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme"
+for p10k_theme_file in \
+  "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme" \
+  "$HOME/.oh-my-zsh/custom/themes/powerlevel10k/powerlevel10k.zsh-theme" \
+  "/usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme"; do
+  if [ -f "$p10k_theme_file" ]; then
+    source "$p10k_theme_file"
+    break
+  fi
+done
+
+if (( ! $+functions[p10k] )); then
+  print -u2 "oooconf: powerlevel10k is missing at $OOODNAKOV_SHARE_HOME/powerlevel10k; run 'oooconf install' to restore the managed prompt."
 fi
+unset p10k_theme_file
 
 if [ -f "$OOODNAKOV_CONFIG_HOME/p10k.zsh" ]; then
   source "$OOODNAKOV_CONFIG_HOME/p10k.zsh"

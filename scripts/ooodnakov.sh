@@ -1002,7 +1002,7 @@ EOF
   ui_command_row "deps" "install optional dependencies only"
   ui_command_row "update" "pull repo with --ff-only, then re-run install"
   printf '  %s\n' "$(ui_colorize "hint" "Inspect & Validate:")"
-  ui_command_row "doctor" "validate managed symlinks and required commands"
+  ui_command_row "doctor" "validate managed symlinks, shell runtimes, and required commands"
   ui_command_row "dry-run" "preview install flow without mutating filesystem"
   ui_command_row "version" "print CLI version and repo root"
   printf '  %s\n' "$(ui_colorize "hint" "Manage State:")"
@@ -1111,9 +1111,9 @@ EOF
       cat <<'EOF' | ui_render_help_block
 Usage: oooconf doctor
 
-Validate managed symlinks and required commands.
-Checks that all managed config links point to valid targets and that
-key tools (git, zsh, wezterm, yazi, nvim, etc.) are available on PATH.
+Validate managed symlinks, shell runtimes, and required commands.
+Checks that managed config links point to valid targets, key tools are
+available on PATH, and pinned zsh runtime checkouts are complete.
 Examples:
   oooconf doctor                       # run all checks
 EOF
@@ -1190,7 +1190,8 @@ EOF
       ;;
     agents)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf agents <detect|sync|doctor|provider|update|skills> [options]
+
+Usage: oooconf agents <detect|sync|doctor|install|provider|update|mcp|rtk|skills> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
@@ -1199,9 +1200,13 @@ Subcommands:
                         append/update shared AGENTS.md managed block
   doctor [--strict-config-paths]
                         verify AGENTS.md managed block and default agent config paths
+  install [<agent> ...] [--all|--missing] [--check]
+                        install missing, selected, or all configured agent CLIs
   update [--check]      update installed agent CLIs (pnpm-based tools use pnpm)
   provider sync minimax [--check] [--region global|china] [--materialize-secrets]
                         configure MiniMax-M2.7 backends for Claude Code, OpenCode, and Codex CLI
+  mcp sync|status       synchronize or inspect managed MCP servers
+  rtk init [--check]    initialize RTK hooks for detected agents
   mcp add [--name N] [--json JSON] [--multi] [--preview] [--sync-now]
                         add one MCP JSON server entry to shared config
   skills sync [--check] sync configured skill specs across agents
@@ -1212,6 +1217,8 @@ Subcommands:
 Examples:
   oooconf agents detect                 # list available agent CLIs
   oooconf agents sync --check           # verify AGENTS.md managed sections
+  oooconf agents install --check        # preview missing agent CLI installs
+  oooconf agents install codex gemini   # install selected agent CLIs
   oooconf agents mcp status             # show managed MCP server status
   oooconf agents provider sync minimax   # configure MiniMax-M2.7 provider backends
   oooconf agents skills view --json     # show shared skills catalog as JSON

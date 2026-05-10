@@ -225,3 +225,51 @@ def test_provider_sync_minimax_handles_empty_json_and_updates_existing_codex(tmp
     assert codex.count("model_providers.minimax") == 1
     assert 'base_url = "https://api.minimaxi.com/v1"' in codex
     assert not (home / ".codex/config.toml").exists()
+def test_select_install_specs_defaults_to_missing(monkeypatch):
+    specs = [
+        agents_tool.AgentUpdateSpec("OpenAI Codex CLI", "codex", "npm", "@openai/codex"),
+        agents_tool.AgentUpdateSpec("Gemini CLI", "gemini", "npm", "@google/gemini-cli"),
+    ]
+    monkeypatch.setattr(agents_tool.shutil, "which", lambda cmd: "/bin/codex" if cmd == "codex" else None)
+
+    selected, errors = agents_tool.select_install_specs(specs, [], install_all=False, missing_only=False)
+
+    assert errors == []
+    assert [spec.command for spec in selected] == ["gemini"]
+
+
+def test_select_install_specs_supports_multiple_explicit_agents():
+    specs = [
+        agents_tool.AgentUpdateSpec("OpenAI Codex CLI", "codex", "npm", "@openai/codex"),
+        agents_tool.AgentUpdateSpec("Gemini CLI", "gemini", "npm", "@google/gemini-cli"),
+    ]
+
+    selected, errors = agents_tool.select_install_specs(
+        specs, ["codex", "Gemini CLI"], install_all=False, missing_only=False
+    )
+
+    assert errors == []
+    assert [spec.command for spec in selected] == ["codex", "gemini"]
+
+
+def test_cmd_install_check_mode_can_plan_selected_agents(tmp_path, capsys):
+    cfg = {
+        "agent_updates": [
+            {"name": "OpenAI Codex CLI", "command": "codex", "preferred": "npm", "package": "@openai/codex"},
+            {"name": "Gemini CLI", "command": "gemini", "preferred": "npm", "package": "@google/gemini-cli"},
+        ]
+    }
+
+    rc = agents_tool.cmd_install(
+        tmp_path,
+        cfg,
+        ["codex", "gemini"],
+        check_only=True,
+        install_all=False,
+        missing_only=False,
+    )
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "Plan: install OpenAI Codex CLI via pnpm" in out
+    assert "Plan: install Gemini CLI via pnpm" in out

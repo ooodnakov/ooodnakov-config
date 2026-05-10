@@ -21,6 +21,17 @@
 - **Optional dependency not installed** — run `oooconf deps` to see the interactive picker (requires `gum`). Without `gum`, a text prompt lists available keys (from `optional-deps.toml`). Use `oooconf deps <key>` for specific tools.
 - **A tool is listed as "install attempted" but not present** — the installer respects your consent prompt. Re-run `oooconf deps <key>` to retry, or install the tool manually.
 
+## Default zsh prompt after install
+
+If zsh opens with the default prompt, check the managed shell runtime:
+
+```bash
+oooconf doctor
+oooconf install
+```
+
+`oooconf doctor` validates that the pinned Oh My Zsh, Powerlevel10k, and zsh plugin checkouts exist under `~/.local/share/ooodnakov-config/` and contain the files sourced by the managed profile. `oooconf install` retries failed git syncs, including an HTTP/1.1 fallback for transient GitHub TLS/HTTP failures.
+
 ## Completion generation issues
 
 - **Completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview). This regenerates tracked files under `home/.config/ooodnakov/zsh/completions/autogen` and refreshes `oooconf` command completion scripts.
