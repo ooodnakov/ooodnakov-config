@@ -1177,7 +1177,7 @@ def cmd_install(
         attempted += 1
         ok, installed = run_install_spec(spec, check_only)
         if ok:
-            planned_or_installed += 1 if check_only or installed else 0
+            planned_or_installed += 1
         else:
             failed += 1
 
