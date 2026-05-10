@@ -1190,7 +1190,8 @@ EOF
       ;;
     agents)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf agents <detect|sync|doctor|install|update|mcp|rtk|skills> [options]
+
+Usage: oooconf agents <detect|sync|doctor|install|provider|update|mcp|rtk|skills> [options]
 
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
@@ -1202,6 +1203,8 @@ Subcommands:
   install [<agent> ...] [--all|--missing] [--check]
                         install missing, selected, or all configured agent CLIs
   update [--check]      update installed agent CLIs (pnpm-based tools use pnpm)
+  provider sync minimax [--check] [--region global|china] [--materialize-secrets]
+                        configure MiniMax-M2.7 backends for Claude Code, OpenCode, and Codex CLI
   mcp sync|status       synchronize or inspect managed MCP servers
   rtk init [--check]    initialize RTK hooks for detected agents
   mcp add [--name N] [--json JSON] [--multi] [--preview] [--sync-now]
@@ -1217,6 +1220,7 @@ Examples:
   oooconf agents install --check        # preview missing agent CLI installs
   oooconf agents install codex gemini   # install selected agent CLIs
   oooconf agents mcp status             # show managed MCP server status
+  oooconf agents provider sync minimax   # configure MiniMax-M2.7 provider backends
   oooconf agents skills view --json     # show shared skills catalog as JSON
 EOF
       ;;
