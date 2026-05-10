@@ -1832,14 +1832,15 @@ function Install-NodeIfMissing {
         Update-SessionEnvironment
     } elseif ($IsWindows -and (Get-Command winget -ErrorAction SilentlyContinue)) {
         if ($DryRun) {
-            Write-Output "[dry-run] winget install --exact --id OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent"
+            Write-Output "[dry-run] winget install --exact --id OpenJS.NodeJS.LTS --version $nodeVer --accept-package-agreements --accept-source-agreements --silent"
             Add-DependencySummary "node: install preview via winget"
             return $true
         }
 
-        Invoke-ActionWithSpinner -Description "Installing Node.js LTS via winget" -Action {
-            winget install --exact --id OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent | Out-Null
-        }
+        Invoke-ActionWithSpinner -Description "Installing Node.js $nodeVer via winget" -Action {
+            param($version)
+            winget install --exact --id OpenJS.NodeJS.LTS --version $version --accept-package-agreements --accept-source-agreements --silent | Out-Null
+        } -ArgumentList $nodeVer
         Update-SessionEnvironment
     } else {
         Add-DependencySummary "node: missing (requires nvm or winget)"

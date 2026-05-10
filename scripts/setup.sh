@@ -2086,7 +2086,7 @@ ensure_node_available_for_pnpm() {
     return 0
   fi
 
-  maybe_install_node custom || true
+  maybe_install_node || true
   if [ "$DRY_RUN" -eq 1 ]; then
     return 0
   fi
@@ -2111,7 +2111,7 @@ maybe_install_pnpm() {
 
   if ! ensure_node_available_for_pnpm; then
     DEPENDENCY_SUMMARY+=("pnpm: missing (requires Node.js/npm; try oooconf deps node pnpm)")
-    return 0
+    return 1
   fi
 
   export PNPM_HOME="$pnpm_home"
@@ -2146,13 +2146,15 @@ maybe_install_pnpm() {
     fi
   else
     DEPENDENCY_SUMMARY+=("pnpm: missing (requires corepack or npm)")
-    return 0
+    return 1
   fi
 
   if resolve_pnpm_command >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("pnpm: installed")
+    return 0
   else
     DEPENDENCY_SUMMARY+=("pnpm: install attempted")
+    return 1
   fi
 }
 
