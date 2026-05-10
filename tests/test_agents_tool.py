@@ -164,7 +164,7 @@ def test_provider_sync_minimax_writes_supported_configs(tmp_path, monkeypatch):
     assert rc == 0
     claude = json.loads((home / ".claude/settings.json").read_text(encoding="utf-8"))
     assert claude["env"]["ANTHROPIC_BASE_URL"] == "https://api.minimax.io/anthropic"
-    assert claude["env"]["ANTHROPIC_AUTH_TOKEN"] == "{MINIMAX_API_KEY}"
+    assert "ANTHROPIC_AUTH_TOKEN" not in claude["env"]
 
     opencode = json.loads((home / ".config/opencode/opencode.json").read_text(encoding="utf-8"))
     assert opencode["model"] == "minimax/MiniMax-M2.7"
@@ -175,3 +175,53 @@ def test_provider_sync_minimax_writes_supported_configs(tmp_path, monkeypatch):
     assert "[model_providers.minimax]" in codex
     assert 'env_key = "MINIMAX_API_KEY"' in codex
     assert "[profiles.minimax]" in codex
+
+
+def test_provider_sync_minimax_handles_empty_json_and_updates_existing_codex(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    claude_path = home / ".claude/settings.json"
+    opencode_path = home / ".config/opencode/opencode.json"
+    codex_path = home / ".config/codex/config.toml"
+    claude_path.parent.mkdir(parents=True)
+    opencode_path.parent.mkdir(parents=True)
+    codex_path.parent.mkdir(parents=True)
+    claude_path.write_text("", encoding="utf-8")
+    opencode_path.write_text("{}", encoding="utf-8")
+    codex_path.write_text(
+        "  [ model_providers.minimax ]\n"
+        'name = "MiniMax Chat Completions API"\n'
+        'base_url = "https://api.minimax.io/v1"\n'
+        'env_key = "MINIMAX_API_KEY"\n'
+        'env_key_instructions = "Export MINIMAX_API_KEY before starting Codex."\n'
+        'wire_api = "chat"\n'
+        "requires_openai_auth = false\n"
+        "request_max_retries = 4\n"
+        "stream_max_retries = 10\n"
+        "stream_idle_timeout_ms = 300000\n\n"
+        "[profiles.minimax]\n"
+        'model = "codex-MiniMax-M2.7"\n'
+        'model_provider = "minimax"\n',
+        encoding="utf-8",
+    )
+    cfg = {
+        "agent_configs": [
+            {"name": "Claude Code", "format": "json", "default_paths": ["~/.claude/settings.json"]},
+            {"name": "OpenCode", "format": "json", "default_paths": ["~/.config/opencode/opencode.json"]},
+            {
+                "name": "OpenAI Codex CLI",
+                "format": "toml",
+                "default_paths": ["~/.codex/config.toml", "~/.config/codex/config.toml"],
+            },
+        ]
+    }
+
+    rc = agents_tool.cmd_provider_sync(cfg, "minimax", check_only=False, materialize_secrets=False, region="china")
+
+    assert rc == 0
+    claude = json.loads(claude_path.read_text(encoding="utf-8"))
+    assert claude["env"]["ANTHROPIC_BASE_URL"] == "https://api.minimaxi.com/anthropic"
+    codex = codex_path.read_text(encoding="utf-8")
+    assert codex.count("model_providers.minimax") == 1
+    assert 'base_url = "https://api.minimaxi.com/v1"' in codex
+    assert not (home / ".codex/config.toml").exists()

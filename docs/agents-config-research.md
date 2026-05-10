@@ -72,7 +72,7 @@ Why this matters for `oooconf`:
 
 MiniMax documents MiniMax-M2.7 integrations for multiple coding agents. The managed `oooconf agents provider sync minimax` command covers the agent CLIs currently configured in this repo that support file-based or CLI-provider MiniMax setup:
 
-- Claude Code: writes `env` overrides in `~/.claude/settings.json`, including `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, and the MiniMax model aliases expected by Claude Code. Keep `MINIMAX_API_KEY` in a local env file by default; only use `--materialize-secrets` on private machine config.
+- Claude Code: writes `env` overrides in `~/.claude/settings.json`, including `ANTHROPIC_BASE_URL` and the MiniMax model aliases expected by Claude Code. Claude Code expects `ANTHROPIC_AUTH_TOKEN` itself to contain the bearer token, so the default mode does not write a literal `{MINIMAX_API_KEY}` placeholder; export `ANTHROPIC_AUTH_TOKEN=$MINIMAX_API_KEY` locally or only use `--materialize-secrets` on private machine config.
 - OpenCode: writes a `minimax` provider and selects `minimax/MiniMax-M2.7` in `~/.config/opencode/opencode.json`. OpenCode's own docs also support storing credentials via `opencode auth login --provider minimax`, so `oooconf` does not write the key unless `--materialize-secrets` is requested.
 - OpenAI Codex CLI: appends `[model_providers.minimax]` and `[profiles.minimax]` to `~/.codex/config.toml`, loading credentials from `MINIMAX_API_KEY`. The MiniMax guide marks Codex as not recommended and suggests `codex --profile minimax` for this backend.
 

@@ -115,7 +115,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 - `oooconf agents provider sync minimax` to configure MiniMax-M2.7 provider backends for Claude Code, OpenCode, and Codex CLI without committing API keys
 - `oooconf agents doctor --strict-config-paths` to fail when expected agent default config files are missing
 - `oooconf agents sync --global` to sync MCP configs with environment-backed secret rendering, including `env_vars` passthrough and `{env_var}` placeholders resolved from the current shell environment
-- MiniMax provider sync uses `MINIMAX_API_KEY` from machine-local environment; `--materialize-secrets` is available for JSON configs but should be avoided in tracked or shared files
+- MiniMax provider sync uses `MINIMAX_API_KEY` from machine-local environment for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is used, which should be avoided in tracked or shared files
 - `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic. Helper scripts use `uv run` if `uv` is available to ensure they run with the pinned Python version and a consistent environment. If `uv` is not present, they fall back to the system `python3`.
 - autogen third-party tool completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.
 - `oooconf` command completions are generated from the canonical CLI spec (`scripts/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/generate_oooconf_completions.py`.

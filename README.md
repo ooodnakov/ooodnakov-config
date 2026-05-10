@@ -230,7 +230,7 @@ The shared AGENTS policy snippets are configured in:
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
 `oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all pnpm-preferred agents through `pnpm add -g <package>@latest`.
-`oooconf agents sync --global` now understands MCP `env_vars` shorthands and resolves `{env_var}` placeholders from the current environment when generating Codex, Claude, and Gemini MCP configs. `oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in local environment by default; use `--materialize-secrets` only when you intentionally want the current key value written into JSON configs.
+`oooconf agents sync --global` now understands MCP `env_vars` shorthands and resolves `{env_var}` placeholders from the current environment when generating Codex, Claude, and Gemini MCP configs. `oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in local environment by default for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is intentionally used on private machine config.
 
 ## Prerequisites
 

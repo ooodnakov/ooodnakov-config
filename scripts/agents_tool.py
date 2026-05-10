@@ -1591,7 +1591,7 @@ def minimax_endpoints(region: str) -> dict[str, str]:
 def read_json_file_or_empty(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
-    parsed = json.loads(path.read_text(encoding="utf-8"))
+    parsed = json.loads(path.read_text(encoding="utf-8").strip() or "{}")
     if not isinstance(parsed, dict):
         raise ValueError(f"expected JSON object in {path}")
     return parsed
@@ -1623,20 +1623,26 @@ def upsert_claude_minimax_config(path: Path, region: str, materialize_secrets: b
     data = read_json_file_or_empty(path)
     endpoints = minimax_endpoints(region)
     api_key = os.environ.get(MINIMAX_ENV_KEY)
-    auth_token = api_key if materialize_secrets and api_key is not None else f"{{{MINIMAX_ENV_KEY}}}"
-    updates = {
-        "env": {
-            "ANTHROPIC_BASE_URL": endpoints["anthropic_base_url"],
-            "ANTHROPIC_AUTH_TOKEN": auth_token,
-            "API_TIMEOUT_MS": "3000000",
-            "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-            "ANTHROPIC_MODEL": MINIMAX_MODEL,
-            "ANTHROPIC_DEFAULT_SONNET_MODEL": MINIMAX_MODEL,
-            "ANTHROPIC_DEFAULT_OPUS_MODEL": MINIMAX_MODEL,
-            "ANTHROPIC_DEFAULT_HAIKU_MODEL": MINIMAX_MODEL,
-        }
+    env_updates = {
+        "ANTHROPIC_BASE_URL": endpoints["anthropic_base_url"],
+        "API_TIMEOUT_MS": "3000000",
+        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+        "ANTHROPIC_MODEL": MINIMAX_MODEL,
+        "ANTHROPIC_DEFAULT_SONNET_MODEL": MINIMAX_MODEL,
+        "ANTHROPIC_DEFAULT_OPUS_MODEL": MINIMAX_MODEL,
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": MINIMAX_MODEL,
     }
-    changed = upsert_nested_dict(data, updates)
+    if materialize_secrets and api_key is not None:
+        env_updates["ANTHROPIC_AUTH_TOKEN"] = api_key
+    changed = upsert_nested_dict(data, {"env": env_updates})
+    env = data.get("env")
+    if (
+        not materialize_secrets
+        and isinstance(env, dict)
+        and env.get("ANTHROPIC_AUTH_TOKEN") == f"{{{MINIMAX_ENV_KEY}}}"
+    ):
+        del env["ANTHROPIC_AUTH_TOKEN"]
+        changed = True
     if changed:
         ensure_parent(path, check_only)
         if not check_only:
@@ -1671,35 +1677,54 @@ def upsert_opencode_minimax_config(path: Path, region: str, materialize_secrets:
 
 
 def toml_table_exists(content: str, table: str) -> bool:
-    return bool(re.search(rf"^\[{re.escape(table)}\]\s*$", content, flags=re.MULTILINE))
+    return bool(re.search(rf"^\s*\[\s*{re.escape(table)}\s*\]\s*$", content, flags=re.MULTILINE))
+
+
+def replace_or_append_toml_table(content: str, table: str, rendered: str) -> tuple[str, bool]:
+    table_pattern = rf"^\s*\[\s*{re.escape(table)}\s*\]\s*$"
+    pattern = re.compile(rf"{table_pattern}.*?(?=^\s*\[|\Z)", flags=re.MULTILINE | re.DOTALL)
+    match = pattern.search(content)
+    rendered = rendered.strip() + "\n"
+    if match is None:
+        prefix = content.rstrip()
+        updated = f"{prefix}\n\n{rendered}" if prefix else rendered
+        return updated, True
+    if match.group(0).strip() == rendered.strip():
+        return content, False
+    updated = f"{content[: match.start()]}{rendered}{content[match.end() :].lstrip(chr(10))}"
+    return updated, True
+
+
+def render_codex_minimax_provider(region: str) -> str:
+    endpoints = minimax_endpoints(region)
+    return (
+        "[model_providers.minimax]\n"
+        'name = "MiniMax Chat Completions API"\n'
+        f'base_url = "{endpoints["openai_base_url"]}"\n'
+        f'env_key = "{MINIMAX_ENV_KEY}"\n'
+        'env_key_instructions = "Export MINIMAX_API_KEY before starting Codex."\n'
+        'wire_api = "chat"\n'
+        "requires_openai_auth = false\n"
+        "request_max_retries = 4\n"
+        "stream_max_retries = 10\n"
+        "stream_idle_timeout_ms = 300000\n"
+    )
+
+
+def render_codex_minimax_profile() -> str:
+    return f'[profiles.minimax]\nmodel = "{MINIMAX_CODEX_MODEL}"\nmodel_provider = "minimax"\n'
 
 
 def append_codex_minimax_config(path: Path, region: str, check_only: bool) -> bool:
     current = path.read_text(encoding="utf-8") if path.exists() else ""
-    endpoints = minimax_endpoints(region)
-    changed = False
-    additions: list[str] = []
-    if not toml_table_exists(current, "model_providers.minimax"):
-        additions.append(
-            "\n[model_providers.minimax]\n"
-            'name = "MiniMax Chat Completions API"\n'
-            f'base_url = "{endpoints["openai_base_url"]}"\n'
-            f'env_key = "{MINIMAX_ENV_KEY}"\n'
-            'env_key_instructions = "Export MINIMAX_API_KEY before starting Codex."\n'
-            'wire_api = "chat"\n'
-            "requires_openai_auth = false\n"
-            "request_max_retries = 4\n"
-            "stream_max_retries = 10\n"
-            "stream_idle_timeout_ms = 300000\n"
-        )
-        changed = True
-    if not toml_table_exists(current, "profiles.minimax"):
-        additions.append(f'\n[profiles.minimax]\nmodel = "{MINIMAX_CODEX_MODEL}"\nmodel_provider = "minimax"\n')
-        changed = True
+    updated, provider_changed = replace_or_append_toml_table(
+        current, "model_providers.minimax", render_codex_minimax_provider(region)
+    )
+    updated, profile_changed = replace_or_append_toml_table(updated, "profiles.minimax", render_codex_minimax_profile())
+    changed = provider_changed or profile_changed
     if changed:
         ensure_parent(path, check_only)
         if not check_only:
-            updated = current.rstrip() + "\n" + "".join(additions).lstrip("\n")
             path.write_text(updated, encoding="utf-8")
     return changed
 
@@ -1732,7 +1757,7 @@ def cmd_provider_sync(
         updater = supported.get(target.name)
         if updater is None or not target.default_paths:
             continue
-        path = Path(target.default_paths[0]).expanduser()
+        path = existing_default_path(target.default_paths) or Path(target.default_paths[0]).expanduser()
         try:
             if target.name == "OpenAI Codex CLI":
                 changed = updater(path, region, check_only)  # type: ignore[misc]
@@ -1750,7 +1775,10 @@ def cmd_provider_sync(
     print("")
     print(f"Summary: {len(changed_paths)} supported provider config(s) {'would change' if check_only else 'changed'}.")
     if not materialize_secrets:
-        print(f"Hint: export {MINIMAX_ENV_KEY} in your local env before launching Codex/Claude.")
+        print(f"Hint: export {MINIMAX_ENV_KEY} in your local env before launching Codex.")
+        print(
+            f"Hint: Claude Code requires ANTHROPIC_AUTH_TOKEN to contain the MiniMax key; export ANTHROPIC_AUTH_TOKEN=${MINIMAX_ENV_KEY} before launching Claude or rerun with --materialize-secrets."
+        )
         print(
             "Hint: OpenCode stores provider credentials via `opencode auth login --provider minimax`; rerun with --materialize-secrets only if you intentionally want the key written to opencode.json."
         )
