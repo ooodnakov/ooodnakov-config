@@ -247,7 +247,6 @@ The setup scripts intentionally do not try to provision a full workstation from 
 | **macOS**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
 
-
 See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 
 ## Install Behavior
@@ -436,6 +435,7 @@ If you'd like to make changes to the configuration, testing your changes against
 You can use `pre-commit` to ensure code is formatted properly and passes linting checks before committing.
 
 Install `pre-commit` and run it locally:
+
 ```bash
 uv tool install pre-commit
 pre-commit install

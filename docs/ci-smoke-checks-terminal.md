@@ -37,7 +37,7 @@ These checks are deterministic and do not depend on GUI/session state.
 
 ## Possible with extra setup (good value, but adds runtime/dependency complexity)
 
-### Neovim
+### Neovim (macOS)
 
 1. **Headless startup sanity**
    - Install Neovim in CI.
@@ -51,7 +51,7 @@ These checks are deterministic and do not depend on GUI/session state.
    - Run Lazy lock/check command headlessly and compare lockfile diff.
    - Useful, but more likely to break due to upstream/plugin API changes.
 
-### WezTerm
+### WezTerm (Windows)
 
 1. **Config load check via WezTerm CLI**
    - Install WezTerm in CI.
