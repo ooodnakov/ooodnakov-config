@@ -210,7 +210,7 @@ def render_zsh(commands: list[str], spec: CliSpec) -> str:
         completer = spec.global_completers.get(option)
         lines.append(f"    '{quote_zsh(zsh_option_spec(option, description, completer, None))}' \\")
     lines.append("    '1:command:->command' \\")
-    lines.append("    '*::arg:->args'")
+    lines.append("    '*:arg:->args'")
     lines.append("")
     lines.append("  case $state in")
     lines.append("    command)")
@@ -234,7 +234,11 @@ def render_zsh(commands: list[str], spec: CliSpec) -> str:
         target = aliases.get(command, command)
         if (target,) in node_map:
             patterns = [command]
-            lines.append(f"        {zsh_pattern('|'.join(patterns))}) {node_map[(target,)].function_name} ;;")
+            lines.append(f"        {zsh_pattern('|'.join(patterns))})")
+            lines.append('          words=("${(@)words[i,-1]}")')
+            lines.append("          CURRENT=$(( CURRENT - i + 1 ))")
+            lines.append(f"          {node_map[(target,)].function_name}")
+            lines.append("          ;;")
     lines.append("      esac")
     lines.append("      ;;")
     lines.append("  esac")
@@ -246,8 +250,8 @@ def render_zsh(commands: list[str], spec: CliSpec) -> str:
 
 
 def render_zsh_node(node: CompletionNode, lines: list[str]) -> None:
-    child_position = len(node.path) + 1
-    value_position = child_position if not node.command.subcommands else child_position + 1
+    child_position = 1
+    value_position = 1 if not node.command.subcommands else 2
     subcommands = {name: child.description for name, child in node.command.subcommands.items()}
     options_with_args = zsh_options_with_args(node.options, node.completers, node.option_values)
     lines.append(f"{node.function_name}() {{")
@@ -280,12 +284,12 @@ def render_zsh_node(node: CompletionNode, lines: list[str]) -> None:
         lines.append(f"    '{quote_zsh(spec_line)}' \\")
     if subcommands:
         lines.append(f"    '{child_position}:subcommand:->command' \\")
-        lines.append("    '*::arg:->args'")
+        lines.append("    '*:arg:->args'")
     elif node.values:
         lines.append(f"    '{value_position}:value:->value' \\")
-        lines.append("    '*::arg:->args'")
+        lines.append("    '*:arg:->args'")
     else:
-        lines.append("    '*::arg:->args'")
+        lines.append("    '*:arg:->args'")
     lines.append("")
     lines.append("  case $state in")
     if subcommands:
@@ -293,8 +297,7 @@ def render_zsh_node(node: CompletionNode, lines: list[str]) -> None:
         lines.append("      _describe -t subcommands 'oooconf subcommand' subcmds")
         lines.append("      ;;")
         lines.append("    args)")
-        lines.append("      local child_name i path_index token")
-        lines.append("      path_index=1")
+        lines.append("      local child_name i token")
         lines.append("      for (( i = 2; i < CURRENT; i++ )); do")
         lines.append('        token="$words[i]"')
         lines.append('        if [[ "$token" == -* ]]; then')
@@ -303,19 +306,18 @@ def render_zsh_node(node: CompletionNode, lines: list[str]) -> None:
         lines.append("          fi")
         lines.append("          continue")
         lines.append("        fi")
-        for index, part in enumerate(node.path, start=1):
-            prefix = "if" if index == 1 else "elif"
-            lines.append(f'        {prefix} (( path_index == {index} )) && [[ "$token" == {quote_zsh(part)} ]]; then')
-            lines.append("          (( path_index++ ))")
-        lines.append(f"        elif (( path_index > {len(node.path)} )); then")
-        lines.append("          case $token in")
+        lines.append("        case $token in")
         for child in subcommands:
             child_path = (*node.path, child)
-            lines.append(
-                f"            {zsh_pattern(child)}) child_name={quote_zsh(child)}; _oooconf_{'_'.join(shell_safe_name(part) for part in child_path)}; return ;;"
-            )
-        lines.append("          esac")
-        lines.append("        fi")
+            child_function = "_oooconf_" + "_".join(shell_safe_name(part) for part in child_path)
+            lines.append(f"          {zsh_pattern(child)})")
+            lines.append(f"            child_name={quote_zsh(child)}")
+            lines.append('            words=("${(@)words[i,-1]}")')
+            lines.append("            CURRENT=$(( CURRENT - i + 1 ))")
+            lines.append(f"            {child_function}")
+            lines.append("            return")
+            lines.append("            ;;")
+        lines.append("        esac")
         lines.append("      done")
         lines.append("      ;;")
     if node.values:

@@ -151,7 +151,7 @@ _oooconf_bootstrap() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -169,8 +169,8 @@ _oooconf_install() {
     '--yes-optional[auto-confirm optional dependency installs]' \
     '-h[show help]' \
     '--help[show help]' \
-    '2:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -191,8 +191,8 @@ _oooconf_deps() {
     '--yes-optional[auto-confirm optional dependency installs]' \
     '-h[show help]' \
     '--help[show help]' \
-    '2:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -213,8 +213,8 @@ _oooconf_update() {
     '--yes-optional[auto-confirm optional dependency installs]' \
     '-h[show help]' \
     '--help[show help]' \
-    '2:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -229,7 +229,7 @@ _oooconf_doctor() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -241,7 +241,7 @@ _oooconf_dry_run() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -253,7 +253,7 @@ _oooconf_delete() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -265,7 +265,7 @@ _oooconf_remove() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -277,7 +277,7 @@ _oooconf_lock() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -290,7 +290,7 @@ _oooconf_update_pins() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--apply[apply pin updates]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -303,7 +303,7 @@ _oooconf_completions() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -329,16 +329,15 @@ _oooconf_agents() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '2:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -347,23 +346,85 @@ _oooconf_agents() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == agents ]]; then
-          (( path_index++ ))
-        elif (( path_index > 1 )); then
-          case $token in
-            detect) child_name=detect; _oooconf_agents_detect; return ;;
-            sync) child_name=sync; _oooconf_agents_sync; return ;;
-            doctor) child_name=doctor; _oooconf_agents_doctor; return ;;
-            mcp) child_name=mcp; _oooconf_agents_mcp; return ;;
-            status) child_name=status; _oooconf_agents_status; return ;;
-            rtk) child_name=rtk; _oooconf_agents_rtk; return ;;
-            provider) child_name=provider; _oooconf_agents_provider; return ;;
-            update) child_name=update; _oooconf_agents_update; return ;;
-            install) child_name=install; _oooconf_agents_install; return ;;
-            install-scripts-build) child_name=install-scripts-build; _oooconf_agents_install_scripts_build; return ;;
-            skills) child_name=skills; _oooconf_agents_skills; return ;;
-          esac
-        fi
+        case $token in
+          detect)
+            child_name=detect
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_detect
+            return
+            ;;
+          sync)
+            child_name=sync
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_sync
+            return
+            ;;
+          doctor)
+            child_name=doctor
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_doctor
+            return
+            ;;
+          mcp)
+            child_name=mcp
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_mcp
+            return
+            ;;
+          status)
+            child_name=status
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_status
+            return
+            ;;
+          rtk)
+            child_name=rtk
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_rtk
+            return
+            ;;
+          provider)
+            child_name=provider
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_provider
+            return
+            ;;
+          update)
+            child_name=update
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_update
+            return
+            ;;
+          install)
+            child_name=install
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_install
+            return
+            ;;
+          install-scripts-build)
+            child_name=install-scripts-build
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_install_scripts_build
+            return
+            ;;
+          skills)
+            child_name=skills
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_skills
+            return
+            ;;
+        esac
       done
       ;;
   esac
@@ -378,7 +439,7 @@ _oooconf_agents_detect() {
     '--repo-root[set repo root path]:value:_files -/' \
     '--config[config path]:value:_files' \
     '--json[emit JSON]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -395,7 +456,7 @@ _oooconf_agents_sync() {
     '--check[check only]' \
     '--global[sync global config]' \
     '--materialize-secrets[materialize secret-backed values]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -410,7 +471,7 @@ _oooconf_agents_doctor() {
     '--repo-root[set repo root path]:value:_files -/' \
     '--config[config path]:value:_files' \
     '--strict-config-paths[require strict config paths]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -428,16 +489,15 @@ _oooconf_agents_mcp() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -446,17 +506,29 @@ _oooconf_agents_mcp() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == agents ]]; then
-          (( path_index++ ))
-        elif (( path_index == 2 )) && [[ "$token" == mcp ]]; then
-          (( path_index++ ))
-        elif (( path_index > 2 )); then
-          case $token in
-            sync) child_name=sync; _oooconf_agents_mcp_sync; return ;;
-            status) child_name=status; _oooconf_agents_mcp_status; return ;;
-            add) child_name=add; _oooconf_agents_mcp_add; return ;;
-          esac
-        fi
+        case $token in
+          sync)
+            child_name=sync
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_mcp_sync
+            return
+            ;;
+          status)
+            child_name=status
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_mcp_status
+            return
+            ;;
+          add)
+            child_name=add
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_mcp_add
+            return
+            ;;
+        esac
       done
       ;;
   esac
@@ -469,7 +541,7 @@ _oooconf_agents_mcp_sync() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--check[check only]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -481,7 +553,7 @@ _oooconf_agents_mcp_status() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -499,7 +571,7 @@ _oooconf_agents_mcp_add() {
     '--preview[preview changes]' \
     '--sync-now[sync after adding]' \
     '--check[check only]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -511,7 +583,7 @@ _oooconf_agents_status() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -527,16 +599,15 @@ _oooconf_agents_rtk() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -545,15 +616,15 @@ _oooconf_agents_rtk() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == agents ]]; then
-          (( path_index++ ))
-        elif (( path_index == 2 )) && [[ "$token" == rtk ]]; then
-          (( path_index++ ))
-        elif (( path_index > 2 )); then
-          case $token in
-            init) child_name=init; _oooconf_agents_rtk_init; return ;;
-          esac
-        fi
+        case $token in
+          init)
+            child_name=init
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_rtk_init
+            return
+            ;;
+        esac
       done
       ;;
   esac
@@ -566,7 +637,7 @@ _oooconf_agents_rtk_init() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--check[check only]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -582,16 +653,15 @@ _oooconf_agents_provider() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -600,15 +670,15 @@ _oooconf_agents_provider() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == agents ]]; then
-          (( path_index++ ))
-        elif (( path_index == 2 )) && [[ "$token" == provider ]]; then
-          (( path_index++ ))
-        elif (( path_index > 2 )); then
-          case $token in
-            sync) child_name=sync; _oooconf_agents_provider_sync; return ;;
-          esac
-        fi
+        case $token in
+          sync)
+            child_name=sync
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_provider_sync
+            return
+            ;;
+        esac
       done
       ;;
   esac
@@ -623,7 +693,7 @@ _oooconf_agents_provider_sync() {
     '--check[check only]' \
     '--materialize-secrets[materialize secret-backed values]' \
     '--region[provider region]:value:(global china)' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -638,7 +708,7 @@ _oooconf_agents_update() {
     '--repo-root[set repo root path]:value:_files -/' \
     '--config[config path]:value:_files' \
     '--check[check only]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -665,8 +735,8 @@ _oooconf_agents_install() {
     '--all[install all agents]' \
     '--missing[install missing agents]' \
     '--check[check only]' \
-    '3:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -681,7 +751,7 @@ _oooconf_agents_install_scripts_build() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -699,16 +769,15 @@ _oooconf_agents_skills() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -717,17 +786,29 @@ _oooconf_agents_skills() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == agents ]]; then
-          (( path_index++ ))
-        elif (( path_index == 2 )) && [[ "$token" == skills ]]; then
-          (( path_index++ ))
-        elif (( path_index > 2 )); then
-          case $token in
-            sync) child_name=sync; _oooconf_agents_skills_sync; return ;;
-            view) child_name=view; _oooconf_agents_skills_view; return ;;
-            add) child_name=add; _oooconf_agents_skills_add; return ;;
-          esac
-        fi
+        case $token in
+          sync)
+            child_name=sync
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_skills_sync
+            return
+            ;;
+          view)
+            child_name=view
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_skills_view
+            return
+            ;;
+          add)
+            child_name=add
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_agents_skills_add
+            return
+            ;;
+        esac
       done
       ;;
   esac
@@ -740,7 +821,7 @@ _oooconf_agents_skills_sync() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--check[check only]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -754,7 +835,7 @@ _oooconf_agents_skills_view() {
   _arguments -C \
     '--check[check only]' \
     '--json[emit JSON]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -769,7 +850,7 @@ _oooconf_agents_skills_add() {
     '--agent[target agent]' \
     '--sync-now[sync after adding]' \
     '--check[check only]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -796,16 +877,15 @@ _oooconf_secrets() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '2:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -814,24 +894,92 @@ _oooconf_secrets() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == secrets ]]; then
-          (( path_index++ ))
-        elif (( path_index > 1 )); then
-          case $token in
-            login) child_name=login; _oooconf_secrets_login; return ;;
-            unlock) child_name=unlock; _oooconf_secrets_unlock; return ;;
-            sync) child_name=sync; _oooconf_secrets_sync; return ;;
-            doctor) child_name=doctor; _oooconf_secrets_doctor; return ;;
-            list) child_name=list; _oooconf_secrets_list; return ;;
-            ls) child_name=ls; _oooconf_secrets_ls; return ;;
-            status) child_name=status; _oooconf_secrets_status; return ;;
-            logout) child_name=logout; _oooconf_secrets_logout; return ;;
-            add) child_name=add; _oooconf_secrets_add; return ;;
-            remove) child_name=remove; _oooconf_secrets_remove; return ;;
-            rm) child_name=rm; _oooconf_secrets_rm; return ;;
-            del) child_name=del; _oooconf_secrets_del; return ;;
-          esac
-        fi
+        case $token in
+          login)
+            child_name=login
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_login
+            return
+            ;;
+          unlock)
+            child_name=unlock
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_unlock
+            return
+            ;;
+          sync)
+            child_name=sync
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_sync
+            return
+            ;;
+          doctor)
+            child_name=doctor
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_doctor
+            return
+            ;;
+          list)
+            child_name=list
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_list
+            return
+            ;;
+          ls)
+            child_name=ls
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_ls
+            return
+            ;;
+          status)
+            child_name=status
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_status
+            return
+            ;;
+          logout)
+            child_name=logout
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_logout
+            return
+            ;;
+          add)
+            child_name=add
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_add
+            return
+            ;;
+          remove)
+            child_name=remove
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_remove
+            return
+            ;;
+          rm)
+            child_name=rm
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_rm
+            return
+            ;;
+          del)
+            child_name=del
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_secrets_del
+            return
+            ;;
+        esac
       done
       ;;
   esac
@@ -847,7 +995,7 @@ _oooconf_secrets_login() {
     '--method[login method]:value:(auto password apikey)' \
     '--client-id[API client ID]' \
     '--client-secret[API client secret]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -861,7 +1009,7 @@ _oooconf_secrets_unlock() {
   _arguments -C \
     '--shell[shell format]:value:(sh zsh bash pwsh fish)' \
     '--raw[raw output]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -877,7 +1025,7 @@ _oooconf_secrets_sync() {
     '--template[template path]:value:_files' \
     '--dry-run[preview actions without changing files]' \
     '--force[force render]' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -891,7 +1039,7 @@ _oooconf_secrets_doctor() {
   _arguments -C \
     '--backend[secret backend]:value:(bw)' \
     '--template[template path]:value:_files' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -906,7 +1054,7 @@ _oooconf_secrets_list() {
     '--template[template path]:value:_files' \
     '--resolved[show resolved values]' \
     '--backend[secret backend]:value:(bw)' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -921,7 +1069,7 @@ _oooconf_secrets_ls() {
     '--template[template path]:value:_files' \
     '--resolved[show resolved values]' \
     '--backend[secret backend]:value:(bw)' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -934,7 +1082,7 @@ _oooconf_secrets_status() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} --template)
   _arguments -C \
     '--template[template path]:value:_files' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -946,7 +1094,7 @@ _oooconf_secrets_logout() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -959,7 +1107,7 @@ _oooconf_secrets_add() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} --template)
   _arguments -C \
     '--template[template path]:value:_files' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -972,7 +1120,7 @@ _oooconf_secrets_remove() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} --template)
   _arguments -C \
     '--template[template path]:value:_files' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -985,7 +1133,7 @@ _oooconf_secrets_rm() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} --template)
   _arguments -C \
     '--template[template path]:value:_files' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -998,7 +1146,7 @@ _oooconf_secrets_del() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} --template)
   _arguments -C \
     '--template[template path]:value:_files' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1019,16 +1167,15 @@ _oooconf_shell() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '2:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -1037,18 +1184,50 @@ _oooconf_shell() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == shell ]]; then
-          (( path_index++ ))
-        elif (( path_index > 1 )); then
-          case $token in
-            status) child_name=status; _oooconf_shell_status; return ;;
-            forgit-aliases) child_name=forgit-aliases; _oooconf_shell_forgit_aliases; return ;;
-            typo-handling) child_name=typo-handling; _oooconf_shell_typo_handling; return ;;
-            psfzf-tab) child_name=psfzf-tab; _oooconf_shell_psfzf_tab; return ;;
-            psfzf-git) child_name=psfzf-git; _oooconf_shell_psfzf_git; return ;;
-            auto-uv-env) child_name=auto-uv-env; _oooconf_shell_auto_uv_env; return ;;
-          esac
-        fi
+        case $token in
+          status)
+            child_name=status
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_status
+            return
+            ;;
+          forgit-aliases)
+            child_name=forgit-aliases
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_forgit_aliases
+            return
+            ;;
+          typo-handling)
+            child_name=typo-handling
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_typo_handling
+            return
+            ;;
+          psfzf-tab)
+            child_name=psfzf-tab
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_psfzf_tab
+            return
+            ;;
+          psfzf-git)
+            child_name=psfzf-git
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_psfzf_git
+            return
+            ;;
+          auto-uv-env)
+            child_name=auto-uv-env
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_auto_uv_env
+            return
+            ;;
+        esac
       done
       ;;
   esac
@@ -1060,7 +1239,7 @@ _oooconf_shell_status() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1078,8 +1257,8 @@ _oooconf_shell_forgit_aliases() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -1101,8 +1280,8 @@ _oooconf_shell_typo_handling() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -1123,8 +1302,8 @@ _oooconf_shell_psfzf_tab() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -1145,8 +1324,8 @@ _oooconf_shell_psfzf_git() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -1167,8 +1346,8 @@ _oooconf_shell_auto_uv_env() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -1194,8 +1373,8 @@ _oooconf_color() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '2:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -1210,7 +1389,7 @@ _oooconf_help() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1222,7 +1401,7 @@ _oooconf_version() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1234,7 +1413,7 @@ _oooconf_minimal() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1246,7 +1425,7 @@ _oooconf_komorebi() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1273,16 +1452,15 @@ _oooconf_wm() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '2:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -1291,19 +1469,57 @@ _oooconf_wm() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == wm ]]; then
-          (( path_index++ ))
-        elif (( path_index > 1 )); then
-          case $token in
-            status) child_name=status; _oooconf_wm_status; return ;;
-            set) child_name=set; _oooconf_wm_set; return ;;
-            start) child_name=start; _oooconf_wm_start; return ;;
-            stop) child_name=stop; _oooconf_wm_stop; return ;;
-            reload) child_name=reload; _oooconf_wm_reload; return ;;
-            bar) child_name=bar; _oooconf_wm_bar; return ;;
-            komorebi) child_name=komorebi; _oooconf_wm_komorebi; return ;;
-          esac
-        fi
+        case $token in
+          status)
+            child_name=status
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_status
+            return
+            ;;
+          set)
+            child_name=set
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_set
+            return
+            ;;
+          start)
+            child_name=start
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_start
+            return
+            ;;
+          stop)
+            child_name=stop
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_stop
+            return
+            ;;
+          reload)
+            child_name=reload
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_reload
+            return
+            ;;
+          bar)
+            child_name=bar
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_bar
+            return
+            ;;
+          komorebi)
+            child_name=komorebi
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_komorebi
+            return
+            ;;
+        esac
       done
       ;;
     value)
@@ -1318,7 +1534,7 @@ _oooconf_wm_status() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1335,8 +1551,8 @@ _oooconf_wm_set() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -1351,7 +1567,7 @@ _oooconf_wm_start() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1363,7 +1579,7 @@ _oooconf_wm_stop() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1375,7 +1591,7 @@ _oooconf_wm_reload() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1395,16 +1611,15 @@ _oooconf_wm_bar() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '3:subcommand:->command' \
-    '*::arg:->args'
+    '1:subcommand:->command' \
+    '*:arg:->args'
 
   case $state in
     command)
       _describe -t subcommands 'oooconf subcommand' subcmds
       ;;
     args)
-      local child_name i path_index token
-      path_index=1
+      local child_name i token
       for (( i = 2; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
@@ -1413,19 +1628,43 @@ _oooconf_wm_bar() {
           fi
           continue
         fi
-        if (( path_index == 1 )) && [[ "$token" == wm ]]; then
-          (( path_index++ ))
-        elif (( path_index == 2 )) && [[ "$token" == bar ]]; then
-          (( path_index++ ))
-        elif (( path_index > 2 )); then
-          case $token in
-            set) child_name=set; _oooconf_wm_bar_set; return ;;
-            zebar-config) child_name=zebar-config; _oooconf_wm_bar_zebar_config; return ;;
-            stop) child_name=stop; _oooconf_wm_bar_stop; return ;;
-            start) child_name=start; _oooconf_wm_bar_start; return ;;
-            reload) child_name=reload; _oooconf_wm_bar_reload; return ;;
-          esac
-        fi
+        case $token in
+          set)
+            child_name=set
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_bar_set
+            return
+            ;;
+          zebar-config)
+            child_name=zebar-config
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_bar_zebar_config
+            return
+            ;;
+          stop)
+            child_name=stop
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_bar_stop
+            return
+            ;;
+          start)
+            child_name=start
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_bar_start
+            return
+            ;;
+          reload)
+            child_name=reload
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_bar_reload
+            return
+            ;;
+        esac
       done
       ;;
   esac
@@ -1442,8 +1681,8 @@ _oooconf_wm_bar_set() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '4:value:->value' \
-    '*::arg:->args'
+    '1:value:->value' \
+    '*:arg:->args'
 
   case $state in
     value)
@@ -1458,7 +1697,7 @@ _oooconf_wm_bar_zebar_config() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1470,7 +1709,7 @@ _oooconf_wm_bar_stop() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1482,7 +1721,7 @@ _oooconf_wm_bar_start() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1494,7 +1733,7 @@ _oooconf_wm_bar_reload() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1506,7 +1745,7 @@ _oooconf_wm_komorebi() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
   esac
@@ -1527,7 +1766,7 @@ _oooconf_main() {
     '-V[show version]' \
     '--version[show version]' \
     '1:command:->command' \
-    '*::arg:->args'
+    '*:arg:->args'
 
   case $state in
     command)
@@ -1547,29 +1786,121 @@ _oooconf_main() {
         break
       done
       case $command_name in
-        bootstrap) _oooconf_bootstrap ;;
-        install) _oooconf_install ;;
-        deps) _oooconf_deps ;;
-        update) _oooconf_update ;;
-        doctor) _oooconf_doctor ;;
-        dry-run) _oooconf_dry_run ;;
-        delete) _oooconf_delete ;;
-        remove) _oooconf_remove ;;
-        lock) _oooconf_lock ;;
-        update-pins) _oooconf_update_pins ;;
-        completions) _oooconf_completions ;;
-        agents) _oooconf_agents ;;
-        secrets) _oooconf_secrets ;;
-        shell) _oooconf_shell ;;
-        color) _oooconf_color ;;
-        version) _oooconf_version ;;
-        check) _oooconf_doctor ;;
-        preview) _oooconf_dry_run ;;
-        upgrade) _oooconf_update ;;
-        komorebi) _oooconf_komorebi ;;
-        wm) _oooconf_wm ;;
-        help) _oooconf_help ;;
-        minimal) _oooconf_minimal ;;
+        bootstrap)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_bootstrap
+          ;;
+        install)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_install
+          ;;
+        deps)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_deps
+          ;;
+        update)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_update
+          ;;
+        doctor)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_doctor
+          ;;
+        dry-run)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_dry_run
+          ;;
+        delete)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_delete
+          ;;
+        remove)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_remove
+          ;;
+        lock)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_lock
+          ;;
+        update-pins)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_update_pins
+          ;;
+        completions)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_completions
+          ;;
+        agents)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_agents
+          ;;
+        secrets)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_secrets
+          ;;
+        shell)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_shell
+          ;;
+        color)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_color
+          ;;
+        version)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_version
+          ;;
+        check)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_doctor
+          ;;
+        preview)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_dry_run
+          ;;
+        upgrade)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_update
+          ;;
+        komorebi)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_komorebi
+          ;;
+        wm)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_wm
+          ;;
+        help)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_help
+          ;;
+        minimal)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_minimal
+          ;;
       esac
       ;;
   esac

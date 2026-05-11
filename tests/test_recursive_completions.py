@@ -199,6 +199,46 @@ def test_zsh_completion_file_has_valid_syntax() -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_zsh_completion_interactively_resolves_subcommand_values() -> None:
+    if not shutil.which("zsh") or not shutil.which("expect"):
+        pytest.skip("zsh and expect are required for interactive completion smoke test")
+
+    completions_dir = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions").as_posix()
+    bin_dir = (REPO_ROOT / "home/.config/ooodnakov/bin").as_posix()
+
+    def run_completion(command: str, expected: str, sentinel: str) -> str:
+        script = f"""
+set timeout 5
+spawn env TERM=xterm-256color zsh -dfi
+expect "%"
+send {{PATH={bin_dir}:$PATH; fpath=({completions_dir} $fpath); autoload -Uz compinit; compinit -D; bindkey "^I" complete-word\r}}
+expect "%"
+send "{command}"
+expect {{
+    "{expected}" {{ puts "{sentinel}" }}
+    timeout {{ puts "TIMEOUT_{sentinel}" }}
+}}
+send "\003exit\r"
+expect eof
+"""
+        result = subprocess.run(
+            ["expect", "-c", script],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, result.stderr
+        return result.stdout
+
+    agents_output = run_completion("oooconf agents \t\t", "detect", "FOUND_DETECT")
+    install_output = run_completion("oooconf install wez\t", "wezterm", "FOUND_WEZTERM")
+
+    assert "FOUND_DETECT" in agents_output
+    assert "FOUND_WEZTERM" in install_output
+    assert "TIMEOUT_" not in agents_output + install_output
+
+
 def test_powershell_completion_resolves_commands_after_global_repo_root() -> None:
     if not shutil.which("pwsh"):
         pytest.skip("pwsh is not available")
@@ -244,7 +284,9 @@ description = "sync servers"
     assert "_oooconf_global_opts_with_args=(-C --repo-root)" in zsh
     assert "case $words[3]" not in zsh
     assert 'token="$words[i]"' in zsh
-    assert "mcp) child_name=mcp; _oooconf_agents_mcp; return ;;" in zsh
+    assert "'1:subcommand:->command'" in zsh
+    assert 'words=("${(@)words[i,-1]}")' in zsh
+    assert "_oooconf_agents_mcp" in zsh
 
 
 def test_zsh_shared_value_sets_are_emitted_once(tmp_path: Path) -> None:
@@ -270,6 +312,7 @@ value_set = "deps_keys"
     assert zsh.count("typeset -ga _oooconf_values_deps_keys") == 1
     assert zsh.count("'git:version control'") == 1
     assert zsh.count('values=("${_oooconf_values_deps_keys[@]}")') == 2
+    assert "'1:value:->value'" in zsh
 
 
 def test_powershell_parser_keeps_boolean_flag_following_subcommand(tmp_path: Path) -> None:
