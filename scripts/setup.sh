@@ -42,6 +42,10 @@ run_python() {
 }
 
 # All pins, versions, and managed tools now live in optional-deps.toml ONLY.
+OPTIONAL_DEPS_PLATFORM_CATALOG_CACHE=""
+OPTIONAL_DEPS_CHECK_COMMAND_CACHE=""
+OPTIONAL_DEPS_HANDLER_CACHE=""
+OPTIONAL_DEPS_INSTALL_INFO_CACHE=""
 # These variables are deprecated and will be removed. Use get_managed_tool() instead.
 get_managed_tool() {
   local name
@@ -192,6 +196,69 @@ detect_platform() {
   esac
 }
 
+
+load_optional_deps_platform_catalog_cache() {
+  if [ -z "$OPTIONAL_DEPS_PLATFORM_CATALOG_CACHE" ]; then
+    OPTIONAL_DEPS_PLATFORM_CATALOG_CACHE="$(run_python "$OPTIONAL_DEPS_SCRIPT" catalog-platform "$(detect_platform)")"
+  fi
+}
+
+load_optional_deps_check_command_cache() {
+  if [ -z "$OPTIONAL_DEPS_CHECK_COMMAND_CACHE" ]; then
+    OPTIONAL_DEPS_CHECK_COMMAND_CACHE="$(run_python "$OPTIONAL_DEPS_SCRIPT" check-commands)"
+  fi
+}
+
+load_optional_deps_handler_cache() {
+  if [ -z "$OPTIONAL_DEPS_HANDLER_CACHE" ]; then
+    OPTIONAL_DEPS_HANDLER_CACHE="$(run_python "$OPTIONAL_DEPS_SCRIPT" handlers)"
+  fi
+}
+
+load_optional_deps_install_info_cache() {
+  if [ -z "$OPTIONAL_DEPS_INSTALL_INFO_CACHE" ]; then
+    OPTIONAL_DEPS_INSTALL_INFO_CACHE="$(run_python "$OPTIONAL_DEPS_SCRIPT" install-info-lines "$(detect_platform)")"
+  fi
+}
+
+lookup_pipe_cache_value() {
+  local cache key
+  cache="$1"
+  key="$2"
+  awk -F'|' -v expected="$key" '$1 == expected { $1=""; sub(/^\|/, ""); print; exit }' <<EOF
+$cache
+EOF
+}
+
+optional_dependency_check_command() {
+  local key value
+  key="$1"
+  load_optional_deps_check_command_cache
+  value="$(lookup_pipe_cache_value "$OPTIONAL_DEPS_CHECK_COMMAND_CACHE" "$key")"
+  if [ -n "$value" ]; then
+    printf '%s\n' "$value"
+  else
+    printf 'command -v %s\n' "$key"
+  fi
+}
+
+optional_dependency_handler() {
+  local key
+  key="$1"
+  load_optional_deps_handler_cache
+  lookup_pipe_cache_value "$OPTIONAL_DEPS_HANDLER_CACHE" "$key"
+}
+
+optional_dependency_install_info_line() {
+  local key us
+  key="$1"
+  us="$(printf '\037')"
+  load_optional_deps_install_info_cache
+  awk -F"$us" -v expected="$key" '$1 == expected { print; exit }' <<EOF
+$OPTIONAL_DEPS_INSTALL_INFO_CACHE
+EOF
+}
+
 optional_dependency_applicable() {
   local key
   key="$1"
@@ -205,11 +272,8 @@ optional_dependency_applicable() {
 }
 
 optional_dependency_catalog() {
-  local key label description
-  while IFS='|' read -r key label description; do
-    optional_dependency_applicable "$key" || continue
-    printf '%s|%s|%s\n' "$key" "$label" "$description"
-  done < <(run_python "$OPTIONAL_DEPS_SCRIPT" catalog)
+  load_optional_deps_platform_catalog_cache
+  printf '%s\n' "$OPTIONAL_DEPS_PLATFORM_CATALOG_CACHE"
 }
 
 optional_dependency_catalog_all() {
@@ -378,7 +442,11 @@ optional_dependency_field() {
   key="$1"
   local field
   field="$2"
-  run_python "$OPTIONAL_DEPS_SCRIPT" field "$key" "$field" 2>/dev/null || true
+
+  case "$field" in
+    handler) optional_dependency_handler "$key" ;;
+    *) run_python "$OPTIONAL_DEPS_SCRIPT" field "$key" "$field" 2>/dev/null || true ;;
+  esac
 }
 
 resolve_package_manager_for_dependency() {
@@ -814,10 +882,17 @@ install_optional_dependency_from_catalog() {
   detected_manager="$2"
   local description info declared_manager package_name command_name winget_id choco_id install_manager handler
 
-  description="$(optional_dependency_label "$key")"
-  info="$(optional_dependency_install_info "$key" || true)"
-  handler="$(optional_dependency_field "$key" "handler")"
-  IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ platform_url asset_name <<< "$info"
+  info="$(optional_dependency_install_info_line "$key")"
+  if [ -n "$info" ]; then
+    local us
+    us="$(printf '\037')"
+    IFS="$us" read -r _ description declared_manager package_name command_name winget_id choco_id _ platform_url asset_name handler <<< "$info"
+  else
+    description="$(optional_dependency_label "$key")"
+    info="$(optional_dependency_install_info "$key" || true)"
+    handler="$(optional_dependency_field "$key" "handler")"
+    IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ platform_url asset_name <<< "$info"
+  fi
   install_manager="$(resolve_package_manager_for_dependency "$detected_manager" "$declared_manager")"
 
   if [ -n "$handler" ]; then
@@ -1109,7 +1184,7 @@ check_pip_dependency_status() {
   python_cmd="$2"
   local check_cmd
 
-  check_cmd=$(run_python scripts/read_optional_deps.py "check-command" "$command_name" 2>/dev/null || echo "command -v $command_name")
+  check_cmd="$(optional_dependency_check_command "$command_name")"
   if [[ "$check_cmd" == python\ * ]]; then
     check_cmd="$python_cmd ${check_cmd#python }"
   fi
@@ -1135,9 +1210,24 @@ check_dependency_status() {
     printf "[-] Checking %s...\r" "$log_name" > /dev/tty
   fi
 
+  # Prefer a fast PATH lookup before any richer TOML check. Some optional
+  # health checks (for example daemon or package-manager probes) can block even
+  # though binary presence is enough to skip installation during setup.
+  if command -v "$command_name" >/dev/null 2>&1; then
+    if [ "$DRY_RUN" -ne 1 ]; then
+      if is_interactive && is_verbose; then
+        printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
+      else
+        printf "[ok] %s is present.\n" "$log_name"
+      fi
+    fi
+    DEPENDENCY_SUMMARY+=("$log_name: present")
+    return 0
+  fi
+
   # Use check command from central TOML if available, fallback to command -v
   local check_cmd
-  check_cmd=$(run_python scripts/read_optional_deps.py "check-command" "$command_name" 2>/dev/null || echo "command -v $command_name")
+  check_cmd="$(optional_dependency_check_command "$command_name")"
 
   if eval "$check_cmd" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ]; then
@@ -1175,6 +1265,11 @@ maybe_install_dependency() {
     echo "missing optional dependency: $command_name ($description)" >&2
     DEPENDENCY_SUMMARY+=("$command_name: missing (no supported package manager)")
     return 1
+  fi
+
+  if [ "$INSTALL_OPTIONAL" != "always" ] && ! is_interactive; then
+    DEPENDENCY_SUMMARY+=("$command_name: skipped")
+    return 0
   fi
 
   if [ "$manager" = "cargo" ]; then
@@ -2911,6 +3006,10 @@ install_optional_dependencies() {
   fi
 
   is_verbose && echo "Dependency check:"
+  load_optional_deps_platform_catalog_cache
+  load_optional_deps_check_command_cache
+  load_optional_deps_handler_cache
+  load_optional_deps_install_info_cache
 
   while IFS='|' read -r key label description; do
     [ -n "$key" ] || continue
