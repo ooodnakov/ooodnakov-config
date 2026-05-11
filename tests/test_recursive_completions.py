@@ -216,3 +216,104 @@ def test_powershell_completion_resolves_commands_after_global_repo_root() -> Non
     )
     assert result.returncode == 0, result.stderr
     assert {"sync", "status", "add"}.issubset(set(result.stdout.splitlines()))
+
+
+def test_zsh_dispatch_scans_actual_subcommand_position_after_global_options(tmp_path: Path) -> None:
+    spec_path = write_spec(
+        tmp_path,
+        """
+[global]
+options = { "-C" = "set repo root path", "--repo-root" = "set repo root path" }
+completers = { "-C" = "_files -/", "--repo-root" = "_files -/" }
+
+[commands.agents]
+description = "agent workflows"
+
+[commands.agents.subcommands.mcp]
+description = "manage MCP servers"
+
+[commands.agents.subcommands.mcp.subcommands.sync]
+description = "sync servers"
+""",
+    )
+    spec = load_cli_spec(spec_path)
+
+    zsh = render_zsh(["agents"], spec)
+
+    assert "_oooconf_option_takes_value" in zsh
+    assert "_oooconf_global_opts_with_args=(-C --repo-root)" in zsh
+    assert "case $words[3]" not in zsh
+    assert 'token="$words[i]"' in zsh
+    assert "mcp) child_name=mcp; _oooconf_agents_mcp; return ;;" in zsh
+
+
+def test_zsh_shared_value_sets_are_emitted_once(tmp_path: Path) -> None:
+    spec_path = write_spec(
+        tmp_path,
+        """
+[definitions.deps_keys]
+git = "version control"
+
+[commands.install]
+description = "install things"
+value_set = "deps_keys"
+
+[commands.deps]
+description = "install deps"
+value_set = "deps_keys"
+""",
+    )
+    spec = load_cli_spec(spec_path)
+
+    zsh = render_zsh(["install", "deps"], spec)
+
+    assert zsh.count("typeset -ga _oooconf_values_deps_keys") == 1
+    assert zsh.count("'git:version control'") == 1
+    assert zsh.count('values=("${_oooconf_values_deps_keys[@]}")') == 2
+
+
+def test_powershell_parser_keeps_boolean_flag_following_subcommand(tmp_path: Path) -> None:
+    if not shutil.which("pwsh"):
+        pytest.skip("pwsh is not available")
+    spec_path = write_spec(
+        tmp_path,
+        """
+[commands.root]
+description = "root command"
+options = { "--flag" = "boolean flag", "--config" = "config path" }
+completers = { "--config" = "_files" }
+
+[commands.root.subcommands.child]
+description = "child command"
+
+[commands.root.subcommands.child.subcommands.leaf]
+description = "leaf command"
+""",
+    )
+    spec = load_cli_spec(spec_path)
+    completion_path = tmp_path / "completion.ps1"
+    completion_path.write_text(render_powershell(["root"], spec), encoding="utf-8")
+    command = (
+        f". {completion_path}; "
+        "$ast = [scriptblock]::Create('oooconf root --flag child ').Ast.EndBlock.Statements[0].PipelineElements[0]; "
+        "Get-OooconfCompletions -wordToComplete '' -commandAst $ast -cursorPosition 27 | ForEach-Object CompletionText"
+    )
+
+    result = subprocess.run(
+        ["pwsh", "-NoProfile", "-Command", command],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "leaf" in result.stdout.splitlines()
+    assert "child" not in result.stdout.splitlines()
+
+
+def test_powershell_command_regex_accepts_windows_backslash_paths() -> None:
+    spec = load_cli_spec(REPO_ROOT / "scripts/oooconf-cli-spec.toml", extra_definitions=load_dependency_definitions())
+    ps = render_powershell(["install"], spec)
+
+    assert "(^|[\\\\\\\\/])(oooconf|o)" in ps

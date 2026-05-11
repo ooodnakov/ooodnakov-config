@@ -27,6 +27,10 @@ def _powershell_completion_keys() -> list[str]:
 
 def _zsh_completion_keys() -> list[str]:
     content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
+    shared = re.search(r"_oooconf_values_deps_keys=\((?P<body>.*?)\n\)", content, flags=re.DOTALL)
+    if shared:
+        return re.findall(r"'([^:']+):", shared.group("body"))
+
     match = re.search(r"_oooconf_install\(\).*?values=\((?P<body>.*?)\n\s*\)", content, flags=re.DOTALL)
     assert match, "Failed to find install value block in zsh completions"
     return re.findall(r"'([^:']+):", match.group("body"))

@@ -44,6 +44,11 @@ function Get-OooconfCompletions {
         '--version'
     )
 
+    $OooconfGlobalOptionsWithArgs = @(
+        '-C',
+        '--repo-root'
+    )
+
     $OooconfAliases =
     @{
         'check' = 'doctor'
@@ -54,6 +59,7 @@ function Get-OooconfCompletions {
     $OooconfNodes = @{
         'agents' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @('detect', 'sync', 'doctor', 'mcp', 'status', 'rtk', 'provider', 'update', 'install', 'install-scripts-build', 'skills')
             OptionValues = @{
@@ -61,6 +67,7 @@ function Get-OooconfCompletions {
         }
         'agents:detect' = @{
             Options = @('--repo-root', '--config', '--json')
+            OptionsWithArgs = @('--repo-root', '--config')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -68,6 +75,7 @@ function Get-OooconfCompletions {
         }
         'agents:doctor' = @{
             Options = @('--repo-root', '--config', '--strict-config-paths')
+            OptionsWithArgs = @('--repo-root', '--config')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -75,6 +83,7 @@ function Get-OooconfCompletions {
         }
         'agents:install' = @{
             Options = @('--repo-root', '--config', '--all', '--missing', '--check')
+            OptionsWithArgs = @('--repo-root', '--config')
             Values = @('codex', 'claude', 'gemini', 'qwen', 'cursor-agent', 'opencode', 'aider')
             Subcommands = @()
             OptionValues = @{
@@ -82,6 +91,7 @@ function Get-OooconfCompletions {
         }
         'agents:install-scripts-build' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -89,6 +99,7 @@ function Get-OooconfCompletions {
         }
         'agents:mcp' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @('sync', 'status', 'add')
             OptionValues = @{
@@ -96,6 +107,7 @@ function Get-OooconfCompletions {
         }
         'agents:mcp:add' = @{
             Options = @('--name', '--json', '--multi', '--preview', '--sync-now', '--check')
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -103,6 +115,7 @@ function Get-OooconfCompletions {
         }
         'agents:mcp:status' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -110,6 +123,7 @@ function Get-OooconfCompletions {
         }
         'agents:mcp:sync' = @{
             Options = @('--check')
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -117,6 +131,7 @@ function Get-OooconfCompletions {
         }
         'agents:provider' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @('sync')
             OptionValues = @{
@@ -124,6 +139,7 @@ function Get-OooconfCompletions {
         }
         'agents:provider:sync' = @{
             Options = @('--check', '--materialize-secrets', '--region')
+            OptionsWithArgs = @('--region')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -132,6 +148,7 @@ function Get-OooconfCompletions {
         }
         'agents:rtk' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @('init')
             OptionValues = @{
@@ -139,6 +156,7 @@ function Get-OooconfCompletions {
         }
         'agents:rtk:init' = @{
             Options = @('--check')
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -146,6 +164,7 @@ function Get-OooconfCompletions {
         }
         'agents:skills' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @('sync', 'view', 'add')
             OptionValues = @{
@@ -153,6 +172,7 @@ function Get-OooconfCompletions {
         }
         'agents:skills:add' = @{
             Options = @('--agent', '--sync-now', '--check')
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -160,6 +180,7 @@ function Get-OooconfCompletions {
         }
         'agents:skills:sync' = @{
             Options = @('--check')
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -167,6 +188,7 @@ function Get-OooconfCompletions {
         }
         'agents:skills:view' = @{
             Options = @('--check', '--json')
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -174,6 +196,7 @@ function Get-OooconfCompletions {
         }
         'agents:status' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -181,6 +204,7 @@ function Get-OooconfCompletions {
         }
         'agents:sync' = @{
             Options = @('--repo-root', '--config', '--check', '--global', '--materialize-secrets')
+            OptionsWithArgs = @('--repo-root', '--config')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -188,6 +212,7 @@ function Get-OooconfCompletions {
         }
         'agents:update' = @{
             Options = @('--repo-root', '--config', '--check')
+            OptionsWithArgs = @('--repo-root', '--config')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -195,6 +220,7 @@ function Get-OooconfCompletions {
         }
         'bootstrap' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -202,6 +228,7 @@ function Get-OooconfCompletions {
         }
         'check' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -209,6 +236,7 @@ function Get-OooconfCompletions {
         }
         'color' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('status', 'list', 'default', 'catppuccin', 'gruvbox', 'nord', 'tokyonight', 'noctalia')
             Subcommands = @()
             OptionValues = @{
@@ -216,6 +244,7 @@ function Get-OooconfCompletions {
         }
         'completions' = @{
             Options = @('--dry-run')
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -223,6 +252,7 @@ function Get-OooconfCompletions {
         }
         'delete' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -230,6 +260,7 @@ function Get-OooconfCompletions {
         }
         'deps' = @{
             Options = @('--dry-run', '--yes-optional', '-h', '--help')
+            OptionsWithArgs = @()
             Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar')
             Subcommands = @()
             OptionValues = @{
@@ -237,6 +268,7 @@ function Get-OooconfCompletions {
         }
         'doctor' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -244,6 +276,7 @@ function Get-OooconfCompletions {
         }
         'dry-run' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -251,6 +284,7 @@ function Get-OooconfCompletions {
         }
         'help' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -258,6 +292,7 @@ function Get-OooconfCompletions {
         }
         'install' = @{
             Options = @('--dry-run', '--yes-optional', '-h', '--help')
+            OptionsWithArgs = @()
             Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar')
             Subcommands = @()
             OptionValues = @{
@@ -265,6 +300,7 @@ function Get-OooconfCompletions {
         }
         'komorebi' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -272,6 +308,7 @@ function Get-OooconfCompletions {
         }
         'lock' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -279,6 +316,7 @@ function Get-OooconfCompletions {
         }
         'minimal' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -286,6 +324,7 @@ function Get-OooconfCompletions {
         }
         'preview' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -293,6 +332,7 @@ function Get-OooconfCompletions {
         }
         'remove' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -300,6 +340,7 @@ function Get-OooconfCompletions {
         }
         'secrets' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @('login', 'unlock', 'sync', 'doctor', 'list', 'ls', 'status', 'logout', 'add', 'remove', 'rm', 'del')
             OptionValues = @{
@@ -307,6 +348,7 @@ function Get-OooconfCompletions {
         }
         'secrets:add' = @{
             Options = @('--template')
+            OptionsWithArgs = @('--template')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -314,6 +356,7 @@ function Get-OooconfCompletions {
         }
         'secrets:del' = @{
             Options = @('--template')
+            OptionsWithArgs = @('--template')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -321,6 +364,7 @@ function Get-OooconfCompletions {
         }
         'secrets:doctor' = @{
             Options = @('--backend', '--template')
+            OptionsWithArgs = @('--backend', '--template')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -329,6 +373,7 @@ function Get-OooconfCompletions {
         }
         'secrets:list' = @{
             Options = @('--template', '--resolved', '--backend')
+            OptionsWithArgs = @('--template', '--backend')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -337,6 +382,7 @@ function Get-OooconfCompletions {
         }
         'secrets:login' = @{
             Options = @('--server', '--method', '--client-id', '--client-secret')
+            OptionsWithArgs = @('--method')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -345,6 +391,7 @@ function Get-OooconfCompletions {
         }
         'secrets:logout' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -352,6 +399,7 @@ function Get-OooconfCompletions {
         }
         'secrets:ls' = @{
             Options = @('--template', '--resolved', '--backend')
+            OptionsWithArgs = @('--template', '--backend')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -360,6 +408,7 @@ function Get-OooconfCompletions {
         }
         'secrets:remove' = @{
             Options = @('--template')
+            OptionsWithArgs = @('--template')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -367,6 +416,7 @@ function Get-OooconfCompletions {
         }
         'secrets:rm' = @{
             Options = @('--template')
+            OptionsWithArgs = @('--template')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -374,6 +424,7 @@ function Get-OooconfCompletions {
         }
         'secrets:status' = @{
             Options = @('--template')
+            OptionsWithArgs = @('--template')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -381,6 +432,7 @@ function Get-OooconfCompletions {
         }
         'secrets:sync' = @{
             Options = @('--backend', '--template', '--dry-run', '--force')
+            OptionsWithArgs = @('--backend', '--template')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -389,6 +441,7 @@ function Get-OooconfCompletions {
         }
         'secrets:unlock' = @{
             Options = @('--shell', '--raw')
+            OptionsWithArgs = @('--shell')
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -397,6 +450,7 @@ function Get-OooconfCompletions {
         }
         'shell' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @('status', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')
             OptionValues = @{
@@ -404,6 +458,7 @@ function Get-OooconfCompletions {
         }
         'shell:auto-uv-env' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('enabled', 'quiet', 'status')
             Subcommands = @()
             OptionValues = @{
@@ -411,6 +466,7 @@ function Get-OooconfCompletions {
         }
         'shell:forgit-aliases' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('plain', 'forgit', 'status')
             Subcommands = @()
             OptionValues = @{
@@ -418,6 +474,7 @@ function Get-OooconfCompletions {
         }
         'shell:psfzf-git' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('enabled', 'disabled', 'status')
             Subcommands = @()
             OptionValues = @{
@@ -425,6 +482,7 @@ function Get-OooconfCompletions {
         }
         'shell:psfzf-tab' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('enabled', 'disabled', 'status')
             Subcommands = @()
             OptionValues = @{
@@ -432,6 +490,7 @@ function Get-OooconfCompletions {
         }
         'shell:status' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -439,6 +498,7 @@ function Get-OooconfCompletions {
         }
         'shell:typo-handling' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('silent', 'suggest', 'help', 'status')
             Subcommands = @()
             OptionValues = @{
@@ -446,6 +506,7 @@ function Get-OooconfCompletions {
         }
         'update' = @{
             Options = @('--dry-run', '--yes-optional', '-h', '--help')
+            OptionsWithArgs = @()
             Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar')
             Subcommands = @()
             OptionValues = @{
@@ -453,6 +514,7 @@ function Get-OooconfCompletions {
         }
         'update-pins' = @{
             Options = @('--apply')
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -460,6 +522,7 @@ function Get-OooconfCompletions {
         }
         'upgrade' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -467,6 +530,7 @@ function Get-OooconfCompletions {
         }
         'version' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -474,6 +538,7 @@ function Get-OooconfCompletions {
         }
         'wm' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('komorebi', 'glazewm')
             Subcommands = @('status', 'set', 'start', 'stop', 'reload', 'bar', 'komorebi')
             OptionValues = @{
@@ -481,6 +546,7 @@ function Get-OooconfCompletions {
         }
         'wm:bar' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @('set', 'zebar-config', 'stop', 'start', 'reload')
             OptionValues = @{
@@ -488,6 +554,7 @@ function Get-OooconfCompletions {
         }
         'wm:bar:reload' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -495,6 +562,7 @@ function Get-OooconfCompletions {
         }
         'wm:bar:set' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('zebar', 'yabs')
             Subcommands = @()
             OptionValues = @{
@@ -502,6 +570,7 @@ function Get-OooconfCompletions {
         }
         'wm:bar:start' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -509,6 +578,7 @@ function Get-OooconfCompletions {
         }
         'wm:bar:stop' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -516,6 +586,7 @@ function Get-OooconfCompletions {
         }
         'wm:bar:zebar-config' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -523,6 +594,7 @@ function Get-OooconfCompletions {
         }
         'wm:komorebi' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -530,6 +602,7 @@ function Get-OooconfCompletions {
         }
         'wm:reload' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -537,6 +610,7 @@ function Get-OooconfCompletions {
         }
         'wm:set' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @('komorebi', 'glazewm')
             Subcommands = @()
             OptionValues = @{
@@ -544,6 +618,7 @@ function Get-OooconfCompletions {
         }
         'wm:start' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -551,6 +626,7 @@ function Get-OooconfCompletions {
         }
         'wm:status' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -558,6 +634,7 @@ function Get-OooconfCompletions {
         }
         'wm:stop' = @{
             Options = @()
+            OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
@@ -582,7 +659,7 @@ function Get-OooconfCompletions {
 
     $commandIndex = -1
     for ($i = 0; $i -lt $tokens.Length; $i++) {
-        if ($tokens[$i] -match '(^|[\/])(oooconf|o)(\.ps1|\.cmd)?$') {
+        if ($tokens[$i] -match '(^|[\\\\/])(oooconf|o)(\.ps1|\.cmd)?$') {
             $commandIndex = $i
             break
         }
@@ -593,7 +670,7 @@ function Get-OooconfCompletions {
     $commandPos = -1
     for ($i = $commandIndex + 1; $i -lt $tokens.Length; $i++) {
         $token = $tokens[$i]
-        if ($token -in @('-C', '--repo-root')) { $i++; continue }
+        if ($token -in $OooconfGlobalOptionsWithArgs) { $i++; continue }
         if ($token -in $OooconfCommands) { $commandName = $token; $commandPos = $i; break }
         if ($token -notlike '-*') { break }
     }
@@ -610,7 +687,10 @@ function Get-OooconfCompletions {
         $node = if ($OooconfNodes.ContainsKey($nodeKey)) { $OooconfNodes[$nodeKey] } else { $null }
         if ($null -eq $node) { break }
         $token = $tokens[$i]
-        if ($token -like '-*') { $i++; continue }
+        if ($token -like '-*') {
+            if (($token -in $OooconfGlobalOptionsWithArgs) -or ($token -in $node.OptionsWithArgs)) { $i++ }
+            continue
+        }
         if ($token -in $node.Subcommands) {
             $path += $token
             $nodeKey = ($path -join ':')
