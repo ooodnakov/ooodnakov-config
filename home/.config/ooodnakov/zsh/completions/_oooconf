@@ -339,7 +339,7 @@ _oooconf_agents() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -438,7 +438,7 @@ _oooconf_agents_mcp() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -537,7 +537,7 @@ _oooconf_agents_rtk() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -592,7 +592,7 @@ _oooconf_agents_provider() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -709,7 +709,7 @@ _oooconf_agents_skills() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -806,7 +806,7 @@ _oooconf_secrets() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -1029,7 +1029,7 @@ _oooconf_shell() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -1283,7 +1283,7 @@ _oooconf_wm() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -1405,7 +1405,7 @@ _oooconf_wm_bar() {
     args)
       local child_name i path_index token
       path_index=1
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
@@ -1535,7 +1535,7 @@ _oooconf_main() {
       ;;
     args)
       local command_name i token
-      for (( i = 2; i < CURRENT; i++ )); do
+      for (( i = 1; i < CURRENT; i++ )); do
         token="$words[i]"
         if [[ "$token" == -* ]]; then
           if _oooconf_option_takes_value "$token" "${_oooconf_global_opts_with_args[@]}"; then

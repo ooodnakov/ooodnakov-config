@@ -218,7 +218,7 @@ def render_zsh(commands: list[str], spec: CliSpec) -> str:
     lines.append("      ;;")
     lines.append("    args)")
     lines.append("      local command_name i token")
-    lines.append("      for (( i = 2; i < CURRENT; i++ )); do")
+    lines.append("      for (( i = 1; i < CURRENT; i++ )); do")
     lines.append('        token="$words[i]"')
     lines.append('        if [[ "$token" == -* ]]; then')
     lines.append('          if _oooconf_option_takes_value "$token" "${_oooconf_global_opts_with_args[@]}"; then')
@@ -295,7 +295,7 @@ def render_zsh_node(node: CompletionNode, lines: list[str]) -> None:
         lines.append("    args)")
         lines.append("      local child_name i path_index token")
         lines.append("      path_index=1")
-        lines.append("      for (( i = 2; i < CURRENT; i++ )); do")
+        lines.append("      for (( i = 1; i < CURRENT; i++ )); do")
         lines.append('        token="$words[i]"')
         lines.append('        if [[ "$token" == -* ]]; then')
         lines.append('          if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then')
@@ -466,6 +466,11 @@ def render_powershell(commands: list[str], spec: CliSpec) -> str:
     lines.append("    $previousToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }")
     lines.append("    if ($currentNode.OptionValues.ContainsKey($previousToken)) {")
     lines.append("        $completions = $currentNode.OptionValues[$previousToken]")
+    lines.append(
+        "    } elseif (($previousToken -in $OooconfGlobalOptionsWithArgs) -or ($previousToken -in $currentNode.OptionsWithArgs)) {"
+    )
+    lines.append("        return @()")
+
     lines.append("    } else {")
     lines.append("        $completions = $currentNode.Options + $currentNode.Subcommands + $currentNode.Values")
     lines.append("    }")

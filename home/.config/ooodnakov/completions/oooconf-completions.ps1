@@ -703,6 +703,8 @@ function Get-OooconfCompletions {
     $previousToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }
     if ($currentNode.OptionValues.ContainsKey($previousToken)) {
         $completions = $currentNode.OptionValues[$previousToken]
+    } elseif (($previousToken -in $OooconfGlobalOptionsWithArgs) -or ($previousToken -in $currentNode.OptionsWithArgs)) {
+        return @()
     } else {
         $completions = $currentNode.Options + $currentNode.Subcommands + $currentNode.Values
     }
