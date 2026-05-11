@@ -275,3 +275,67 @@ def test_cmd_install_check_mode_can_plan_selected_agents(tmp_path, capsys):
     assert rc == 0
     assert "Plan: install OpenAI Codex CLI via pnpm" in out
     assert "Plan: install Gemini CLI via pnpm" in out
+
+
+def test_supports_nerd_font_output(monkeypatch):
+    class MockStdout:
+        def __init__(self, tty=True, encoding="utf-8"):
+            self._tty = tty
+            self.encoding = encoding
+
+        def isatty(self):
+            return self._tty
+
+    # Test OOOCONF_ASCII=1
+    monkeypatch.setenv("OOOCONF_ASCII", "1")
+    assert agents_tool.supports_nerd_font_output() is False
+    monkeypatch.delenv("OOOCONF_ASCII")
+
+    # Test not a TTY
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=False))
+    assert agents_tool.supports_nerd_font_output() is False
+
+    # Test is a TTY but not UTF
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=True, encoding="ascii"))
+    assert agents_tool.supports_nerd_font_output() is False
+
+    # Test is a TTY and UTF
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=True, encoding="utf-8"))
+    assert agents_tool.supports_nerd_font_output() is True
+
+
+def test_supports_color_output(monkeypatch):
+    class MockStdout:
+        def __init__(self, tty=True):
+            self._tty = tty
+
+        def isatty(self):
+            return self._tty
+
+    # Test OOOCONF_COLOR=0/false/never
+    for val in ["0", "false", "never"]:
+        monkeypatch.setenv("OOOCONF_COLOR", val)
+        assert agents_tool.supports_color_output() is False
+
+    # Test NO_COLOR
+    monkeypatch.delenv("OOOCONF_COLOR", raising=False)
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert agents_tool.supports_color_output() is False
+    monkeypatch.delenv("NO_COLOR")
+
+    # Test OOOCONF_COLOR=1/true/always
+    for val in ["1", "true", "always"]:
+        monkeypatch.setenv("OOOCONF_COLOR", val)
+        assert agents_tool.supports_color_output() is True
+
+    # Test FORCE_COLOR
+    monkeypatch.delenv("OOOCONF_COLOR", raising=False)
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    assert agents_tool.supports_color_output() is True
+    monkeypatch.delenv("FORCE_COLOR")
+
+    # Test TTY fallback
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=True))
+    assert agents_tool.supports_color_output() is True
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=False))
+    assert agents_tool.supports_color_output() is False
