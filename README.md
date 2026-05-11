@@ -178,6 +178,7 @@ Shell completion:
   - Complete shell values: `oooconf secrets unlock --shell <Tab>`
 - **Zsh**: completion is provided via fzf-tab integration
   - Regenerate tracked completions: `oooconf completions`
+  - Command metadata comes from the recursive CLI tree in `scripts/oooconf-cli-spec.toml`; shared value sets such as optional dependency keys are referenced by name and expanded by the generator.
 
 Help system:
 

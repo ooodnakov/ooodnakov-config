@@ -120,7 +120,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 - MiniMax provider sync uses `MINIMAX_API_KEY` from machine-local environment for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is used, which should be avoided in tracked or shared files
 - `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic. Helper scripts use `uv run` if `uv` is available to ensure they run with the pinned Python version and a consistent environment. If `uv` is not present, they fall back to the system `python3`.
 - autogen third-party tool completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.
-- `oooconf` command completions are generated from the canonical CLI spec (`scripts/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/generate_oooconf_completions.py`.
+- `oooconf` command completions are generated from the canonical recursive CLI spec (`scripts/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/generate_oooconf_completions.py`. Shared completion definitions, such as dependency keys and provider regions, are referenced by name from command nodes instead of hardcoded in shell-specific generators.
 
 
 ## Phase-3 ergonomics
