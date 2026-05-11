@@ -173,6 +173,59 @@ def output_json() -> None:
     print(json.dumps(result, indent=2))
 
 
+def output_catalog_for_platform(platform: str) -> None:
+    """Print pipe-delimited catalog entries installable on a platform."""
+    for d in normalized_deps(platform):
+        manager = str(d.get("manager") or "")
+        if manager and manager != "none":
+            key = d.get("key", "")
+            display = d.get("display", key)
+            desc = d.get("description", "")
+            print(f"{key}|{display}|{desc}")
+
+
+def output_check_commands() -> None:
+    """Print pipe-delimited dependency check commands for shell-side caching."""
+    data = load_deps()
+    for d in data["deps"]:
+        key = d.get("key", "")
+        if key:
+            print(f"{key}|{d.get('check', f'command -v {key}')}")
+
+
+def output_handlers() -> None:
+    """Print pipe-delimited dependency handlers for shell-side caching."""
+    data = load_deps()
+    for d in data["deps"]:
+        key = d.get("key", "")
+        if key:
+            print(f"{key}|{d.get('handler', '')}")
+
+
+def output_install_info_lines(platform: str) -> None:
+    """Print unit-separator-delimited install metadata for shell-side caching."""
+    sep = "\x1f"
+    for d in normalized_deps(platform):
+        key = str(d.get("key") or "")
+        display = str(d.get("display") or key)
+        desc = str(d.get("description") or "")
+        label = f"{display} - {desc}" if desc else display
+        fields = [
+            key,
+            label,
+            str(d.get("manager") or ""),
+            str(d.get("package") or ""),
+            str(d.get("command") or ""),
+            str(d.get("winget_id") or ""),
+            str(d.get("choco_id") or ""),
+            str(d.get("ver") or ""),
+            str(d.get("url") or ""),
+            str(d.get("asset") or ""),
+            str(d.get("handler") or ""),
+        ]
+        print(sep.join(fields))
+
+
 def get_dep(key: str) -> None:
     """Print pipe-delimited single dep or nothing."""
     data = load_deps()
@@ -228,6 +281,14 @@ def main() -> int:
     cmd = sys.argv[1]
     if cmd == "catalog":
         output_catalog()
+    elif cmd == "catalog-platform" and len(sys.argv) >= 3:
+        output_catalog_for_platform(sys.argv[2])
+    elif cmd == "check-commands":
+        output_check_commands()
+    elif cmd == "handlers":
+        output_handlers()
+    elif cmd == "install-info-lines" and len(sys.argv) >= 3:
+        output_install_info_lines(sys.argv[2])
     elif cmd == "json":
         output_json()
     elif cmd == "get" and len(sys.argv) >= 3:
