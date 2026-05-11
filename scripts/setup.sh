@@ -2117,7 +2117,7 @@ maybe_install_dua_cli() {
 source_nvm_if_available() {
   export NVM_DIR="${NVM_DIR:-$HOME_DIR/.nvm}"
   if [ -s "$NVM_DIR/nvm.sh" ]; then
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1091
     . "$NVM_DIR/nvm.sh"
     return 0
   fi

@@ -40,6 +40,18 @@ After changing bootstrap logic, helper scripts, or Python configuration, run the
   uv run pytest
   ```
 
+
+## Updating oooconf Completions
+
+The `oooconf` completion source of truth is `scripts/oooconf-cli-spec.toml`. It is a recursive command tree: add nested commands under `subcommands`, put each command's options and positional values on that command node, and use `value_set` or `option_value_sets` when values come from a shared definition. Dependency-key completions use the `deps_keys` shared definition hydrated from `scripts/optional-deps.toml`, so do not duplicate the optional dependency catalog in generated shell code.
+
+After changing the CLI spec or completion generator, run:
+
+```bash
+uv run python scripts/generate_oooconf_completions.py
+uv run pytest tests/test_recursive_completions.py
+```
+
 ## Keeping README, docs/, and AGENTS.md Aligned
 
 Whenever you make updates to the dotfiles setup, ensure that:

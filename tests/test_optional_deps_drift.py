@@ -18,15 +18,21 @@ def _catalog_keys() -> list[str]:
 
 def _powershell_completion_keys() -> list[str]:
     content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(encoding="utf-8")
-    match = re.search(r"\$OooconfDepsKeys\s*=\s*@\((?P<body>.*?)\n\s*\)", content, flags=re.DOTALL)
-    assert match, "Failed to find $OooconfDepsKeys block in PowerShell completions"
-    return re.findall(r"'([^']+)'", match.group("body"))
+    match = re.search(r"'install' = @\{(?P<body>.*?)\n\s*}\n", content, flags=re.DOTALL)
+    assert match, "Failed to find install node in PowerShell completions"
+    values = re.search(r"Values = @\((?P<values>.*?)\)", match.group("body"), flags=re.DOTALL)
+    assert values, "Failed to find install dependency values in PowerShell completions"
+    return re.findall(r"'([^']+)'", values.group("values"))
 
 
 def _zsh_completion_keys() -> list[str]:
     content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
-    match = re.search(r"deps_keys=\((?P<body>.*?)\n\)", content, flags=re.DOTALL)
-    assert match, "Failed to find deps_keys block in zsh completions"
+    shared = re.search(r"_oooconf_values_deps_keys=\((?P<body>.*?)\n\)", content, flags=re.DOTALL)
+    if shared:
+        return re.findall(r"'([^:']+):", shared.group("body"))
+
+    match = re.search(r"_oooconf_install\(\).*?values=\((?P<body>.*?)\n\s*\)", content, flags=re.DOTALL)
+    assert match, "Failed to find install value block in zsh completions"
     return re.findall(r"'([^:']+):", match.group("body"))
 
 
@@ -39,25 +45,29 @@ def test_completion_keys_match_optional_deps_catalog() -> None:
 def test_completions_generator_uses_canonical_parser() -> None:
     content = (REPO_ROOT / "scripts/generate_oooconf_completions.py").read_text(encoding="utf-8")
     assert "from read_optional_deps import load_deps" in content
-    assert "from oooconf_cli_spec import CliSpec, CommandSpec, load_cli_spec" in content
+    assert "from oooconf_cli_spec import CliSpec, Command, load_cli_spec, shell_safe_name" in content
     assert "def parse_optional_deps" not in content
     assert 'eval "local -a' not in content
-    assert "${(@P)var_" in content
+    assert "def walk_commands" in content
+    assert "subsubcommand" not in content.lower()
 
 
 def test_spec_driven_subcommand_options_are_emitted() -> None:
     zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
-    assert "oooconf subcommand option" in zsh_content
-    assert "--strict-config-paths:strict-config-paths" in zsh_content
-    assert "--client-secret:client-secret" in zsh_content
+    assert "--strict-config-paths[require strict config paths]" in zsh_content
+    assert "--client-secret[API client secret]" in zsh_content
+    assert "--method[login method]:value:(auto password apikey)" in zsh_content
 
     pwsh_content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(
         encoding="utf-8"
     )
-    assert "'agents:detect' = @('--repo-root', '--config', '--json')" in pwsh_content
-    assert "'agents:mcp:sync' = @('--check')" in pwsh_content
-    assert "'secrets:login' = @('--server', '--method', '--client-id', '--client-secret')" in pwsh_content
-    assert "'secrets:--method' = @('auto', 'password', 'apikey')" in pwsh_content
+    assert "'agents:detect' = @{" in pwsh_content
+    assert "Options = @('--repo-root', '--config', '--json')" in pwsh_content
+    assert "'agents:mcp:sync' = @{" in pwsh_content
+    assert "Options = @('--check')" in pwsh_content
+    assert "'secrets:login' = @{" in pwsh_content
+    assert "Options = @('--server', '--method', '--client-id', '--client-secret')" in pwsh_content
+    assert "'--method' = @('auto', 'password', 'apikey')" in pwsh_content
 
 
 def test_spec_driven_subcommand_descriptions_are_emitted() -> None:
@@ -66,36 +76,39 @@ def test_spec_driven_subcommand_descriptions_are_emitted() -> None:
     assert "forgit-aliases:toggle plain vs forgit git aliases" in zsh_content
 
     spec_content = (REPO_ROOT / "scripts/oooconf-cli-spec.toml").read_text(encoding="utf-8")
-    assert "[commands.agents.subcommand_descriptions]" in spec_content
-    assert "[commands.agents.subsubcommands]" in spec_content
-    assert 'mcp = ["sync", "status", "add"]' in spec_content
-    assert "[commands.shell.subcommand_descriptions]" in spec_content
+    assert "[commands.agents.subcommands.detect]" in spec_content
+    assert "[commands.agents.subcommands.mcp.subcommands.sync]" in spec_content
+    assert "[commands.shell.subcommands.forgit-aliases]" in spec_content
+    assert "subsubcommands" not in spec_content
 
 
-def test_subsubcommand_metadata_is_emitted_for_zsh_and_powershell() -> None:
+def test_nested_command_metadata_is_emitted_for_zsh_and_powershell() -> None:
     zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
-    assert "cmd_agents_mcp_subsubcommands=(" in zsh_content
+    assert "_oooconf_agents_mcp()" in zsh_content
     assert "'sync:synchronize managed MCP servers'" in zsh_content
-    assert "cmd_agents_mcp_sync_options=(" in zsh_content
-    assert "'--check:check'" in zsh_content
+    assert "_oooconf_agents_mcp_sync()" in zsh_content
+    assert "'--check[check only]'" in zsh_content
 
     pwsh_content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(
         encoding="utf-8"
     )
-    assert "'agents:mcp' = @('sync', 'status', 'add')" in pwsh_content
-    assert "'agents:mcp:sync' = @('--check')" in pwsh_content
+    assert "'agents:mcp' = @{" in pwsh_content
+    assert "Subcommands = @('sync', 'status', 'add')" in pwsh_content
+    assert "'agents:mcp:sync' = @{" in pwsh_content
+    assert "Options = @('--check')" in pwsh_content
 
 
 def test_top_level_command_values_are_emitted() -> None:
     zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
-    assert "cmd_wm_values=(" in zsh_content
-    assert "'komorebi:komorebi'" in zsh_content
-    assert "'glazewm:glazewm'" in zsh_content
+    assert "_oooconf_wm()" in zsh_content
+    assert "'komorebi:Komorebi'" in zsh_content
+    assert "'glazewm:GlazeWM'" in zsh_content
 
     pwsh_content = (REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1").read_text(
         encoding="utf-8"
     )
-    assert "'wm' = @('komorebi', 'glazewm')" in pwsh_content
+    assert "'wm' = @{" in pwsh_content
+    assert "Values = @('komorebi', 'glazewm')" in pwsh_content
 
 
 def test_oooconf_completions_command_wires_generator() -> None:

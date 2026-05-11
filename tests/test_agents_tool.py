@@ -225,6 +225,8 @@ def test_provider_sync_minimax_handles_empty_json_and_updates_existing_codex(tmp
     assert codex.count("model_providers.minimax") == 1
     assert 'base_url = "https://api.minimaxi.com/v1"' in codex
     assert not (home / ".codex/config.toml").exists()
+
+
 def test_select_install_specs_defaults_to_missing(monkeypatch):
     specs = [
         agents_tool.AgentUpdateSpec("OpenAI Codex CLI", "codex", "npm", "@openai/codex"),

@@ -3,10 +3,10 @@
 
 from __future__ import annotations
 
-import re
+from dataclasses import dataclass
 from pathlib import Path
 
-from oooconf_cli_spec import CliSpec, CommandSpec, load_cli_spec
+from oooconf_cli_spec import CliSpec, Command, load_cli_spec, shell_safe_name
 from read_optional_deps import load_deps
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -14,6 +14,24 @@ COMMANDS_FILE = REPO_ROOT / "scripts" / "oooconf-commands.txt"
 CLI_SPEC_FILE = REPO_ROOT / "scripts" / "oooconf-cli-spec.toml"
 ZSH_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf"
 POWERSHELL_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/completions/oooconf-completions.ps1"
+
+
+@dataclass(frozen=True)
+class CompletionNode:
+    path: tuple[str, ...]
+    command: Command
+    options: dict[str, str]
+    completers: dict[str, str]
+    values: dict[str, str]
+    option_values: dict[str, dict[str, str]]
+
+    @property
+    def key(self) -> str:
+        return ":".join(self.path)
+
+    @property
+    def function_name(self) -> str:
+        return "_oooconf_" + "_".join(shell_safe_name(part) for part in self.path)
 
 
 def load_commands(path: Path) -> list[str]:
@@ -30,6 +48,14 @@ def load_commands(path: Path) -> list[str]:
     return commands
 
 
+def load_dependency_definitions() -> dict[str, dict[str, str]]:
+    deps_data = load_deps()["deps"]
+    deps_keys = {
+        dep.get("key", ""): dep.get("description", "") or dep.get("key", "") for dep in deps_data if dep.get("key")
+    }
+    return {"deps_keys": deps_keys}
+
+
 def unique_preserving_order(items: list[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -42,273 +68,262 @@ def unique_preserving_order(items: list[str]) -> list[str]:
 
 
 def quote_zsh(value: str) -> str:
-    return value.replace("'", "'\\''")
+    return value.replace("\\", "\\\\").replace("'", "'\\''")
 
 
 def quote_ps(value: str) -> str:
     return value.replace("'", "''")
 
 
-def command_spec(spec: CliSpec, name: str) -> CommandSpec | None:
-    return spec.commands.get(name)
+def zsh_pattern(value: str) -> str:
+    return value.replace("\\", "\\\\").replace(")", "\\)").replace("|", "\\|")
 
 
-def zsh_safe_name(value: str) -> str:
-    safe = re.sub(r"[^A-Za-z0-9_]", "_", value)
-    if not safe:
-        safe = "item"
-    if safe[0].isdigit():
-        safe = f"_{safe}"
-    return safe
+def zsh_describe_array(name: str, values: dict[str, str], lines: list[str], *, local: bool = True) -> None:
+    if local:
+        lines.append(f"  local -a {name}")
+        prefix = "  "
+    else:
+        lines.append(f"typeset -ga {name}")
+        prefix = ""
+    lines.append(f"{prefix}{name}=(")
+    for key, description in values.items():
+        lines.append(f"{prefix}  '{quote_zsh(key)}:{quote_zsh(description)}'")
+    lines.append(f"{prefix})")
 
 
-def subcommand_desc(command: CommandSpec, subcommand: str) -> str:
-    return command.subcommand_descriptions.get(subcommand, subcommand)
+def zsh_value_array_name(value_set: str) -> str:
+    return "_oooconf_values_" + shell_safe_name(value_set)
 
 
-def option_desc(option: str, descriptions: dict[str, str]) -> str:
-    return descriptions.get(option, option[2:] if option.startswith("--") else option)
+def zsh_options_with_args(
+    options: dict[str, str], completers: dict[str, str], option_values: dict[str, dict[str, str]]
+) -> list[str]:
+    return [option for option in options if option in completers or option in option_values]
 
 
-def option_completion_suffix(option: str, completion_types: dict[str, str]) -> str:
-    completion_type = completion_types.get(option)
-    if completion_type == "directory":
-        return ":_files -/"
-    if completion_type == "file":
-        return ":_files"
-    return ""
+def ps_options_with_args(
+    options: dict[str, str], completers: dict[str, str], option_values: dict[str, dict[str, str]]
+) -> list[str]:
+    return zsh_options_with_args(options, completers, option_values)
 
 
-def _render_zsh_command_metadata(lines: list[str], command: str, spec: CommandSpec) -> None:
-    safe_command = zsh_safe_name(command)
-
-    lines.append(f"cmd_{safe_command}_options=(")
-    for option in spec.options:
-        lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option_desc(option, spec.option_descriptions))}'")
-    lines.append(")")
-
-    lines.append(f"cmd_{safe_command}_values=(")
-    for value in spec.values:
-        lines.append(f"  '{quote_zsh(value)}:{quote_zsh(value)}'")
-    lines.append(")")
-
-    lines.append(f"cmd_{safe_command}_subcommands=(")
-    for subcommand in spec.subcommands:
-        lines.append(f"  '{quote_zsh(subcommand)}:{quote_zsh(subcommand_desc(spec, subcommand))}'")
-    lines.append(")")
-
-    for subcommand in spec.subcommands:
-        safe_sub = zsh_safe_name(subcommand)
-        options = list(spec.subcommand_options.get(subcommand, ()))
-        values = list(spec.subcommand_values.get(subcommand, ()))
-
-        lines.append(f"cmd_{safe_command}_{safe_sub}_options=(")
-        for option in options:
-            lines.append(f"  '{quote_zsh(option)}:{quote_zsh(option_desc(option, spec.option_descriptions))}'")
-        lines.append(")")
-
-        lines.append(f"cmd_{safe_command}_{safe_sub}_values=(")
-        for value in values:
-            lines.append(f"  '{quote_zsh(value)}:{quote_zsh(value)}'")
-        lines.append(")")
-
-        subsubs = list(spec.subsubcommands.get(subcommand, ()))
-        subsub_desc = spec.subsubcommand_descriptions.get(subcommand, {})
-        lines.append(f"cmd_{safe_command}_{safe_sub}_subsubcommands=(")
-        for subsub in subsubs:
-            lines.append(f"  '{quote_zsh(subsub)}:{quote_zsh(subsub_desc.get(subsub, subsub))}'")
-        lines.append(")")
-
-        nested_opts = spec.subsubcommand_options.get(subcommand, {})
-        for subsub in subsubs:
-            safe_subsub = zsh_safe_name(subsub)
-            lines.append(f"cmd_{safe_command}_{safe_sub}_{safe_subsub}_options=(")
-            for option in nested_opts.get(subsub, ()):
-                label = option_desc(option, spec.option_descriptions)
-                lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}'")
-            lines.append(")")
-
-    lines.append(f"cmd_{safe_command}_option_values=(")
-    for key, values in spec.value_sets.items():
-        option = f"--{key}"
-        joined = " ".join(quote_zsh(value) for value in values)
-        lines.append(f"  '{quote_zsh(option)}:{joined}'")
-    lines.append(")")
+def zsh_value_choices(values: dict[str, str]) -> str:
+    return " ".join(quote_zsh(value) for value in values)
 
 
-def render_zsh(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) -> str:
-    commands = unique_preserving_order(commands)
-    command_pattern = "|".join(commands)
+def zsh_option_spec(option: str, description: str, completer: str | None, value_set: dict[str, str] | None) -> str:
+    spec = f"{option}[{description}]"
+    if value_set is not None:
+        spec += f":value:({zsh_value_choices(value_set)})"
+    elif completer:
+        spec += f":value:{completer}"
+    return spec
 
-    alias_map = {name: command.alias_for for name, command in spec.commands.items() if command.alias_for}
+
+def resolve_values(command: Command, spec: CliSpec) -> dict[str, str]:
+    values = dict(command.values)
+    if command.value_set:
+        values.update(spec.definition_values(command.value_set))
+    return values
+
+
+def resolve_option_values(command: Command, spec: CliSpec) -> dict[str, dict[str, str]]:
+    return {option: spec.definition_values(value_set) for option, value_set in command.option_value_sets.items()}
+
+
+def walk_commands(commands: dict[str, Command], spec: CliSpec, prefix: tuple[str, ...] = ()) -> list[CompletionNode]:
+    nodes: list[CompletionNode] = []
+    for name, command in commands.items():
+        path = (*prefix, name)
+        nodes.append(
+            CompletionNode(
+                path=path,
+                command=command,
+                options=command.options,
+                completers=command.completers,
+                values=resolve_values(command, spec),
+                option_values=resolve_option_values(command, spec),
+            )
+        )
+        nodes.extend(walk_commands(command.subcommands, spec, path))
+    return nodes
+
+
+def command_order(commands: list[str], spec: CliSpec) -> list[str]:
+    return unique_preserving_order([*commands, *spec.commands.keys()])
+
+
+def render_zsh(commands: list[str], spec: CliSpec) -> str:
+    commands = command_order(commands, spec)
+    nodes = walk_commands(spec.commands, spec)
+    node_map = {node.path: node for node in nodes}
+    aliases = spec.aliases()
 
     lines: list[str] = []
     lines.append("#compdef oooconf o")
-    lines.append("")
-    lines.append("local -a oooconf_commands global_opts deps_keys")
-    lines.append("local command_name subcommand_name subsubcommand_name previous_token")
-    lines.append("local safe_command safe_subcommand safe_subsubcommand")
-    lines.append("local i")
-    lines.append("typeset -A oooconf_aliases")
+    lines.append("# Generated by scripts/generate_oooconf_completions.py; edit scripts/oooconf-cli-spec.toml instead.")
     lines.append("")
 
-    lines.append("oooconf_commands=(")
-    for command in commands:
-        description = spec.commands.get(command).description if command in spec.commands else "command"
-        lines.append(f"  '{quote_zsh(command)}:{quote_zsh(description)}'")
-    lines.append(")")
+    top_commands = {name: spec.commands.get(name, Command(name=name)).description for name in commands}
+    zsh_describe_array("_oooconf_commands", top_commands, lines, local=False)
+    zsh_describe_array("_oooconf_global_opts", spec.global_options, lines, local=False)
+    lines.append("typeset -ga _oooconf_global_opts_with_args")
+    lines.append(f"_oooconf_global_opts_with_args=({zsh_value_choices(spec.global_completers)})")
     lines.append("")
 
-    lines.append("global_opts=(")
-    for option in spec.global_options:
-        label = option_desc(option, spec.global_option_descriptions)
-        file_suffix = option_completion_suffix(option, spec.global_option_completion_types)
-        lines.append(f"  '{quote_zsh(option)}:{quote_zsh(label)}{file_suffix}'")
-    lines.append(")")
-    lines.append("")
-
-    lines.append("deps_keys=(")
-    for key, description in deps:
-        desc = description if description else key
-        lines.append(f"  '{quote_zsh(key)}:{quote_zsh(desc)}'")
-    lines.append(")")
-    lines.append("")
-
-    for alias, target in alias_map.items():
-        lines.append(f"oooconf_aliases['{quote_zsh(alias)}']='{quote_zsh(target)}'")
-    lines.append("")
-
-    for command in commands:
-        if command in spec.commands:
-            _render_zsh_command_metadata(lines, command, spec.commands[command])
+    for definition_name, definition_values in spec.definitions.items():
+        if definition_values:
+            zsh_describe_array(zsh_value_array_name(definition_name), definition_values, lines, local=False)
             lines.append("")
 
-    lines.append("command_name=")
-    lines.append("for (( i = 2; i < CURRENT; i++ )); do")
-    lines.append('  case "$words[i]" in')
-    lines.append("    -C|--repo-root)")
-    lines.append("      (( i++ ))")
+    lines.append("_oooconf_option_takes_value() {")
+    lines.append("  local option known")
+    lines.append('  option="$1"')
+    lines.append("  shift")
+    lines.append('  for known in "$@"; do')
+    lines.append('    [[ "$option" == "$known" ]] && return 0')
+    lines.append("  done")
+    lines.append("  return 1")
+    lines.append("}")
+    lines.append("")
+
+    for alias, target in aliases.items():
+        alias_node = node_map.get((alias,))
+        target_node = node_map.get((target,))
+        if alias_node and target_node:
+            lines.append(f'{alias_node.function_name}() {{ {target_node.function_name} "$@" }}')
+    if aliases:
+        lines.append("")
+
+    for node in nodes:
+        if node.command.alias_for:
+            continue
+        render_zsh_node(node, lines)
+        lines.append("")
+
+    lines.append("_oooconf_main() {")
+    lines.append("  local context state line")
+    lines.append("  typeset -A opt_args")
+    lines.append("  _arguments -C \\")
+    for option, description in spec.global_options.items():
+        completer = spec.global_completers.get(option)
+        lines.append(f"    '{quote_zsh(zsh_option_spec(option, description, completer, None))}' \\")
+    lines.append("    '1:command:->command' \\")
+    lines.append("    '*::arg:->args'")
+    lines.append("")
+    lines.append("  case $state in")
+    lines.append("    command)")
+    lines.append("      _describe -t commands 'oooconf command' _oooconf_commands")
     lines.append("      ;;")
-    lines.append("    -*)")
-    lines.append("      ;;")
-    lines.append(f"    {command_pattern})")
-    lines.append('      command_name="$words[i]"')
-    lines.append("      break")
-    lines.append("      ;;")
-    lines.append("  esac")
-    lines.append("done")
-    lines.append("")
-
-    lines.append('if [[ -z "$command_name" ]]; then')
-    lines.append("  _describe -t commands 'oooconf command' oooconf_commands && return 0")
-    lines.append("  _describe -t options 'oooconf option' global_opts && return 0")
-    lines.append("  return 0")
-    lines.append("fi")
-    lines.append("")
-
-    lines.append('if [[ -n "${oooconf_aliases[$command_name]:-}" ]]; then')
-    lines.append('  command_name="${oooconf_aliases[$command_name]}"')
-    lines.append("fi")
-    lines.append("")
-
-    lines.append('safe_command="${command_name//[^A-Za-z0-9_]/_}"')
-    lines.append('if [[ "$safe_command" =~ ^[0-9] ]]; then safe_command="_$safe_command"; fi')
-    lines.append('local var_opts="cmd_${safe_command}_options"')
-    lines.append('local -a command_options=("${(@P)var_opts}")')
-    lines.append('local var_subs="cmd_${safe_command}_subcommands"')
-    lines.append('local -a command_subcommands=("${(@P)var_subs}")')
-    lines.append('local var_cmd_values="cmd_${safe_command}_values"')
-    lines.append('local -a command_values=("${(@P)var_cmd_values}")')
-    lines.append("")
-
-    lines.append("subcommand_name=")
-    lines.append("for (( i = 3; i < CURRENT; i++ )); do")
-    lines.append('  case "$words[i]" in')
-    lines.append("    -*) ;;")
-    lines.append("    *)")
-    lines.append('      local candidate="$words[i]"')
-    lines.append("      if (( ${command_subcommands[(Ie)$candidate]} )); then")
-    lines.append('        subcommand_name="$candidate"')
+    lines.append("    args)")
+    lines.append("      local command_name i token")
+    lines.append("      for (( i = 2; i < CURRENT; i++ )); do")
+    lines.append('        token="$words[i]"')
+    lines.append('        if [[ "$token" == -* ]]; then')
+    lines.append('          if _oooconf_option_takes_value "$token" "${_oooconf_global_opts_with_args[@]}"; then')
+    lines.append("            (( i++ ))")
+    lines.append("          fi")
+    lines.append("          continue")
+    lines.append("        fi")
+    lines.append('        command_name="$token"')
     lines.append("        break")
-    lines.append("      fi")
+    lines.append("      done")
+    lines.append("      case $command_name in")
+    for command in commands:
+        target = aliases.get(command, command)
+        if (target,) in node_map:
+            patterns = [command]
+            lines.append(f"        {zsh_pattern('|'.join(patterns))}) {node_map[(target,)].function_name} ;;")
+    lines.append("      esac")
     lines.append("      ;;")
     lines.append("  esac")
-    lines.append("done")
+    lines.append("}")
     lines.append("")
-
-    lines.append("previous_token=")
-    lines.append('if (( CURRENT > 2 )); then previous_token="$words[CURRENT-1]"; fi')
-    lines.append("")
-
-    lines.append('if [[ -z "$subcommand_name" ]]; then')
-    lines.append('  if [[ "$command_name" == help ]]; then')
-    lines.append("    _describe -t commands 'oooconf command' oooconf_commands")
-    lines.append("    return 0")
-    lines.append("  fi")
-    lines.append("  _describe -t subcommands 'oooconf subcommand' command_subcommands")
-    lines.append("  _describe -t options 'oooconf option' command_options")
-    lines.append("  _describe -t values 'oooconf value' command_values")
-    lines.append('  if [[ "$command_name" == install || "$command_name" == deps || "$command_name" == update ]]; then')
-    lines.append("    _describe -t dependencies 'dependency key' deps_keys")
-    lines.append("  fi")
-    lines.append("  return 0")
-    lines.append("fi")
-    lines.append("")
-
-    lines.append('safe_subcommand="${subcommand_name//[^A-Za-z0-9_]/_}"')
-    lines.append('if [[ "$safe_subcommand" =~ ^[0-9] ]]; then safe_subcommand="_$safe_subcommand"; fi')
-    lines.append('local var_sub_opts="cmd_${safe_command}_${safe_subcommand}_options"')
-    lines.append('local -a sub_options=("${(@P)var_sub_opts}")')
-    lines.append('local var_sub_vals="cmd_${safe_command}_${safe_subcommand}_values"')
-    lines.append('local -a sub_values=("${(@P)var_sub_vals}")')
-    lines.append('local var_sub_subs="cmd_${safe_command}_${safe_subcommand}_subsubcommands"')
-    lines.append('local -a sub_subcommands=("${(@P)var_sub_subs}")')
-    lines.append('local var_opt_vals="cmd_${safe_command}_option_values"')
-    lines.append('local -a option_value_entries=("${(@P)var_opt_vals}")')
-    lines.append("")
-
-    lines.append("subsubcommand_name=")
-    lines.append("for (( i = 4; i < CURRENT; i++ )); do")
-    lines.append('  case "$words[i]" in')
-    lines.append("    -*) ;;")
-    lines.append("    *)")
-    lines.append('      local candidate="$words[i]"')
-    lines.append("      if (( ${sub_subcommands[(Ie)$candidate]} )); then")
-    lines.append('        subsubcommand_name="$candidate"')
-    lines.append("        break")
-    lines.append("      fi")
-    lines.append("      ;;")
-    lines.append("  esac")
-    lines.append("done")
-    lines.append("")
-
-    lines.append("local option_entry")
-    lines.append('for option_entry in "${option_value_entries[@]}"; do')
-    lines.append('  local opt_name="${option_entry%%:*}"')
-    lines.append('  local opt_values="${option_entry#*:}"')
-    lines.append('  if [[ "$previous_token" == "$opt_name" ]]; then')
-    lines.append('    _values "$opt_name value" ${(z)opt_values}')
-    lines.append("    return 0")
-    lines.append("  fi")
-    lines.append("done")
-    lines.append("")
-
-    lines.append('if [[ -z "$subsubcommand_name" ]]; then')
-    lines.append("  _describe -t options 'oooconf subcommand option' sub_options")
-    lines.append("  _describe -t values 'oooconf subcommand value' sub_values")
-    lines.append("  _describe -t subsubcommands 'oooconf subsubcommand' sub_subcommands")
-    lines.append("  return 0")
-    lines.append("fi")
-    lines.append("")
-
-    lines.append('safe_subsubcommand="${subsubcommand_name//[^A-Za-z0-9_]/_}"')
-    lines.append('if [[ "$safe_subsubcommand" =~ ^[0-9] ]]; then safe_subsubcommand="_$safe_subsubcommand"; fi')
-    lines.append('local var_subsub_opts="cmd_${safe_command}_${safe_subcommand}_${safe_subsubcommand}_options"')
-    lines.append('local -a subsub_options=("${(@P)var_subsub_opts}")')
-    lines.append("_describe -t options 'oooconf subsubcommand option' subsub_options")
-    lines.append("return 0")
+    lines.append('_oooconf_main "$@"')
 
     return "\n".join(lines) + "\n"
+
+
+def render_zsh_node(node: CompletionNode, lines: list[str]) -> None:
+    child_position = len(node.path) + 1
+    value_position = child_position if not node.command.subcommands else child_position + 1
+    subcommands = {name: child.description for name, child in node.command.subcommands.items()}
+    options_with_args = zsh_options_with_args(node.options, node.completers, node.option_values)
+    lines.append(f"{node.function_name}() {{")
+    lines.append("  local context state line")
+    lines.append("  typeset -A opt_args")
+    if subcommands:
+        zsh_describe_array("subcmds", subcommands, lines)
+    if node.values:
+        lines.append("  local -a values")
+        if node.command.value_set:
+            lines.append(f'  values=("${{{zsh_value_array_name(node.command.value_set)}[@]}}")')
+            for key, description in node.command.values.items():
+                lines.append(f"  values+=('{quote_zsh(key)}:{quote_zsh(description)}')")
+        else:
+            lines.append("  values=(")
+            for key, description in node.values.items():
+                lines.append(f"    '{quote_zsh(key)}:{quote_zsh(description)}'")
+            lines.append("  )")
+    lines.append("  local -a opts_with_args")
+    lines.append(
+        f"  opts_with_args=(${{_oooconf_global_opts_with_args[@]}} {zsh_value_choices({option: option for option in options_with_args})})"
+    )
+    lines.append("  _arguments -C \\")
+    option_specs = []
+    for option, description in node.options.items():
+        option_specs.append(
+            zsh_option_spec(option, description, node.completers.get(option), node.option_values.get(option))
+        )
+    for spec_line in option_specs:
+        lines.append(f"    '{quote_zsh(spec_line)}' \\")
+    if subcommands:
+        lines.append(f"    '{child_position}:subcommand:->command' \\")
+        lines.append("    '*::arg:->args'")
+    elif node.values:
+        lines.append(f"    '{value_position}:value:->value' \\")
+        lines.append("    '*::arg:->args'")
+    else:
+        lines.append("    '*::arg:->args'")
+    lines.append("")
+    lines.append("  case $state in")
+    if subcommands:
+        lines.append("    command)")
+        lines.append("      _describe -t subcommands 'oooconf subcommand' subcmds")
+        lines.append("      ;;")
+        lines.append("    args)")
+        lines.append("      local child_name i path_index token")
+        lines.append("      path_index=1")
+        lines.append("      for (( i = 2; i < CURRENT; i++ )); do")
+        lines.append('        token="$words[i]"')
+        lines.append('        if [[ "$token" == -* ]]; then')
+        lines.append('          if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then')
+        lines.append("            (( i++ ))")
+        lines.append("          fi")
+        lines.append("          continue")
+        lines.append("        fi")
+        for index, part in enumerate(node.path, start=1):
+            prefix = "if" if index == 1 else "elif"
+            lines.append(f'        {prefix} (( path_index == {index} )) && [[ "$token" == {quote_zsh(part)} ]]; then')
+            lines.append("          (( path_index++ ))")
+        lines.append(f"        elif (( path_index > {len(node.path)} )); then")
+        lines.append("          case $token in")
+        for child in subcommands:
+            child_path = (*node.path, child)
+            lines.append(
+                f"            {zsh_pattern(child)}) child_name={quote_zsh(child)}; _oooconf_{'_'.join(shell_safe_name(part) for part in child_path)}; return ;;"
+            )
+        lines.append("          esac")
+        lines.append("        fi")
+        lines.append("      done")
+        lines.append("      ;;")
+    if node.values:
+        lines.append("    value)")
+        lines.append("      _describe -t values 'oooconf value' values")
+        lines.append("      ;;")
+    lines.append("  esac")
+    lines.append("}")
 
 
 def format_ps_array(values: list[str], indent: str = "        ") -> list[str]:
@@ -320,198 +335,141 @@ def format_ps_array(values: list[str], indent: str = "        ") -> list[str]:
     return lines
 
 
-def format_ps_hashtable(mapping: dict[str, list[str]], indent: str = "    ") -> list[str]:
+def render_ps_string_array(values: list[str]) -> str:
+    return "@(" + ", ".join(f"'{quote_ps(value)}'" for value in values) + ")"
+
+
+def render_ps_nodes(nodes: list[CompletionNode]) -> list[str]:
+    lines = ["    $OooconfNodes = @{"]
+    for node in sorted(nodes, key=lambda item: item.key):
+        options = list(node.options.keys())
+        values = list(node.values.keys())
+        subcommands = list(node.command.subcommands.keys())
+        options_with_args = ps_options_with_args(node.options, node.completers, node.option_values)
+        lines.append(f"        '{quote_ps(node.key)}' = @{{")
+        lines.append(f"            Options = {render_ps_string_array(options)}")
+        lines.append(f"            OptionsWithArgs = {render_ps_string_array(options_with_args)}")
+        lines.append(f"            Values = {render_ps_string_array(values)}")
+        lines.append(f"            Subcommands = {render_ps_string_array(subcommands)}")
+        lines.append("            OptionValues = @{")
+        for option, option_values in sorted(node.option_values.items()):
+            lines.append(f"                '{quote_ps(option)}' = {render_ps_string_array(list(option_values.keys()))}")
+        lines.append("            }")
+        lines.append("        }")
+    lines.append("    }")
+    return lines
+
+
+def render_ps_hashtable(mapping: dict[str, str], indent: str = "    ") -> list[str]:
     lines: list[str] = [f"{indent}@{{"]
     for key in sorted(mapping.keys()):
-        values = mapping[key]
-        rendered = ", ".join(f"'{quote_ps(value)}'" for value in values)
-        lines.append(f"{indent}    '{quote_ps(key)}' = @({rendered})")
+        lines.append(f"{indent}    '{quote_ps(key)}' = '{quote_ps(mapping[key])}'")
     lines.append(f"{indent}}}")
     return lines
 
 
-def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: CliSpec) -> str:
-    commands = unique_preserving_order(commands)
-
-    aliases: dict[str, list[str]] = {}
-    command_options: dict[str, list[str]] = {}
-    command_subcommands: dict[str, list[str]] = {}
-    command_values: dict[str, list[str]] = {}
-    subcommand_options: dict[str, list[str]] = {}
-    subcommand_values: dict[str, list[str]] = {}
-    subsubcommands: dict[str, list[str]] = {}
-    subsubcommand_options: dict[str, list[str]] = {}
-    option_values: dict[str, list[str]] = {}
-
-    for name, command in spec.commands.items():
-        if command.alias_for:
-            aliases[name] = [command.alias_for]
-        command_options[name] = list(command.options)
-        command_subcommands[name] = list(command.subcommands)
-        command_values[name] = list(command.values)
-        for subcommand, options in command.subcommand_options.items():
-            subcommand_options[f"{name}:{subcommand}"] = list(options)
-        for subcommand, values in command.subcommand_values.items():
-            subcommand_values[f"{name}:{subcommand}"] = list(values)
-        for subcommand, values in command.subsubcommands.items():
-            subsubcommands[f"{name}:{subcommand}"] = list(values)
-        for subcommand, mapping in command.subsubcommand_options.items():
-            for subsubcommand, options in mapping.items():
-                subsubcommand_options[f"{name}:{subcommand}:{subsubcommand}"] = list(options)
-        for key, values in command.value_sets.items():
-            option_values[f"{name}:--{key}"] = list(values)
+def render_powershell(commands: list[str], spec: CliSpec) -> str:
+    commands = command_order(commands, spec)
+    nodes = walk_commands(spec.commands, spec)
 
     lines: list[str] = []
     lines.append("# PowerShell argument completions for oooconf")
+    lines.append("# Generated by scripts/generate_oooconf_completions.py; edit scripts/oooconf-cli-spec.toml instead.")
     lines.append("# This file is automatically loaded by the managed PowerShell profile via common.ps1")
     lines.append("")
     lines.append("function Get-OooconfCompletions {")
     lines.append("    param($wordToComplete, $commandAst, $cursorPosition)")
     lines.append("")
-
     lines.append("    $OooconfCommands = @(")
     lines.extend(format_ps_array(commands))
     lines.append("    )")
     lines.append("")
-
     lines.append("    $OooconfGlobalOptions = @(")
-    lines.extend(format_ps_array(list(spec.global_options)))
+    lines.extend(format_ps_array(list(spec.global_options.keys())))
     lines.append("    )")
     lines.append("")
-
-    lines.append("    $OooconfDepsKeys = @(")
-    lines.extend(format_ps_array([key for key, _ in deps]))
+    lines.append("    $OooconfGlobalOptionsWithArgs = @(")
+    lines.extend(format_ps_array(list(spec.global_completers.keys())))
     lines.append("    )")
     lines.append("")
-
     lines.append("    $OooconfAliases =")
-    lines.extend(format_ps_hashtable(aliases))
+    lines.extend(render_ps_hashtable(spec.aliases()))
     lines.append("")
-
-    lines.append("    $OooconfCommandOptions =")
-    lines.extend(format_ps_hashtable(command_options))
+    lines.extend(render_ps_nodes(nodes))
     lines.append("")
-
-    lines.append("    $OooconfCommandSubcommands =")
-    lines.extend(format_ps_hashtable(command_subcommands))
-    lines.append("")
-
-    lines.append("    $OooconfCommandValues =")
-    lines.extend(format_ps_hashtable(command_values))
-    lines.append("")
-
-    lines.append("    $OooconfSubcommandOptions =")
-    lines.extend(format_ps_hashtable(subcommand_options))
-    lines.append("")
-
-    lines.append("    $OooconfSubcommandValues =")
-    lines.extend(format_ps_hashtable(subcommand_values))
-    lines.append("")
-
-    lines.append("    $OooconfSubsubcommands =")
-    lines.extend(format_ps_hashtable(subsubcommands))
-    lines.append("")
-
-    lines.append("    $OooconfSubsubcommandOptions =")
-    lines.extend(format_ps_hashtable(subsubcommand_options))
-    lines.append("")
-
-    lines.append("    $OooconfOptionValues =")
-    lines.extend(format_ps_hashtable(option_values))
-    lines.append("")
-
     lines.append("    $elements = $commandAst.CommandElements")
     lines.append("    $tokens = @()")
     lines.append("    for ($i = 0; $i -lt $elements.Count; $i++) {")
     lines.append("        $element = $elements[$i]")
-    lines.append("        if ($element -is [System.Management.Automation.Language.StringConstantExpressionAst]) {")
+    lines.append("        if ($element -is [System.Management.Automation.Language.CommandParameterAst]) {")
+    lines.append('            $val = "-$($element.ParameterName)"')
+    lines.append("            if ($val -eq $wordToComplete -and $i -eq ($elements.Count - 1)) { break }")
+    lines.append("            $tokens += $val")
+    lines.append(
+        "        } elseif ($element -is [System.Management.Automation.Language.StringConstantExpressionAst]) {"
+    )
     lines.append("            $val = $element.Value")
     lines.append("            if ($val -eq $wordToComplete -and $i -eq ($elements.Count - 1)) { break }")
     lines.append("            $tokens += $val")
     lines.append("        }")
     lines.append("    }")
     lines.append("")
-
     lines.append("    $commandIndex = -1")
     lines.append("    for ($i = 0; $i -lt $tokens.Length; $i++) {")
-    lines.append("        if ($tokens[$i] -match '(^|[\\\\/])(oooconf|o)(\\.ps1|\\.cmd)?$') {")
+    lines.append("        if ($tokens[$i] -match '(^|[\\\\\\\\/])(oooconf|o)(\\.ps1|\\.cmd)?$') {")
     lines.append("            $commandIndex = $i")
     lines.append("            break")
     lines.append("        }")
     lines.append("    }")
     lines.append("    if ($commandIndex -eq -1) { return @() }")
     lines.append("")
-
     lines.append("    $commandName = $null")
     lines.append("    $commandPos = -1")
     lines.append("    for ($i = $commandIndex + 1; $i -lt $tokens.Length; $i++) {")
     lines.append("        $token = $tokens[$i]")
+    lines.append("        if ($token -in $OooconfGlobalOptionsWithArgs) { $i++; continue }")
     lines.append("        if ($token -in $OooconfCommands) { $commandName = $token; $commandPos = $i; break }")
+    lines.append("        if ($token -notlike '-*') { break }")
     lines.append("    }")
     lines.append("")
-
-    lines.append("    $completions = @()")
     lines.append("    if ($null -eq $commandName) {")
-    lines.append("        $completions = $OooconfCommands + $OooconfGlobalOptions")
-    lines.append("    } else {")
     lines.append(
-        "        if ($OooconfAliases.ContainsKey($commandName)) { $commandName = $OooconfAliases[$commandName][0] }"
+        "        return ($OooconfCommands + $OooconfGlobalOptions) | Where-Object { $_ -like \"$wordToComplete*\" } | ForEach-Object { [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_) }"
     )
-    lines.append(
-        "        $commandOpts = if ($OooconfCommandOptions.ContainsKey($commandName)) { $OooconfCommandOptions[$commandName] } else { @() }"
-    )
-    lines.append(
-        "        $subcommands = if ($OooconfCommandSubcommands.ContainsKey($commandName)) { $OooconfCommandSubcommands[$commandName] } else { @() }"
-    )
-    lines.append(
-        "        $commandValues = if ($OooconfCommandValues.ContainsKey($commandName)) { $OooconfCommandValues[$commandName] } else { @() }"
-    )
+    lines.append("    }")
     lines.append("")
-    lines.append("        $subcommandName = $null")
-    lines.append("        for ($i = $commandPos + 1; $i -lt $tokens.Length; $i++) {")
-    lines.append("            if ($tokens[$i] -in $subcommands) { $subcommandName = $tokens[$i]; break }")
+    lines.append("    if ($OooconfAliases.ContainsKey($commandName)) { $commandName = $OooconfAliases[$commandName] }")
+    lines.append("    $path = @($commandName)")
+    lines.append("    $nodeKey = $commandName")
+    lines.append("    $lastNodeKey = $nodeKey")
+    lines.append("    for ($i = $commandPos + 1; $i -lt $tokens.Length; $i++) {")
+    lines.append("        $node = if ($OooconfNodes.ContainsKey($nodeKey)) { $OooconfNodes[$nodeKey] } else { $null }")
+    lines.append("        if ($null -eq $node) { break }")
+    lines.append("        $token = $tokens[$i]")
+    lines.append("        if ($token -like '-*') {")
+    lines.append(
+        "            if (($token -in $OooconfGlobalOptionsWithArgs) -or ($token -in $node.OptionsWithArgs)) { $i++ }"
+    )
+    lines.append("            continue")
     lines.append("        }")
-    lines.append("")
-    lines.append("        if ($null -eq $subcommandName) {")
-    lines.append("            $completions = $commandOpts + $subcommands + $commandValues")
-    lines.append(
-        "            if ($commandName -in @('install', 'deps', 'update')) { $completions += $OooconfDepsKeys }"
-    )
-    lines.append("        } else {")
-    lines.append("            $lastToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }")
-    lines.append('            $valueKey = "${commandName}:$lastToken"')
-    lines.append("            if ($OooconfOptionValues.ContainsKey($valueKey)) {")
-    lines.append("                $completions = $OooconfOptionValues[$valueKey]")
-    lines.append("            } else {")
-    lines.append('                $optKey = "${commandName}:$subcommandName"')
-    lines.append('                $subsubKey = "${commandName}:$subcommandName"')
-    lines.append(
-        "                $subsubCommands = if ($OooconfSubsubcommands.ContainsKey($subsubKey)) { $OooconfSubsubcommands[$subsubKey] } else { @() }"
-    )
-    lines.append("                $subsubcommandName = $null")
-    lines.append("                for ($j = $commandPos + 2; $j -lt $tokens.Length; $j++) {")
-    lines.append("                    if ($tokens[$j] -in $subsubCommands) { $subsubcommandName = $tokens[$j]; break }")
-    lines.append("                }")
-    lines.append("")
-    lines.append("                if ($null -eq $subsubcommandName) {")
-    lines.append(
-        "                    if ($OooconfSubcommandOptions.ContainsKey($optKey)) { $completions += $OooconfSubcommandOptions[$optKey] }"
-    )
-    lines.append(
-        "                    if ($OooconfSubcommandValues.ContainsKey($optKey)) { $completions += $OooconfSubcommandValues[$optKey] }"
-    )
-    lines.append("                    $completions += $subsubCommands")
-    lines.append("                } else {")
-    lines.append('                    $subsubOptKey = "${commandName}:${subcommandName}:$subsubcommandName"')
-    lines.append(
-        "                    if ($OooconfSubsubcommandOptions.ContainsKey($subsubOptKey)) { $completions += $OooconfSubsubcommandOptions[$subsubOptKey] }"
-    )
-    lines.append("                }")
-    lines.append("            }")
+    lines.append("        if ($token -in $node.Subcommands) {")
+    lines.append("            $path += $token")
+    lines.append("            $nodeKey = ($path -join ':')")
+    lines.append("            $lastNodeKey = $nodeKey")
     lines.append("        }")
     lines.append("    }")
     lines.append("")
-
+    lines.append(
+        "    $currentNode = if ($OooconfNodes.ContainsKey($lastNodeKey)) { $OooconfNodes[$lastNodeKey] } else { $null }"
+    )
+    lines.append("    if ($null -eq $currentNode) { return @() }")
+    lines.append("    $previousToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }")
+    lines.append("    if ($currentNode.OptionValues.ContainsKey($previousToken)) {")
+    lines.append("        $completions = $currentNode.OptionValues[$previousToken]")
+    lines.append("    } else {")
+    lines.append("        $completions = $currentNode.Options + $currentNode.Subcommands + $currentNode.Values")
+    lines.append("    }")
+    lines.append("")
     lines.append('    return $completions | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {')
     lines.append("        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)")
     lines.append("    }")
@@ -530,13 +488,11 @@ def render_powershell(commands: list[str], deps: list[tuple[str, str]], spec: Cl
 
 
 def main() -> int:
-    spec = load_cli_spec(CLI_SPEC_FILE)
+    spec = load_cli_spec(CLI_SPEC_FILE, extra_definitions=load_dependency_definitions())
     commands = load_commands(COMMANDS_FILE)
-    deps_data = load_deps()["deps"]
-    deps = [(dep.get("key", ""), dep.get("description", "")) for dep in deps_data if dep.get("key")]
 
-    ZSH_OUTPUT.write_text(render_zsh(commands, deps, spec), encoding="utf-8", newline="\n")
-    POWERSHELL_OUTPUT.write_text(render_powershell(commands, deps, spec), encoding="utf-8", newline="\n")
+    ZSH_OUTPUT.write_text(render_zsh(commands, spec), encoding="utf-8", newline="\n")
+    POWERSHELL_OUTPUT.write_text(render_powershell(commands, spec), encoding="utf-8", newline="\n")
 
     print(f"updated: {ZSH_OUTPUT.relative_to(REPO_ROOT)}")
     print(f"updated: {POWERSHELL_OUTPUT.relative_to(REPO_ROOT)}")
