@@ -1191,7 +1191,7 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
                 continue
             print_status_line("info", f"Running post-install step: {line}")
             try:
-                subprocess.run(line, shell=True, check=True)
+                subprocess.run([os.environ.get("SHELL", "/bin/sh"), "-c", line], check=True)
                 print_status_line("ok", "Post-install step succeeded")
             except subprocess.CalledProcessError as exc:
                 print_status_line("fail", f"Post-install step failed: {exc}")
@@ -1993,7 +1993,7 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
             # Run install command in the mcp directory
             try:
                 # Use shell=True to support command chains like "pnpm install && pnpm run build"
-                subprocess.run(install_cmd, shell=True, check=True, cwd=str(mcp_dir))
+                subprocess.run([os.environ.get("SHELL", "/bin/sh"), "-c", install_cmd], check=True, cwd=str(mcp_dir))
                 print_status_line("ok", f"Successfully installed {name}")
                 synced += 1
             except subprocess.CalledProcessError as exc:
