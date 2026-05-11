@@ -225,9 +225,8 @@ lookup_pipe_cache_value() {
   local cache key
   cache="$1"
   key="$2"
-  awk -F'|' -v expected="$key" '$1 == expected { $1=""; sub(/^\|/, ""); print; exit }' <<EOF
-$cache
-EOF
+  printf '%s\n' "$cache" \
+    | awk -F'|' -v expected="$key" '$1 == expected { print substr($0, index($0, FS) + 1); exit }'
 }
 
 optional_dependency_check_command() {
@@ -254,9 +253,8 @@ optional_dependency_install_info_line() {
   key="$1"
   us="$(printf '\037')"
   load_optional_deps_install_info_cache
-  awk -F"$us" -v expected="$key" '$1 == expected { print; exit }' <<EOF
-$OPTIONAL_DEPS_INSTALL_INFO_CACHE
-EOF
+  printf '%s\n' "$OPTIONAL_DEPS_INSTALL_INFO_CACHE" \
+    | awk -F"$us" -v expected="$key" '$1 == expected { print; exit }'
 }
 
 optional_dependency_applicable() {
@@ -1210,10 +1208,14 @@ check_dependency_status() {
     printf "[-] Checking %s...\r" "$log_name" > /dev/tty
   fi
 
-  # Prefer a fast PATH lookup before any richer TOML check. Some optional
-  # health checks (for example daemon or package-manager probes) can block even
-  # though binary presence is enough to skip installation during setup.
-  if command -v "$command_name" >/dev/null 2>&1; then
+  # Use check command from central TOML if available, fallback to command -v.
+  local check_cmd
+  check_cmd="$(optional_dependency_check_command "$command_name")"
+
+  # Prefer a fast PATH lookup only for the default binary-presence check. Richer
+  # TOML checks can validate compound requirements (for example node+npm) and
+  # must still run even when the main binary is present.
+  if [ "$check_cmd" = "command -v $command_name" ] && command -v "$command_name" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ]; then
       if is_interactive && is_verbose; then
         printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
@@ -1224,10 +1226,6 @@ check_dependency_status() {
     DEPENDENCY_SUMMARY+=("$log_name: present")
     return 0
   fi
-
-  # Use check command from central TOML if available, fallback to command -v
-  local check_cmd
-  check_cmd="$(optional_dependency_check_command "$command_name")"
 
   if eval "$check_cmd" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ]; then

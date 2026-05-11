@@ -166,6 +166,33 @@ def test_unix_handlers_have_setup_sh_implementations() -> None:
     assert not missing, f"Missing setup.sh handler implementations: {', '.join(missing)}"
 
 
+def test_setup_optional_deps_cache_lookups_are_literal_safe() -> None:
+    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
+
+    pipe_lookup = setup_sh.split("lookup_pipe_cache_value()", 1)[1].split("optional_dependency_check_command()", 1)[0]
+    assert "printf '%s\\n' \"$cache\"" in pipe_lookup
+    assert "| awk -F'|'" in pipe_lookup
+    assert "substr($0, index($0, FS) + 1)" in pipe_lookup
+    assert '$1=""' not in pipe_lookup
+    assert "<<EOF" not in pipe_lookup
+
+    install_lookup = setup_sh.split("optional_dependency_install_info_line()", 1)[1].split(
+        "optional_dependency_applicable()", 1
+    )[0]
+    assert "printf '%s\\n' \"$OPTIONAL_DEPS_INSTALL_INFO_CACHE\"" in install_lookup
+    assert '| awk -F"$us"' in install_lookup
+    assert "<<EOF" not in install_lookup
+
+
+def test_setup_fast_path_only_applies_to_default_dependency_check() -> None:
+    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
+    check_fn = setup_sh.split("check_dependency_status()", 1)[1].split("maybe_install_dependency()", 1)[0]
+
+    assert 'check_cmd="$(optional_dependency_check_command "$command_name")"' in check_fn
+    assert '[ "$check_cmd" = "command -v $command_name" ] && command -v "$command_name"' in check_fn
+    assert "Richer" in check_fn and "node+npm" in check_fn
+
+
 def test_documented_optional_dependency_examples_exist_in_catalog() -> None:
     """Ensure README examples do not mention dependency keys missing from the catalog."""
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
