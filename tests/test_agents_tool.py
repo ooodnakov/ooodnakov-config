@@ -88,6 +88,15 @@ def test_skills_add_check_mode(tmp_path):
     assert "vercel-labs/agent-skills" not in data
 
 
+def test_skills_view_check_mode_uses_global_ls(capsys):
+    rc = agents_tool.cmd_skills_view(json_output=True, check_only=True)
+
+    assert rc == 0
+    output = capsys.readouterr().out
+    assert "pnpm dlx skills ls -g --json" in output
+    assert "skills view" not in output
+
+
 def test_parse_mcp_json_inputs_multi():
     payload = '{"one":{"command":"pnpm","args":["dlx","a"]},"two":{"command":"pnpm","args":["dlx","b"]}}'
     result = agents_tool.parse_mcp_json_inputs(payload, allow_multi=True)

@@ -1211,7 +1211,7 @@ Subcommands:
                         add one MCP JSON server entry to shared config
   skills sync [--check] sync configured skill specs across agents
   skills view [--check] [--json]
-                        view shared skills catalog via pnpm dlx
+                        list global shared skills catalog via pnpm dlx
   skills add <source> [--agent gemini] [--sync-now]
                         add one shared skill source (e.g. vercel-labs/agent-skills)
 Examples:

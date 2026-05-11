@@ -763,7 +763,7 @@ _oooconf_agents_skills() {
   local -a subcmds
   subcmds=(
     'sync:synchronize configured skill specs across agents'
-    'view:view shared skills catalog via pnpm dlx'
+    'view:list global shared skills catalog via pnpm dlx'
     'add:add one shared skill source and optionally sync'
   )
   local -a opts_with_args

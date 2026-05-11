@@ -1792,7 +1792,7 @@ Subcommands:
   mcp add [--name N] [--json J] [--multi] [--preview] [--sync-now]
                                   add one MCP JSON server entry to shared config
   skills sync [--check]          sync configured skill specs across agents
-  skills view [--check] [--json] view shared skills catalog via pnpm dlx
+  skills view [--check] [--json] list global shared skills catalog via pnpm dlx
   skills add <source> [--agent gemini] [--sync-now]
                                   add one shared skill source
 Examples:

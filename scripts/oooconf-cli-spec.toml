@@ -136,7 +136,7 @@ description = "synchronize configured skill specs across agents"
 options = { "--check" = "check only" }
 
 [commands.agents.subcommands.skills.subcommands.view]
-description = "view shared skills catalog via pnpm dlx"
+description = "list global shared skills catalog via pnpm dlx"
 options = { "--check" = "check only", "--json" = "emit JSON" }
 
 [commands.agents.subcommands.skills.subcommands.add]

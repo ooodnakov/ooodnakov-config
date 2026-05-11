@@ -273,7 +273,7 @@ def parse_args() -> argparse.Namespace:
     )
     skills_view_parser = skills_subparsers.add_parser(
         "view",
-        help="View available skills from the shared pnpm skills catalog.",
+        help="List globally available skills through the shared pnpm skills catalog.",
     )
     skills_view_parser.add_argument("--json", action="store_true", help="Request JSON output from the skills catalog.")
     skills_view_parser.add_argument("--check", action="store_true", help="Print planned command without executing.")
@@ -1482,14 +1482,13 @@ def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -
 
 
 def cmd_skills_view(json_output: bool, check_only: bool) -> int:
-    command = ["pnpm", "dlx", "skills", "view"]
+    command = ["pnpm", "dlx", "skills", "ls", "-g"]
     if json_output:
         command.append("--json")
-    fallback = ["pnpm", "dlx", "skills", "list"]
     command_display = shlex.join(command)
     print_section("Agent Skills View")
     if check_only:
-        print_status_line("ok", "Plan: view shared skills catalog")
+        print_status_line("ok", "Plan: list global shared skills catalog")
         print(f"  command: {command_display}")
         return 0
 
@@ -1498,17 +1497,13 @@ def cmd_skills_view(json_output: bool, check_only: bool) -> int:
         print("  install pnpm first, then rerun: oooconf agents skills view")
         return 1
 
-    print_status_line("info", "Opening shared skills catalog via pnpm dlx")
+    print_status_line("info", "Listing global shared skills catalog via pnpm dlx")
     print(f"  command: {command_display}")
     result = subprocess.run(command, shell=os.name == "nt")
     if result.returncode != 0:
-        print_status_line("warn", "skills view command failed; trying fallback `skills list`.")
-        print(f"  command: {shlex.join(fallback)}")
-        fallback_result = subprocess.run(fallback, shell=os.name == "nt")
-        if fallback_result.returncode != 0:
-            print_status_line("fail", "skills view fallback failed.")
-            print("  ensure the `skills` package is reachable from pnpm dlx in your environment.")
-            return fallback_result.returncode
+        print_status_line("fail", "skills list command failed.")
+        print("  ensure the `skills` package is reachable from pnpm dlx in your environment.")
+        return result.returncode
     return 0
 
 
