@@ -47,6 +47,8 @@ local GLYPH_CIRCLE = nf.fa_circle --[[  ]]
 local GLYPH_ADMIN = nf.md_shield_half_full --[[ 󰞀 ]]
 local GLYPH_LINUX = nf.cod_terminal_linux --[[  ]]
 local GLYPH_DEBUG = nf.fa_bug --[[  ]]
+local GLYPH_ZOOM = nf.md_fullscreen --[[ 󰊓 ]]
+local GLYPH_PANES = nf.cod_layout_panel_justify --[[  ]]
 -- local GLYPH_SEARCH = nf.fa_search --[[  ]]
 local GLYPH_SEARCH = '🔭'
 
@@ -122,13 +124,19 @@ end
 ---@param base_title string
 ---@param max_width number
 ---@param inset number
-local function create_title(process_name, base_title, max_width, inset)
+---@param metadata string
+local function create_title(process_name, base_title, max_width, inset, metadata)
    local title
 
    if process_name:len() > 0 then
       title = process_name .. ' ~ ' .. base_title
    else
       title = base_title
+   end
+
+   if metadata:len() > 0 then
+      title = metadata .. ' ' .. title
+      inset = inset + metadata:len() + 1
    end
 
    if base_title == 'Debug' then
@@ -225,11 +233,19 @@ function Tab:set_info(event_opts, tab, max_width)
       inset = inset + 2
    end
 
+   local metadata = tostring(tab.tab_index + 1)
+   if #tab.panes > 1 then
+      metadata = metadata .. ' ' .. GLYPH_PANES .. #tab.panes
+   end
+   if tab.active_pane.is_zoomed then
+      metadata = metadata .. ' ' .. GLYPH_ZOOM
+   end
+
    if self.title_locked then
-      self.title = create_title('', self.locked_title, max_width, inset)
+      self.title = create_title('', self.locked_title, max_width, inset, metadata)
       return
    end
-   self.title = create_title(process_name, tab.active_pane.title, max_width, inset)
+   self.title = create_title(process_name, tab.active_pane.title, max_width, inset, metadata)
 end
 
 function Tab:create_cells()

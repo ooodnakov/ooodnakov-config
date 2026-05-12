@@ -403,6 +403,16 @@ Example:
 OOODNAKOV_WEZTERM_WORKSPACE=project-x OOODNAKOV_WEZTERM_CWD=$HOME/src/project-x wezterm
 ```
 
+The managed WezTerm setup also loads a small, cross-platform plugin layer:
+
+- `LEADER Space`: searchable command picker for managed keybindings
+- `LEADER s` / `LEADER S`: smart workspace switching and previous-workspace toggle with zoxide-backed project discovery
+- `LEADER r` / `LEADER R` / `LEADER D`: restore, save, and delete resurrected WezTerm workspace state
+- `LEADER d` / `LEADER v` / `LEADER h`: quick domain attach, vertical split attach, and horizontal split attach
+- pane navigation keeps the existing platform `SUPER+h/j/k/l` shortcuts but routes them through `smart-splits.nvim` so they can cross Neovim and WezTerm pane boundaries; `SUPER_REV+h/j/k/l` resizes panes the same way
+
+The tab/status bar remains local to this repo rather than replacing it wholesale with an external tab plugin. It borrows the useful pieces from the retro/tabline ecosystem: workspace and leader/mode cells, zoom indicators, tab indexes, pane counts, host/current-directory context, battery, and clock.
+
 ## CI/CD
 
 - CI runs on pushes to `main` and pull requests
