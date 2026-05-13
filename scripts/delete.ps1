@@ -129,30 +129,83 @@ $LocalBinDir = Join-Path $HomeDir ".local/bin"
 $ActivePowerShellProfile = $PROFILE.CurrentUserCurrentHost
 
 # Remove managed links
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $ConfigHome "ohmyposh/ooodnakov.omp.json")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $ConfigHome "powershell/Microsoft.PowerShell_profile.ps1")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
-Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
+if (Get-Command py -ErrorAction SilentlyContinue) {
+    $linkOutput = & py "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null
+    if ($LASTEXITCODE -eq 0 -and $linkOutput) {
+        $linkOutput | ForEach-Object {
+            $parts = $_ -split '\|'
+            if ($parts.Count -ge 3) {
+                $source = $parts[1]
+                $target = $parts[2]
+                Remove-ManagedLink -Source $source -Target $target
+            }
+        }
+    } else {
+        # Fallback to hardcoded pairs
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $ConfigHome "ohmyposh/ooodnakov.omp.json")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $ConfigHome "powershell/Microsoft.PowerShell_profile.ps1")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
+        Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
+    }
+} else {
+    # Fallback to hardcoded pairs
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $ConfigHome "ohmyposh/ooodnakov.omp.json")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target (Join-Path $ConfigHome "powershell/Microsoft.PowerShell_profile.ps1")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
+    Remove-ManagedLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
+}
 
 Remove-FontDir
 
 if ($Mode -eq "restore") {
-    Restore-Backup -Target (Join-Path $ConfigHome "wezterm")
-    Restore-Backup -Target (Join-Path $ConfigHome "yazi")
-    Restore-Backup -Target (Join-Path $ConfigHome "lazygit")
-    Restore-Backup -Target (Join-Path $ConfigHome "nvim")
-    Restore-Backup -Target (Join-Path $ConfigHome "ooodnakov")
-    Restore-Backup -Target (Join-Path $ConfigHome "ohmyposh/ooodnakov.omp.json")
-    Restore-Backup -Target (Join-Path $ConfigHome "powershell/Microsoft.PowerShell_profile.ps1")
-    Restore-Backup -Target $ActivePowerShellProfile
+    if (Get-Command py -ErrorAction SilentlyContinue) {
+        $linkOutput = & py "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null
+        if ($LASTEXITCODE -eq 0 -and $linkOutput) {
+            $linkOutput | ForEach-Object {
+                $parts = $_ -split '\|'
+                if ($parts.Count -ge 3) {
+                    $target = $parts[2]
+                    Restore-Backup -Target $target
+                }
+            }
+        } else {
+            # Fallback to hardcoded targets
+            Restore-Backup -Target (Join-Path $ConfigHome "wezterm")
+            Restore-Backup -Target (Join-Path $ConfigHome "yazi")
+            Restore-Backup -Target (Join-Path $ConfigHome "lazygit")
+            Restore-Backup -Target (Join-Path $ConfigHome "nvim")
+            Restore-Backup -Target (Join-Path $ConfigHome "ooodnakov")
+            Restore-Backup -Target (Join-Path $ConfigHome "ohmyposh/ooodnakov.omp.json")
+            Restore-Backup -Target (Join-Path $ConfigHome "powershell/Microsoft.PowerShell_profile.ps1")
+            Restore-Backup -Target $ActivePowerShellProfile
+        }
+    } else {
+        # Fallback to hardcoded targets
+        Restore-Backup -Target (Join-Path $ConfigHome "wezterm")
+        Restore-Backup -Target (Join-Path $ConfigHome "yazi")
+        Restore-Backup -Target (Join-Path $ConfigHome "lazygit")
+        Restore-Backup -Target (Join-Path $ConfigHome "nvim")
+        Restore-Backup -Target (Join-Path $ConfigHome "ooodnakov")
+        Restore-Backup -Target (Join-Path $ConfigHome "ohmyposh/ooodnakov.omp.json")
+        Restore-Backup -Target (Join-Path $ConfigHome "powershell/Microsoft.PowerShell_profile.ps1")
+        Restore-Backup -Target $ActivePowerShellProfile
+    }
 }
 
 Write-Output ""
