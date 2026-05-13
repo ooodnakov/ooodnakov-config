@@ -10,6 +10,13 @@ local resurrect = wezterm.plugin.require('https://github.com/MLFlexer/resurrect.
 local workspace_switcher = wezterm.plugin.require(
    'https://github.com/MLFlexer/smart_workspace_switcher.wezterm'
 )
+if platform.is_mac then
+   workspace_switcher.zoxide_path = '/opt/homebrew/bin/zoxide'
+elseif platform.is_linux then
+   workspace_switcher.zoxide_path = '/usr/bin/zoxide'
+elseif platform.is_win then
+   workspace_switcher.zoxide_path = 'placeholder'
+end
 local smart_splits = wezterm.plugin.require('https://github.com/mrjones2014/smart-splits.nvim')
 
 local M = {}
