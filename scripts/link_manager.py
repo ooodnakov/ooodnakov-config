@@ -177,6 +177,11 @@ def read_links_manifest(repo_root: Path | str, platform: str) -> list[dict]:
         source = expand_path_template(entry["source"], platform)
         target = expand_path_template(entry["target"], platform)
 
+        # Resolve source to absolute path relative to repo_root
+        source_path = Path(source)
+        if not os.path.isabs(source_path):
+            source = str((repo_root / source_path).resolve())
+
         entry_dict = {
             "key": key,
             "source": source,
@@ -258,7 +263,7 @@ def discover_links(repo_root: Path | str, manifest: dict, platform: str = "linux
 
                 # Generate link entry
                 key = entry.name
-                source = str(entry).replace("\\", "/")
+                source = str(entry.resolve()).replace("\\", "/")
 
                 # Skip if ANY explicit entry (from full manifest) restricts this key to a different platform
                 if explicit_links:
