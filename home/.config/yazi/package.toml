@@ -19,9 +19,9 @@ rev = "1db18bb"
 hash = "6e67c36d6c25fc84cb0976aac8a3ff5"
 
 [[plugin.deps]]
-use = "alberti42/faster-piper"
-rev = "8b794bf"
-hash = "7fc8921769b02a0c9b1d9a2bc523db57"
+use = "yazi-rs/plugins:piper"
+rev = "1db18bb"
+hash = "bef05511fab6c6414990eb48003582b9"
 
 [[plugin.deps]]
 use = "yazi-rs/plugins:zoom"
