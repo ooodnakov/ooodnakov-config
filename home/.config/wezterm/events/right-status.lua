@@ -109,13 +109,17 @@ local function shorten_cwd(path)
    path = path:gsub('^file://', ''):gsub('%%20', ' ')
    path = path:gsub('^' .. wezterm.home_dir:gsub('([^%w])', '%%%1'), '~')
    local max_len = 42
-   if #path > max_len then
-      path = '…' .. path:sub(#path - max_len + 2)
+   if wezterm.column_width(path) > max_len then
+      path = '…' .. wezterm.truncate_left(path, max_len - 1)
    end
    return path
 end
 
 local function cwd_and_host(pane)
+   if not pane then
+      return '', wezterm.hostname()
+   end
+
    local uri = pane:get_current_working_dir()
    if not uri then
       return '', wezterm.hostname()

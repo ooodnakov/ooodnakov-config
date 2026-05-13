@@ -136,7 +136,7 @@ local function create_title(process_name, base_title, max_width, inset, metadata
 
    if metadata:len() > 0 then
       title = metadata .. ' ' .. title
-      inset = inset + metadata:len() + 1
+      inset = inset + wezterm.column_width(metadata) + 1
    end
 
    if base_title == 'Debug' then
@@ -149,11 +149,10 @@ local function create_title(process_name, base_title, max_width, inset, metadata
       inset = inset - 2
    end
 
-   if title:len() > max_width - inset then
-      local diff = title:len() - max_width + inset
-      title = title:sub(1, title:len() - diff)
+   if wezterm.column_width(title) > max_width - inset then
+      title = wezterm.truncate_right(title, max_width - inset)
    else
-      local padding = max_width - title:len() - inset
+      local padding = max_width - wezterm.column_width(title) - inset
       title = title .. string.rep(' ', padding)
    end
 

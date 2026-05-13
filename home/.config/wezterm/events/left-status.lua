@@ -42,18 +42,7 @@ cells
    :add_segment('zoom_right', GLYPH_SEMI_CIRCLE_RIGHT, colors.scircle_zoom)
 
 local function active_pane_is_zoomed(pane)
-   local tab = pane:tab()
-   if not tab then
-      return false
-   end
-
-   for _, pane_info in ipairs(tab:panes_with_info()) do
-      if pane_info.is_active and pane_info.is_zoomed then
-         return true
-      end
-   end
-
-   return false
+   return pane and pane:is_zoomed() or false
 end
 
 M.setup = function()

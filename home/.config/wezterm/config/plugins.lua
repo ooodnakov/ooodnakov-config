@@ -165,8 +165,8 @@ function M.apply_to_config(config)
    smart_splits.apply_to_config(config, {
       direction_keys = { 'h', 'j', 'k', 'l' },
       modifiers = {
-         move = { wezterm = mod.SUPER, neovim = 'CTRL' },
-         resize = { wezterm = mod.SUPER_REV, neovim = 'ALT' },
+         move = mod.SUPER,
+         resize = mod.SUPER_REV,
       },
       default_amount = 3,
       log_level = 'warn',
