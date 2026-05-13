@@ -17,6 +17,7 @@ function Get-OooconfCompletions {
         'lock',
         'update-pins',
         'completions',
+        'link',
         'agents',
         'secrets',
         'shell',
@@ -25,10 +26,10 @@ function Get-OooconfCompletions {
         'check',
         'preview',
         'upgrade',
-        'komorebi',
-        'wm',
         'help',
-        'minimal'
+        'minimal',
+        'komorebi',
+        'wm'
     )
 
     $OooconfGlobalOptions = @(
@@ -300,6 +301,14 @@ function Get-OooconfCompletions {
         }
         'komorebi' = @{
             Options = @()
+            OptionsWithArgs = @()
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+            }
+        }
+        'link' = @{
+            Options = @('--dry-run')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
