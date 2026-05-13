@@ -86,8 +86,13 @@ local function battery_info()
 
    local charge = ''
    local icon = ''
+   local ok, batteries = pcall(wezterm.battery_info)
 
-   for _, b in ipairs(wezterm.battery_info()) do
+   if not ok or type(batteries) ~= 'table' then
+      return charge, icon
+   end
+
+   for _, b in ipairs(batteries) do
       local idx = umath.clamp(umath.round(b.state_of_charge * 10), 1, 10)
       charge = string.format('%.0f%%', b.state_of_charge * 100)
 
@@ -97,7 +102,10 @@ local function battery_info()
          icon = discharging_icons[idx]
       end
    end
-
+   
+   if icon == '' then
+      return charge, icon
+   end
    return charge, icon .. ' '
 end
 
@@ -140,7 +148,7 @@ M.setup = function(opts)
       wezterm.log_error(err)
    end
 
-   wezterm.on('update-right-status', function(window, pane)
+   wezterm.on('update-status', function(window, pane)
       local battery_text, battery_icon = battery_info()
       local cwd, host = cwd_and_host(pane)
       local segments = { 'date_icon', 'date_text' }

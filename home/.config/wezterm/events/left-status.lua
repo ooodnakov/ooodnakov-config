@@ -42,11 +42,35 @@ cells
    :add_segment('zoom_right', GLYPH_SEMI_CIRCLE_RIGHT, colors.scircle_zoom)
 
 local function active_pane_is_zoomed(pane)
-   return pane and pane:is_zoomed() or false
+   if not pane then
+      return false
+   end
+
+   local ok, tab = pcall(function()
+      return pane:tab()
+   end)
+   if not ok or not tab or type(tab.panes_with_info) ~= 'function' then
+      return false
+   end
+
+   local panes_ok, panes = pcall(function()
+      return tab:panes_with_info()
+   end)
+   if not panes_ok or type(panes) ~= 'table' then
+      return false
+   end
+
+   for _, pane_info in ipairs(panes) do
+      if pane_info.is_active then
+         return pane_info.is_zoomed or false
+      end
+   end
+
+   return false
 end
 
 M.setup = function()
-   wezterm.on('update-right-status', function(window, pane)
+   wezterm.on('update-status', function(window, pane)
       local segments = { 'workspace_left', 'workspace_icon', 'workspace_text', 'workspace_right' }
       local mode_name = window:active_key_table()
 
