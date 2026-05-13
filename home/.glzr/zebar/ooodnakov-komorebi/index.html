@@ -403,7 +403,7 @@
       button.type = 'button';
       button.className = 'workspace' + (focused ? ' focused' : '') + (occupied ? ' occupied' : '');
       button.title = workspace.displayName || `Workspace ${workspace.name}`;
-      button.onclick = () => komorebiOutput.runCommand(`focus workspace ${workspace.name}`);
+      button.onclick = () => komorebiOutput.runCommand(`focus-named-workspace ${workspace.name}`);
 
       label.className = 'workspace-label';
       label.innerText = workspace.name;
