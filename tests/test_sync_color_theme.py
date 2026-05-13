@@ -268,3 +268,69 @@ def test_set_wezterm_theme_creates_missing_local_override(tmp_path: Path, monkey
         '  color_scheme = "tokyonight_night",\n'
         "}\n"
     )
+
+
+def test_set_wezterm_theme_inserts_color_scheme_in_commented_returned_table(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    path = tmp_path / ".config" / "ooodnakov" / "local" / "wezterm.lua"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "return { -- local overrides\n  font_size = 14,\n}\n",
+        encoding="utf-8",
+    )
+
+    result = set_wezterm_theme("gruvbox")
+
+    assert result == "wezterm: inserted color_scheme in returned table -> Gruvbox dark, hard (base16)"
+    assert path.read_text(encoding="utf-8") == (
+        'return { -- local overrides\n  color_scheme = "Gruvbox dark, hard (base16)",\n  font_size = 14,\n}\n'
+    )
+
+
+def test_set_wezterm_theme_preserves_commented_variable_return_local_override(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    path = tmp_path / ".config" / "ooodnakov" / "local" / "wezterm.lua"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        "local overrides = {\n  font_size = 14,\n}\nreturn overrides -- local overrides\n",
+        encoding="utf-8",
+    )
+
+    result = set_wezterm_theme("nord")
+
+    assert result == "wezterm: added color_scheme before final return -> Nord"
+    assert path.read_text(encoding="utf-8") == (
+        "local overrides = {\n"
+        "  font_size = 14,\n"
+        "}\n"
+        "local __oooconf_local_override = overrides\n"
+        '__oooconf_local_override.color_scheme = "Nord"\n'
+        "return __oooconf_local_override\n"
+    )
+
+
+def test_set_wezterm_theme_inserts_color_scheme_in_inline_returned_table(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    path = tmp_path / ".config" / "ooodnakov" / "local" / "wezterm.lua"
+    path.parent.mkdir(parents=True)
+    path.write_text("return { font_size = 14 } -- local overrides\n", encoding="utf-8")
+
+    result = set_wezterm_theme("tokyonight")
+
+    assert result == "wezterm: inserted color_scheme in inline returned table -> tokyonight_night"
+    assert path.read_text(encoding="utf-8") == (
+        'return {\n  color_scheme = "tokyonight_night",\n  font_size = 14\n} -- local overrides\n'
+    )
+
+
+def test_set_wezterm_theme_does_not_append_after_unrecognized_return(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    path = tmp_path / ".config" / "ooodnakov" / "local" / "wezterm.lua"
+    path.parent.mkdir(parents=True)
+    original = "return make_overrides()\n"
+    path.write_text(original, encoding="utf-8")
+
+    result = set_wezterm_theme("catppuccin")
+
+    assert result == "wezterm: skipped unrecognized existing return -> Catppuccin Mocha"
+    assert path.read_text(encoding="utf-8") == original

@@ -444,7 +444,7 @@ def _with_wezterm_color_scheme(raw: str, scheme: str) -> tuple[str, str]:
         )
         return updated, "updated existing color_scheme"
 
-    return_table_pattern = re.compile(r"(?m)^(?P<indent>[ \t]*)return\s*\{\s*$")
+    return_table_pattern = re.compile(r"(?m)^(?P<indent>[ \t]*)return\s*\{[ \t]*(?:--.*)?$")
     match = return_table_pattern.search(raw)
     if match:
         insert_at = match.end()
@@ -452,7 +452,22 @@ def _with_wezterm_color_scheme(raw: str, scheme: str) -> tuple[str, str]:
         updated = raw[:insert_at] + f"\n{indent}  color_scheme = {quoted_scheme}," + raw[insert_at:]
         return updated, "inserted color_scheme in returned table"
 
-    final_return_pattern = re.compile(r"(?m)^(?P<indent>[ \t]*)return[ \t]+(?P<name>[A-Za-z_][A-Za-z0-9_\.]*)[ \t]*$")
+    inline_return_table_pattern = re.compile(
+        r"(?m)^(?P<indent>[ \t]*)return\s*\{[ \t]*(?P<body>[^{}\n]*)[ \t]*\}(?P<trailing>[ \t]*(?:--.*)?)$"
+    )
+    match = inline_return_table_pattern.search(raw)
+    if match:
+        indent = match.group("indent")
+        body = match.group("body").strip()
+        trailing = match.group("trailing")
+        body_line = f"\n{indent}  {body}" if body else ""
+        replacement = f"{indent}return {{\n{indent}  color_scheme = {quoted_scheme},{body_line}\n{indent}}}{trailing}"
+        updated = raw[: match.start()] + replacement + raw[match.end() :]
+        return updated, "inserted color_scheme in inline returned table"
+
+    final_return_pattern = re.compile(
+        r"(?m)^(?P<indent>[ \t]*)return[ \t]+(?P<name>[A-Za-z_][A-Za-z0-9_\.]*)[ \t]*(?:--.*)?$"
+    )
     matches = list(final_return_pattern.finditer(raw))
     if matches:
         match = matches[-1]
@@ -465,6 +480,10 @@ def _with_wezterm_color_scheme(raw: str, scheme: str) -> tuple[str, str]:
         )
         updated = raw[: match.start()] + replacement + raw[match.end() :]
         return updated, "added color_scheme before final return"
+
+    return_pattern = re.compile(r"(?m)^[ \t]*return\b")
+    if return_pattern.search(raw):
+        return raw, "skipped unrecognized existing return"
 
     suffix = "" if raw.endswith("\n") or not raw else "\n"
     updated = (
