@@ -22,6 +22,7 @@ KNOWN_SHELL_AUTO_UV_MODES=(enabled quiet status)
 KNOWN_SHELL_PROMPT_MODES=(p10k ohmyposh status)
 KNOWN_SHELL_PROMPT_STYLE_MODES=(verbose concise status)
 KNOWN_COLOR_THEMES=(default catppuccin gruvbox nord tokyonight noctalia)
+KNOWN_COLOR_MODES=(dark light)
 LOCAL_OVERRIDES_START="# --- LOCAL OVERRIDES START ---"
 LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
 FORGIT_ALIAS_VAR="OOODNAKOV_FORGIT_ALIAS_MODE"
@@ -30,6 +31,7 @@ PSFZF_TAB_VAR="OOODNAKOV_PSFZF_TAB"
 PSFZF_GIT_VAR="OOODNAKOV_PSFZF_GIT"
 AUTO_UV_ENV_VAR="AUTO_UV_ENV_QUIET"
 OOOCONF_THEME_VAR="OOOCONF_THEME"
+OOOCONF_COLOR_MODE_VAR="OOOCONF_COLOR_MODE"
 OOOCONF_OMP_CONFIG_VAR="OOOCONF_OMP_CONFIG"
 OOOCONF_ZSH_PROMPT_VAR="OOOCONF_ZSH_PROMPT"
 OOOCONF_PROMPT_STYLE_VAR="OOOCONF_PROMPT_STYLE"
@@ -153,64 +155,78 @@ ui_colorize() {
     return 0
   fi
   theme="${__OOOCONF_THEME_CACHE:=$(get_oooconf_theme)}"
+  theme="${theme}:$(get_oooconf_color_mode)"
   case "$role" in
     section)
       case "$theme" in
-        catppuccin) code='1;38;5;111' ;;
-        gruvbox) code='1;38;5;214' ;;
-        nord) code='1;38;5;110' ;;
-        tokyonight) code='1;38;5;111' ;;
-        noctalia) code='1;38;5;141' ;;
+        catppuccin:dark) code='1;38;5;111' ;;
+        gruvbox:dark) code='1;38;5;214' ;;
+        nord:dark) code='1;38;5;110' ;;
+        tokyonight:dark) code='1;38;5;111' ;;
+        noctalia:dark) code='1;38;5;141' ;;
+        catppuccin:light|tokyonight:light|default:light|noctalia:light) code='1;38;5;25' ;;
+        gruvbox:light) code='1;38;5;94' ;;
+        nord:light) code='1;38;5;24' ;;
         *) code='1;38;5;111' ;;
       esac
       ;;
     ok)
       case "$theme" in
-        catppuccin) code='1;38;5;150' ;;
-        gruvbox) code='1;38;5;142' ;;
-        nord) code='1;38;5;108' ;;
-        tokyonight) code='1;38;5;114' ;;
-        noctalia) code='1;38;5;110' ;;
+        catppuccin:dark) code='1;38;5;150' ;;
+        gruvbox:dark) code='1;38;5;142' ;;
+        nord:dark) code='1;38;5;108' ;;
+        tokyonight:dark) code='1;38;5;114' ;;
+        noctalia:dark) code='1;38;5;110' ;;
+        catppuccin:light|gruvbox:light|default:light|noctalia:light) code='1;38;5;64' ;;
+        nord:light|tokyonight:light) code='1;38;5;31' ;;
         *) code='1;38;5;78' ;;
       esac
       ;;
     warn)
       case "$theme" in
-        catppuccin) code='1;38;5;223' ;;
-        gruvbox) code='1;38;5;214' ;;
-        nord) code='1;38;5;180' ;;
-        tokyonight) code='1;38;5;221' ;;
-        noctalia) code='1;38;5;180' ;;
+        catppuccin:dark) code='1;38;5;223' ;;
+        gruvbox:dark) code='1;38;5;214' ;;
+        nord:dark) code='1;38;5;180' ;;
+        tokyonight:dark) code='1;38;5;221' ;;
+        noctalia:dark) code='1;38;5;180' ;;
+        catppuccin:light|gruvbox:light|tokyonight:light|default:light|noctalia:light) code='1;38;5;130' ;;
+        nord:light) code='1;38;5;131' ;;
         *) code='1;38;5;221' ;;
       esac
       ;;
     fail)
       case "$theme" in
-        catppuccin) code='1;38;5;203' ;;
-        gruvbox) code='1;38;5;167' ;;
-        nord) code='1;38;5;174' ;;
-        tokyonight) code='1;38;5;203' ;;
-        noctalia) code='1;38;5;174' ;;
+        catppuccin:dark) code='1;38;5;203' ;;
+        gruvbox:dark) code='1;38;5;167' ;;
+        nord:dark) code='1;38;5;174' ;;
+        tokyonight:dark) code='1;38;5;203' ;;
+        noctalia:dark) code='1;38;5;174' ;;
+        catppuccin:light|gruvbox:light|tokyonight:light|default:light|noctalia:light) code='1;38;5;124' ;;
+        nord:light) code='1;38;5;131' ;;
         *) code='1;38;5;203' ;;
       esac
       ;;
     info)
       case "$theme" in
-        catppuccin) code='1;38;5;117' ;;
-        gruvbox) code='1;38;5;109' ;;
-        nord) code='1;38;5;110' ;;
-        tokyonight) code='1;38;5;117' ;;
-        noctalia) code='1;38;5;117' ;;
+        catppuccin:dark) code='1;38;5;117' ;;
+        gruvbox:dark) code='1;38;5;109' ;;
+        nord:dark) code='1;38;5;110' ;;
+        tokyonight:dark) code='1;38;5;117' ;;
+        noctalia:dark) code='1;38;5;117' ;;
+        catppuccin:light|tokyonight:light|default:light|noctalia:light) code='1;38;5;25' ;;
+        gruvbox:light) code='1;38;5;24' ;;
+        nord:light) code='1;38;5;25' ;;
         *) code='1;38;5;117' ;;
       esac
       ;;
     hint|muted)
       case "$theme" in
-        catppuccin) code='38;5;145' ;;
-        gruvbox) code='38;5;248' ;;
-        nord) code='38;5;146' ;;
-        tokyonight) code='38;5;146' ;;
-        noctalia) code='38;5;146' ;;
+        catppuccin:dark) code='38;5;145' ;;
+        gruvbox:dark) code='38;5;248' ;;
+        nord:dark) code='38;5;146' ;;
+        tokyonight:dark) code='38;5;146' ;;
+        noctalia:dark) code='38;5;146' ;;
+        catppuccin:light|gruvbox:light|nord:light|tokyonight:light|default:light|noctalia:light) code='38;5;59' ;;
         *) code='38;5;245' ;;
       esac
       ;;
@@ -506,6 +522,30 @@ get_auto_uv_env_mode() {
   printf 'enabled\n'
 }
 
+get_oooconf_color_mode() {
+  local env_zsh mode
+
+  case "${OOOCONF_COLOR_MODE:-}" in
+    dark|light)
+      printf '%s\n' "$OOOCONF_COLOR_MODE"
+      return 0
+      ;;
+  esac
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  if [ -f "$env_zsh" ]; then
+    mode="$(sed -n "s/^export ${OOOCONF_COLOR_MODE_VAR}=\"\([^\"]*\)\"$/\1/p" "$env_zsh" | head -n 1)"
+    case "$mode" in
+      dark|light)
+        printf '%s\n' "$mode"
+        return 0
+        ;;
+    esac
+  fi
+
+  printf 'dark\n'
+}
+
 get_oooconf_theme() {
   local env_zsh mode
 
@@ -548,6 +588,7 @@ detect_repo_color_theme() {
 
 set_oooconf_theme() {
   local mode="$1"
+  local color_mode="${2:-$(get_oooconf_color_mode)}"
   local env_zsh env_ps1 omp_config_path
 
   case "$mode" in
@@ -559,20 +600,44 @@ set_oooconf_theme() {
       ;;
   esac
 
+  case "$color_mode" in
+    dark|light) ;;
+    *)
+      visible_error "Invalid color mode: $color_mode"
+      visible_error "Expected one of: ${KNOWN_COLOR_MODES[*]}"
+      return 1
+      ;;
+  esac
+
   env_zsh="$(shell_local_env_zsh_path)"
   env_ps1="$(shell_local_env_ps1_path)"
-  omp_config_path="$(shell_config_home)/local/ohmyposh/${mode}.omp.json"
+  omp_config_path="$(shell_config_home)/local/ohmyposh/${mode}-${color_mode}.omp.json"
 
   upsert_override_line "$env_zsh" "$OOOCONF_THEME_VAR" "export $OOOCONF_THEME_VAR=\"$mode\""
   upsert_override_line "$env_ps1" "$OOOCONF_THEME_VAR" "\$env:$OOOCONF_THEME_VAR = '$mode'"
+  upsert_override_line "$env_zsh" "$OOOCONF_COLOR_MODE_VAR" "export $OOOCONF_COLOR_MODE_VAR=\"$color_mode\""
+  upsert_override_line "$env_ps1" "$OOOCONF_COLOR_MODE_VAR" "\$env:$OOOCONF_COLOR_MODE_VAR = '$color_mode'"
   upsert_override_line "$env_zsh" "$OOOCONF_OMP_CONFIG_VAR" "export $OOOCONF_OMP_CONFIG_VAR=\"$omp_config_path\""
   upsert_override_line "$env_ps1" "$OOOCONF_OMP_CONFIG_VAR" "\$env:$OOOCONF_OMP_CONFIG_VAR = '$omp_config_path'"
 
-  ui_line ok "oooconf theme set to $mode"
+  ui_line ok "oooconf theme set to $mode ($color_mode)"
   ui_line info "zsh: $env_zsh"
   ui_line info "pwsh: $env_ps1"
-  OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$SYNC_COLOR_THEME" apply --theme "$mode"
+  OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$SYNC_COLOR_THEME" apply --theme "$mode" --mode "$color_mode"
   ui_line hint "Open a new shell session to apply the theme globally."
+}
+
+set_oooconf_color_mode() {
+  local color_mode="$1"
+  case "$color_mode" in
+    dark|light) ;;
+    *)
+      visible_error "Invalid color mode: $color_mode"
+      visible_error "Expected one of: ${KNOWN_COLOR_MODES[*]}"
+      return 1
+      ;;
+  esac
+  set_oooconf_theme "$(get_oooconf_theme)" "$color_mode"
 }
 
 set_zsh_prompt_mode() {
@@ -758,16 +823,19 @@ print_help_for_scope() {
       ;;
     color)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf color [status|list|<theme>]
+Usage: oooconf color [status|list|<theme>|dark|light]
 
-Set or inspect the oooconf CLI color theme.
+Set or inspect the oooconf CLI color theme and dark/light mode.
 Themes:
   default, catppuccin, gruvbox, nord, tokyonight, noctalia
+Modes:
+  dark, light
 Examples:
   oooconf color status
   oooconf color list
   oooconf color catppuccin
   oooconf color noctalia
+  oooconf color light
 EOF
       ;;
     *)
@@ -986,11 +1054,12 @@ handle_color_command() {
   local action="${1:-status}"
   case "$action" in
     status)
-      printf '%s\n' "$(get_oooconf_theme)"
+      printf 'theme=%s\n' "$(get_oooconf_theme)"
+      printf 'mode=%s\n' "$(get_oooconf_color_mode)"
       OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$SYNC_COLOR_THEME" status || true
       ;;
     list)
-      printf '%s\n' "${KNOWN_COLOR_THEMES[@]}"
+      printf '%s\n' "${KNOWN_COLOR_THEMES[@]}" "${KNOWN_COLOR_MODES[@]}"
       ;;
     help|-h|--help)
       cat <<'EOF'
@@ -998,13 +1067,20 @@ Usage:
   oooconf color status
   oooconf color list
   oooconf color <theme>
+  oooconf color dark
+  oooconf color light
 
-Select a unified oooconf CLI color theme.
+Select a unified oooconf CLI color theme and dark/light mode.
 Available themes:
   default, catppuccin, gruvbox, nord, tokyonight, noctalia
+Available modes:
+  dark, light
 This also syncs theme-friendly overrides for yazi, wezterm local override, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
 Status output also reports detected nvim and oh-my-posh theme config state.
 EOF
+      ;;
+    dark|light)
+      set_oooconf_color_mode "$action"
       ;;
     *)
       set_oooconf_theme "$action"

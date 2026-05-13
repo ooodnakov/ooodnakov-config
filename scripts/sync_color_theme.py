@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from json import JSONDecodeError
 from pathlib import Path
@@ -11,16 +12,29 @@ from typing import Any
 CSS_MANAGED_BEGIN = "/* oooconf color:start */"
 CSS_MANAGED_END = "/* oooconf color:end */"
 
+COLOR_MODES = ("dark", "light")
+DEFAULT_COLOR_MODE = "dark"
+
 WEZTERM_SCHEME_BY_THEME = {
-    "default": "Noctalia",
-    "catppuccin": "Catppuccin Mocha",
-    "gruvbox": "Gruvbox dark, hard (base16)",
-    "nord": "Nord",
-    "tokyonight": "tokyonight_night",
-    "noctalia": "Noctalia",
+    "dark": {
+        "default": "Noctalia",
+        "catppuccin": "Catppuccin Mocha",
+        "gruvbox": "Gruvbox dark, hard (base16)",
+        "nord": "Nord",
+        "tokyonight": "tokyonight_night",
+        "noctalia": "Noctalia",
+    },
+    "light": {
+        "default": "Builtin Solarized Light",
+        "catppuccin": "Catppuccin Latte",
+        "gruvbox": "Gruvbox light, hard (base16)",
+        "nord": "Nord Light",
+        "tokyonight": "tokyonight_day",
+        "noctalia": "Builtin Solarized Light",
+    },
 }
 
-KOMOREBI_THEME_BY_THEME = {
+KOMOREBI_DARK_THEME_BY_THEME = {
     "default": {
         "palette": "Base16",
         "name": "Ashes",
@@ -71,7 +85,7 @@ KOMOREBI_THEME_BY_THEME = {
     },
 }
 
-SKETCHYBAR_COLORS_BY_THEME: dict[str, dict[str, str]] = {
+SKETCHYBAR_DARK_COLORS_BY_THEME: dict[str, dict[str, str]] = {
     "default": {
         "TEXT_WHITE": "0xFFFBF1C7",
         "TEXT_GREY": "0xFFEBDBB2",
@@ -170,7 +184,7 @@ SKETCHYBAR_COLORS_BY_THEME: dict[str, dict[str, str]] = {
     },
 }
 
-ZEBAR_VARS_BY_THEME: dict[str, dict[str, str]] = {
+ZEBAR_DARK_VARS_BY_THEME: dict[str, dict[str, str]] = {
     "default": {
         "bg": "rgba(28, 32, 35, 0.85)",
         "fg": "#c0c5ce",
@@ -263,7 +277,7 @@ ZEBAR_VARS_BY_THEME: dict[str, dict[str, str]] = {
     },
 }
 
-OVERLINE_ZEBAR_VARS_BY_THEME: dict[str, dict[str, str]] = {
+OVERLINE_ZEBAR_DARK_VARS_BY_THEME: dict[str, dict[str, str]] = {
     "default": {
         "border": "#343b47",
         "background": "#1e2228",
@@ -362,7 +376,7 @@ OVERLINE_ZEBAR_VARS_BY_THEME: dict[str, dict[str, str]] = {
     },
 }
 
-OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
+OMP_DARK_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
     "default": {
         "#444444": "#444444",
         "#eeeeee": "#eeeeee",
@@ -454,30 +468,422 @@ OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
         "#5f8787": "#8eb2c7",
     },
 }
+KOMOREBI_THEME_BY_THEME = KOMOREBI_DARK_THEME_BY_THEME
+SKETCHYBAR_COLORS_BY_THEME = SKETCHYBAR_DARK_COLORS_BY_THEME
+ZEBAR_VARS_BY_THEME = ZEBAR_DARK_VARS_BY_THEME
+OVERLINE_ZEBAR_VARS_BY_THEME = OVERLINE_ZEBAR_DARK_VARS_BY_THEME
+OMP_REPLACEMENTS_BY_THEME = OMP_DARK_REPLACEMENTS_BY_THEME
+
+KOMOREBI_LIGHT_THEME_BY_THEME = {
+    "default": {
+        "palette": "Base16",
+        "name": "SolarizedLight",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
+    },
+    "catppuccin": {
+        "palette": "Catppuccin",
+        "name": "Latte",
+        "single_border": "Blue",
+        "unfocused_border": "Surface0",
+        "bar_accent": "Blue",
+        "accent": "Blue",
+    },
+    "gruvbox": {
+        "palette": "Base16",
+        "name": "GruvboxLightHard",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
+    },
+    "nord": {
+        "palette": "Base16",
+        "name": "Nord",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
+    },
+    "tokyonight": {
+        "palette": "Base16",
+        "name": "TokyoNightDay",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
+    },
+    "noctalia": {
+        "palette": "Base16",
+        "name": "SolarizedLight",
+        "single_border": "Base0D",
+        "unfocused_border": "Base03",
+        "bar_accent": "Base0D",
+        "accent": "Base0D",
+    },
+}
+
+SKETCHYBAR_LIGHT_COLORS_BY_THEME: dict[str, dict[str, str]] = {
+    "default": {
+        "TEXT_WHITE": "0xFF586E75",
+        "TEXT_GREY": "0xFF657B83",
+        "TEXT_SPOTIFY_GREEN": "0xFF859900",
+        "TEXT_RED": "0xFFDC322F",
+        "TEXT_ORANGE": "0xFFCB4B16",
+        "BACKGROUND": "0xDAFDF6E3",
+        "BACKGROUND_DARK": "0xFFEEE8D5",
+        "BACKGROUND_DARK_BLUE": "0xFFDCECF2",
+        "BACKGROUND_DARK_ORANGE": "0xFFF4E3C1",
+        "BACKGROUND_DARK_GREEN": "0xFFE4ECC9",
+        "BACKGROUND_DARK_RED": "0xFFF1D7D2",
+        "BACKGROUND_DARKER": "0xFFE9E1CC",
+        "HIGHLIGHT_BACKGROUND": "0xCF268BD2",
+        "TRANSPARENT": "0x00000000",
+    },
+    "catppuccin": {
+        "TEXT_WHITE": "0xFF4C4F69",
+        "TEXT_GREY": "0xFF6C6F85",
+        "TEXT_SPOTIFY_GREEN": "0xFF40A02B",
+        "TEXT_RED": "0xFFD20F39",
+        "TEXT_ORANGE": "0xFFFE640B",
+        "BACKGROUND": "0xDAEFF1F5",
+        "BACKGROUND_DARK": "0xFFE6E9EF",
+        "BACKGROUND_DARK_BLUE": "0xFFDCE0E8",
+        "BACKGROUND_DARK_ORANGE": "0xFFF2E0D7",
+        "BACKGROUND_DARK_GREEN": "0xFFDDEAD7",
+        "BACKGROUND_DARK_RED": "0xFFF0D5DD",
+        "BACKGROUND_DARKER": "0xFFDCE0E8",
+        "HIGHLIGHT_BACKGROUND": "0xCF1E66F5",
+        "TRANSPARENT": "0x00000000",
+    },
+    "gruvbox": {
+        "TEXT_WHITE": "0xFF3C3836",
+        "TEXT_GREY": "0xFF665C54",
+        "TEXT_SPOTIFY_GREEN": "0xFF79740E",
+        "TEXT_RED": "0xFF9D0006",
+        "TEXT_ORANGE": "0xFFAF3A03",
+        "BACKGROUND": "0xDAFBF1C7",
+        "BACKGROUND_DARK": "0xFFEBDBB2",
+        "BACKGROUND_DARK_BLUE": "0xFFDCE6D6",
+        "BACKGROUND_DARK_ORANGE": "0xFFF0D8B7",
+        "BACKGROUND_DARK_GREEN": "0xFFE1E3B0",
+        "BACKGROUND_DARK_RED": "0xFFEBCDC1",
+        "BACKGROUND_DARKER": "0xFFD5C4A1",
+        "HIGHLIGHT_BACKGROUND": "0xCF076678",
+        "TRANSPARENT": "0x00000000",
+    },
+    "nord": {
+        "TEXT_WHITE": "0xFF2E3440",
+        "TEXT_GREY": "0xFF4C566A",
+        "TEXT_SPOTIFY_GREEN": "0xFF5E81AC",
+        "TEXT_RED": "0xFFBF616A",
+        "TEXT_ORANGE": "0xFFD08770",
+        "BACKGROUND": "0xDAECEFF4",
+        "BACKGROUND_DARK": "0xFFE5E9F0",
+        "BACKGROUND_DARK_BLUE": "0xFFD8DEE9",
+        "BACKGROUND_DARK_ORANGE": "0xFFF0E1DA",
+        "BACKGROUND_DARK_GREEN": "0xFFDDE8DD",
+        "BACKGROUND_DARK_RED": "0xFFEBD9DE",
+        "BACKGROUND_DARKER": "0xFFD8DEE9",
+        "HIGHLIGHT_BACKGROUND": "0xCF5E81AC",
+        "TRANSPARENT": "0x00000000",
+    },
+    "tokyonight": {
+        "TEXT_WHITE": "0xFF343B58",
+        "TEXT_GREY": "0xFF565A6E",
+        "TEXT_SPOTIFY_GREEN": "0xFF485E30",
+        "TEXT_RED": "0xFF8C4351",
+        "TEXT_ORANGE": "0xFF965027",
+        "BACKGROUND": "0xDAE1E2E7",
+        "BACKGROUND_DARK": "0xFFD5D6DB",
+        "BACKGROUND_DARK_BLUE": "0xFFC9D4E8",
+        "BACKGROUND_DARK_ORANGE": "0xFFE9D7C6",
+        "BACKGROUND_DARK_GREEN": "0xFFD7E1CC",
+        "BACKGROUND_DARK_RED": "0xFFE7CED5",
+        "BACKGROUND_DARKER": "0xFFC4C8DA",
+        "HIGHLIGHT_BACKGROUND": "0xCF34548A",
+        "TRANSPARENT": "0x00000000",
+    },
+    "noctalia": {
+        "TEXT_WHITE": "0xFF586E75",
+        "TEXT_GREY": "0xFF657B83",
+        "TEXT_SPOTIFY_GREEN": "0xFF859900",
+        "TEXT_RED": "0xFFDC322F",
+        "TEXT_ORANGE": "0xFFCB4B16",
+        "BACKGROUND": "0xDAFDF6E3",
+        "BACKGROUND_DARK": "0xFFEEE8D5",
+        "BACKGROUND_DARK_BLUE": "0xFFDCECF2",
+        "BACKGROUND_DARK_ORANGE": "0xFFF4E3C1",
+        "BACKGROUND_DARK_GREEN": "0xFFE4ECC9",
+        "BACKGROUND_DARK_RED": "0xFFF1D7D2",
+        "BACKGROUND_DARKER": "0xFFE9E1CC",
+        "HIGHLIGHT_BACKGROUND": "0xCF268BD2",
+        "TRANSPARENT": "0x00000000",
+    },
+}
+
+ZEBAR_LIGHT_VARS_BY_THEME: dict[str, dict[str, str]] = {
+    "default": {
+        "bg": "rgba(253, 246, 227, 0.88)",
+        "fg": "#586e75",
+        "accent": "#268bd2",
+        "critical": "#dc322f",
+        "warning": "#cb4b16",
+        "success": "#859900",
+        "workspace_hover_bg": "rgba(0, 0, 0, 0.05)",
+        "workspace_hover_border": "rgba(38, 139, 210, 0.28)",
+        "workspace_focused_bg": "rgba(38, 139, 210, 0.16)",
+        "workspace_focused_border": "rgba(38, 139, 210, 0.42)",
+        "workspace_focused_shadow": "rgba(38, 139, 210, 0.14)",
+        "workspace_label_fg": "#fdf6e3",
+        "workspace_label_bg": "rgba(88, 110, 117, 0.85)",
+    },
+    "catppuccin": {
+        "bg": "rgba(239, 241, 245, 0.88)",
+        "fg": "#4c4f69",
+        "accent": "#1e66f5",
+        "critical": "#d20f39",
+        "warning": "#fe640b",
+        "success": "#40a02b",
+        "workspace_hover_bg": "rgba(0, 0, 0, 0.05)",
+        "workspace_hover_border": "rgba(30, 102, 245, 0.30)",
+        "workspace_focused_bg": "rgba(30, 102, 245, 0.18)",
+        "workspace_focused_border": "rgba(30, 102, 245, 0.45)",
+        "workspace_focused_shadow": "rgba(30, 102, 245, 0.16)",
+        "workspace_label_fg": "#eff1f5",
+        "workspace_label_bg": "rgba(76, 79, 105, 0.85)",
+    },
+    "gruvbox": {
+        "bg": "rgba(251, 241, 199, 0.88)",
+        "fg": "#3c3836",
+        "accent": "#076678",
+        "critical": "#9d0006",
+        "warning": "#af3a03",
+        "success": "#79740e",
+        "workspace_hover_bg": "rgba(0, 0, 0, 0.05)",
+        "workspace_hover_border": "rgba(7, 102, 120, 0.30)",
+        "workspace_focused_bg": "rgba(7, 102, 120, 0.17)",
+        "workspace_focused_border": "rgba(7, 102, 120, 0.43)",
+        "workspace_focused_shadow": "rgba(7, 102, 120, 0.15)",
+        "workspace_label_fg": "#fbf1c7",
+        "workspace_label_bg": "rgba(60, 56, 54, 0.85)",
+    },
+    "nord": {
+        "bg": "rgba(236, 239, 244, 0.88)",
+        "fg": "#2e3440",
+        "accent": "#5e81ac",
+        "critical": "#bf616a",
+        "warning": "#d08770",
+        "success": "#5e81ac",
+        "workspace_hover_bg": "rgba(0, 0, 0, 0.05)",
+        "workspace_hover_border": "rgba(94, 129, 172, 0.30)",
+        "workspace_focused_bg": "rgba(94, 129, 172, 0.17)",
+        "workspace_focused_border": "rgba(94, 129, 172, 0.43)",
+        "workspace_focused_shadow": "rgba(94, 129, 172, 0.15)",
+        "workspace_label_fg": "#eceff4",
+        "workspace_label_bg": "rgba(46, 52, 64, 0.85)",
+    },
+    "tokyonight": {
+        "bg": "rgba(225, 226, 231, 0.88)",
+        "fg": "#343b58",
+        "accent": "#34548a",
+        "critical": "#8c4351",
+        "warning": "#965027",
+        "success": "#485e30",
+        "workspace_hover_bg": "rgba(0, 0, 0, 0.05)",
+        "workspace_hover_border": "rgba(52, 84, 138, 0.30)",
+        "workspace_focused_bg": "rgba(52, 84, 138, 0.18)",
+        "workspace_focused_border": "rgba(52, 84, 138, 0.44)",
+        "workspace_focused_shadow": "rgba(52, 84, 138, 0.16)",
+        "workspace_label_fg": "#e1e2e7",
+        "workspace_label_bg": "rgba(52, 59, 88, 0.85)",
+    },
+    "noctalia": {
+        "bg": "rgba(253, 246, 227, 0.88)",
+        "fg": "#586e75",
+        "accent": "#268bd2",
+        "critical": "#dc322f",
+        "warning": "#cb4b16",
+        "success": "#859900",
+        "workspace_hover_bg": "rgba(0, 0, 0, 0.05)",
+        "workspace_hover_border": "rgba(38, 139, 210, 0.28)",
+        "workspace_focused_bg": "rgba(38, 139, 210, 0.16)",
+        "workspace_focused_border": "rgba(38, 139, 210, 0.42)",
+        "workspace_focused_shadow": "rgba(38, 139, 210, 0.14)",
+        "workspace_label_fg": "#fdf6e3",
+        "workspace_label_bg": "rgba(88, 110, 117, 0.85)",
+    },
+}
+
+OVERLINE_ZEBAR_LIGHT_VARS_BY_THEME: dict[str, dict[str, str]] = {
+    theme: {
+        "border": values["accent"],
+        "background": values["bg"],
+        "background-deeper": values["workspace_hover_bg"],
+        "button": values["workspace_hover_bg"],
+        "button-border": values["workspace_hover_border"],
+        "primary": values["accent"],
+        "primary-border": values["accent"],
+        "primary-text": values["workspace_label_fg"],
+        "text": values["fg"],
+        "text-muted": values["workspace_label_bg"],
+        "icon": values["fg"],
+        "success": values["success"],
+        "danger": values["critical"],
+        "warning": values["warning"],
+    }
+    for theme, values in ZEBAR_LIGHT_VARS_BY_THEME.items()
+}
+
+OMP_LIGHT_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
+    "default": {
+        "#444444": "#eee8d5",
+        "#eeeeee": "#586e75",
+        "#0087af": "#268bd2",
+        "#5fdf00": "#859900",
+        "#dfaf00": "#b58900",
+        "#6c6c6c": "#93a1a1",
+        "#949494": "#839496",
+        "#a8a8a8": "#657b83",
+        "#d70000": "#dc322f",
+        "#ff0000": "#dc322f",
+        "#00afaf": "#2aa198",
+        "#5faf00": "#859900",
+        "#5f8787": "#268bd2",
+    },
+    "catppuccin": {
+        "#444444": "#dce0e8",
+        "#eeeeee": "#4c4f69",
+        "#0087af": "#1e66f5",
+        "#5fdf00": "#40a02b",
+        "#dfaf00": "#df8e1d",
+        "#6c6c6c": "#bcc0cc",
+        "#949494": "#8c8fa1",
+        "#a8a8a8": "#6c6f85",
+        "#d70000": "#d20f39",
+        "#ff0000": "#d20f39",
+        "#00afaf": "#179299",
+        "#5faf00": "#40a02b",
+        "#5f8787": "#179299",
+    },
+    "gruvbox": {
+        "#444444": "#ebdbb2",
+        "#eeeeee": "#3c3836",
+        "#0087af": "#076678",
+        "#5fdf00": "#79740e",
+        "#dfaf00": "#b57614",
+        "#6c6c6c": "#d5c4a1",
+        "#949494": "#928374",
+        "#a8a8a8": "#665c54",
+        "#d70000": "#9d0006",
+        "#ff0000": "#9d0006",
+        "#00afaf": "#427b58",
+        "#5faf00": "#79740e",
+        "#5f8787": "#076678",
+    },
+    "nord": {
+        "#444444": "#d8dee9",
+        "#eeeeee": "#2e3440",
+        "#0087af": "#5e81ac",
+        "#5fdf00": "#5e81ac",
+        "#dfaf00": "#d08770",
+        "#6c6c6c": "#e5e9f0",
+        "#949494": "#81a1c1",
+        "#a8a8a8": "#4c566a",
+        "#d70000": "#bf616a",
+        "#ff0000": "#bf616a",
+        "#00afaf": "#5e81ac",
+        "#5faf00": "#5e81ac",
+        "#5f8787": "#81a1c1",
+    },
+    "tokyonight": {
+        "#444444": "#c4c8da",
+        "#eeeeee": "#343b58",
+        "#0087af": "#34548a",
+        "#5fdf00": "#485e30",
+        "#dfaf00": "#8f5e15",
+        "#6c6c6c": "#d5d6db",
+        "#949494": "#5a4a78",
+        "#a8a8a8": "#565a6e",
+        "#d70000": "#8c4351",
+        "#ff0000": "#8c4351",
+        "#00afaf": "#166775",
+        "#5faf00": "#485e30",
+        "#5f8787": "#33635c",
+    },
+    "noctalia": {
+        "#444444": "#eee8d5",
+        "#eeeeee": "#586e75",
+        "#0087af": "#268bd2",
+        "#5fdf00": "#859900",
+        "#dfaf00": "#b58900",
+        "#6c6c6c": "#93a1a1",
+        "#949494": "#839496",
+        "#a8a8a8": "#657b83",
+        "#d70000": "#dc322f",
+        "#ff0000": "#dc322f",
+        "#00afaf": "#2aa198",
+        "#5faf00": "#859900",
+        "#5f8787": "#268bd2",
+    },
+}
+
 YAZI_THEME_BY_NAME = {
-    "default": "default",
-    "catppuccin": "catppuccin-frappe",
-    "gruvbox": "gruvbox-dark",
-    "nord": "nord",
-    "tokyonight": "tokyo-night",
-    "noctalia": "noctalia",
+    "dark": {
+        "default": "default",
+        "catppuccin": "catppuccin-frappe",
+        "gruvbox": "gruvbox-dark",
+        "nord": "nord",
+        "tokyonight": "tokyo-night",
+        "noctalia": "noctalia",
+    },
+    "light": {
+        "default": "default",
+        "catppuccin": "catppuccin-latte",
+        "gruvbox": "gruvbox-light",
+        "nord": "nord",
+        "tokyonight": "tokyo-night",
+        "noctalia": "default",
+    },
 }
 
 
+def normalize_mode(mode: str | None) -> str:
+    if mode in COLOR_MODES:
+        return mode
+    return DEFAULT_COLOR_MODE
+
+
+def palette_for(
+    mode: str, dark: dict[str, dict[str, str]], light: dict[str, dict[str, str]]
+) -> dict[str, dict[str, str]]:
+    return light if normalize_mode(mode) == "light" else dark
+
+
+def theme_value(mode: str, mapping: dict[str, dict[str, Any]], theme: str, key: str | None = None) -> Any:
+    mode_map = mapping.get(normalize_mode(mode), mapping[DEFAULT_COLOR_MODE])
+    value = mode_map.get(theme, mode_map["default"])
+    return value if key is None else value[key]
+
+
 def config_home() -> Path:
-    return Path.home() / ".config"
+    return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")).expanduser()
 
 
-def set_yazi_theme(theme: str) -> str:
+def set_yazi_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
     path = config_home() / "ooodnakov" / "local" / "yazi" / "theme.toml"
     path.parent.mkdir(parents=True, exist_ok=True)
-    theme = YAZI_THEME_BY_NAME[theme]
+    selected_mode = normalize_mode(mode)
+    selected_theme = YAZI_THEME_BY_NAME[selected_mode].get(theme, YAZI_THEME_BY_NAME[selected_mode]["default"])
     path.write_text(
         "# Generated by `oooconf color`.\n"
         "# Local override for Yazi theme selection.\n"
         "[flavor]\n"
-        f'dark = "{theme}"\n'
-        f'light = "{theme}"\n',
+        f'dark = "{selected_theme}"\n'
+        f'light = "{selected_theme}"\n'
+        f'# selected-mode = "{selected_mode}"\n',
         encoding="utf-8",
     )
     return f"yazi: wrote local override ({path})"
@@ -555,8 +961,8 @@ def _with_wezterm_color_scheme(raw: str, scheme: str) -> tuple[str, str]:
     return updated, "appended color_scheme fallback"
 
 
-def set_wezterm_theme(theme: str) -> str:
-    scheme = WEZTERM_SCHEME_BY_THEME.get(theme, WEZTERM_SCHEME_BY_THEME["default"])
+def set_wezterm_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
+    scheme = theme_value(mode, WEZTERM_SCHEME_BY_THEME, theme)
     path = config_home() / "ooodnakov" / "local" / "wezterm.lua"
     path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -577,14 +983,15 @@ def set_wezterm_theme(theme: str) -> str:
     return f"wezterm: {action} -> {scheme}"
 
 
-def _set_komorebi_theme_file(path: Path, theme: str) -> str:
+def _set_komorebi_theme_file(path: Path, theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
     if not path.exists():
         return f"{path.name}: skipped ({path} not found)"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except JSONDecodeError as exc:
         return f"{path.name}: skipped (invalid JSON at line {exc.lineno}, column {exc.colno}: {path})"
-    theme_spec = KOMOREBI_THEME_BY_THEME.get(theme, KOMOREBI_THEME_BY_THEME["default"])
+    komorebi_themes = KOMOREBI_LIGHT_THEME_BY_THEME if normalize_mode(mode) == "light" else KOMOREBI_DARK_THEME_BY_THEME
+    theme_spec = komorebi_themes.get(theme, komorebi_themes["default"])
     if isinstance(data, dict):
         if path.name.endswith(".bar.json"):
             data["theme"] = {
@@ -604,7 +1011,7 @@ def _set_komorebi_theme_file(path: Path, theme: str) -> str:
     return f"{path.name}: set theme -> {theme_spec['palette']}/{theme_spec['name']}"
 
 
-def set_komorebi_theme(theme: str) -> list[str]:
+def set_komorebi_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> list[str]:
     candidate_paths = [
         Path.home() / "komorebi.json",
         Path.home() / "komorebi.bar.json",
@@ -617,12 +1024,13 @@ def set_komorebi_theme(theme: str) -> list[str]:
         if path in seen:
             continue
         seen.add(path)
-        results.append(_set_komorebi_theme_file(path, theme))
+        results.append(_set_komorebi_theme_file(path, theme, mode))
     return results
 
 
-def set_sketchybar_theme(theme: str) -> str:
-    palette = SKETCHYBAR_COLORS_BY_THEME.get(theme, SKETCHYBAR_COLORS_BY_THEME["default"])
+def set_sketchybar_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
+    palettes = palette_for(mode, SKETCHYBAR_DARK_COLORS_BY_THEME, SKETCHYBAR_LIGHT_COLORS_BY_THEME)
+    palette = palettes.get(theme, palettes["default"])
     root = config_home() / "ooodnakov" / "local" / "sketchybar"
     root.mkdir(parents=True, exist_ok=True)
     lua_path = root / "colors.lua"
@@ -655,8 +1063,9 @@ def _css_var_block(vars_map: dict[str, str], *, important: bool = False, managed
     return "\n".join(lines) + "\n"
 
 
-def _zebar_vars_for_css(theme: str, *, kebab_case: bool) -> dict[str, str]:
-    vars_map = ZEBAR_VARS_BY_THEME.get(theme, ZEBAR_VARS_BY_THEME["default"])
+def _zebar_vars_for_css(theme: str, mode: str = DEFAULT_COLOR_MODE, *, kebab_case: bool) -> dict[str, str]:
+    palettes = palette_for(mode, ZEBAR_DARK_VARS_BY_THEME, ZEBAR_LIGHT_VARS_BY_THEME)
+    vars_map = palettes.get(theme, palettes["default"])
     out = {"font": '"MesloLGSDZ Nerd Font Mono", sans-serif'}
     for key, value in vars_map.items():
         out[key.replace("_", "-") if kebab_case else key] = value
@@ -685,11 +1094,11 @@ def _write_managed_css_vars(path: Path, vars_map: dict[str, str], *, important: 
     path.write_text(text, encoding="utf-8")
 
 
-def set_zebar_theme(theme: str) -> str:
+def set_zebar_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
     zebar_root = Path.home() / ".glzr" / "zebar"
     targets = [
-        (zebar_root / "ooodnakov" / "theme-overrides.css", _zebar_vars_for_css(theme, kebab_case=True)),
-        (zebar_root / "ooodnakov-komorebi" / "theme-overrides.css", _zebar_vars_for_css(theme, kebab_case=True)),
+        (zebar_root / "ooodnakov" / "theme-overrides.css", _zebar_vars_for_css(theme, mode, kebab_case=True)),
+        (zebar_root / "ooodnakov-komorebi" / "theme-overrides.css", _zebar_vars_for_css(theme, mode, kebab_case=True)),
     ]
     for path, vars_map in targets:
         _write_css_vars(path, vars_map)
@@ -697,8 +1106,9 @@ def set_zebar_theme(theme: str) -> str:
     return f"zebar: wrote theme overrides ({paths})"
 
 
-def set_overline_zebar_theme(theme: str) -> str:
-    vars_map = OVERLINE_ZEBAR_VARS_BY_THEME.get(theme, OVERLINE_ZEBAR_VARS_BY_THEME["default"])
+def set_overline_zebar_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
+    palettes = palette_for(mode, OVERLINE_ZEBAR_DARK_VARS_BY_THEME, OVERLINE_ZEBAR_LIGHT_VARS_BY_THEME)
+    vars_map = palettes.get(theme, palettes["default"])
     zebar_root = Path.home() / ".glzr" / "zebar"
     if not zebar_root.exists():
         return f"overline-zebar: skipped ({zebar_root} not found)"
@@ -740,15 +1150,16 @@ def _replace_hex_values(value: Any, replacements: dict[str, str]) -> Any:
     return value
 
 
-def set_oh_my_posh_theme(theme: str) -> str:
+def set_oh_my_posh_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
     source = config_home() / "ohmyposh" / "ooodnakov.omp.json"
     if not source.exists():
         return f"oh-my-posh: skipped ({source} not found)"
 
-    replacements = OMP_REPLACEMENTS_BY_THEME.get(theme, OMP_REPLACEMENTS_BY_THEME["default"])
+    palettes = palette_for(mode, OMP_DARK_REPLACEMENTS_BY_THEME, OMP_LIGHT_REPLACEMENTS_BY_THEME)
+    replacements = palettes.get(theme, palettes["default"])
     data = json.loads(source.read_text(encoding="utf-8"))
     themed = _replace_hex_values(data, replacements)
-    output = config_home() / "ooodnakov" / "local" / "ohmyposh" / f"{theme}.omp.json"
+    output = config_home() / "ooodnakov" / "local" / "ohmyposh" / f"{theme}-{normalize_mode(mode)}.omp.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(themed, indent=2) + "\n", encoding="utf-8")
 
@@ -815,6 +1226,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="sync_color_theme.py")
     parser.add_argument("action", choices=["apply", "status"])
     parser.add_argument("--theme", default="default")
+    parser.add_argument("--mode", choices=COLOR_MODES, default=DEFAULT_COLOR_MODE)
     args = parser.parse_args()
 
     if args.action == "status":
@@ -822,14 +1234,14 @@ def main() -> int:
             print(line)
         return 0
 
-    print(set_yazi_theme(args.theme))
-    print(set_wezterm_theme(args.theme))
-    for line in set_komorebi_theme(args.theme):
+    print(set_yazi_theme(args.theme, args.mode))
+    print(set_wezterm_theme(args.theme, args.mode))
+    for line in set_komorebi_theme(args.theme, args.mode):
         print(line)
-    print(set_sketchybar_theme(args.theme))
-    print(set_zebar_theme(args.theme))
-    print(set_overline_zebar_theme(args.theme))
-    print(set_oh_my_posh_theme(args.theme))
+    print(set_sketchybar_theme(args.theme, args.mode))
+    print(set_zebar_theme(args.theme, args.mode))
+    print(set_overline_zebar_theme(args.theme, args.mode))
+    print(set_oh_my_posh_theme(args.theme, args.mode))
     return 0
 
 

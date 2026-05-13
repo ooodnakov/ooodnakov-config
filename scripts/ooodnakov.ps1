@@ -48,6 +48,7 @@ $KnownShellAutoUvModes = @("enabled", "quiet", "status")
 $KnownShellPromptModes = @("p10k", "ohmyposh", "status")
 $KnownShellPromptStyleModes = @("verbose", "concise", "status")
 $KnownColorThemes = @("default", "catppuccin", "gruvbox", "nord", "tokyonight", "noctalia")
+$KnownColorModes = @("dark", "light")
 $KnownWmSubcommands = @("status", "set", "start", "stop", "reload", "bar", "komorebi")
 $KnownWmOptions = @("komorebi", "glazewm")
 $KnownBarSubcommands = @("set", "zebar-config", "stop", "start", "reload")
@@ -60,6 +61,7 @@ $PsfzfTabVar = "OOODNAKOV_PSFZF_TAB"
 $PsfzfGitVar = "OOODNAKOV_PSFZF_GIT"
 $AutoUvEnvVar = "AUTO_UV_ENV_QUIET"
 $OooconfThemeVar = "OOOCONF_THEME"
+$OooconfColorModeVar = "OOOCONF_COLOR_MODE"
 $OooconfOmpConfigVar = "OOOCONF_OMP_CONFIG"
 $OooconfZshPromptVar = "OOOCONF_ZSH_PROMPT"
 $OooconfPromptStyleVar = "OOOCONF_PROMPT_STYLE"
@@ -837,6 +839,32 @@ function Get-AutoUvEnvMode {
     return "enabled"
 }
 
+function Get-OooconfColorMode {
+    if ($env:OOOCONF_COLOR_MODE -in $KnownColorModes) {
+        return $env:OOOCONF_COLOR_MODE
+    }
+
+    $envZsh = Get-LocalEnvZshPath
+    if (Test-Path -LiteralPath $envZsh) {
+        foreach ($line in Get-Content -LiteralPath $envZsh) {
+            if ($line -match ('^export ' + [regex]::Escape($OooconfColorModeVar) + '="([^"]+)"$') -and $Matches[1] -in $KnownColorModes) {
+                return $Matches[1]
+            }
+        }
+    }
+
+    $envPs1 = Get-LocalEnvPs1Path
+    if (Test-Path -LiteralPath $envPs1) {
+        foreach ($line in Get-Content -LiteralPath $envPs1) {
+            if ($line -match ('^\$env:' + [regex]::Escape($OooconfColorModeVar) + " = '([^']+)'$") -and $Matches[1] -in $KnownColorModes) {
+                return $Matches[1]
+            }
+        }
+    }
+
+    return "dark"
+}
+
 function Get-OooconfTheme {
     if ($env:OOOCONF_THEME) {
         return $env:OOOCONF_THEME
@@ -886,9 +914,9 @@ function Get-RepoColorTheme {
 }
 
 function Get-UiThemePalette {
-    $theme = Get-OooconfTheme
+    $theme = "$(Get-OooconfTheme):$(Get-OooconfColorMode)"
     switch ($theme) {
-        "catppuccin" {
+        "catppuccin:dark" {
             return @{
                 Section = "$([char]27)[38;5;111m"
                 Ok = "$([char]27)[38;5;150m"
@@ -898,7 +926,7 @@ function Get-UiThemePalette {
                 Muted = "$([char]27)[38;5;145m"
             }
         }
-        "gruvbox" {
+        "gruvbox:dark" {
             return @{
                 Section = "$([char]27)[38;5;214m"
                 Ok = "$([char]27)[38;5;142m"
@@ -908,7 +936,7 @@ function Get-UiThemePalette {
                 Muted = "$([char]27)[38;5;248m"
             }
         }
-        "nord" {
+        "nord:dark" {
             return @{
                 Section = "$([char]27)[38;5;110m"
                 Ok = "$([char]27)[38;5;108m"
@@ -918,7 +946,7 @@ function Get-UiThemePalette {
                 Muted = "$([char]27)[38;5;146m"
             }
         }
-        "tokyonight" {
+        "tokyonight:dark" {
             return @{
                 Section = "$([char]27)[38;5;111m"
                 Ok = "$([char]27)[38;5;114m"
@@ -928,7 +956,7 @@ function Get-UiThemePalette {
                 Muted = "$([char]27)[38;5;146m"
             }
         }
-        "noctalia" {
+        "noctalia:dark" {
             return @{
                 Section = "$([char]27)[38;5;141m"
                 Ok = "$([char]27)[38;5;110m"
@@ -936,6 +964,36 @@ function Get-UiThemePalette {
                 Fail = "$([char]27)[38;5;174m"
                 Info = "$([char]27)[38;5;117m"
                 Muted = "$([char]27)[38;5;146m"
+            }
+        }
+        { $_ -in @("default:light", "catppuccin:light", "noctalia:light", "tokyonight:light") } {
+            return @{
+                Section = "$([char]27)[38;5;25m"
+                Ok = "$([char]27)[38;5;64m"
+                Warn = "$([char]27)[38;5;130m"
+                Fail = "$([char]27)[38;5;124m"
+                Info = "$([char]27)[38;5;25m"
+                Muted = "$([char]27)[38;5;59m"
+            }
+        }
+        "gruvbox:light" {
+            return @{
+                Section = "$([char]27)[38;5;94m"
+                Ok = "$([char]27)[38;5;64m"
+                Warn = "$([char]27)[38;5;130m"
+                Fail = "$([char]27)[38;5;124m"
+                Info = "$([char]27)[38;5;24m"
+                Muted = "$([char]27)[38;5;59m"
+            }
+        }
+        "nord:light" {
+            return @{
+                Section = "$([char]27)[38;5;24m"
+                Ok = "$([char]27)[38;5;31m"
+                Warn = "$([char]27)[38;5;131m"
+                Fail = "$([char]27)[38;5;131m"
+                Info = "$([char]27)[38;5;25m"
+                Muted = "$([char]27)[38;5;59m"
             }
         }
         default {
@@ -1018,26 +1076,40 @@ function Set-AutoUvEnvMode {
 function Set-OooconfTheme {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Theme
+        [string]$Theme,
+        [string]$Mode = (Get-OooconfColorMode)
     )
 
     if ($Theme -notin $KnownColorThemes) {
         throw "Invalid theme: $Theme`nExpected one of: $($KnownColorThemes -join ', ')"
     }
+    if ($Mode -notin $KnownColorModes) {
+        throw "Invalid color mode: $Mode`nExpected one of: $($KnownColorModes -join ', ')"
+    }
 
     $envZsh = Get-LocalEnvZshPath
     $envPs1 = Get-LocalEnvPs1Path
-    $ompConfigPath = Join-Path (Get-ShellConfigHome) "local/ohmyposh/$Theme.omp.json"
+    $ompConfigPath = Join-Path (Get-ShellConfigHome) "local/ohmyposh/$Theme-$Mode.omp.json"
     Set-LocalOverrideLine -Path $envZsh -VariableName $OooconfThemeVar -ReplacementLine "export $OooconfThemeVar=""$Theme"""
     Set-LocalOverrideLine -Path $envPs1 -VariableName $OooconfThemeVar -ReplacementLine "`$env:$OooconfThemeVar = '$Theme'"
+    Set-LocalOverrideLine -Path $envZsh -VariableName $OooconfColorModeVar -ReplacementLine "export $OooconfColorModeVar=""$Mode"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $OooconfColorModeVar -ReplacementLine "`$env:$OooconfColorModeVar = '$Mode'"
     Set-LocalOverrideLine -Path $envZsh -VariableName $OooconfOmpConfigVar -ReplacementLine "export $OooconfOmpConfigVar=""$ompConfigPath"""
     Set-LocalOverrideLine -Path $envPs1 -VariableName $OooconfOmpConfigVar -ReplacementLine "`$env:$OooconfOmpConfigVar = '$ompConfigPath'"
 
-    Write-UiLine -Role ok -Message "oooconf theme set to $Theme"
+    Write-UiLine -Role ok -Message "oooconf theme set to $Theme ($Mode)"
     Write-UiLine -Role info -Message "zsh: $envZsh"
     Write-UiLine -Role info -Message "pwsh: $envPs1"
-    Run-Python -ScriptPath $SyncColorThemeScript -ScriptArgs @("apply", "--theme", $Theme)
+    Run-Python -ScriptPath $SyncColorThemeScript -ScriptArgs @("apply", "--theme", $Theme, "--mode", $Mode)
     Write-UiLine -Role hint -Message "Open a new shell session to apply the theme globally."
+}
+
+function Set-OooconfColorMode {
+    param([Parameter(Mandatory = $true)][string]$Mode)
+    if ($Mode -notin $KnownColorModes) {
+        throw "Invalid color mode: $Mode`nExpected one of: $($KnownColorModes -join ', ')"
+    }
+    Set-OooconfTheme -Theme (Get-OooconfTheme) -Mode $Mode
 }
 
 function Set-ForgitAliasMode {
@@ -1588,13 +1660,18 @@ function Invoke-ColorCommand {
     $action = if ($ColorArgs.Count -gt 0) { $ColorArgs[0] } else { "status" }
     switch ($action) {
         "status" {
-            Write-Output (Get-OooconfTheme)
+            Write-Output "theme=$(Get-OooconfTheme)"
+            Write-Output "mode=$(Get-OooconfColorMode)"
             Run-Python -ScriptPath $SyncColorThemeScript -ScriptArgs @("status")
         }
-        "list" { $KnownColorThemes | ForEach-Object { Write-Output $_ } }
+        "list" {
+            $KnownColorThemes + $KnownColorModes | ForEach-Object { Write-Output $_ }
+        }
         "help" { Show-CommandUsage "color" }
         "-h" { Show-CommandUsage "color" }
         "--help" { Show-CommandUsage "color" }
+        "dark" { Set-OooconfColorMode -Mode $action }
+        "light" { Set-OooconfColorMode -Mode $action }
         default { Set-OooconfTheme -Theme $action }
     }
 }
@@ -2011,11 +2088,13 @@ Examples:
         }
         "color" {
             Write-UiHelpBlock @"
-Usage: oooconf color [status|list|<theme>]
+Usage: oooconf color [status|list|<theme>|dark|light]
 
-Set or inspect the oooconf CLI color theme.
+Set or inspect the oooconf CLI color theme and dark/light mode.
 Themes:
   default, catppuccin, gruvbox, nord, tokyonight, noctalia
+Modes:
+  dark, light
 This also syncs theme-friendly overrides for yazi, wezterm local override, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
 Status output also reports detected nvim and oh-my-posh theme config state.
 Examples:
@@ -2023,6 +2102,7 @@ Examples:
   oooconf color list
   oooconf color catppuccin
   oooconf color noctalia
+  oooconf color light
 "@
         }
         "wm" {

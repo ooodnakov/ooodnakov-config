@@ -237,7 +237,7 @@ function Get-OooconfCompletions {
         'color' = @{
             Options = @()
             OptionsWithArgs = @()
-            Values = @('status', 'list', 'default', 'catppuccin', 'gruvbox', 'nord', 'tokyonight', 'noctalia')
+            Values = @('status', 'list', 'dark', 'light', 'default', 'catppuccin', 'gruvbox', 'nord', 'tokyonight', 'noctalia')
             Subcommands = @()
             OptionValues = @{
             }
