@@ -1,5 +1,37 @@
-[plugin]
-deps = []
+[[plugin.deps]]
+use = "yazi-rs/plugins:full-border"
+rev = "1db18bb"
+hash = "eff8ff12fa4e5f035a10d8aeeb4c258d"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:chmod"
+rev = "1db18bb"
+hash = "f0c8c378184d5f8abd1b095a443d336d"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:git"
+rev = "1db18bb"
+hash = "c8d30a70659f1b880407e61c564ab4e8"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:jump-to-char"
+rev = "1db18bb"
+hash = "7a4b4237223aaa94e589d1c01a23542a"
+
+[[plugin.deps]]
+use = "alberti42/faster-piper"
+rev = "8b794bf"
+hash = "fac71f8ce9447ad509b5aad9e0d8c694"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:zoom"
+rev = "1db18bb"
+hash = "fa268cb59989a87780605fdcfb8d99a9"
+
+[[plugin.deps]]
+use = "Lil-Dank/lazygit"
+rev = "e73fd74"
+hash = "6ea5f37c7f219671ec504cb8311f889d"
 
 [[flavor.deps]]
 use = "AdithyanA2005/nord"
