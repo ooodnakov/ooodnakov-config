@@ -64,6 +64,10 @@ options = { "--apply" = "apply pin updates" }
 description = "regenerate tracked completion files"
 options = { "--dry-run" = "preview actions without changing files" }
 
+[commands.link]
+description = "create or update symlinks from manifest"
+options = { "--dry-run" = "preview actions without changing files" }
+
 [commands.agents]
 description = "detect/sync/doctor/provider/update AGENTS.md workflows"
 

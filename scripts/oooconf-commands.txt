@@ -9,6 +9,7 @@ remove
 lock
 update-pins
 completions
+link
 agents
 secrets
 shell
@@ -17,5 +18,3 @@ version
 check
 preview
 upgrade
-komorebi
-wm

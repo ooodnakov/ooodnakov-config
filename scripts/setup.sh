@@ -27,12 +27,13 @@ PACKAGE_MANAGER=""
 APT_UPDATED=0
 LOG_FILE=""
 LOG_LATEST=""
-KNOWN_SETUP_COMMANDS=(install update doctor deps completions)
+KNOWN_SETUP_COMMANDS=(install update doctor deps completions link)
 PROGRESS_TOTAL=0
 PROGRESS_CURRENT=0
 PROGRESS_TITLE=""
 NEOVIM_MIN_VERSION="${OOODNAKOV_NEOVIM_MIN_VERSION:-0.10.0}"
-NEOVIM_VERSION="${OOODNAKOV_NEOVIM_VERSION:-}"
+NEOVIM_VERSION="${OOODNAKOV_NEOVIM_VERSION:-}";
+LINK_MANAGER="$REPO_ROOT/scripts/link_manager.py"
 
 # shellcheck source=/dev/null
 source "$PYTHON_LIB"
@@ -3102,6 +3103,18 @@ case "$COMMAND" in
     "$REPO_ROOT/scripts/minimal-setup.sh"
     ;;
   completions) ;;
+  link)
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "oooconf link requires python3" >&2
+      exit 1
+    fi
+    while IFS='|' read -r key source target; do
+      link_file "$source" "$target" || {
+        echo "Failed to link $target" >&2
+        exit 1
+      }
+    done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text) || exit 1
+    ;;
   *)
     usage >&2
     exit 1
@@ -3166,20 +3179,26 @@ progress_step "Installing managed utility checkouts"
 install_auto_uv_env
 
 progress_step "Linking managed config files"
-managed_link_pairs=(
-  "home/.zshrc|$HOME_DIR/.zshrc"
-  "home/.config/zsh|$CONFIG_HOME/zsh"
-  "home/.config/wezterm|$CONFIG_HOME/wezterm"
-  "home/.config/yazi|$CONFIG_HOME/yazi"
-  "home/.config/niri|$CONFIG_HOME/niri"
-  "home/.config/noctalia|$CONFIG_HOME/noctalia"
-  "home/.config/ooodnakov|$CONFIG_HOME/ooodnakov"
-)
-
-for link_pair in "${managed_link_pairs[@]}"; do
-  IFS='|' read -r source_rel target_path <<< "$link_pair"
-  link_file "$REPO_ROOT/$source_rel" "$target_path" || true
-done
+if command -v python3 >/dev/null 2>&1; then
+  while IFS='|' read -r key source_rel target_path; do
+    link_file "$source_rel" "$target_path" || true
+  done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text 2>/dev/null || true)
+else
+  # Fallback: use hardcoded pairs if python is unavailable
+  managed_link_pairs=(
+    "home/.zshrc|$HOME_DIR/.zshrc"
+    "home/.config/zsh|$CONFIG_HOME/zsh"
+    "home/.config/wezterm|$CONFIG_HOME/wezterm"
+    "home/.config/yazi|$CONFIG_HOME/yazi"
+    "home/.config/niri|$CONFIG_HOME/niri"
+    "home/.config/noctalia|$CONFIG_HOME/noctalia"
+    "home/.config/ooodnakov|$CONFIG_HOME/ooodnakov"
+  )
+  for link_pair in "${managed_link_pairs[@]}"; do
+    IFS='|' read -r source_rel target_path <<< "$link_pair"
+    link_file "$REPO_ROOT/$source_rel" "$target_path" || true
+  done
+fi
 
 if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
   # Sync LazyVim plugins non-interactively
@@ -3194,17 +3213,7 @@ if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
   fi
 fi
 
-run_cmd mkdir -p "$HOME_DIR/.local/bin"
-link_file "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf" || true
-link_file "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o" || true
-
 progress_step "Generating completions and platform integrations"
-generate_autogen_completions || true
-generate_oooconf_completions || true
-
-run_cmd mkdir -p "$CONFIG_HOME/ohmyposh" "$CONFIG_HOME/powershell"
-link_file "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json" || true
-link_file "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1" || true
 
 ensure_ssh_include || true
 install_fonts

@@ -2633,27 +2633,42 @@ function Test-DoctorOptionalCommand {
 function Test-Doctor {
     Write-Output "Running doctor checks..."
 
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/noctalia") -Target (Join-Path $ConfigHome "noctalia")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $PowerShellProfileTarget
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
+    # Read links from manifest via link_manager.py for doctor checks
+    $linkOutput = python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null
+    if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($linkOutput)) {
+        $linkOutput -split "`n" | ForEach-Object {
+            if ([string]::IsNullOrWhiteSpace($_)) { return }
+            $parts = $_ -split '\|'
+            if ($parts.Count -lt 3) { return }
+            $key = $parts[0]
+            $source = $parts[1]
+            $target = $parts[2]
+            Test-DoctorLink -Source $source -Target $target
+        }
+    } else {
+        # Fallback to hardcoded links for older versions
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/noctalia") -Target (Join-Path $ConfigHome "noctalia")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $PowerShellProfileTarget
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
 
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")
 
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")
-    Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")
+        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")
+    }
 
     Test-DoctorCommand -Name "oooconf"
     Test-DoctorCommand -Name "o"
@@ -2712,22 +2727,100 @@ function Invoke-Install {
     Install-OptionalDependencies
 
     Step-Progress -Status "Linking managed configuration"
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")) {
-        Add-ToolSummary "wezterm: linked"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")) {
-        Add-ToolSummary "yazi: linked"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")) {
-        Add-ToolSummary "lazygit: linked"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/noctalia") -Target (Join-Path $ConfigHome "noctalia")) {
-        Add-ToolSummary "noctalia: linked"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")) {
-        Add-ToolSummary "nvim: linked"
+    $linkOutput = python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($linkOutput)) {
+        Write-Output "[warn] link_manager.py failed or returned no output; falling back to hardcoded links"
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")) {
+            Add-ToolSummary "wezterm: linked"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")) {
+            Add-ToolSummary "yazi: linked"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")) {
+            Add-ToolSummary "lazygit: linked"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/noctalia") -Target (Join-Path $ConfigHome "noctalia")) {
+            Add-ToolSummary "noctalia: linked"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")) {
+            Add-ToolSummary "nvim: linked"
 
-        # Sync LazyVim plugins non-interactively
+            # Sync LazyVim plugins non-interactively
+            if (Get-Command nvim -ErrorAction SilentlyContinue) {
+                $syncExitCode = Invoke-WithProgress -Description "Syncing LazyVim plugins" -Action {
+                    param($stdoutLog, $stderrLog)
+                    Start-Process -FilePath "nvim" `
+                        -ArgumentList @("--headless", "+Lazy! sync", "+qa") `
+                        -NoNewWindow `
+                        -RedirectStandardOutput $stdoutLog `
+                        -RedirectStandardError $stderrLog `
+                        -PassThru
+                }
+
+                if ($syncExitCode -eq 0) {
+                    Add-ToolSummary "nvim: plugins synced"
+                } else {
+                    Write-Warning "LazyVim plugin sync exited with code $syncExitCode"
+                }
+            }
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")) {
+            Add-ToolSummary "ooodnakov config: linked"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")) {
+            Add-ToolSummary "oh-my-posh config: linked"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $PowerShellProfileTarget) {
+            Add-ToolSummary "PowerShell XDG profile: linked"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile) {
+            Add-ToolSummary "PowerShell active profile: linked"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")) {
+            Add-ToolSummary "oooconf.ps1: linked into $LocalBinDir"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")) {
+            Add-ToolSummary "oooconf.cmd: linked into $LocalBinDir"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")) {
+            Add-ToolSummary "o.ps1: linked into $LocalBinDir"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")) {
+            Add-ToolSummary "o.cmd: linked into $LocalBinDir"
+        }
+
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")) {
+            Add-ToolSummary "komorebi: linked config"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")) {
+            Add-ToolSummary "komorebi-bar: linked config"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")) {
+            Add-ToolSummary "komorebi-applications: linked config"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")) {
+            Add-ToolSummary "whkd: linked config"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")) {
+            Add-ToolSummary "glazewm: linked config directory"
+        }
+        if (New-Symlink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")) {
+            Add-ToolSummary "zebar: linked config directory"
+        }
+    } else {
+        $linkOutput -split "`n" | ForEach-Object {
+            if ([string]::IsNullOrWhiteSpace($_)) { return }
+            $parts = $_ -split '\|'
+            if ($parts.Count -lt 3) { return }
+            $key = $parts[0]
+            $source = $parts[1]
+            $target = $parts[2]
+            if (New-Symlink -Source $source -Target $target) {
+                Add-ToolSummary "linked: $key"
+            }
+        }
+
+        # Sync LazyVim plugins non-interactively (nvim post-link hook)
         if (Get-Command nvim -ErrorAction SilentlyContinue) {
             $syncExitCode = Invoke-WithProgress -Description "Syncing LazyVim plugins" -Action {
                 param($stdoutLog, $stderrLog)
@@ -2745,49 +2838,6 @@ function Invoke-Install {
                 Write-Warning "LazyVim plugin sync exited with code $syncExitCode"
             }
         }
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")) {
-        Add-ToolSummary "ooodnakov config: linked"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")) {
-        Add-ToolSummary "oh-my-posh config: linked"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $PowerShellProfileTarget) {
-        Add-ToolSummary "PowerShell XDG profile: linked"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile) {
-        Add-ToolSummary "PowerShell active profile: linked"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")) {
-        Add-ToolSummary "oooconf.ps1: linked into $LocalBinDir"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")) {
-        Add-ToolSummary "oooconf.cmd: linked into $LocalBinDir"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")) {
-        Add-ToolSummary "o.ps1: linked into $LocalBinDir"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")) {
-        Add-ToolSummary "o.cmd: linked into $LocalBinDir"
-    }
-
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")) {
-        Add-ToolSummary "komorebi: linked config"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")) {
-        Add-ToolSummary "komorebi-bar: linked config"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")) {
-        Add-ToolSummary "komorebi-applications: linked config"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")) {
-        Add-ToolSummary "whkd: linked config"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")) {
-        Add-ToolSummary "glazewm: linked config directory"
-    }
-    if (New-Symlink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")) {
-        Add-ToolSummary "zebar: linked config directory"
     }
 
     if (Ensure-UserPathContains -PathEntry $LocalBinDir) {

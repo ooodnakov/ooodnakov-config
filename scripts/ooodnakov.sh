@@ -116,6 +116,7 @@ ui_cmd_icon() {
       lock) printf '󰌾' ;;
       update-pins) printf '󱥂' ;;
       completions) printf '󰩫' ;;
+      link) printf '🔗' ;;
       shell) printf '󱆃' ;;
       secrets) printf '󰠮' ;;
       agents) printf '󰭹' ;;
@@ -135,6 +136,7 @@ ui_cmd_icon() {
       lock) printf '[lock]' ;;
       update-pins) printf '[pins]' ;;
       completions) printf '[comp]' ;;
+      link) printf '[link]' ;;
       shell) printf '[sh]' ;;
       secrets) printf '[sec]' ;;
       agents) printf '[agt]' ;;
@@ -1331,6 +1333,18 @@ Examples:
   oooconf completions --dry-run        # preview generation actions
 EOF
       ;;
+    link)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf link [--dry-run]
+
+Create or update symlinks from tracked config in home/ to their target
+locations, backing up any replaced files. Reads from links.toml manifest
+with auto-discovery for home/.config, home/.local, and home/.glzr.
+Examples:
+  oooconf link                       # create/update all manifest links
+  oooconf link --dry-run            # preview without making changes
+EOF
+      ;;
     agents)
       cat <<'EOF' | ui_render_help_block
 
@@ -1602,6 +1616,9 @@ case "$command" in
     ;;
   completions)
     exec_setup_command completions 1 "$@"
+    ;;
+  link)
+    exec_setup_command link 1 "$@"
     ;;
   dry-run)
     if [ "$dry_run_requested" -eq 1 ]; then
