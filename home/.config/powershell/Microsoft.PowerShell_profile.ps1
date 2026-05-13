@@ -1,6 +1,5 @@
 $ConfigRoot = Join-Path $HOME ".config/ooodnakov"
 $DefaultPromptConfig = Join-Path $HOME ".config/ohmyposh/ooodnakov.omp.json"
-$PromptConfig = if ($env:OOOCONF_OMP_CONFIG -and (Test-Path $env:OOOCONF_OMP_CONFIG)) { $env:OOOCONF_OMP_CONFIG } else { $DefaultPromptConfig }
 $SharedEnv = Join-Path $ConfigRoot "env/common.ps1"
 $LocalEnv = Join-Path $ConfigRoot "local/env.ps1"
 $LocalBin = Join-Path $HOME ".local/bin"
@@ -29,9 +28,34 @@ function Test-InteractiveConsoleHost {
 
 # ---[ PLUGINS & CONFIG ]---
 
+if (Test-Path $SharedEnv) {
+    . $SharedEnv
+}
+
+if (Test-Path $LocalEnv) {
+    . $LocalEnv
+}
+
+$PromptConfig = if ($env:OOOCONF_OMP_CONFIG -and (Test-Path $env:OOOCONF_OMP_CONFIG)) { $env:OOOCONF_OMP_CONFIG } else { $DefaultPromptConfig }
+$PromptStyle = if ($env:OOOCONF_PROMPT_STYLE) { $env:OOOCONF_PROMPT_STYLE } else { "verbose" }
+
+function Get-StableCacheKey {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+        $hashBytes = $sha256.ComputeHash($bytes)
+        return -join ($hashBytes | ForEach-Object { $_.ToString("x2") })
+    } finally {
+        $sha256.Dispose()
+    }
+}
+
 # Optimized Oh My Posh initialization
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    $ompCache = Join-Path $CacheDir "oh-my-posh.ps1"
+    $promptConfigKey = Get-StableCacheKey ([System.IO.Path]::GetFullPath($PromptConfig))
+    $ompCache = Join-Path $CacheDir "oh-my-posh-$promptConfigKey-$PromptStyle.ps1"
     if (-not (Test-Path $ompCache) -or (Get-Item $PromptConfig).LastWriteTime -gt (Get-Item $ompCache).LastWriteTime) {
         oh-my-posh init pwsh --config $PromptConfig --print > $ompCache
     }
@@ -54,14 +78,6 @@ function global:prompt {
     Update-Venv
     if ($oldPrompt) { & $oldPrompt }
     else { "PS $($executionContext.SessionState.Path.CurrentLocation)$('>' * ($nestedPromptLevel + 1)) " }
-}
-
-if (Test-Path $SharedEnv) {
-    . $SharedEnv
-}
-
-if (Test-Path $LocalEnv) {
-    . $LocalEnv
 }
 
 if ($null -ne (Get-Module -ListAvailable -Name posh-git)) {

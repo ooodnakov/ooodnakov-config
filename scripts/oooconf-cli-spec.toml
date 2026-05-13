@@ -214,6 +214,14 @@ description = "manage local shell preferences"
 [commands.shell.subcommands.status]
 description = "print all shell preference modes"
 
+[commands.shell.subcommands.prompt]
+description = "switch only the zsh prompt engine"
+values = { "p10k" = "Powerlevel10k", "ohmyposh" = "Oh My Posh", "status" = "show status" }
+
+[commands.shell.subcommands.prompt-style]
+description = "switch all managed prompts between verbose and concise layouts"
+values = { "verbose" = "verbose prompt", "concise" = "concise prompt", "status" = "show status" }
+
 [commands.shell.subcommands.forgit-aliases]
 description = "toggle plain vs forgit git aliases"
 values = { "plain" = "plain aliases", "forgit" = "forgit aliases", "status" = "show status" }

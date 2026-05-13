@@ -14,11 +14,13 @@ AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
 SYNC_COLOR_THEME="$REPO_ROOT/scripts/sync_color_theme.py"
 COMMANDS_FILE="$REPO_ROOT/scripts/oooconf-commands.txt"
 KNOWN_COMMANDS=()
-KNOWN_SHELL_SUBCOMMANDS=(status forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
+KNOWN_SHELL_SUBCOMMANDS=(status prompt prompt-style forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
 KNOWN_SHELL_TYPO_MODES=(silent suggest help status)
 KNOWN_SHELL_PSFZF_MODES=(enabled disabled status)
 KNOWN_SHELL_AUTO_UV_MODES=(enabled quiet status)
+KNOWN_SHELL_PROMPT_MODES=(p10k ohmyposh status)
+KNOWN_SHELL_PROMPT_STYLE_MODES=(verbose concise status)
 KNOWN_COLOR_THEMES=(default catppuccin gruvbox nord tokyonight noctalia)
 LOCAL_OVERRIDES_START="# --- LOCAL OVERRIDES START ---"
 LOCAL_OVERRIDES_END="# --- LOCAL OVERRIDES END ---"
@@ -29,6 +31,8 @@ PSFZF_GIT_VAR="OOODNAKOV_PSFZF_GIT"
 AUTO_UV_ENV_VAR="AUTO_UV_ENV_QUIET"
 OOOCONF_THEME_VAR="OOOCONF_THEME"
 OOOCONF_OMP_CONFIG_VAR="OOOCONF_OMP_CONFIG"
+OOOCONF_ZSH_PROMPT_VAR="OOOCONF_ZSH_PROMPT"
+OOOCONF_PROMPT_STYLE_VAR="OOOCONF_PROMPT_STYLE"
 
 load_known_commands() {
   local fallback_commands=(bootstrap install deps update doctor dry-run delete remove lock update-pins completions agents secrets shell color version check preview upgrade minimal)
@@ -374,6 +378,55 @@ upsert_override_line() {
   mv "$tmp_file" "$target"
 }
 
+get_zsh_prompt_mode() {
+  local env_zsh mode
+
+  if [ -n "${OOOCONF_ZSH_PROMPT:-}" ]; then
+    printf '%s\n' "$OOOCONF_ZSH_PROMPT"
+    return 0
+  fi
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  if [ -f "$env_zsh" ]; then
+    mode="$(sed -n "s/^export ${OOOCONF_ZSH_PROMPT_VAR}=\"\([^\"]*\)\"$/\1/p" "$env_zsh" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+  fi
+
+  printf 'p10k\n'
+}
+
+get_prompt_style_mode() {
+  local env_zsh env_ps1 mode
+
+  if [ -n "${OOOCONF_PROMPT_STYLE:-}" ]; then
+    printf '%s\n' "$OOOCONF_PROMPT_STYLE"
+    return 0
+  fi
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  if [ -f "$env_zsh" ]; then
+    mode="$(sed -n "s/^export ${OOOCONF_PROMPT_STYLE_VAR}=\"\([^\"]*\)\"$/\1/p" "$env_zsh" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+  fi
+
+  env_ps1="$(shell_local_env_ps1_path)"
+  if [ -f "$env_ps1" ]; then
+    mode="$(sed -n "s/^\$env:${OOOCONF_PROMPT_STYLE_VAR} = '\([^']*\)'$/\1/p" "$env_ps1" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+  fi
+
+  printf 'verbose\n'
+}
+
 get_forgit_alias_mode() {
   local env_zsh mode
   env_zsh="$(shell_local_env_zsh_path)"
@@ -522,6 +575,52 @@ set_oooconf_theme() {
   ui_line hint "Open a new shell session to apply the theme globally."
 }
 
+set_zsh_prompt_mode() {
+  local mode="$1"
+  local env_zsh
+
+  case "$mode" in
+    p10k|ohmyposh) ;;
+    *)
+      visible_error "Invalid zsh prompt mode: $mode"
+      visible_error "Expected one of: p10k, ohmyposh"
+      return 1
+      ;;
+  esac
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  upsert_override_line "$env_zsh" "$OOOCONF_ZSH_PROMPT_VAR" "export $OOOCONF_ZSH_PROMPT_VAR=\"$mode\""
+
+  ui_line ok "zsh prompt set to $mode"
+  ui_line info "zsh: $env_zsh"
+  ui_line hint "Open a new zsh session or run: exec zsh"
+}
+
+set_prompt_style_mode() {
+  local mode="$1"
+  local env_zsh env_ps1
+
+  case "$mode" in
+    verbose|concise) ;;
+    *)
+      visible_error "Invalid prompt style: $mode"
+      visible_error "Expected one of: verbose, concise"
+      return 1
+      ;;
+  esac
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  env_ps1="$(shell_local_env_ps1_path)"
+
+  upsert_override_line "$env_zsh" "$OOOCONF_PROMPT_STYLE_VAR" "export $OOOCONF_PROMPT_STYLE_VAR=\"$mode\""
+  upsert_override_line "$env_ps1" "$OOOCONF_PROMPT_STYLE_VAR" "\$env:$OOOCONF_PROMPT_STYLE_VAR = '$mode'"
+
+  ui_line ok "prompt style set to $mode"
+  ui_line info "zsh: $env_zsh"
+  ui_line info "pwsh: $env_ps1"
+  ui_line hint "Open a new shell session to apply the change."
+}
+
 set_auto_uv_env_mode() {
   local mode="$1"
   local env_zsh env_ps1 val
@@ -645,6 +744,8 @@ print_shell_status() {
   ui_line info "typo-handling: $(get_typo_handling_mode)"
   ui_line info "psfzf-tab: $(get_psfzf_tab_mode)"
   ui_line info "psfzf-git: $(get_psfzf_git_mode)"
+  ui_line info "prompt: $(get_zsh_prompt_mode)"
+  ui_line info "prompt-style: $(get_prompt_style_mode)"
   ui_line info "auto-uv-env: $(get_auto_uv_env_mode)"
 }
 
@@ -711,6 +812,8 @@ handle_shell_command() {
       cat <<'EOF'
 Usage:
   oooconf shell status
+  oooconf shell prompt [p10k|ohmyposh|status]
+  oooconf shell prompt-style [verbose|concise|status]
   oooconf shell forgit-aliases [plain|forgit|status]
   oooconf shell typo-handling [silent|suggest|help|status]
   oooconf shell psfzf-tab [enabled|disabled|status]
@@ -734,6 +837,11 @@ PSFzf options:
   psfzf-git  enable or disable fzf-based git keybindings in PowerShell
   status     show the currently configured mode
 
+Prompt options:
+  prompt        switch only the zsh prompt engine between Powerlevel10k and Oh My Posh
+  prompt-style  switch all managed prompts between verbose and concise layouts
+  status        show the currently configured mode
+
 Auto UV environment options:
   enabled   show activation/deactivation messages for Python venvs
   quiet     suppress activation/deactivation messages
@@ -741,6 +849,10 @@ Auto UV environment options:
 
 Examples:
   oooconf shell status
+  oooconf shell prompt status
+  oooconf shell prompt ohmyposh
+  oooconf shell prompt p10k
+  oooconf shell prompt-style concise
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain
   oooconf shell forgit-aliases forgit
@@ -755,6 +867,37 @@ EOF
       ;;
     status)
       print_shell_status
+      ;;
+
+    prompt)
+      case "${2:-status}" in
+        status)
+          get_zsh_prompt_mode
+          ;;
+        p10k|ohmyposh)
+          set_zsh_prompt_mode "$2"
+          ;;
+        *)
+          suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_PROMPT_MODES[@]}")"
+          report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
+          return 1
+          ;;
+      esac
+      ;;
+    prompt-style)
+      case "${2:-status}" in
+        status)
+          get_prompt_style_mode
+          ;;
+        verbose|concise)
+          set_prompt_style_mode "$2"
+          ;;
+        *)
+          suggestion="$(suggest_from_list "${2:-}" "${KNOWN_SHELL_PROMPT_STYLE_MODES[@]}")"
+          report_unknown_command "Unknown shell option: ${2:-}" "$suggestion" shell
+          return 1
+          ;;
+      esac
       ;;
     forgit-aliases)
       case "${2:-status}" in
