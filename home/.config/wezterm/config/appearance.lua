@@ -26,7 +26,7 @@ return {
 	-- color scheme
 	-- colors = colors,
 
-	background = nil,
+	background = backdrops:initial_options(true),
 
 	-- scrollbar
 	enable_scroll_bar = true,

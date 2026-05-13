@@ -15,7 +15,7 @@ if platform.is_mac then
 elseif platform.is_linux then
    workspace_switcher.zoxide_path = '/usr/bin/zoxide'
 elseif platform.is_win then
-   workspace_switcher.zoxide_path = 'placeholder'
+   workspace_switcher.zoxide_path = 'C:\\Users\\coolk\\AppData\\Local\\UniGetUI\\Chocolatey\\bin\\zoxide.exe'
 end
 local smart_splits = wezterm.plugin.require('https://github.com/mrjones2014/smart-splits.nvim')
 
