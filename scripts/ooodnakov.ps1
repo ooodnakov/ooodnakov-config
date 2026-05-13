@@ -1739,6 +1739,7 @@ function Show-Usage {
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
+      --skip-deps       skip dependency installation
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
 "@
@@ -1791,6 +1792,21 @@ Common workflows:
 function Show-CommandUsage {
     param($command)
     switch ($command) {
+        "install" {
+            Write-UiHelpBlock @"
+Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps]
+
+Apply managed config and optional dependency installation.
+Creates symlinks from tracked config in home/ to their target locations,
+backing up any replaced files. Optionally installs dependencies when
+allowed.
+Examples:
+  oooconf install                      # interactive dependency prompts
+  oooconf install --yes-optional       # auto-accept all optional installs
+  oooconf install --skip-deps          # apply config without dependency installs
+  oooconf install --dry-run            # preview without making changes
+"@
+        }
         "deps" {
             Write-UiHelpBlock @"
 Usage: oooconf deps [--dry-run] [dependency-key...]
@@ -2115,6 +2131,7 @@ function Require-PythonRuntime {
 
 $dryRunRequested = $false
 $yesOptionalRequested = $false
+$skipDepsRequested = $false
 $command = $null
 $remaining = [System.Collections.Generic.List[string]]::new()
 
@@ -2174,6 +2191,9 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         "--yes-optional" {
             $yesOptionalRequested = $true
         }
+        "--skip-deps" {
+            $skipDepsRequested = $true
+        }
         "help" {
             if ($i + 1 -lt $Arguments.Count) {
                 Show-CommandUsage (Resolve-CommandAlias -CommandName $Arguments[$i + 1])
@@ -2222,6 +2242,7 @@ if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
             "-n" { $dryRunRequested = $true }
             "--dry-run" { $dryRunRequested = $true }
             "--yes-optional" { $yesOptionalRequested = $true }
+            "--skip-deps" { $skipDepsRequested = $true }
             default { $normalizedRemaining += $arg }
         }
     }
@@ -2244,14 +2265,14 @@ function Invoke-SetupCommand {
         if (-not $SupportsDryRun) {
             throw "--dry-run is not supported for $SetupCommand"
         }
-        & $SetupScript $SetupCommand -DryRun @RemainingArgs
+        & $SetupScript $SetupCommand -DryRun -SkipDeps:$skipDepsRequested @RemainingArgs
         if ($LASTEXITCODE -ne 0) {
             throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
         }
         return
     }
 
-    & $SetupScript $SetupCommand @RemainingArgs
+    & $SetupScript $SetupCommand -SkipDeps:$skipDepsRequested @RemainingArgs
     if ($LASTEXITCODE -ne 0) {
         throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
     }

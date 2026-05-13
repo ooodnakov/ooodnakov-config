@@ -28,7 +28,7 @@ description = "clone or update the repo, then run install"
 
 [commands.install]
 description = "apply managed config"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--skip-deps" = "skip dependency installation", "-h" = "show help", "--help" = "show help" }
 value_set = "deps_keys"
 
 [commands.deps]

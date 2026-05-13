@@ -20,6 +20,7 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 INSTALL_OPTIONAL="${OOODNAKOV_INSTALL_OPTIONAL:-prompt}"
 VERBOSE="${OOODNAKOV_VERBOSE:-0}"
+SKIP_DEPS="${OOODNAKOV_SKIP_DEPS:-0}"
 DEPENDENCY_SUMMARY=()
 TOOL_SUMMARY=()
 FAILURES=()
@@ -2993,6 +2994,10 @@ maybe_install_cargo() {
 }
 
 install_optional_dependencies() {
+  if [ "$SKIP_DEPS" -eq 1 ]; then
+    is_verbose && echo "Skipping optional dependency installation (--skip-deps)"
+    return 0
+  fi
   local manager
   local key label description
   manager="$(detect_package_manager)"
