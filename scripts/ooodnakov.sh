@@ -1213,7 +1213,7 @@ EOF
       ;;
     install)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf install [--dry-run] [--yes-optional]
+Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps]
 
 Apply managed config and optional dependency installation.
 Creates symlinks from tracked config in home/ to their target locations,
@@ -1222,6 +1222,7 @@ allowed.
 Examples:
   oooconf install                      # interactive dependency prompts
   oooconf install --yes-optional       # auto-accept all optional installs
+  oooconf install --skip-deps          # apply config without dependency installs
   oooconf install --dry-run            # preview without making changes
 EOF
       ;;
@@ -1446,6 +1447,7 @@ require_repo_script() {
 
 dry_run_requested=0
 yes_optional_requested=0
+skip_deps_requested=0
 command=""
 
 while [ "$#" -gt 0 ]; do
@@ -1486,6 +1488,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --yes-optional)
       yes_optional_requested=1
+      shift
+      ;;
+    --skip-deps)
+      skip_deps_requested=1
       shift
       ;;
     help)
@@ -1540,6 +1546,9 @@ if should_normalize_global_flags "$command"; then
       --yes-optional)
         yes_optional_requested=1
         ;;
+      --skip-deps)
+        skip_deps_requested=1
+        ;;
       *)
         normalized_args+=("$arg")
         ;;
@@ -1564,15 +1573,15 @@ exec_setup_command() {
       exit 1
     fi
     if [ "$yes_optional_requested" -eq 1 ]; then
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" "$setup_command" --dry-run "$@"
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "$@"
     fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" "$setup_command" --dry-run "$@"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "$@"
   fi
 
   if [ "$yes_optional_requested" -eq 1 ]; then
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" "$setup_command" "$@"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "$@"
   fi
-  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" "$setup_command" "$@"
+  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "$@"
 }
 
 require_no_dry_run() {

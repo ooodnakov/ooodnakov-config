@@ -2,6 +2,7 @@ param(
     [string]$Command = "",
     [switch]$DryRun,
     [switch]$Help,
+    [switch]$SkipDeps,
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$DependencyKeys = @()
 )
@@ -13,6 +14,8 @@ foreach ($key in $DependencyKeys) {
         $DryRun = $true
     } elseif ($key -eq "--yes-optional") {
         $env:OOODNAKOV_INSTALL_OPTIONAL = "always"
+    } elseif ($key -eq "--skip-deps") {
+        $SkipDeps = $true
     } else {
         $filteredKeys += $key
     }
@@ -2396,6 +2399,12 @@ function Install-DuaIfMissing {
 }
 
 function Install-OptionalDependencies {
+    if ($SkipDeps) {
+        if (Test-VerboseMode) {
+            Write-Output "Skipping optional dependency installation (--skip-deps)"
+        }
+        return
+    }
     if (Test-VerboseMode) {
         Write-Output "Dependency check:"
     }
