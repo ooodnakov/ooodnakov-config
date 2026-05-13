@@ -2,6 +2,7 @@ export EDITOR="${EDITOR:-$HOME/.local/share/ooodnakov-config/bin/nvim}"
 export VISUAL="${VISUAL:-$EDITOR}"
 export PAGER="${PAGER:-less}"
 export LESS="-FRX"
+export YAZI_CONFIG_HOME="${YAZI_CONFIG_HOME:-$HOME/.config/yazi}"
 
 export SUDO_EDITOR="${SUDO_EDITOR:-$EDITOR}"
 snvim() {

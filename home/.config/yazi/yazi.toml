@@ -23,9 +23,9 @@ prepend_previewers = [
 ]
 
 prepend_preloaders = [
-  { url = "*.md",     run = 'faster-piper -- CLICOLOR_FORCE=1 glow -w=$w -s=gruvbox -- "$1"' },
+  { url = "*.md",     run = 'faster-piper -- glow -w=$w -s=gruvbox -- "$1"' },
   { url = "*.tar*",   run = 'faster-piper -- tar tf "$1"' },
   { url = "*.txt.gz", run = 'faster-piper -- gzip -dc "$1"' },
-  { url = "*.csv",    run = 'faster-piper -- bat -p --color=always "$1"'},
-  { url = "*/",       run = 'faster-piper -- eza -TL=3 --color=always --icons=always --group-directories-first --no-quotes "$1"'},
+  { url = "*.csv",    run = 'faster-piper -- bat -p --color=always -- "$1"' },
+  { url = "*/",       run = 'faster-piper -- eza -TL=3 --color=always --icons=always --group-directories-first --no-quotes "$1"' },
 ]
