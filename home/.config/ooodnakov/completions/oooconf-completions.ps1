@@ -452,7 +452,7 @@ function Get-OooconfCompletions {
             Options = @()
             OptionsWithArgs = @()
             Values = @()
-            Subcommands = @('status', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')
+            Subcommands = @('status', 'prompt', 'prompt-style', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')
             OptionValues = @{
             }
         }
@@ -468,6 +468,22 @@ function Get-OooconfCompletions {
             Options = @()
             OptionsWithArgs = @()
             Values = @('plain', 'forgit', 'status')
+            Subcommands = @()
+            OptionValues = @{
+            }
+        }
+        'shell:prompt' = @{
+            Options = @()
+            OptionsWithArgs = @()
+            Values = @('p10k', 'ohmyposh', 'status')
+            Subcommands = @()
+            OptionValues = @{
+            }
+        }
+        'shell:prompt-style' = @{
+            Options = @()
+            OptionsWithArgs = @()
+            Values = @('verbose', 'concise', 'status')
             Subcommands = @()
             OptionValues = @{
             }

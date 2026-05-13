@@ -1158,6 +1158,8 @@ _oooconf_shell() {
   local -a subcmds
   subcmds=(
     'status:print all shell preference modes'
+    'prompt:switch only the zsh prompt engine'
+    'prompt-style:switch all managed prompts between verbose and concise layouts'
     'forgit-aliases:toggle plain vs forgit git aliases'
     'typo-handling:configure typo handling behavior'
     'psfzf-tab:toggle PSFzf tab completion integration'
@@ -1190,6 +1192,20 @@ _oooconf_shell() {
             words=("${(@)words[i,-1]}")
             CURRENT=$(( CURRENT - i + 1 ))
             _oooconf_shell_status
+            return
+            ;;
+          prompt)
+            child_name=prompt
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_prompt
+            return
+            ;;
+          prompt-style)
+            child_name=prompt-style
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_prompt_style
             return
             ;;
           forgit-aliases)
@@ -1242,6 +1258,50 @@ _oooconf_shell_status() {
     '*:arg:->args'
 
   case $state in
+  esac
+}
+
+_oooconf_shell_prompt() {
+  local context state line
+  typeset -A opt_args
+  local -a values
+  values=(
+    'p10k:Powerlevel10k'
+    'ohmyposh:Oh My Posh'
+    'status:show status'
+  )
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    '1:value:->value' \
+    '*:arg:->args'
+
+  case $state in
+    value)
+      _describe -t values 'oooconf value' values
+      ;;
+  esac
+}
+
+_oooconf_shell_prompt_style() {
+  local context state line
+  typeset -A opt_args
+  local -a values
+  values=(
+    'verbose:verbose prompt'
+    'concise:concise prompt'
+    'status:show status'
+  )
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    '1:value:->value' \
+    '*:arg:->args'
+
+  case $state in
+    value)
+      _describe -t values 'oooconf value' values
+      ;;
   esac
 }
 

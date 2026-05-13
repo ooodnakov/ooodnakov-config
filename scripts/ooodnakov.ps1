@@ -40,11 +40,13 @@ function Get-KnownCommands {
 
 $KnownCommands = Get-KnownCommands
 
-$KnownShellSubcommands = @("status", "forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env")
+$KnownShellSubcommands = @("status", "prompt", "prompt-style", "forgit-aliases", "typo-handling", "psfzf-tab", "psfzf-git", "auto-uv-env")
 $KnownShellForgitModes = @("plain", "forgit", "status")
 $KnownShellTypoModes = @("silent", "suggest", "help", "status")
 $KnownShellPsfzfModes = @("enabled", "disabled", "status")
 $KnownShellAutoUvModes = @("enabled", "quiet", "status")
+$KnownShellPromptModes = @("p10k", "ohmyposh", "status")
+$KnownShellPromptStyleModes = @("verbose", "concise", "status")
 $KnownColorThemes = @("default", "catppuccin", "gruvbox", "nord", "tokyonight", "noctalia")
 $KnownWmSubcommands = @("status", "set", "start", "stop", "reload", "bar", "komorebi")
 $KnownWmOptions = @("komorebi", "glazewm")
@@ -59,6 +61,8 @@ $PsfzfGitVar = "OOODNAKOV_PSFZF_GIT"
 $AutoUvEnvVar = "AUTO_UV_ENV_QUIET"
 $OooconfThemeVar = "OOOCONF_THEME"
 $OooconfOmpConfigVar = "OOOCONF_OMP_CONFIG"
+$OooconfZshPromptVar = "OOOCONF_ZSH_PROMPT"
+$OooconfPromptStyleVar = "OOOCONF_PROMPT_STYLE"
 $UiAscii = @{
     section = "=="
     ok = "[ok]"
@@ -725,6 +729,48 @@ function Set-LocalOverrideLine {
     Set-Content -LiteralPath $Path -Value $result
 }
 
+function Get-ZshPromptMode {
+    if ($env:OOOCONF_ZSH_PROMPT) {
+        return $env:OOOCONF_ZSH_PROMPT
+    }
+
+    $envPath = Get-LocalEnvZshPath
+    if (Test-Path -LiteralPath $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match "^export $([regex]::Escape($OooconfZshPromptVar))=""([^""]+)""$") {
+                return $Matches[1]
+            }
+        }
+    }
+    return "p10k"
+}
+
+function Get-PromptStyleMode {
+    if ($env:OOOCONF_PROMPT_STYLE) {
+        return $env:OOOCONF_PROMPT_STYLE
+    }
+
+    $envZshPath = Get-LocalEnvZshPath
+    if (Test-Path -LiteralPath $envZshPath) {
+        foreach ($line in Get-Content -LiteralPath $envZshPath) {
+            if ($line -match ('^export ' + [regex]::Escape($OooconfPromptStyleVar) + '="([^"]+)"$')) {
+                return $Matches[1]
+            }
+        }
+    }
+
+    $envPs1Path = Get-LocalEnvPs1Path
+    if (Test-Path -LiteralPath $envPs1Path) {
+        foreach ($line in Get-Content -LiteralPath $envPs1Path) {
+            if ($line -match ('^\$env:' + [regex]::Escape($OooconfPromptStyleVar) + " = '([^']+)'$")) {
+                return $Matches[1]
+            }
+        }
+    }
+
+    return "verbose"
+}
+
 function Get-ForgitAliasMode {
     $envPath = Get-LocalEnvZshPath
     if (Test-Path -LiteralPath $envPath) {
@@ -903,6 +949,45 @@ function Get-UiThemePalette {
             }
         }
     }
+}
+
+function Set-ZshPromptMode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode
+    )
+
+    if ($Mode -notin @("p10k", "ohmyposh")) {
+        throw "Invalid zsh prompt mode: $Mode`nExpected one of: p10k, ohmyposh"
+    }
+
+    $envZsh = Get-LocalEnvZshPath
+    Set-LocalOverrideLine -Path $envZsh -VariableName $OooconfZshPromptVar -ReplacementLine "export $OooconfZshPromptVar=""$Mode"""
+
+    Write-UiLine -Role ok -Message "zsh prompt set to $Mode"
+    Write-UiLine -Role info -Message "zsh: $envZsh"
+    Write-UiLine -Role hint -Message "Open a new zsh session or run: exec zsh"
+}
+
+function Set-PromptStyleMode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode
+    )
+
+    if ($Mode -notin @("verbose", "concise")) {
+        throw "Invalid prompt style: $Mode`nExpected one of: verbose, concise"
+    }
+
+    $envZsh = Get-LocalEnvZshPath
+    $envPs1 = Get-LocalEnvPs1Path
+    Set-LocalOverrideLine -Path $envZsh -VariableName $OooconfPromptStyleVar -ReplacementLine "export $OooconfPromptStyleVar=""$Mode"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $OooconfPromptStyleVar -ReplacementLine "`$env:$OooconfPromptStyleVar = '$Mode'"
+
+    Write-UiLine -Role ok -Message "prompt style set to $Mode"
+    Write-UiLine -Role info -Message "zsh: $envZsh"
+    Write-UiLine -Role info -Message "pwsh: $envPs1"
+    Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
 }
 
 function Set-AutoUvEnvMode {
@@ -1333,6 +1418,8 @@ function Show-ShellStatus {
     Write-UiLine -Role info -Message "typo-handling: $(Get-TypoHandlingMode)"
     Write-UiLine -Role info -Message "psfzf-tab: $(Get-PsfzfTabMode)"
     Write-UiLine -Role info -Message "psfzf-git: $(Get-PsfzfGitMode)"
+    Write-UiLine -Role info -Message "prompt: $(Get-ZshPromptMode)"
+    Write-UiLine -Role info -Message "prompt-style: $(Get-PromptStyleMode)"
     Write-UiLine -Role info -Message "auto-uv-env: $(Get-AutoUvEnvMode)"
 }
 
@@ -1385,6 +1472,35 @@ function Invoke-ShellCommand {
         "-h" { Show-CommandUsage "shell"; return }
         "--help" { Show-CommandUsage "shell"; return }
         "status" { Show-ShellStatus; return }
+
+        "prompt" {
+            $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
+            switch ($mode) {
+                "status" { Write-Output (Get-ZshPromptMode) }
+                "p10k" { Set-ZshPromptMode -Mode $mode }
+                "ohmyposh" { Set-ZshPromptMode -Mode $mode }
+                default {
+                    $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellPromptModes
+                    Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
+                    throw "Unknown shell option: $mode`nExpected one of: p10k, ohmyposh, status"
+                }
+            }
+            return
+        }
+        "prompt-style" {
+            $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
+            switch ($mode) {
+                "status" { Write-Output (Get-PromptStyleMode) }
+                "verbose" { Set-PromptStyleMode -Mode $mode }
+                "concise" { Set-PromptStyleMode -Mode $mode }
+                default {
+                    $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellPromptStyleModes
+                    Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
+                    throw "Unknown shell option: $mode`nExpected one of: verbose, concise, status"
+                }
+            }
+            return
+        }
         "forgit-aliases" {
             $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
             switch ($mode) {
@@ -1846,6 +1962,8 @@ Print the CLI version (git describe or commit SHA) and resolved repo root.
         "shell" {
             Write-UiHelpBlock @"
 Usage: oooconf shell status
+       oooconf shell prompt [p10k|ohmyposh|status]
+       oooconf shell prompt-style [verbose|concise|status]
        oooconf shell forgit-aliases [plain|forgit|status]
        oooconf shell typo-handling [silent|suggest|help|status]
        oooconf shell psfzf-tab [enabled|disabled|status]
@@ -1865,12 +1983,20 @@ PSFzf options:
   psfzf-tab  enable or disable fzf-based tab completion in PowerShell
   psfzf-git  enable or disable fzf-based git keybindings in PowerShell
   status     show the currently configured mode
+Prompt options:
+  prompt        switch only the zsh prompt engine between Powerlevel10k and Oh My Posh
+  prompt-style  switch all managed prompts between verbose and concise layouts
+  status        show the currently configured mode
 Auto UV environment options:
   enabled   show activation/deactivation messages for Python venvs
   quiet     suppress activation/deactivation messages
   status    show the currently configured mode
 Examples:
   oooconf shell status
+  oooconf shell prompt status
+  oooconf shell prompt ohmyposh
+  oooconf shell prompt p10k
+  oooconf shell prompt-style concise
   oooconf shell forgit-aliases status
   oooconf shell forgit-aliases plain
   oooconf shell forgit-aliases forgit

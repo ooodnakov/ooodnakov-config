@@ -6,23 +6,23 @@
       "type": "prompt",
       "segments": [
         {
-          "foreground": "#6c6c6c",
+          "foreground": "#665c54",
           "style": "plain",
-          "template": "\u256d\u2500",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}\u256d\u2500{{ end }}",
           "type": "text"
         },
         {
           "background": "#3c3836",
           "foreground": "#ebdbb2",
           "style": "plain",
-          "template": " {{ .Icon }} ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }} {{ .Icon }} {{ end }}",
           "type": "os"
         },
         {
           "background": "#3c3836",
           "foreground": "#83a598",
           "style": "plain",
-          "template": "<#949494>\u2502</> {{ .Path }} ",
+          "template": "<#928374>\u2502</> {{ if eq .Env.OOOCONF_PROMPT_STYLE \"concise\" }}{{ .Folder }}{{ else }}{{ .Path }}{{ end }} ",
           "properties": {
             "style": "full",
             "home_icon": "\uf015 ~",
@@ -41,7 +41,7 @@
             "fetch_upstream_icon": true
           },
           "style": "plain",
-          "template": "<#949494>\u2502 </>{{ .HEAD }}{{ if gt .Ahead 0 }} \uf062 {{ .Ahead }}{{ end }}{{ if gt .Behind 0 }} \uf063{{ .Behind }}{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0 }} \ueb4b {{ .StashCount }}{{ end }} ",
+          "template": "<#928374>\u2502 </>{{ .HEAD }}{{ if gt .Ahead 0 }} \uf062 {{ .Ahead }}{{ end }}{{ if gt .Behind 0 }} \uf063{{ .Behind }}{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0 }} \ueb4b {{ .StashCount }}{{ end }} ",
           "type": "git"
         },
         {
@@ -55,21 +55,21 @@
     },
     {
       "alignment": "right",
-      "filler": "<#6c6c6c>\u00b7</>",
+      "filler": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}<#665c54>\u00b7</>{{ end }}",
       "type": "prompt",
       "segments": [
         {
           "background": "transparent",
           "foreground": "#3c3836",
           "style": "plain",
-          "template": "\ue0b2",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}\ue0b2{{ end }}",
           "type": "text"
         },
         {
           "background": "#3c3836",
-          "foreground": "#d70000",
+          "foreground": "#fb4934",
           "foreground_templates": [
-            "{{ if eq .Code 0 }}#5faf00{{ end }}"
+            "{{ if eq .Code 0 }}#b8bb26{{ end }}"
           ],
           "properties": {
             "always_enabled": true
@@ -80,23 +80,23 @@
         },
         {
           "background": "#3c3836",
-          "foreground": "#a8a8a8",
+          "foreground": "#a89984",
           "style": "plain",
-          "template": "<#949494>\u2502</> {{ .FormattedMs }}\uf252 ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}<#928374>\u2502</> {{ .FormattedMs }}\uf252 {{ end }}",
           "type": "executiontime"
         },
         {
           "background": "#3c3836",
           "foreground": "#fabd2f",
           "style": "plain",
-          "template": "{{ if .Env.DIRENV_FILE }}<#949494>\u2502</> \u25bc {{ end }}",
+          "template": "{{ if and (ne .Env.OOOCONF_PROMPT_STYLE \"concise\") .Env.DIRENV_FILE }}<#928374>\u2502</> \u25bc {{ end }}",
           "type": "text"
         },
         {
           "background": "#3c3836",
-          "foreground": "#00afaf",
+          "foreground": "#8ec07c",
           "style": "plain",
-          "template": "{{ if .Venv }}<#949494>\u2502</> \ue235 {{ .Venv }} {{ end }}",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}{{ if .Venv }}<#928374>\u2502</> \ue235 {{ .Venv }} {{ end }}{{ end }}",
           "type": "python",
           "properties": {
             "display_mode": "context",
@@ -105,15 +105,15 @@
         },
         {
           "background": "#3c3836",
-          "foreground": "#5f8787",
+          "foreground": "#83a598",
           "style": "plain",
-          "template": "<#949494>\u2502</> <#a8a8a8>at </>{{ .CurrentDate | date \"15:04:05\" }} \uf017 ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}<#928374>\u2502</> <#a89984>at </>{{ .CurrentDate | date \"15:04:05\" }} \uf017 {{ end }}",
           "type": "time"
         },
         {
-          "foreground": "#6c6c6c",
+          "foreground": "#665c54",
           "style": "plain",
-          "template": " \u2500\u256e ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }} \u2500\u256e {{ end }}",
           "type": "text"
         }
       ]
@@ -124,15 +124,15 @@
       "newline": true,
       "segments": [
         {
-          "foreground": "#6c6c6c",
+          "foreground": "#665c54",
           "style": "plain",
-          "template": "\u2570\u2500",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}\u2570\u2500{{ end }}",
           "type": "text"
         },
         {
           "foreground": "#b8bb26",
           "foreground_templates": [
-            "{{ if gt .Code 0 }}#ff0000{{ end }}"
+            "{{ if gt .Code 0 }}#fb4934{{ end }}"
           ],
           "properties": {
             "always_enabled": true
@@ -148,9 +148,9 @@
       "type": "rprompt",
       "segments": [
         {
-          "foreground": "#6c6c6c",
+          "foreground": "#665c54",
           "style": "plain",
-          "template": "\u2500\u256f ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}\u2500\u256f {{ end }}",
           "type": "text"
         }
       ]
@@ -162,7 +162,7 @@
     "background": "transparent",
     "foreground": "#b8bb26",
     "foreground_templates": [
-      "{{ if gt .Code 0 }}#ff0000{{ end }}"
+      "{{ if gt .Code 0 }}#fb4934{{ end }}"
     ],
     "template": "\u276f "
   },

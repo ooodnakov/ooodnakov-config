@@ -369,6 +369,14 @@ OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
         "#0087af": "#0087af",
         "#5fdf00": "#5fdf00",
         "#dfaf00": "#dfaf00",
+        "#6c6c6c": "#6c6c6c",
+        "#949494": "#949494",
+        "#a8a8a8": "#a8a8a8",
+        "#d70000": "#d70000",
+        "#ff0000": "#ff0000",
+        "#00afaf": "#00afaf",
+        "#5faf00": "#5faf00",
+        "#5f8787": "#5f8787",
     },
     "catppuccin": {
         "#444444": "#313244",
@@ -376,6 +384,14 @@ OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
         "#0087af": "#89b4fa",
         "#5fdf00": "#a6e3a1",
         "#dfaf00": "#f9e2af",
+        "#6c6c6c": "#6c7086",
+        "#949494": "#9399b2",
+        "#a8a8a8": "#a6adc8",
+        "#d70000": "#f38ba8",
+        "#ff0000": "#f38ba8",
+        "#00afaf": "#89dceb",
+        "#5faf00": "#a6e3a1",
+        "#5f8787": "#94e2d5",
     },
     "gruvbox": {
         "#444444": "#3c3836",
@@ -383,6 +399,14 @@ OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
         "#0087af": "#83a598",
         "#5fdf00": "#b8bb26",
         "#dfaf00": "#fabd2f",
+        "#6c6c6c": "#665c54",
+        "#949494": "#928374",
+        "#a8a8a8": "#a89984",
+        "#d70000": "#fb4934",
+        "#ff0000": "#fb4934",
+        "#00afaf": "#8ec07c",
+        "#5faf00": "#b8bb26",
+        "#5f8787": "#83a598",
     },
     "nord": {
         "#444444": "#3b4252",
@@ -390,6 +414,14 @@ OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
         "#0087af": "#88c0d0",
         "#5fdf00": "#a3be8c",
         "#dfaf00": "#ebcb8b",
+        "#6c6c6c": "#4c566a",
+        "#949494": "#81a1c1",
+        "#a8a8a8": "#d8dee9",
+        "#d70000": "#bf616a",
+        "#ff0000": "#bf616a",
+        "#00afaf": "#8fbcbb",
+        "#5faf00": "#a3be8c",
+        "#5f8787": "#88c0d0",
     },
     "tokyonight": {
         "#444444": "#2f3549",
@@ -397,6 +429,14 @@ OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
         "#0087af": "#7aa2f7",
         "#5fdf00": "#9ece6a",
         "#dfaf00": "#e0af68",
+        "#6c6c6c": "#565f89",
+        "#949494": "#7aa2f7",
+        "#a8a8a8": "#a9b1d6",
+        "#d70000": "#f7768e",
+        "#ff0000": "#f7768e",
+        "#00afaf": "#7dcfff",
+        "#5faf00": "#9ece6a",
+        "#5f8787": "#73daca",
     },
     "noctalia": {
         "#444444": "#2a3036",
@@ -404,6 +444,14 @@ OMP_REPLACEMENTS_BY_THEME: dict[str, dict[str, str]] = {
         "#0087af": "#8eb2c7",
         "#5fdf00": "#99cc99",
         "#dfaf00": "#f99157",
+        "#6c6c6c": "#65737e",
+        "#949494": "#8fa1b3",
+        "#a8a8a8": "#a7adba",
+        "#d70000": "#f2777a",
+        "#ff0000": "#f2777a",
+        "#00afaf": "#66cccc",
+        "#5faf00": "#99cc99",
+        "#5f8787": "#8eb2c7",
     },
 }
 YAZI_THEME_BY_NAME = {
@@ -414,6 +462,8 @@ YAZI_THEME_BY_NAME = {
     "tokyonight": "tokyo-night",
     "noctalia": "noctalia",
 }
+
+
 def config_home() -> Path:
     return Path.home() / ".config"
 
@@ -703,8 +753,10 @@ def set_oh_my_posh_theme(theme: str) -> str:
     output.write_text(json.dumps(themed, indent=2) + "\n", encoding="utf-8")
 
     # Invalidate the cached oh-my-posh init script so the next shell picks up the new theme.
-    cache = config_home() / "ooodnakov" / "cache" / "oh-my-posh.ps1"
-    if cache.exists():
+    cache_root = config_home() / "ooodnakov" / "cache"
+    for cache in cache_root.glob("oh-my-posh*.ps1"):
+        cache.unlink()
+    for cache in cache_root.glob("oh-my-posh*.zsh"):
         cache.unlink()
     return f"oh-my-posh: wrote themed config ({output})"
 
