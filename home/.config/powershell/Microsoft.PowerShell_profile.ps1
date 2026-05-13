@@ -39,10 +39,23 @@ if (Test-Path $LocalEnv) {
 $PromptConfig = if ($env:OOOCONF_OMP_CONFIG -and (Test-Path $env:OOOCONF_OMP_CONFIG)) { $env:OOOCONF_OMP_CONFIG } else { $DefaultPromptConfig }
 $PromptStyle = if ($env:OOOCONF_PROMPT_STYLE) { $env:OOOCONF_PROMPT_STYLE } else { "verbose" }
 
+function Get-StableCacheKey {
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+        $hashBytes = $sha256.ComputeHash($bytes)
+        return -join ($hashBytes | ForEach-Object { $_.ToString("x2") })
+    } finally {
+        $sha256.Dispose()
+    }
+}
+
 # Optimized Oh My Posh initialization
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    $promptConfigHash = [Math]::Abs($PromptConfig.GetHashCode())
-    $ompCache = Join-Path $CacheDir "oh-my-posh-$promptConfigHash-$PromptStyle.ps1"
+    $promptConfigKey = Get-StableCacheKey ([System.IO.Path]::GetFullPath($PromptConfig))
+    $ompCache = Join-Path $CacheDir "oh-my-posh-$promptConfigKey-$PromptStyle.ps1"
     if (-not (Test-Path $ompCache) -or (Get-Item $PromptConfig).LastWriteTime -gt (Get-Item $ompCache).LastWriteTime) {
         oh-my-posh init pwsh --config $PromptConfig --print > $ompCache
     }
