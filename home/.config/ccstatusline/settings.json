@@ -1,0 +1,105 @@
+{
+  "version": 3,
+  "lines": [
+    [
+      {
+        "id": "1",
+        "type": "model",
+        "color": "cyan"
+      },
+      {
+        "id": "7972d92a-d6cb-425c-b9e3-44d45dd6649a",
+        "type": "claude-session-id",
+        "backgroundColor": "bgBrightCyan"
+      },
+      {
+        "id": "82e0dae2-156c-493d-aee7-95ed169c67fe",
+        "type": "context-percentage",
+        "backgroundColor": "bgYellow"
+      },
+      {
+        "id": "5",
+        "type": "git-branch",
+        "color": "magenta"
+      },
+      {
+        "id": "7",
+        "type": "git-changes",
+        "color": "yellow"
+      },
+      {
+        "id": "14a5e7ac-1976-4ea2-a93e-4fe81bb93edd",
+        "type": "worktree-mode",
+        "backgroundColor": "bgGreen"
+      },
+      {
+        "id": "eb760ab8-a247-419d-ba3a-592ba78e3445",
+        "type": "git-worktree",
+        "backgroundColor": "bgBrightBlack"
+      },
+      {
+        "id": "a92cb63b-886c-403d-9d2e-c0dd4e7e61a3",
+        "type": "worktree-name",
+        "backgroundColor": "bgCyan"
+      },
+      {
+        "id": "127d0b08-95a4-4dcf-be91-bebb065500e4",
+        "type": "git-ahead-behind",
+        "backgroundColor": "bgMagenta"
+      }
+    ],
+    [
+      {
+        "id": "1d641097-f25c-4235-a192-b0683d917f80",
+        "type": "tokens-input",
+        "backgroundColor": "bgBrightWhite"
+      },
+      {
+        "id": "5c0cc410-b2cf-4ab4-b595-cd3da64ee7b6",
+        "type": "tokens-cached",
+        "backgroundColor": "bgBrightYellow"
+      },
+      {
+        "id": "0593d1f3-244a-4d8b-b547-748775c89954",
+        "type": "tokens-output",
+        "backgroundColor": "bgWhite"
+      },
+      {
+        "id": "7e9fa91b-6bf8-45db-bd2d-bc76d19c2bfd",
+        "type": "output-speed",
+        "backgroundColor": "bgBrightWhite"
+      }
+    ],
+    []
+  ],
+  "flexMode": "full",
+  "compactThreshold": 60,
+  "colorLevel": 3,
+  "defaultPadding": " ",
+  "inheritSeparatorColors": false,
+  "globalBold": false,
+  "minimalistMode": false,
+  "powerline": {
+    "enabled": true,
+    "separators": [
+      ""
+    ],
+    "separatorInvertBackground": [
+      false
+    ],
+    "startCaps": [],
+    "endCaps": [],
+    "theme": "dracula",
+    "autoAlign": true,
+    "continueThemeAcrossLines": true
+  },
+  "offHours": {
+    "enabled": false,
+    "startMinutes": 1320,
+    "endMinutes": 420
+  },
+  "installation": {
+    "method": "pinned",
+    "installedVersion": "2.4.4"
+  }
+}
