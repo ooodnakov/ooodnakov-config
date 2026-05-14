@@ -31,6 +31,12 @@ if ($MyInvocation.InvocationName -eq ".") {
     return
 }
 
+# Dot-source ooodnakov.ps1 for shared UI functions
+$OooconfPs1Path = Join-Path $RepoRoot "scripts/setup/ooodnakov.ps1"
+if (Test-Path $OooconfPs1Path) {
+    . $OooconfPs1Path
+}
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $OptionalDepsScript = Join-Path $RepoRoot "scripts/cli/read_optional_deps.py"
 $AutogenCompletionsManifest = Join-Path $RepoRoot "scripts/generate/autogen-completions.txt"
@@ -196,26 +202,67 @@ function Get-ClosestSuggestion {
 }
 
 function Show-SetupHelp {
+    Write-UiBanner
+    Write-UiSpacer
+    Write-UiSectionFancy -IconName "version" -Title "Global options"
     @"
-Usage: setup.ps1 [install|update|doctor|deps|completions] [--dry-run] [--minimal|--all] [dependency-key...]
+  -C, --repo-root PATH  run against a specific repo checkout
+  -h, --help            show this help
+  -n, --dry-run         add --dry-run to install or update
+      --yes-optional    auto-accept optional dependency installs
+      --skip-deps       skip dependency installation
+  -V, --version         show CLI version information
+      --print-repo-root print the resolved repo root and exit
+"@
 
-Commands:
-  install   apply managed config and dependencies
-  update    git pull this repo, then run install flow
-  doctor    validate managed links and required tools
-  deps      install optional dependencies only
-  completions  regenerate tracked shell completion files (autogen + oooconf)
+    Write-UiSpacer
+    Write-UiSeparator
+    Write-UiSectionFancy -IconName "install" -Title "Setup"
+    Write-UiCommandRow -CommandName "bootstrap" -Description "clone/update repo then run install"
+    Write-UiCommandRow -CommandName "install" -Description "apply managed config and optional dependency installs"
+    Write-UiCommandRow -CommandName "deps" -Description "install optional dependencies only"
+    Write-UiCommandRow -CommandName "update" -Description "pull repo with --ff-only, then re-run install"
 
-Options:
-  --dry-run       print actions without mutating filesystem
-  --yes-optional  auto-accept optional dependency installs
-  --minimal       install the minimal optional dependency set for deps
-  --all           install all optional dependency keys for deps
-  -h, --help      show this help
+    Write-UiSpacer
+    Write-UiSectionFancy -IconName "doctor" -Title "Inspect & Validate"
+    Write-UiCommandRow -CommandName "doctor" -Description "validate managed symlinks and required commands"
+    Write-UiCommandRow -CommandName "dry-run" -Description "preview install flow without mutating filesystem"
+    Write-UiCommandRow -CommandName "version" -Description "print CLI version and repo root"
 
-Environment variables:
-  OOODNAKOV_INTERACTIVE    always, never, auto (default: auto)
-  OOODNAKOV_INSTALL_OPTIONAL always, prompt (default: prompt)
+    Write-UiSpacer
+    Write-UiSectionFancy -IconName "lock" -Title "Manage State"
+    Write-UiCommandRow -CommandName "delete" -Description "remove managed links and restore latest backups"
+    Write-UiCommandRow -CommandName "remove" -Description "remove managed links only (no backup restore)"
+    Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
+    Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
+    Write-UiCommandRow -CommandName "completions" -Description "regenerate tracked shell completions (autogen + oooconf)"
+    Write-UiCommandRow -CommandName "link" -Description "inspect or manage links from the symlink manifest"
+
+    Write-UiSpacer
+    Write-UiSectionFancy -IconName "shell" -Title "Shell / Secrets / Agents"
+    Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
+    Write-UiCommandRow -CommandName "color" -Description "set a unified oooconf CLI color theme"
+    Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
+    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
+    Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
+
+    Write-UiSpacer
+    Write-UiSeparator
+    Write-UiHelpBlock @"
+Aliases:
+  check -> doctor
+  preview -> dry-run
+  upgrade -> update
+Note:
+  bootstrap is Unix-only in this wrapper.
+  On Windows, run ``scripts/setup/setup.ps1 install`` for initial setup.
+Getting help:
+  ./scripts/setup/setup.ps1 --help              show this message
+  ./scripts/setup/setup.ps1 <command> --help   show command-specific help
+UI controls:
+  `$env:OOOCONF_COLOR='always'       override color output
+  `$env:OOOCONF_ASCII='1'            force ASCII icons and borders
+  `$env:OOOCONF_THEME='<theme>'      set the CLI color theme for this run
 "@
 }
 

@@ -2017,6 +2017,10 @@ require_repo_script() {
   fi
 }
 
+if [ "${OOODNAKOV_OOSCRIPT:-0}" = "1" ] && [ "$#" -eq 0 ]; then
+  return 0 2>/dev/null || exit 0
+fi
+
 dry_run_requested=0
 yes_optional_requested=0
 skip_deps_requested=0

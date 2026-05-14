@@ -39,6 +39,9 @@ LINK_MANAGER="$REPO_ROOT/scripts/link_manager.py"
 # shellcheck source=/dev/null
 source "$PYTHON_LIB"
 
+# shellcheck source=/dev/null
+OOODNAKOV_OOSCRIPT=1 source "$REPO_ROOT/scripts/setup/ooodnakov.sh"
+
 run_python() {
   oooconf_run_python "$REPO_ROOT" "$@"
 }
@@ -114,21 +117,63 @@ progress_step() {
 }
 
 usage() {
+  ui_banner
+  ui_spacer
+  ui_section_fancy "version" "Global options"
   cat <<'EOF'
-Usage: ./scripts/setup.sh [install|update|doctor|deps|completions] [--dry-run] [--minimal|--all] [dependency-key...]
+  -C, --repo-root PATH  run against a specific repo checkout
+  -h, --help            show this help
+  -n, --dry-run         add --dry-run to install or update
+      --yes-optional    auto-accept optional dependency installs
+      --skip-deps       skip dependency installation
+  -V, --version         show CLI version information
+      --print-repo-root print the resolved repo root and exit
+EOF
 
-Commands:
-  install   apply managed config and dependencies
-  update    git pull this repo, then run install flow
-  doctor    validate managed links, shell runtimes, and required tools
-  deps      install optional dependencies only
-  completions  regenerate tracked shell completion files (autogen + oooconf)
+  ui_spacer
+  ui_separator
+  ui_section_fancy "install" "Setup"
+  ui_command_row "bootstrap" "clone/update repo then run install"
+  ui_command_row "install" "apply managed config and optional dependency installs"
+  ui_command_row "deps" "install optional dependencies only"
+  ui_command_row "update" "pull repo with --ff-only, then re-run install"
 
-Options:
-  --dry-run print actions without mutating filesystem
-  --yes-optional auto-accept optional dependency installs
-  --minimal install the minimal optional dependency set for deps
-  --all install all optional dependency keys for deps
+  ui_spacer
+  ui_section_fancy "doctor" "Inspect & Validate"
+  ui_command_row "doctor" "validate managed symlinks and required commands"
+  ui_command_row "dry-run" "preview install flow without mutating filesystem"
+  ui_command_row "version" "print CLI version and repo root"
+
+  ui_spacer
+  ui_section_fancy "lock" "Manage State"
+  ui_command_row "delete" "remove managed links and restore latest backups"
+  ui_command_row "remove" "remove managed links only (no backup restore)"
+  ui_command_row "lock" "regenerate dependency lock artifacts from pinned refs"
+  ui_command_row "update-pins" "compare/update pinned refs and refresh lock artifacts"
+  ui_command_row "completions" "regenerate tracked shell completions (autogen + oooconf)"
+  ui_command_row "link" "inspect or manage links from the symlink manifest"
+
+  ui_spacer
+  ui_section_fancy "shell" "Shell / Secrets / Agents"
+  ui_command_row "shell" "manage local shell preferences such as forgit aliases"
+  ui_command_row "color" "set a unified oooconf CLI color theme"
+  ui_command_row "secrets" "sync or validate local secret env files"
+  ui_command_row "agents" "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
+
+  ui_spacer
+  ui_separator
+  cat <<'EOF'
+Aliases:
+  check -> doctor
+  preview -> dry-run
+  upgrade -> update
+Getting help:
+  ./scripts/setup.sh --help              show this message
+  ./scripts/setup.sh <command> --help     show command-specific help
+UI controls:
+  OOOCONF_COLOR=always|never|auto    override color output
+  OOOCONF_ASCII=1                    force ASCII icons and borders
+  OOOCONF_THEME=<theme>              set the CLI color theme for this run
 EOF
 }
 
