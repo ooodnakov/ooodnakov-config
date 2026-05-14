@@ -2859,29 +2859,29 @@ print_summary() {
   local item
 
   echo
-  echo "Dependency summary:"
   if [ ${#DEPENDENCY_SUMMARY[@]} -gt 0 ]; then
+    ui_section "Dependency summary"
     for item in "${DEPENDENCY_SUMMARY[@]}"; do
       if ! is_verbose && [[ "$item" == *": present" || "$item" == *": skipped" ]]; then
         continue
       fi
-      echo "  - $item"
+      bullet "$item"
     done
   fi
 
-  echo "Managed tools:"
   if [ ${#TOOL_SUMMARY[@]} -gt 0 ]; then
+    ui_section "Managed tools"
     for item in "${TOOL_SUMMARY[@]}"; do
       if ! is_verbose && [[ "$item" == *": linked" || "$item" == *": synced" || "$item" == "ensured directory: "* || "$item" == *": linked into "* || "$item" == *": permissions normalized" || "$item" == *": install.py succeeded" ]]; then
          continue
       fi
-      echo "  - $item"
+      bullet "$item"
     done
   fi
   if [ "${#FAILURES[@]}" -gt 0 ]; then
-    echo "Failures:"
+    ui_section "Failures"
     for item in "${FAILURES[@]}"; do
-      echo "  - $item"
+      bullet "$item"
     done
   fi
 }
@@ -2896,9 +2896,9 @@ doctor_check_link() {
   local target
   target="$2"
   if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
-    echo "[ok] $target -> $source"
+    ui_line ok "$target -> $source"
   else
-    echo "[missing] $target (expected symlink to $source)"
+    ui_line missing "$target (expected symlink to $source)"
     FAILURES+=("doctor link $target")
   fi
 }
@@ -2907,9 +2907,9 @@ doctor_check_command() {
   local name
   name="$1"
   if command -v "$name" >/dev/null 2>&1; then
-    echo "[ok] command: $name"
+    ui_line ok "command: $name"
   else
-    echo "[missing] command: $name"
+    ui_line missing "command: $name"
     FAILURES+=("doctor command $name")
   fi
 }
@@ -2917,16 +2917,16 @@ doctor_check_command() {
 doctor_check_nvim() {
   local version
   if ! command -v nvim >/dev/null 2>&1; then
-    echo "[missing] command: nvim"
+    ui_line missing "command: nvim"
     FAILURES+=("doctor command nvim")
     return 1
   fi
 
   version="$(get_nvim_version 2>/dev/null || true)"
   if [ -n "$version" ] && version_gte "$version" "$NEOVIM_MIN_VERSION"; then
-    echo "[ok] command: nvim ($version)"
+    ui_line ok "command: nvim ($version)"
   else
-    echo "[missing] command: nvim >= $NEOVIM_MIN_VERSION (found ${version:-unknown})"
+    ui_line missing "command: nvim >= $NEOVIM_MIN_VERSION (found ${version:-unknown})"
     FAILURES+=("doctor command nvim version")
     return 1
   fi
@@ -2944,32 +2944,32 @@ doctor_check_managed_repo() {
   local actual_ref
 
   if [ ! -d "$target/.git" ]; then
-    echo "[missing] managed repo: $name ($target)"
-    echo "          repair: oooconf install"
+    ui_line missing "managed repo: $name ($target)"
+    ui_line hint "          repair: oooconf install"
     FAILURES+=("doctor managed repo $name")
     return 1
   fi
 
   if [ ! -f "$target/$required_file" ]; then
-    echo "[missing] managed repo file: $name/$required_file"
-    echo "          repair: oooconf install"
+    ui_line missing "managed repo file: $name/$required_file"
+    ui_line hint "          repair: oooconf install"
     FAILURES+=("doctor managed repo file $name")
     return 1
   fi
 
   actual_ref="$(git -C "$target" rev-parse HEAD 2>/dev/null || true)"
   if [ -n "$expected_ref" ] && [ "$actual_ref" != "$expected_ref" ]; then
-    echo "[missing] managed repo ref: $name (expected $expected_ref, found ${actual_ref:-unknown})"
-    echo "          repair: oooconf install"
+    ui_line missing "managed repo ref: $name (expected $expected_ref, found ${actual_ref:-unknown})"
+    ui_line hint "          repair: oooconf install"
     FAILURES+=("doctor managed repo ref $name")
     return 1
   fi
 
-  echo "[ok] managed repo: $name (${actual_ref:-unknown})"
+  ui_line ok "managed repo: $name (${actual_ref:-unknown})"
 }
 
 run_doctor() {
-  echo "Running doctor checks..."
+  ui_section "Doctor checks"
   doctor_check_link "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
   doctor_check_link "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"
   doctor_check_link "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm"
@@ -3000,18 +3000,18 @@ run_doctor() {
   doctor_check_managed_repo "forgit" "$STATE_HOME/oh-my-zsh/custom/plugins/forgit" "forgit.plugin.zsh"
   doctor_check_managed_repo "you-should-use" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" "you-should-use.plugin.zsh"
   if [ -d "$FONT_TARGET_DIR" ]; then
-    echo "[ok] fonts dir: $FONT_TARGET_DIR"
+    ui_line ok "fonts dir: $FONT_TARGET_DIR"
   else
-    echo "[missing] fonts dir: $FONT_TARGET_DIR"
+    ui_line missing "fonts dir: $FONT_TARGET_DIR"
     FAILURES+=("doctor fonts")
   fi
 
   if [ "${#FAILURES[@]}" -gt 0 ]; then
-    echo "Doctor found ${#FAILURES[@]} issue(s)."
-    echo "Run 'oooconf install' to retry missing managed checkouts and repair links."
+    ui_line warn "Doctor found ${#FAILURES[@]} issue(s)."
+    ui_line hint "Run 'oooconf install' to retry missing managed checkouts and repair links."
     return 1
   fi
-  echo "Doctor checks passed."
+  ui_line ok "Doctor checks passed."
 }
 
 maybe_install_cargo() {
