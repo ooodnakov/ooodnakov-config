@@ -111,5 +111,5 @@ else
   git -C "$TARGET_DIR" pull --ff-only
 fi
 
-chmod +x "$TARGET_DIR/scripts/setup.sh"
-exec "$TARGET_DIR/scripts/setup.sh" install
+chmod +x "$TARGET_DIR/scripts/setup/setup.sh"
+exec "$TARGET_DIR/scripts/setup/setup.sh" install
