@@ -28,8 +28,18 @@
         "color": "yellow"
       },
       {
-        "id": "dac8060f-f3a4-4dc0-9355-1280687ef7dd",
-        "type": "git-branch",
+        "id": "14a5e7ac-1976-4ea2-a93e-4fe81bb93edd",
+        "type": "worktree-mode",
+        "backgroundColor": "bgGreen"
+      },
+      {
+        "id": "eb760ab8-a247-419d-ba3a-592ba78e3445",
+        "type": "git-worktree",
+        "backgroundColor": "bgBrightBlack"
+      },
+      {
+        "id": "a92cb63b-886c-403d-9d2e-c0dd4e7e61a3",
+        "type": "worktree-name",
         "backgroundColor": "bgCyan"
       },
       {
