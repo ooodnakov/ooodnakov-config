@@ -517,35 +517,53 @@ function Get-UiCommandIcon {
     param([Parameter(Mandatory = $true)][string]$Name)
     if (Test-UiNerdFont) {
         switch ($Name) {
+            "bootstrap" { return [char]::ConvertFromUtf32(0xF0320) }
             "install" { return [char]::ConvertFromUtf32(0xF05E0) }
             "deps" { return [char]::ConvertFromUtf32(0xF03D6) }
             "update" { return [char]::ConvertFromUtf32(0xF06B0) }
             "doctor" { return [char]::ConvertFromUtf32(0xF04D9) }
             "dry-run" { return [char]::ConvertFromUtf32(0xF0709) }
             "version" { return [char]::ConvertFromUtf32(0xF0386) }
+            "delete" { return [char]::ConvertFromUtf32(0xF0A7A) }
+            "remove" { return [char]::ConvertFromUtf32(0xF1238) }
             "lock" { return [char]::ConvertFromUtf32(0xF033E) }
             "update-pins" { return [char]::ConvertFromUtf32(0xF1962) }
             "completions" { return [char]::ConvertFromUtf32(0xF0A6B) }
+            "link" { return [char]::ConvertFromUtf32(0xF0337) }
             "shell" { return [char]::ConvertFromUtf32(0xF1183) }
+            "color" { return [char]::ConvertFromUtf32(0xF03D8) }
             "secrets" { return [char]::ConvertFromUtf32(0xF082E) }
             "agents" { return [char]::ConvertFromUtf32(0xF0B79) }
+            "komorebi" { return [char]::ConvertFromUtf32(0xF0319) }
+            "check" { return [char]::ConvertFromUtf32(0xF04D9) }
+            "preview" { return [char]::ConvertFromUtf32(0xF0709) }
+            "upgrade" { return [char]::ConvertFromUtf32(0xF06B0) }
             "wm" { return [char]::ConvertFromUtf32(0xF030F) }
             default { return [char]::ConvertFromUtf32(0xF060D) }
         }
     }
     switch ($Name) {
+        "bootstrap" { return "[boot]" }
         "install" { return "[inst]" }
         "deps" { return "[deps]" }
         "update" { return "[up]" }
         "doctor" { return "[doc]" }
         "dry-run" { return "[dry]" }
         "version" { return "[ver]" }
+        "delete" { return "[del]" }
+        "remove" { return "[rm]" }
         "lock" { return "[lock]" }
         "update-pins" { return "[pins]" }
         "completions" { return "[comp]" }
+        "link" { return "[link]" }
         "shell" { return "[sh]" }
+        "color" { return "[clr]" }
         "secrets" { return "[sec]" }
         "agents" { return "[agt]" }
+        "komorebi" { return "[kom]" }
+        "check" { return "[doc]" }
+        "preview" { return "[dry]" }
+        "upgrade" { return "[up]" }
         "wm" { return "[wm]" }
         default { return "[cmd]" }
     }
@@ -592,6 +610,72 @@ function Write-UiSection {
     Write-Output $rule
 }
 
+function Write-UiBannerLine {
+    param(
+        [Parameter(Mandatory = $true)][string]$Text,
+        [Parameter(Mandatory = $true)][int]$Width,
+        [Parameter(Mandatory = $true)][string]$Left,
+        [Parameter(Mandatory = $true)][string]$Right
+    )
+
+    $padding = [Math]::Max(0, $Width - $Text.Length)
+    $leftPadding = [Math]::Floor($padding / 2)
+    $rightPadding = $padding - $leftPadding
+    $line = $Left + (" " * $leftPadding) + $Text + (" " * $rightPadding) + $Right
+    Write-Output (Format-UiText -Text $line -Role "section" -Bold)
+}
+
+function Write-UiBanner {
+    $width = 58
+    $horizontal = "-"
+    $topLeft = "+"
+    $topRight = "+"
+    $bottomLeft = "+"
+    $bottomRight = "+"
+    $left = "|"
+    $right = "|"
+    $platformLine = "Linux / Windows / macOS"
+
+    if (Test-UiNerdFont) {
+        $horizontal = [string][char]0x2500
+        $topLeft = [string][char]0x250C
+        $topRight = [string][char]0x2510
+        $bottomLeft = [string][char]0x2514
+        $bottomRight = [string][char]0x2518
+        $left = [string][char]0x2502
+        $right = [string][char]0x2502
+        $platformLine = "Linux • Windows • macOS"
+    }
+
+    Write-Output (Format-UiText -Text ($topLeft + ($horizontal * $width) + $topRight) -Role "section" -Bold)
+    Write-UiBannerLine -Text "oooconf" -Width $width -Left $left -Right $right
+    Write-UiBannerLine -Text "reproducible dotfiles manager" -Width $width -Left $left -Right $right
+    Write-UiBannerLine -Text $platformLine -Width $width -Left $left -Right $right
+    Write-Output (Format-UiText -Text ($bottomLeft + ($horizontal * $width) + $bottomRight) -Role "section" -Bold)
+}
+
+function Write-UiSeparator {
+    $ruleChar = if (Test-UiNerdFont) { [string][char]0x2500 } else { "-" }
+    Write-Output (Format-UiText -Text ($ruleChar * 54) -Role "muted")
+}
+
+function Write-UiSpacer {
+    Write-Output ""
+}
+
+function Write-UiSectionFancy {
+    param(
+        [Parameter(Mandatory = $true)][string]$IconName,
+        [Parameter(Mandatory = $true)][string]$Title
+    )
+    $icon = Format-UiText -Text (Get-UiCommandIcon $IconName) -Role "hint"
+    $heading = Format-UiText -Text $Title -Role "section" -Bold
+    $ruleChar = if (Test-UiNerdFont) { [string][char]0x2500 } else { "-" }
+    $rule = Format-UiText -Text ($ruleChar * ($Title.Length + 6)) -Role "muted"
+    Write-Output "  $icon  $heading"
+    Write-Output "  $rule"
+}
+
 function Write-UiCommandRow {
     param(
         [Parameter(Mandatory = $true)][string]$CommandName,
@@ -616,11 +700,11 @@ function Write-UiHelpBlock {
                 Write-Output (Format-UiText -Text $line -Role "section")
                 continue
             }
-            '^(Examples:|Environment overrides:|Subcommands:|Forgit alias modes:|Typo handling modes:|PSFzf options:)$' {
+            '^(Examples:|Environment overrides:|Subcommands:|Global options:|Mode values:|Aliases:|Getting help:|Common workflows:|Repo root:|UI controls:|Themes:|Forgit alias modes:|Typo handling modes:|PSFzf options:|Prompt options:|Auto UV environment options:)$' {
                 Write-Output (Format-UiText -Text $line -Role "info")
                 continue
             }
-            '^\s{2}(oooconf|OOODNAKOV_)' {
+            '^\s+(oooconf|OOODNAKOV_|OOOCONF_|\$env:OOOCONF_|\./scripts/)' {
                 Write-Output (Format-UiText -Text $line -Role "hint")
                 continue
             }
@@ -1729,11 +1813,14 @@ function Get-Version {
 }
 
 function Show-Usage {
-    Write-UiSection "oooconf"
-    Write-Output "Usage: oooconf [global options] <command> [command options]"
-    Write-Output ""
-    Write-Output (Format-UiText -Text "oooconf - reproducible cross-platform dotfiles manager" -Role "section")
-    Write-Output (Format-UiText -Text "Global options:" -Role "info")
+    Write-UiBanner
+    Write-UiSpacer
+    Write-Output (Format-UiText -Text "Usage: oooconf [global options] <command> [command options]" -Role "section" -Bold)
+    Write-Output (Format-UiText -Text "A reproducible cross-platform dotfiles manager with setup, health checks, secrets, and shell tooling." -Role "muted")
+
+    Write-UiSpacer
+    Write-UiSeparator
+    Write-UiSectionFancy -IconName "version" -Title "Global options"
     Write-Output @"
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
@@ -1743,41 +1830,55 @@ function Show-Usage {
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
 "@
-    Write-Output ""
-    Write-Output (Format-UiText -Text "Commands:" -Role "info")
-    Write-Output ("  " + (Format-UiText -Text "Setup:" -Role "hint"))
+
+    Write-UiSpacer
+    Write-UiSeparator
+    Write-UiSectionFancy -IconName "install" -Title "Setup"
     Write-UiCommandRow -CommandName "install" -Description "apply managed config and optional dependency installs"
     Write-UiCommandRow -CommandName "deps" -Description "install optional dependencies only"
     Write-UiCommandRow -CommandName "update" -Description "pull repo with --ff-only, then re-run install"
-    Write-Output ("  " + (Format-UiText -Text "Inspect & Validate:" -Role "hint"))
+
+    Write-UiSpacer
+    Write-UiSectionFancy -IconName "doctor" -Title "Inspect & Validate"
     Write-UiCommandRow -CommandName "doctor" -Description "validate managed symlinks and required commands"
     Write-UiCommandRow -CommandName "dry-run" -Description "preview install flow without mutating filesystem"
     Write-UiCommandRow -CommandName "version" -Description "print CLI version and repo root"
-    Write-Output ("  " + (Format-UiText -Text "Manage State:" -Role "hint"))
+
+    Write-UiSpacer
+    Write-UiSectionFancy -IconName "lock" -Title "Manage State"
     Write-UiCommandRow -CommandName "delete" -Description "remove managed links and restore latest backups"
     Write-UiCommandRow -CommandName "remove" -Description "remove managed links only (no backup restore)"
     Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
     Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
     Write-UiCommandRow -CommandName "completions" -Description "regenerate tracked shell completions (autogen + oooconf)"
-    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
-    Write-Output ("  " + (Format-UiText -Text "Shell / Secrets:" -Role "hint"))
+    Write-UiCommandRow -CommandName "link" -Description "inspect or manage links from the symlink manifest"
+
+    Write-UiSpacer
+    Write-UiSectionFancy -IconName "shell" -Title "Shell / Secrets / Agents"
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "color" -Description "set a unified oooconf CLI color theme"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
-    Write-UiCommandRow -CommandName "komorebi" -Description "manage komorebi tiling window manager state"
+    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
     Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
-    Write-Output @"
-    Aliases:
-    check -> doctor
-    preview -> dry-run
-    upgrade -> update
+
+    Write-UiSpacer
+    Write-UiSeparator
+    Write-UiHelpBlock @"
+Aliases:
+  check -> doctor
+  preview -> dry-run
+  upgrade -> update
 Note:
   bootstrap is Unix-only in this wrapper.
-  On Windows, run `scripts/setup/setup.ps1 install` for initial setup.
+  On Windows, run ``scripts/setup/setup.ps1 install`` for initial setup.
 Getting help:
   oooconf --help                     show this message
   oooconf help <command>             show command-specific help
   oooconf help secrets               show secrets subcommand help
+UI controls:
+  `$env:OOOCONF_COLOR='always'       override color output
+  `$env:OOOCONF_ASCII='1'            force ASCII icons and borders
+  `$env:OOOCONF_THEME='<theme>'      set the CLI color theme for this run
 Common workflows:
   # Initial setup on Windows:
   ./scripts/setup/setup.ps1 install
@@ -1809,20 +1910,31 @@ Examples:
         }
         "deps" {
             Write-UiHelpBlock @"
-Usage: oooconf deps [--dry-run] [dependency-key...]
+Usage: oooconf deps [--dry-run] [--all] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
 picker is shown (using gum if available).
 
 All dependency metadata (including versions, URLs, and install methods) lives exclusively in scripts/optional-deps.toml.
-
+Examples:
   oooconf deps                         # interactive picker (when gum available)
-  oooconf deps key1 key2                # specific tools (see optional-deps.toml for keys)
+  oooconf deps key1 key2               # install specific dependency keys
   oooconf deps --dry-run               # preview only
+  oooconf deps --all                   # install all dependency keys
 "@
         }
         "update" {
-            Write-Output "See README.md for oooconf update usage"
+            Write-UiHelpBlock @"
+Usage: oooconf update [--dry-run] [--yes-optional]
+
+Pull the repo with --ff-only, then re-run the install flow.
+Use this to update your config to the latest tracked state. It performs
+a fast-forward pull only, failing if local changes would prevent it.
+Examples:
+  oooconf update                       # pull and reinstall
+  oooconf update --yes-optional        # also install missing dependencies
+  oooconf update --dry-run             # preview pull and install
+"@
         }
         "doctor" {
             Write-UiHelpBlock @"
@@ -1864,6 +1976,8 @@ Examples:
 Usage: oooconf delete
 
 Remove managed links and restore the latest backups when available.
+Use this to undo the managed config and return to your previous state.
+Backup files are stored in ~/.local/state/ooodnakov-config/backups/.
 Examples:
   oooconf delete                       # restore from backups
 "@
@@ -1983,7 +2097,7 @@ Environment overrides:
 Usage: oooconf version
 
 Print the CLI version (git describe or commit SHA) and resolved repo root.
-
+Examples:
   oooconf version                      # show version and repo path
 "@
         }
@@ -2047,10 +2161,10 @@ Themes:
 This also syncs theme-friendly overrides for yazi, wezterm local override, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
 Status output also reports detected nvim and oh-my-posh theme config state.
 Examples:
-  oooconf color status
-  oooconf color list
-  oooconf color catppuccin
-  oooconf color noctalia
+  oooconf color status                 # print current theme and synced config state
+  oooconf color list                   # list available themes
+  oooconf color catppuccin             # switch to Catppuccin colors
+  oooconf color noctalia               # switch to Noctalia colors
 "@
         }
         "wm" {
