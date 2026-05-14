@@ -85,16 +85,25 @@ plugins=(
   zsh-autosuggestions
 )
 
+BREW_PREFIX=""
 for brew_path in "${commands[brew]}" /opt/homebrew/bin/brew /usr/local/bin/brew "$HOME/.linuxbrew/bin/brew" /home/linuxbrew/.linuxbrew/bin/brew; do
   if [[ -x "$brew_path" ]]; then
-    brew_prefix="${brew_path:A:h:h}"
-    if [[ -d "$brew_prefix" && -O "$brew_prefix" ]]; then
+    BREW_PREFIX="${brew_path:A:h:h}"
+    if [[ -d "$BREW_PREFIX" && -O "$BREW_PREFIX" ]]; then
+      export HOMEBREW_PREFIX="$BREW_PREFIX"
+      export HOMEBREW_CELLAR="$BREW_PREFIX/Cellar"
+      export HOMEBREW_REPOSITORY="$BREW_PREFIX/Homebrew"
+      fpath[1,0]="$BREW_PREFIX/share/zsh/site-functions"
+      export FPATH
+      export PATH="$BREW_PREFIX/bin:$BREW_PREFIX/sbin${PATH+:$PATH}"
+      [ -z "${MANPATH-}" ] || export MANPATH=":${MANPATH#:}"
+      export INFOPATH="$BREW_PREFIX/share/info${INFOPATH:+:$INFOPATH}"
       plugins+=(brew)
     fi
     break
   fi
 done
-unset brew_path brew_prefix
+unset brew_path BREW_PREFIX
 
 for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
   source "$file"
