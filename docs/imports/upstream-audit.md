@@ -116,7 +116,7 @@ Remote shell files contained secrets. Those were inspected for migration risk bu
 
 ## Automated Pin Checks
 
-Last checked (UTC): `2026-05-14T21:33:02+00:00`
+Last checked (UTC): `2026-05-14T21:41:51+00:00`
 
 | Dependency | Status | Current ref | Latest HEAD |
 | --- | --- | --- | --- |
