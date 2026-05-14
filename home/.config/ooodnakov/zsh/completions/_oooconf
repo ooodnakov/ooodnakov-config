@@ -294,6 +294,8 @@ _oooconf_update_pins() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--apply[apply pin updates]' \
+    '--offline[skip remote HEAD resolution]' \
+    '--dry-run[skip report and lock writes]' \
     '*:arg:->args'
 
   case $state in

@@ -538,7 +538,7 @@ function Get-OooconfCompletions {
             }
         }
         'update-pins' = @{
-            Options = @('--apply')
+            Options = @('--apply', '--offline', '--dry-run')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()

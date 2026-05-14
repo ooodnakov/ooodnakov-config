@@ -108,7 +108,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 
 - `oooconf lock` (or `.\scripts\ooodnakov.ps1 lock`) to regenerate lock artifacts from pinned refs
 - `oooconf update-pins` to compare pinned refs with remote HEAD and append an audit summary
-- `oooconf update-pins --apply` to update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
+- `oooconf update-pins --apply` to update pinned refs in `scripts/optional-deps.toml`, then regenerate lock artifacts
 - `oooconf agents detect` to detect configured AI coding agent CLIs available on `PATH`
 - `oooconf agents sync` to update managed shared AGENTS.md policy sections from tracked snippets
 - `oooconf agents doctor` to verify AGENTS.md managed sections and check common MCP/skills markers in default agent config paths
