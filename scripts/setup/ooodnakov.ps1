@@ -1960,8 +1960,8 @@ Examples:
             Write-UiHelpBlock @"
 Usage: oooconf lock
 
-Regenerate dependency lock artifacts from pinned refs in setup scripts.
-Reads pinned versions from scripts/setup/setup.ps1 (or setup.sh) and writes
+Regenerate dependency lock artifacts from managed tool refs.
+Reads pinned versions from scripts/optional-deps.toml and writes
 the resolved lock file to deps.lock.json.
 Examples:
   oooconf lock                         # regenerate lock artifact
@@ -1969,14 +1969,15 @@ Examples:
         }
         "update-pins" {
             Write-UiHelpBlock @"
-Usage: oooconf update-pins [--apply]
+Usage: oooconf update-pins [--apply] [--offline] [--dry-run]
 
-Compare pinned git refs to upstream HEAD and refresh lock artifacts.
-Without --apply, only reports differences. With --apply, updates the
-pinned refs in setup scripts and regenerates lock artifacts.
+Compare pinned git refs in scripts/optional-deps.toml to upstream HEAD.
+Without --apply, reports differences and refreshes lock artifacts. With --apply,
+updates pinned refs in the catalog and regenerates lock artifacts.
 Examples:
   oooconf update-pins                  # check for pin drift
   oooconf update-pins --apply          # update pins and regenerate lock
+  oooconf update-pins --offline --dry-run # validate local catalog parsing
 "@
         }
         "completions" {

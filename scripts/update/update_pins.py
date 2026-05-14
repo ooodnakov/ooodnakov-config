@@ -6,6 +6,7 @@ import datetime as dt
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 SCRIPTS_CLI_DIR = Path(__file__).resolve().parents[1] / "cli"
@@ -15,27 +16,25 @@ if str(SCRIPTS_CLI_DIR) not in sys.path:
 from cli_ui import bullet, section, status  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-SETUP_SH = REPO_ROOT / "scripts" / "setup.sh"
+OPTIONAL_DEPS = REPO_ROOT / "scripts" / "optional-deps.toml"
 REPORT_PATH = REPO_ROOT / "docs" / "imports" / "upstream-audit.md"
-GEN_LOCK = REPO_ROOT / "scripts" / "generate_dependency_lock.py"
+GEN_LOCK = REPO_ROOT / "scripts" / "generate" / "generate_dependency_lock.py"
 AUTOMATED_SECTION_HEADER = "## Automated Pin Checks"
-PAIR_RE = re.compile(r'^(?P<name>[A-Z0-9_]+)_(?P<kind>REPO|REF)="(?P<value>.+)"$')
 
 
-def parse_pins(setup_text: str) -> list[dict[str, str]]:
-    entries: dict[str, dict[str, str]] = {}
-    for raw in setup_text.splitlines():
-        match = PAIR_RE.match(raw.strip())
-        if not match:
-            continue
-        entries.setdefault(match.group("name"), {})[match.group("kind")] = match.group("value")
+def parse_pins(catalog_text: str) -> list[dict[str, str]]:
+    catalog = tomllib.loads(catalog_text)
+    managed_tools = catalog.get("managed-tools", {})
 
     rows: list[dict[str, str]] = []
-    for name in sorted(entries):
-        row = entries[name]
-        if "REPO" not in row or "REF" not in row:
+    for name, tool in sorted(managed_tools.items()):
+        if not isinstance(tool, dict):
             continue
-        rows.append({"name": name, "repo": row["REPO"], "current": row["REF"]})
+        repo = tool.get("repo")
+        ref = tool.get("ref")
+        if not isinstance(repo, str) or not isinstance(ref, str):
+            continue
+        rows.append({"name": name, "repo": repo, "current": ref})
     return rows
 
 
@@ -49,31 +48,33 @@ def resolve_latest(repo: str) -> str:
     return result.stdout.split()[0]
 
 
-def build_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+def build_rows(rows: list[dict[str, str]], *, offline: bool = False) -> list[dict[str, str]]:
     enriched: list[dict[str, str]] = []
     for row in rows:
-        latest = "unresolved"
-        status = "error"
-        try:
-            latest = resolve_latest(row["repo"])
-            status = "up-to-date" if latest == row["current"] else "update-available"
-        except Exception:
-            pass
+        latest = row["current"] if offline else "unresolved"
+        status = "not-checked" if offline else "error"
+        if not offline:
+            try:
+                latest = resolve_latest(row["repo"])
+                status = "up-to-date" if latest == row["current"] else "update-available"
+            except Exception:
+                pass
         enriched.append({**row, "latest": latest, "status": status})
     return enriched
 
 
-def apply_updates(setup_text: str, rows: list[dict[str, str]]) -> tuple[str, int]:
-    updated = setup_text
+def apply_updates(catalog_text: str, rows: list[dict[str, str]]) -> tuple[str, int]:
+    updated = catalog_text
     applied = 0
     for row in rows:
         if row["status"] != "update-available":
             continue
-        before = f'{row["name"]}_REF="{row["current"]}"'
-        after = f'{row["name"]}_REF="{row["latest"]}"'
-        if before in updated:
-            updated = updated.replace(before, after, 1)
-            applied += 1
+        line_re = re.compile(
+            rf'^(?P<prefix>{re.escape(row["name"])}\s*=\s*\{{[^}}\n]*?\bref\s*=\s*"){re.escape(row["current"])}(?P<suffix>"[^}}\n]*\}}\s*)$',
+            re.MULTILINE,
+        )
+        updated, count = line_re.subn(rf"\g<prefix>{row['latest']}\g<suffix>", updated, count=1)
+        applied += count
     return updated, applied
 
 
@@ -108,31 +109,47 @@ def run_lock_generator() -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Check/update pinned git refs in scripts/setup.sh")
-    parser.add_argument("--apply", action="store_true", help="apply update-available refs into scripts/setup.sh")
+    parser = argparse.ArgumentParser(description="Check/update pinned git refs in scripts/optional-deps.toml")
+    parser.add_argument(
+        "--apply", action="store_true", help="apply update-available refs into scripts/optional-deps.toml"
+    )
+    parser.add_argument("--offline", action="store_true", help="parse pins without resolving remote HEAD commits")
+    parser.add_argument("--dry-run", action="store_true", help="do not write report or lock artifacts")
     args = parser.parse_args()
+    if args.apply and args.offline:
+        parser.error("--apply cannot be combined with --offline")
 
-    setup_text = SETUP_SH.read_text(encoding="utf-8")
-    rows = build_rows(parse_pins(setup_text))
+    catalog_text = OPTIONAL_DEPS.read_text(encoding="utf-8")
+    rows = build_rows(parse_pins(catalog_text), offline=args.offline)
 
     if args.apply:
-        updated_text, applied = apply_updates(setup_text, rows)
+        updated_text, applied = apply_updates(catalog_text, rows)
         if applied > 0:
-            SETUP_SH.write_text(updated_text, encoding="utf-8")
-            setup_text = updated_text
-            rows = build_rows(parse_pins(setup_text))
-        status("ok", f"Applied {applied} ref update(s) to {SETUP_SH}.")
+            OPTIONAL_DEPS.write_text(updated_text, encoding="utf-8")
+            catalog_text = updated_text
+            rows = build_rows(parse_pins(catalog_text), offline=args.offline)
+        status("ok", f"Applied {applied} ref update(s) to {OPTIONAL_DEPS}.")
 
     section("Dependency Pin Status")
     for row in rows:
-        role = "ok" if row["status"] == "up-to-date" else "warn" if row["status"] == "update-available" else "fail"
+        role = (
+            "ok"
+            if row["status"] in {"up-to-date", "not-checked"}
+            else "warn"
+            if row["status"] == "update-available"
+            else "fail"
+        )
         status(role, f"{row['name'].lower():<20} {row['status']:<16} {row['current'][:10]} -> {row['latest'][:10]}")
 
-    update_report(rows)
-    print()
-    bullet(f"Updated automated pin-check section in {REPORT_PATH}.")
+    if args.dry_run:
+        print()
+        bullet("Dry run: skipped report and lock artifact writes.")
+    else:
+        update_report(rows)
+        print()
+        bullet(f"Updated automated pin-check section in {REPORT_PATH}.")
 
-    run_lock_generator()
+        run_lock_generator()
     return 0
 
 

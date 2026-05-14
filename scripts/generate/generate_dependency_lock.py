@@ -54,7 +54,7 @@ def write_markdown_lock(pins: list[dict[str, str]], generated_at: str) -> None:
     lines = [
         "# Dependency Lock",
         "",
-        "Generated from `scripts/setup.sh` pinned dependency refs.",
+        "Generated from `scripts/optional-deps.toml` managed tool refs.",
         "",
         f"Generated at (UTC): `{generated_at}`",
         "",
