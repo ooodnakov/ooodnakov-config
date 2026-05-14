@@ -112,7 +112,7 @@ case "$RESTORE_MODE" in
 esac
 
 if command -v py > /dev/null 2>&1; then
-  while IFS='|' read -r key source target; do
+  while IFS='|' read -r _ source target; do
     [ -z "$target" ] && continue
     remove_managed_link "$source" "$target"
   done < <(py scripts/link_manager.py --repo-root "$REPO_ROOT" --format text 2>/dev/null) || true
@@ -134,7 +134,7 @@ remove_font_dir
 
 if [ "$RESTORE_MODE" = "restore" ]; then
   if command -v py > /dev/null 2>&1; then
-    while IFS='|' read -r key source target; do
+    while IFS='|' read -r _ source target; do
       [ -z "$target" ] && continue
       restore_backup "$target"
     done < <(py scripts/link_manager.py --repo-root "$REPO_ROOT" --format text 2>/dev/null) || true

@@ -110,6 +110,7 @@ The project uses `uv` for Python version and dependency management.
 - The virtual environment `.venv/` is ignored by git.
 
 When adding new Python dependencies:
+
 - Use `uv add <package>` to update `pyproject.toml`.
 - Ensure scripts remain compatible with the pinned Python version.
 
@@ -177,7 +178,6 @@ Follow this policy when finishing a requested task:
 - Organize, stage, and commit changes to the current branch.
 - Write a clear, concise commit message following the existing style (e.g., `feat(scope): ...`, `fix(scope): ...`).
 - Only push to the remote repository if specifically asked by the user or if it is the natural conclusion of the task.
-
 
 ## Common MCP servers
 <!-- oooconf:mcp-servers:start -->

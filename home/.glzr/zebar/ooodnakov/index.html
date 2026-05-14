@@ -223,34 +223,34 @@
     <div class="group" id="left">
       <div class="group" id="workspaces"></div>
       <div id="window-title">
-        <span id="window-title-icon">󰍹</span>
+        <span id="window-title-icon" aria-hidden="true">󰍹</span>
         <span id="window-title-text">Ready</span>
       </div>
     </div>
 
     <div class="group" id="right">
-      <div class="widget" id="net-widget">
-        <span class="icon" id="net-icon">󰤨</span>
+      <div class="widget" id="net-widget" role="status" aria-label="Network status">
+        <span class="icon" id="net-icon" aria-hidden="true">󰤨</span>
         <span id="net-text">--</span>
       </div>
-      <div class="widget">
-        <span class="icon"></span>
+      <div class="widget" role="status" aria-label="CPU usage">
+        <span class="icon" aria-hidden="true"></span>
         <span id="cpu">0%</span>
       </div>
-      <div class="widget">
-        <span class="icon"></span>
+      <div class="widget" role="status" aria-label="Memory usage">
+        <span class="icon" aria-hidden="true"></span>
         <span id="memory">0%</span>
       </div>
-      <div class="widget" id="bat-widget">
-        <span class="icon" id="bat-icon">󰁹</span>
+      <div class="widget" id="bat-widget" role="status" aria-label="Battery status">
+        <span class="icon" id="bat-icon" aria-hidden="true">󰁹</span>
         <span id="bat-text">--%</span>
       </div>
-      <div class="widget">
-        <span class="icon">󱑒</span>
+      <div class="widget" role="status" aria-label="Time">
+        <span class="icon" aria-hidden="true">󱑒</span>
         <span id="time">00:00</span>
       </div>
-      <div class="widget">
-        <span class="icon">󰃭</span>
+      <div class="widget" role="status" aria-label="Date">
+        <span class="icon" aria-hidden="true">󰃭</span>
         <span id="date">Mon, Jan 01</span>
       </div>
     </div>
@@ -460,6 +460,8 @@
 
       button.type = 'button';
       button.className = 'workspace' + (focused ? ' focused' : '') + (occupied ? ' occupied' : '');
+      if (focused) { button.setAttribute('aria-current', 'true'); }
+      button.setAttribute('aria-label', `Workspace ${workspace.name}${focused ? ' (current)' : ''}`);
       button.title = workspace.displayName || `Workspace ${workspace.name}`;
       button.onclick = () => glazewmOutput.runCommand(`focus --workspace ${workspace.name}`);
 
@@ -478,6 +480,7 @@
           const chip = document.createElement('span');
           chip.className = 'workspace-app';
           chip.innerText = visual.icon;
+          chip.setAttribute('aria-hidden', 'true');
           chip.title = visual.label;
           apps.appendChild(chip);
         });
