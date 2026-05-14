@@ -16,6 +16,8 @@ foreach ($key in $DependencyKeys) {
         $env:OOODNAKOV_INSTALL_OPTIONAL = "always"
     } elseif ($key -eq "--skip-deps") {
         $SkipDeps = $true
+    } elseif ($key -eq "--all") {
+        $filteredKeys += $key
     } else {
         $filteredKeys += $key
     }
@@ -195,7 +197,7 @@ function Get-ClosestSuggestion {
 
 function Show-SetupHelp {
     @"
-Usage: setup.ps1 [install|update|doctor|deps|completions] [--dry-run] [dependency-key...]
+Usage: setup.ps1 [install|update|doctor|deps|completions] [--dry-run] [--minimal|--all] [dependency-key...]
 
 Commands:
   install   apply managed config and dependencies
@@ -207,6 +209,8 @@ Commands:
 Options:
   --dry-run       print actions without mutating filesystem
   --yes-optional  auto-accept optional dependency installs
+  --minimal       install the minimal optional dependency set for deps
+  --all           install all optional dependency keys for deps
   -h, --help      show this help
 
 Environment variables:
@@ -984,9 +988,15 @@ function Update-SessionEnvironment {
     $newPath = @()
     if ($machinePath) { $newPath += $machinePath -split ';' }
     if ($userPath) { $newPath += $userPath -split ';' }
+    if ($newPath.Count -eq 0 -and $env:PATH) {
+        $separator = [System.IO.Path]::PathSeparator
+        $newPath += $env:PATH -split [regex]::Escape([string]$separator)
+    }
 
-    $uniquePath = $newPath | Where-Object { $_ } | Select-Object -Unique
-    $env:PATH = [string]::Join(';', $uniquePath)
+    $uniquePath = @($newPath | Where-Object { $_ } | Select-Object -Unique)
+    if ($uniquePath.Count -gt 0) {
+        $env:PATH = [string]::Join([System.IO.Path]::PathSeparator, $uniquePath)
+    }
 
     if (Test-VerboseMode) {
         Write-Output "Refreshed session PATH."
@@ -2878,6 +2888,10 @@ try {
         $minimalKeys = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("minimal")
         $requestedDependencyKeys = @($minimalKeys -split ' ' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
         Write-Information "Installing minimal setup: $($requestedDependencyKeys -join ', ')" -InformationAction Continue
+    } elseif ($Command -eq "deps" -and $requestedDependencyKeys -contains "--all") {
+        $allKeys = @((Get-AllOptionalDependencySpecs).Key | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        $requestedDependencyKeys = @($allKeys)
+        Write-Information "Installing all optional dependencies: $($requestedDependencyKeys -join ', ')" -InformationAction Continue
     }
 
     if ($requestedDependencyKeys.Count -gt 0) {

@@ -115,7 +115,7 @@ progress_step() {
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/setup.sh [install|update|doctor|deps|completions] [--dry-run] [--minimal] [dependency-key...]
+Usage: ./scripts/setup.sh [install|update|doctor|deps|completions] [--dry-run] [--minimal|--all] [dependency-key...]
 
 Commands:
   install   apply managed config and dependencies
@@ -127,6 +127,8 @@ Commands:
 Options:
   --dry-run print actions without mutating filesystem
   --yes-optional auto-accept optional dependency installs
+  --minimal install the minimal optional dependency set for deps
+  --all install all optional dependency keys for deps
 EOF
 }
 
@@ -3028,6 +3030,7 @@ while [ "$#" -gt 0 ]; do
     --dry-run) DRY_RUN=1 ;;
     --yes-optional) INSTALL_OPTIONAL=always ;;
     --minimal) MINIMAL=1 ;;
+    --all) ALL_DEPS=1 ;;
     -h|--help) usage; exit 0 ;;
     --*)
       echo "unknown option: $1" >&2
@@ -3061,6 +3064,8 @@ case "$COMMAND" in
   deps)
     if [ "$MINIMAL" = 1 ]; then
       selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')
+    elif [ "${ALL_DEPS:-0}" = 1 ]; then
+      selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "keys" | paste -sd, -)
     fi
     if [ -z "$selected_optional_key_csv" ] && is_interactive; then
       if selected_optional_key_csv="$(choose_optional_dependencies_with_gum)"; then

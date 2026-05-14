@@ -700,7 +700,7 @@ function Write-UiHelpBlock {
                 Write-Output (Format-UiText -Text $line -Role "section")
                 continue
             }
-            '^(Examples:|Environment overrides:|Subcommands:|Global options:|Mode values:|Aliases:|Getting help:|Common workflows:|Repo root:|UI controls:|Themes:|Forgit alias modes:|Typo handling modes:|PSFzf options:|Prompt options:|Auto UV environment options:)$' {
+            '^(Examples:|Environment overrides:|Subcommands:|Global options:|Mode values:|Aliases:|Note:|Getting help:|Common workflows:|Repo root:|UI controls:|Themes:|Forgit alias modes:|Typo handling modes:|PSFzf options:|Prompt options:|Auto UV environment options:)$' {
                 Write-Output (Format-UiText -Text $line -Role "info")
                 continue
             }
@@ -2258,6 +2258,7 @@ function Require-PythonRuntime {
 $dryRunRequested = $false
 $yesOptionalRequested = $false
 $skipDepsRequested = $false
+$allDepsRequested = $false
 $command = $null
 $remaining = [System.Collections.Generic.List[string]]::new()
 
@@ -2320,6 +2321,9 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         "--skip-deps" {
             $skipDepsRequested = $true
         }
+        "--all" {
+            $allDepsRequested = $true
+        }
         "help" {
             if ($i + 1 -lt $Arguments.Count) {
                 Show-CommandUsage (Resolve-CommandAlias -CommandName $Arguments[$i + 1])
@@ -2369,6 +2373,7 @@ if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
             "--dry-run" { $dryRunRequested = $true }
             "--yes-optional" { $yesOptionalRequested = $true }
             "--skip-deps" { $skipDepsRequested = $true }
+            "--all" { $allDepsRequested = $true }
             default { $normalizedRemaining += $arg }
         }
     }
@@ -2387,18 +2392,24 @@ function Invoke-SetupCommand {
         [string[]]$RemainingArgs = @()
     )
 
+    $setupArgs = @()
+    if ($allDepsRequested -and $SetupCommand -eq "deps") {
+        $setupArgs += "--all"
+    }
+    $setupArgs += $RemainingArgs
+
     if ($dryRunRequested) {
         if (-not $SupportsDryRun) {
             throw "--dry-run is not supported for $SetupCommand"
         }
-        & $SetupScript $SetupCommand -DryRun -SkipDeps:$skipDepsRequested @RemainingArgs
+        & $SetupScript $SetupCommand -DryRun -SkipDeps:$skipDepsRequested @setupArgs
         if ($LASTEXITCODE -ne 0) {
             throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
         }
         return
     }
 
-    & $SetupScript $SetupCommand -SkipDeps:$skipDepsRequested @RemainingArgs
+    & $SetupScript $SetupCommand -SkipDeps:$skipDepsRequested @setupArgs
     if ($LASTEXITCODE -ne 0) {
         throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
     }
