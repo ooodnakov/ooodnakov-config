@@ -72,7 +72,7 @@ The project-owned `oooconf` command completions are generated separately from th
 This gives two properties:
 
 - the working config remains small and readable
-- installs stay reproducible because setup pins upstream refs and regenerates `deps.lock.json` plus `docs/dependency-lock.md`
+- installs stay reproducible because setup pins upstream refs and regenerates `deps.lock.json`
 
 Python scripts under `scripts/` own the lockfile generation and pin-update workflow so Unix and PowerShell entrypoints share the same implementation.
 

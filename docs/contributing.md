@@ -14,7 +14,7 @@ When making structural or setup behavior changes, it is important to keep the do
 
 When adding, updating, or removing dependencies, you must regenerate the lock artifacts to maintain cross-platform reproducibility:
 
-1. Use the helper script to regenerate the lock artifacts (`deps.lock.json` and `docs/dependency-lock.md`).
+1. Use `oooconf lock` to regenerate the lock artifacts (`deps.lock.json`).
 
    ```bash
    oooconf lock

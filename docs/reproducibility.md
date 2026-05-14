@@ -31,7 +31,7 @@ Ignored files:
 `zsh` dependencies and other third-party utilities are intentionally not committed into the repo.
 
 See [`dependency-decisions.md`](dependency-decisions.md) for the full list of automated, optional, and manual dependencies and how they are installed per platform.
-See [`dependency-lock.md`](dependency-lock.md) for the exact pinned git revisions used by the setup scripts.
+See `deps.lock.json` for the exact pinned git revisions used by the setup scripts.
 
 This keeps the repo small while still making bootstrap deterministic.
 
