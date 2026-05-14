@@ -3188,9 +3188,9 @@ if [ "$COMMAND" = "completions" ]; then
   progress_step "Generating oooconf command completions"
   generate_oooconf_completions || true
   echo
-  echo "Completion generation complete."
+  ui_line ok "Completion generation complete."
   if [ -n "$LOG_FILE" ]; then
-    echo "Log file: $LOG_FILE"
+    ui_line info "Log file: $LOG_FILE"
   fi
   exit 0
 fi
@@ -3204,9 +3204,9 @@ if [ "$COMMAND" = "deps" ]; then
   progress_step "Rendering dependency summary"
   print_summary
   echo
-  echo "Optional dependency install complete."
+  ui_line ok "Optional dependency install complete."
   if [ -n "$LOG_FILE" ]; then
-    echo "Log file: $LOG_FILE"
+    ui_line info "Log file: $LOG_FILE"
   fi
   exit 0
 fi
@@ -3284,8 +3284,8 @@ fi
 print_summary
 
 echo
-echo "Bootstrap complete."
-echo "If needed, create local overrides in $CONFIG_HOME/ooodnakov/local."
+ui_line ok "Bootstrap complete."
+ui_line hint "If needed, create local overrides in $CONFIG_HOME/ooodnakov/local."
 if [ -n "$LOG_FILE" ]; then
-  echo "Log file: $LOG_FILE"
+  ui_line info "Log file: $LOG_FILE"
 fi
