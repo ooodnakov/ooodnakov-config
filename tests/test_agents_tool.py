@@ -350,6 +350,8 @@ def test_supports_color_output(monkeypatch):
     assert agents_tool.supports_color_output() is True
     monkeypatch.setattr(sys, "stdout", MockStdout(tty=False))
     assert agents_tool.supports_color_output() is False
+
+
 def test_run_install_spec_post_install_safe_execution(monkeypatch, capsys):
     from agents_tool import AgentUpdateSpec, run_install_spec
 
