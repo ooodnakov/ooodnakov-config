@@ -19,13 +19,97 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     tomllib = None
 
+from tui import is_interactive, interactive_select
+
 MANAGED_BEGIN = "<!-- oooconf:agents-common:start -->"
 MANAGED_END = "<!-- oooconf:agents-common:end -->"
 RTK_BEGIN = "<!-- oooconf:rtk:start -->"
 RTK_END = "<!-- oooconf:rtk:end -->"
 DEFAULT_CONFIG_PATH = Path("home/.config/ooodnakov/agents/config.json")
-from cli_ui import icon, colorize, section, status
-
+ASCII_ICONS = {
+    "section": "==",
+    "ok": "[ok]",
+    "warn": "[warn]",
+    "fail": "[fail]",
+    "missing": "[missing]",
+    "outdated": "[outdated]",
+    "info": "[info]",
+    "bullet": "-",
+}
+NERD_FONT_ICONS = {
+    "section": "▸",
+    "ok": "✓",
+    "warn": "⚠",
+    "fail": "✗",
+    "missing": "✗",
+    "outdated": "󰏫",
+    "info": "ℹ",
+    "bullet": "•",
+}
+ANSI_RESET = "\033[0m"
+ANSI_BOLD = "\033[1m"
+THEME_COLORS = {
+    "default": {
+        "section": 111,
+        "ok": 78,
+        "warn": 221,
+        "fail": 203,
+        "missing": 203,
+        "outdated": 215,
+        "info": 117,
+        "muted": 245,
+    },
+    "catppuccin": {
+        "section": 111,
+        "ok": 150,
+        "warn": 223,
+        "fail": 203,
+        "missing": 203,
+        "outdated": 181,
+        "info": 117,
+        "muted": 145,
+    },
+    "gruvbox": {
+        "section": 214,
+        "ok": 142,
+        "warn": 214,
+        "fail": 167,
+        "missing": 167,
+        "outdated": 214,
+        "info": 109,
+        "muted": 248,
+    },
+    "nord": {
+        "section": 110,
+        "ok": 108,
+        "warn": 180,
+        "fail": 174,
+        "missing": 174,
+        "outdated": 109,
+        "info": 110,
+        "muted": 146,
+    },
+    "tokyonight": {
+        "section": 111,
+        "ok": 114,
+        "warn": 221,
+        "fail": 203,
+        "missing": 203,
+        "outdated": 180,
+        "info": 117,
+        "muted": 146,
+    },
+    "noctalia": {
+        "section": 141,
+        "ok": 110,
+        "warn": 180,
+        "fail": 174,
+        "missing": 174,
+        "outdated": 109,
+        "info": 117,
+        "muted": 146,
+    },
+}
 ENV_PLACEHOLDER_PATTERN = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 BRACED_ENV_REF_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 SIMPLE_ENV_REF_PATTERN = re.compile(r"(?<!\$)\$([A-Za-z_][A-Za-z0-9_]*)")
@@ -65,14 +149,14 @@ class AgentUpdateSpec:
 
 
 def parse_args() -> argparse.Namespace:
-    main_parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog="oooconf agents",
         description="Detect AI agent CLIs and manage shared AGENTS.md instructions.",
     )
-    main_parser.add_argument("--repo-root", default=None, help="Repo root containing oooconf agent config.")
-    main_parser.add_argument("--config", default=None, help="Override agent config JSON path.")
+    parser.add_argument("--repo-root", default=None, help="Repo root containing oooconf agent config.")
+    parser.add_argument("--config", default=None, help="Override agent config JSON path.")
 
-    subparsers = main_parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
     detect_parser = subparsers.add_parser("detect", help="Detect known agent CLIs available on PATH.")
     detect_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output.")
@@ -86,6 +170,11 @@ def parse_args() -> argparse.Namespace:
     )
     sync_parser.add_argument(
         "--global", dest="global_sync", action="store_true", help="Also sync MCP servers to global agent configs."
+    )
+    sync_parser.add_argument(
+        "--agents",
+        nargs="*",
+        help="Filter sync to specific agents by name or key.",
     )
 
     doctor_parser = subparsers.add_parser(
@@ -101,6 +190,13 @@ def parse_args() -> argparse.Namespace:
     mcp_subparsers = mcp_parser.add_subparsers(dest="subcommand", required=True)
     mcp_sync_parser = mcp_subparsers.add_parser("sync", help="Synchronize (clone/pull/install) managed MCP servers.")
     mcp_sync_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
+    mcp_sync_parser.add_argument(
+        "--agents",
+        metavar="AGENT",
+        nargs="*",
+        default=None,
+        help="Restrict sync to specific agents. If omitted, interactive mode.",
+    )
     mcp_add_parser = mcp_subparsers.add_parser("add", help="Add an MCP server entry to common-data.json.")
     mcp_add_parser.add_argument("--name", help="Optional MCP server name (otherwise inferred from JSON key).")
     mcp_add_parser.add_argument(
@@ -112,10 +208,7 @@ def parse_args() -> argparse.Namespace:
     mcp_add_parser.add_argument("--multi", action="store_true", help="Allow multiple MCP entries in one JSON payload.")
     mcp_add_parser.add_argument("--preview", action="store_true", help="Show diff preview before writing.")
     mcp_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
-    mcp_status_parser = mcp_subparsers.add_parser("status", help="Show status of managed MCP servers.")
-
-    help_parser = subparsers.add_parser("help", help="Show this help message.")
-    help_parser.add_argument("topic", nargs="?", default=None, help="Topic to show help for.")
+    subparsers.add_parser("status", help="Show status of managed MCP servers.")
 
     rtk_parser = subparsers.add_parser("rtk", help="Manage RTK (Rust Token Killer) integration.")
     rtk_subparsers = rtk_parser.add_subparsers(dest="subcommand", required=True)
@@ -182,6 +275,13 @@ def parse_args() -> argparse.Namespace:
         default="global",
         help="MiniMax endpoint region to configure (default: global).",
     )
+    provider_sync_parser.add_argument(
+        "--agents",
+        metavar="AGENT",
+        nargs="*",
+        default=None,
+        help="Restrict sync to specific agents (e.g., claude codex opencode). If omitted, interactive mode.",
+    )
 
     skills_parser = subparsers.add_parser(
         "skills",
@@ -191,6 +291,13 @@ def parse_args() -> argparse.Namespace:
     skills_sync_parser = skills_subparsers.add_parser("sync", help="Synchronize configured skill_specs across agents.")
     skills_sync_parser.add_argument(
         "--check", action="store_true", help="Print planned skill installs without executing."
+    )
+    skills_sync_parser.add_argument(
+        "--agents",
+        metavar="AGENT",
+        nargs="*",
+        default=None,
+        help="Restrict sync to specific agents. If omitted, interactive mode.",
     )
     skills_view_parser = skills_subparsers.add_parser(
         "view",
@@ -204,7 +311,7 @@ def parse_args() -> argparse.Namespace:
     skills_add_parser.add_argument("--sync-now", action="store_true", help="Run agents skills sync after adding.")
     skills_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
 
-    return main_parser.parse_args()
+    return parser.parse_args()
 
 
 def resolve_repo_root(repo_root: str | None) -> Path:
@@ -426,6 +533,54 @@ def parse_agent_update_specs(raw: list[dict[str, str]]) -> list[AgentUpdateSpec]
         )
         for entry in raw
     ]
+
+
+def supports_nerd_font_output() -> bool:
+    if os.environ.get("OOOCONF_ASCII") == "1":
+        return False
+    if not sys.stdout.isatty():
+        return False
+    encoding = (sys.stdout.encoding or "").lower()
+    return "utf" in encoding
+
+
+def supports_color_output() -> bool:
+    mode = os.environ.get("OOOCONF_COLOR", "").lower()
+    if mode in {"0", "false", "never"} or os.environ.get("NO_COLOR") is not None:
+        return False
+    if mode in {"1", "true", "always"} or os.environ.get("FORCE_COLOR") is not None:
+        return True
+    return sys.stdout.isatty()
+
+
+def _theme_palette() -> dict[str, int]:
+    return THEME_COLORS.get(os.environ.get("OOOCONF_THEME", "default").lower(), THEME_COLORS["default"])
+
+
+def colorize(text: str, role: str, *, bold: bool = False) -> str:
+    if not supports_color_output():
+        return text
+    palette = _theme_palette()
+    color_num = palette.get(role)
+    color = f"\033[38;5;{color_num}m" if color_num is not None else ""
+    weight = ANSI_BOLD if bold else ""
+    return f"{weight}{color}{text}{ANSI_RESET}"
+
+
+def icon(name: str) -> str:
+    palette = NERD_FONT_ICONS if supports_nerd_font_output() else ASCII_ICONS
+    return palette[name]
+
+
+def print_section(title: str) -> None:
+    prefix = icon("section")
+    print(f"{colorize(prefix, 'section', bold=True)} {colorize(title, 'section', bold=True)}")
+    line = "─" * (len(title) + 2) if prefix != ASCII_ICONS["section"] else "-" * (len(title) + 3)
+    print(colorize(line, "muted"))
+
+
+def print_status_line(status: str, message: str) -> None:
+    print(f"{colorize(icon(status), status, bold=True)} {message}")
 
 
 def detect_clis(agent_clis: list[AgentCli]) -> list[dict[str, str | bool]]:
@@ -773,11 +928,11 @@ def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
     if json_output:
         print(json.dumps({"detected": rows}, indent=2))
     else:
-        section("Agent CLI Detection")
+        print_section("Agent CLI Detection")
         for row in rows:
             status = "ok" if row["installed"] else "missing"
             location = row["path"] or "-"
-            status(status, f"{row['name']} ({row['command']})")
+            print_status_line(status, f"{row['name']} ({row['command']})")
             print(f"  path: {location}")
         print("")
         print(f"Summary: detected {installed}/{len(rows)} configured agent CLIs.")
@@ -802,10 +957,11 @@ def cmd_sync(
     check_only: bool,
     global_sync: bool,
     materialize_secrets: bool = False,
+    agents: list[str] | None = None,
 ) -> int:
     common_text = get_platform_common_text(repo_root, config)
 
-    section("AGENTS Sync")
+    print_section("AGENTS Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
 
     g_count = 0
@@ -814,6 +970,23 @@ def cmd_sync(
         merged_data = load_common_data(repo_root, config, include_local=True)
         managed_block_global = render_markdown_block(common_text, merged_data)
         config_targets = parse_agent_targets(config["agent_configs"])
+
+        # Filter to selected agents if not all specified
+        if agents is None and not check_only and is_interactive():
+            agent_names = [t.name for t in config_targets]
+            selected = interactive_select(
+                agent_names,
+                title="Select agents to sync",
+                instructions="SPACE toggle  ENTER confirm  A all  N none  Q quit",
+            )
+            if selected is None:
+                print("Aborted.")
+                return 1
+            agents = selected
+
+        if agents is not None:
+            config_targets = [t for t in config_targets if t.name in agents]
+
         g_count, g_files = sync_global_configs(
             repo_root,
             config_targets,
@@ -847,7 +1020,7 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
 
     failed = False
 
-    section("AGENTS Doctor")
+    print_section("AGENTS Doctor")
 
     print("Agent Configs")
     print("-------------")
@@ -857,29 +1030,29 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
             message = f"{target.name}: config path not found ({', '.join(target.default_paths)})"
             if target.docs_url:
                 message += f" | docs: {target.docs_url}"
-            status("warn", message)
+            print_status_line("warn", message)
             if strict_paths:
                 failed = True
             continue
 
         if result.parse_error:
-            status("fail", f"{target.name}: failed parsing {result.existing_path}")
+            print_status_line("fail", f"{target.name}: failed parsing {result.existing_path}")
             print(f"  error: {result.parse_error}")
             continue
 
         if result.missing_mcp or result.missing_skills:
-            status("fail", f"{target.name}: missing required markers in {result.existing_path}")
+            print_status_line("fail", f"{target.name}: missing required markers in {result.existing_path}")
             if result.missing_mcp:
                 print(f"  missing MCPs: {', '.join(result.missing_mcp)}")
             if result.missing_skills:
                 print(f"  missing skills: {', '.join(result.missing_skills)}")
             continue
         if result.shape_issues:
-            status("fail", f"{target.name}: config shape mismatch in {result.existing_path}")
+            print_status_line("fail", f"{target.name}: config shape mismatch in {result.existing_path}")
             print(f"  issues: {', '.join(result.shape_issues)}")
             continue
 
-        status("ok", f"{target.name}: required MCP/skills markers found in {result.existing_path}")
+        print_status_line("ok", f"{target.name}: required MCP/skills markers found in {result.existing_path}")
 
     print("")
     print("Agent CLIs")
@@ -887,9 +1060,9 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
     missing_clis = [row for row in rows if not row["installed"]]
     installed_clis = [row for row in rows if row["installed"]]
     for row in installed_clis:
-        status("ok", f"{row['name']} ({row['command']})")
+        print_status_line("ok", f"{row['name']} ({row['command']})")
     for row in missing_clis:
-        status("missing", f"{row['name']} ({row['command']})")
+        print_status_line("missing", f"{row['name']} ({row['command']})")
 
     print("")
     strict_note = "strict config paths enabled" if strict_paths else "missing config paths are warnings"
@@ -921,7 +1094,7 @@ def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
     install_dir = repo_root / "home" / ".config" / "ooodnakov" / "agents" / "install"
     install_dir.mkdir(parents=True, exist_ok=True)
 
-    section("Building Agent Install Scripts")
+    print_section("Building Agent Install Scripts")
     print(f"Target: {install_dir}")
 
     count = 0
@@ -966,7 +1139,7 @@ def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
         ps1_content = "".join(ps1_lines)
         ps1_path.write_text(ps1_content, encoding="utf-8")
 
-        status("ok", f"{spec.name} ({spec.command})")
+        print_status_line("ok", f"{spec.name} ({spec.command})")
         count += 1
 
     print(f"\nSummary: built install scripts for {count} agents.")
@@ -1028,12 +1201,12 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
     try:
         command, runner = resolve_update_command(spec)
     except RuntimeError as exc:
-        status("fail", f"{spec.name}: {exc}")
+        print_status_line("fail", f"{spec.name}: {exc}")
         return False, False
 
     command_display = shlex.join(command)
     if check_only:
-        status("ok", f"Plan: install {spec.name} via {runner}")
+        print_status_line("ok", f"Plan: install {spec.name} via {runner}")
         print(f"  command: {command_display}")
         if spec.install_script:
             print(f"  post-install: {spec.install_script}")
@@ -1041,17 +1214,17 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
 
     resolved_runner = shutil.which(command[0])
     if not resolved_runner:
-        status("fail", f"{spec.name}: required installer '{command[0]}' is not installed.")
+        print_status_line("fail", f"{spec.name}: required installer '{command[0]}' is not installed.")
         return False, False
 
     command_exec = [resolved_runner, *command[1:]]
-    status("info", f"Installing {spec.name} via {runner}")
+    print_status_line("info", f"Installing {spec.name} via {runner}")
     print(f"  command: {command_display}")
     try:
         subprocess.run(command_exec, check=True)
-        status("ok", f"Successfully installed {spec.name}")
+        print_status_line("ok", f"Successfully installed {spec.name}")
     except subprocess.CalledProcessError as exc:
-        status("fail", f"Failed to install {spec.name}: {exc}")
+        print_status_line("fail", f"Failed to install {spec.name}: {exc}")
         return False, False
 
     # Run post-install script if configured
@@ -1062,18 +1235,18 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
             line = line.strip()
             if not line:
                 continue
-            status("info", f"Running post-install step: {line}")
+            print_status_line("info", f"Running post-install step: {line}")
             try:
                 cmd_parts = shlex.split(line)
                 if not cmd_parts:
                     continue
                 subprocess.run(cmd_parts, check=True)
-                status("ok", "Post-install step succeeded")
+                print_status_line("ok", "Post-install step succeeded")
             except ValueError as exc:
-                status("fail", f"Post-install step failed to parse: {exc}")
+                print_status_line("fail", f"Post-install step failed to parse: {exc}")
                 return False, False
             except subprocess.CalledProcessError as exc:
-                status("fail", f"Post-install step failed: {exc}")
+                print_status_line("fail", f"Post-install step failed: {exc}")
                 return False, False
 
     return True, True
@@ -1095,11 +1268,11 @@ def cmd_install(
 
     selected, errors = select_install_specs(specs, agent_queries, install_all=install_all, missing_only=missing_only)
     for error in errors:
-        status("fail", error)
+        print_status_line("fail", error)
     if errors:
         return 1
 
-    section("Agent CLI Installation")
+    print_section("Agent CLI Installation")
     if install_all:
         scope = "all configured agents"
     elif agent_queries:
@@ -1112,7 +1285,7 @@ def cmd_install(
     print(f"Scope: {scope}")
 
     if not selected:
-        status("ok", "No matching agents require installation.")
+        print_status_line("ok", "No matching agents require installation.")
         return 0
 
     attempted = 0
@@ -1178,7 +1351,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
         print("No agent_updates configured.", file=sys.stderr)
         return 1
 
-    section("Agent CLI Updates")
+    print_section("Agent CLI Updates")
     print(f"Mode: {'check' if check_only else 'update'}")
 
     attempted = 0
@@ -1188,7 +1361,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
     for spec in specs:
         installed_path = shutil.which(spec.command)
         if not installed_path:
-            status("missing", f"{spec.name} ({spec.command}) not found on PATH; skipping.")
+            print_status_line("missing", f"{spec.name} ({spec.command}) not found on PATH; skipping.")
             skipped += 1
             continue
 
@@ -1198,25 +1371,25 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
         try:
             command, runner = resolve_update_command(spec)
         except RuntimeError as exc:
-            status("fail", f"{spec.name}: {exc}")
+            print_status_line("fail", f"{spec.name}: {exc}")
             failed += 1
             continue
         attempted += 1
         command_display = shlex.join(command)
         if check_only:
-            status("ok", f"{spec.name} via {runner}")
+            print_status_line("ok", f"{spec.name} via {runner}")
             if version_before:
                 print(f"  current version: {version_before}")
             print(f"  command: {command_display}")
             continue
         resolved_runner = shutil.which(command[0])
         if not resolved_runner:
-            status("fail", f"{spec.name}: required updater '{command[0]}' is not installed.")
+            print_status_line("fail", f"{spec.name}: required updater '{command[0]}' is not installed.")
             failed += 1
             continue
 
         command_exec = [resolved_runner, *command[1:]]
-        status("info", f"Updating {spec.name} via {runner}")
+        print_status_line("info", f"Updating {spec.name} via {runner}")
         print(f"  command: {command_display}")
 
         output_lines: list[str] = []
@@ -1249,7 +1422,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
             if version_before and version_after and version_before == version_after:
                 output_str = "\n".join(output_lines)
                 if "Already up to date" not in output_str and "is up to date" not in output_str:
-                    status("warn", f"{spec.name} version did not change ({version_after}).")
+                    print_status_line("warn", f"{spec.name} version did not change ({version_after}).")
                     if is_shadowed:
                         print(
                             f"  {colorize('Note:', 'warn')} active binary '{installed_path}' is SHADOWING the {runner} version."
@@ -1257,23 +1430,23 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
                         print(f"  Expected in: {runner_bin_dir}")
                 else:
                     if is_shadowed:
-                        status("warn", f"{spec.name} is up to date in {runner}, but SHADOWED on PATH.")
+                        print_status_line("warn", f"{spec.name} is up to date in {runner}, but SHADOWED on PATH.")
                         print(f"  Active: {installed_path}")
                         print(f"  Try: pnpm remove -g {spec.package} (if installed via pnpm)")
                     else:
-                        status("ok", f"{spec.name} is already up to date ({version_after})")
+                        print_status_line("ok", f"{spec.name} is already up to date ({version_after})")
             else:
                 if is_shadowed:
-                    status("warn", f"{spec.name} updated, but still SHADOWED on PATH.")
+                    print_status_line("warn", f"{spec.name} updated, but still SHADOWED on PATH.")
                     print(f"  Active version: {version_after}")
                     print(f"  Active path: {installed_path}")
                 else:
-                    status(
+                    print_status_line(
                         "ok", f"{spec.name} updated: {version_before or 'unknown'} -> {version_after or 'unknown'}"
                     )
             updated += 1
         else:
-            status("fail", f"{spec.name} update failed via {runner}")
+            print_status_line("fail", f"{spec.name} update failed via {runner}")
             if output_lines:
                 print("  (combined stdout/stderr shown above)")
             failed += 1
@@ -1282,15 +1455,34 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
     return 1 if failed else 0
 
 
-def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     skill_specs = common_data.get("skill_specs", [])
     if not skill_specs:
         print("No skill_specs configured.", file=sys.stderr)
         return 0
 
-    section("Agent Skills Sync")
+    # Get unique agent keys from skill specs
+    spec_agents = sorted(set(s.get("agent", "").lower() for s in skill_specs if s.get("agent")))
+    if agents is None and not check_only and is_interactive():
+        agents = interactive_select(spec_agents, title="Select agents to sync skills for")
+        if agents is None:
+            print_status_line("info", "Cancelled.")
+            return 0
+        if not agents:
+            print_status_line("info", "No agents selected.")
+            return 0
+
+    if agents:
+        skill_specs = [s for s in skill_specs if s.get("agent", "").lower() in [a.lower() for a in agents]]
+        if not skill_specs:
+            print_status_line("warn", f"No skill specs match agents: {', '.join(agents)}")
+            return 0
+
+    print_section("Agent Skills Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
+    if agents:
+        print(f"Agents: {', '.join(agents)}")
 
     attempted = 0
     failed = 0
@@ -1302,7 +1494,7 @@ def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -
         agent_key = spec.get("agent", "").lower()
         source = spec.get("source", "")
         if not agent_key or not source:
-            status("fail", f"Invalid skill spec: {name} (missing agent or source)")
+            print_status_line("fail", f"Invalid skill spec: {name} (missing agent or source)")
             failed += 1
             continue
 
@@ -1320,7 +1512,7 @@ def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -
 
         installed_path = shutil.which(agent_cli.command)
         if not installed_path:
-            status("missing", f"{agent_cli.name} ({agent_cli.command}) not found; skipping skill {name}.")
+            print_status_line("missing", f"{agent_cli.name} ({agent_cli.command}) not found; skipping skill {name}.")
             skipped += 1
             continue
 
@@ -1330,29 +1522,29 @@ def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -
         elif agent_cli.command == "claude":
             # Claude Code uses /plugin install in-session, but for CLI automation we might need another way or just skip
             # If there's no CLI flag for plugins, we skip for now.
-            status("warn", f"Automated plugin install for {agent_cli.name} not yet supported; skip {name}.")
+            print_status_line("warn", f"Automated plugin install for {agent_cli.name} not yet supported; skip {name}.")
             skipped += 1
             continue
         else:
-            status("warn", f"Skill sync for {agent_cli.name} not yet implemented; skip {name}.")
+            print_status_line("warn", f"Skill sync for {agent_cli.name} not yet implemented; skip {name}.")
             skipped += 1
             continue
 
         attempted += 1
         command_display = shlex.join(command)
         if check_only:
-            status("ok", f"Plan: {name} for {agent_cli.name}")
+            print_status_line("ok", f"Plan: {name} for {agent_cli.name}")
             print(f"  command: {command_display}")
             continue
 
-        status("ok", f"Syncing {name} for {agent_cli.name}...")
+        print_status_line("ok", f"Syncing {name} for {agent_cli.name}...")
         print(f"  command: {command_display}")
         try:
             subprocess.run(command, check=True, shell=os.name == "nt")
-            status("ok", f"Successfully synced {name}")
+            print_status_line("ok", f"Successfully synced {name}")
             synced += 1
         except subprocess.CalledProcessError as exc:
-            status("fail", f"Failed to sync {name}: {exc}")
+            print_status_line("fail", f"Failed to sync {name}: {exc}")
             failed += 1
 
     print("")
@@ -1365,22 +1557,22 @@ def cmd_skills_view(json_output: bool, check_only: bool) -> int:
     if json_output:
         command.append("--json")
     command_display = shlex.join(command)
-    section("Agent Skills View")
+    print_section("Agent Skills View")
     if check_only:
-        status("ok", "Plan: list global shared skills catalog")
+        print_status_line("ok", "Plan: list global shared skills catalog")
         print(f"  command: {command_display}")
         return 0
 
     if not shutil.which("pnpm"):
-        status("missing", "pnpm not found; cannot run skills catalog view.")
+        print_status_line("missing", "pnpm not found; cannot run skills catalog view.")
         print("  install pnpm first, then rerun: oooconf agents skills view")
         return 1
 
-    status("info", "Listing global shared skills catalog via pnpm dlx")
+    print_status_line("info", "Listing global shared skills catalog via pnpm dlx")
     print(f"  command: {command_display}")
     result = subprocess.run(command, shell=os.name == "nt")
     if result.returncode != 0:
-        status("fail", "skills list command failed.")
+        print_status_line("fail", "skills list command failed.")
         print("  ensure the `skills` package is reachable from pnpm dlx in your environment.")
         return result.returncode
     return 0
@@ -1412,10 +1604,10 @@ def cmd_mcp_add(
         print(f"Paste {prompt} and press Ctrl-D:", file=sys.stderr)
         payload = sys.stdin.read()
     if not payload.strip():
-        status("fail", "No MCP JSON payload provided.")
+        print_status_line("fail", "No MCP JSON payload provided.")
         return 1
     if allow_multi and name:
-        status("fail", "--name cannot be combined with --multi.")
+        print_status_line("fail", "--name cannot be combined with --multi.")
         return 1
 
     single_named_payload = payload
@@ -1438,7 +1630,7 @@ def cmd_mcp_add(
         mcp_servers[key] = normalized
         planned.append(key)
     if check_only:
-        status("ok", f"Plan: add MCP(s) {', '.join(planned)} to {config['common_data_file']}")
+        print_status_line("ok", f"Plan: add MCP(s) {', '.join(planned)} to {config['common_data_file']}")
         return 0
     if preview:
         path = common_data_path(repo_root, config)
@@ -1452,7 +1644,7 @@ def cmd_mcp_add(
         if diff:
             print(diff)
     write_common_data(repo_root, config, data)
-    status("ok", f"Added MCP(s) {', '.join(planned)} to {config['common_data_file']}")
+    print_status_line("ok", f"Added MCP(s) {', '.join(planned)} to {config['common_data_file']}")
     should_sync = sync_now or prompt_yes_no("Sync global agent configs now?")
     if should_sync:
         return cmd_sync(repo_root, config, check_only=False, global_sync=True)
@@ -1483,10 +1675,10 @@ def cmd_skills_add(
     if label not in skills:
         skills.append(label)
     if check_only:
-        status("ok", f"Plan: add skill spec '{source_url}' for {agent}")
+        print_status_line("ok", f"Plan: add skill spec '{source_url}' for {agent}")
         return 0
     write_common_data(repo_root, config, data)
-    status("ok", f"Added skill spec '{source_url}' for {agent}")
+    print_status_line("ok", f"Added skill spec '{source_url}' for {agent}")
     should_sync = sync_now or prompt_yes_no("Sync skills to local agents now?")
     if should_sync:
         return cmd_skills_sync(repo_root, config, check_only=False)
@@ -1721,30 +1913,15 @@ def replace_or_append_toml_table(content: str, table: str, rendered: str) -> tup
     return updated, True
 
 
-def render_codex_minimax_provider(region: str) -> str:
-    endpoints = minimax_endpoints(region)
-    return (
-        "[model_providers.minimax]\n"
-        'name = "MiniMax Chat Completions API"\n'
-        f'base_url = "{endpoints["openai_base_url"]}"\n'
-        f'env_key = "{MINIMAX_ENV_KEY}"\n'
-        'env_key_instructions = "Export MINIMAX_API_KEY before starting Codex."\n'
-        'wire_api = "chat"\n'
-        "requires_openai_auth = false\n"
-        "request_max_retries = 4\n"
-        "stream_max_retries = 10\n"
-        "stream_idle_timeout_ms = 300000\n"
-    )
-
-
 def render_codex_minimax_profile() -> str:
     return f'[profiles.minimax]\nmodel = "{MINIMAX_CODEX_MODEL}"\nmodel_provider = "minimax"\n'
 
 
-def append_codex_minimax_config(path: Path, region: str, check_only: bool) -> bool:
+def append_codex_minimax_config(path: Path, region: str, materialize_secrets: bool, check_only: bool) -> bool:
     current = path.read_text(encoding="utf-8") if path.exists() else ""
+    api_key = os.environ.get(MINIMAX_ENV_KEY)
     updated, provider_changed = replace_or_append_toml_table(
-        current, "model_providers.minimax", render_codex_minimax_provider(region)
+        current, "model_providers.minimax", render_codex_minimax_provider(region, materialize_secrets and api_key is not None, api_key)
     )
     updated, profile_changed = replace_or_append_toml_table(updated, "profiles.minimax", render_codex_minimax_profile())
     changed = provider_changed or profile_changed
@@ -1755,20 +1932,28 @@ def append_codex_minimax_config(path: Path, region: str, check_only: bool) -> bo
     return changed
 
 
+def render_codex_minimax_provider(region: str, materialize_secrets: bool = False, api_key: str | None = None) -> str:
+    endpoints = minimax_endpoints(region)
+    key_value = api_key if materialize_secrets and api_key is not None else MINIMAX_ENV_KEY
+    return (
+        "[model_providers.minimax]\n"
+        'name = "MiniMax Chat Completions API"\n'
+        f'base_url = "{endpoints["openai_base_url"]}"\n'
+        f'env_key = "{key_value}"\n'
+        'env_key_instructions = "Export MINIMAX_API_KEY before starting Codex."\n'
+        'wire_api = "chat"\n'
+        "requires_openai_auth = false\n"
+        "request_max_retries = 4\n"
+        "stream_max_retries = 10\n"
+        "stream_idle_timeout_ms = 300000\n"
+    )
+
+
 def cmd_provider_sync(
-    config: dict[str, Any], provider: str, check_only: bool, materialize_secrets: bool, region: str
+    config: dict[str, Any], provider: str, check_only: bool, materialize_secrets: bool, region: str, agents: list[str] | None = None
 ) -> int:
     if provider != "minimax":
-        status("fail", f"Unsupported provider: {provider}")
-        return 1
-
-    section("Agent Provider Sync")
-    print(f"Provider: {provider}")
-    print(f"Region: {region}")
-    print(f"Mode: {'check' if check_only else 'sync'}")
-
-    if materialize_secrets and not os.environ.get(MINIMAX_ENV_KEY):
-        status("fail", f"{MINIMAX_ENV_KEY} is not set; refusing to materialize an empty API key.")
+        print_status_line("fail", f"Unsupported provider: {provider}")
         return 1
 
     targets = parse_agent_targets(config["agent_configs"])
@@ -1777,24 +1962,46 @@ def cmd_provider_sync(
         "OpenCode": upsert_opencode_minimax_config,
         "OpenAI Codex CLI": append_codex_minimax_config,
     }
+
+    # Filter to only supported agents
+    supported_names = sorted(supported.keys())
+    if agents is None and not check_only and is_interactive():
+        agents = interactive_select(supported_names, title="Select agents to configure provider")
+        if agents is None:
+            print_status_line("info", "Cancelled.")
+            return 0
+        if not agents:
+            print_status_line("info", "No agents selected.")
+            return 0
+
+    print_section("Agent Provider Sync")
+    print(f"Provider: {provider}")
+    print(f"Region: {region}")
+    print(f"Mode: {'check' if check_only else 'sync'}")
+    if agents:
+        print(f"Agents: {', '.join(agents)}")
+
+    if materialize_secrets and not os.environ.get(MINIMAX_ENV_KEY):
+        print_status_line("fail", f"{MINIMAX_ENV_KEY} is not set; refusing to materialize an empty API key.")
+        return 1
+
     changed_paths: list[Path] = []
 
     for target in targets:
         updater = supported.get(target.name)
         if updater is None or not target.default_paths:
             continue
+        if agents is not None and target.name not in agents:
+            continue
         path = existing_default_path(target.default_paths) or Path(target.default_paths[0]).expanduser()
         try:
-            if target.name == "OpenAI Codex CLI":
-                changed = updater(path, region, check_only)  # type: ignore[misc]
-            else:
-                changed = updater(path, region, materialize_secrets, check_only)  # type: ignore[misc]
+            changed = updater(path, region, materialize_secrets, check_only)  # type: ignore[misc]
         except Exception as exc:
-            status("fail", f"{target.name}: failed to update {path}: {exc}")
+            print_status_line("fail", f"{target.name}: failed to update {path}: {exc}")
             return 1
         status = "ok" if changed else "info"
         action = "would update" if check_only and changed else "updated" if changed else "already configured"
-        status(status, f"{target.name}: {action} {path}")
+        print_status_line(status, f"{target.name}: {action} {path}")
         if changed:
             changed_paths.append(path)
 
@@ -1811,7 +2018,7 @@ def cmd_provider_sync(
     return 1 if check_only and changed_paths else 0
 
 
-def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     mcp_servers = common_data.get("mcp_servers", {})
     managed_mcps = {name: cfg for name, cfg in mcp_servers.items() if "source" in cfg}
@@ -1820,8 +2027,26 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
         print("No managed MCP servers (with 'source') configured.")
         return 0
 
-    section("MCP Sync")
+    mcp_names = sorted(managed_mcps.keys())
+    if agents is None and not check_only and is_interactive():
+        agents = interactive_select(mcp_names, title="Select MCP servers to sync")
+        if agents is None:
+            print_status_line("info", "Cancelled.")
+            return 0
+        if not agents:
+            print_status_line("info", "No MCP servers selected.")
+            return 0
+
+    if agents:
+        managed_mcps = {name: cfg for name, cfg in managed_mcps.items() if name in agents}
+        if not managed_mcps:
+            print_status_line("warn", f"No managed MCP servers match: {', '.join(agents)}")
+            return 0
+
+    print_section("MCP Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
+    if agents:
+        print(f"Agents: {', '.join(agents)}")
 
     attempted = 0
     failed = 0
@@ -1833,33 +2058,33 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
         install_cmd = cfg.get("install")
 
         attempted += 1
-        status("info", f"Syncing {name} ({source})")
+        print_status_line("info", f"Syncing {name} ({source})")
 
         if not mcp_dir.parent.exists():
             if not check_only:
                 mcp_dir.parent.mkdir(parents=True, exist_ok=True)
 
         if not mcp_dir.exists():
-            print(f"  {bullet('')} Pulling latest changes in {mcp_dir}...")
+            print(f"  {icon('bullet')} Cloning into {mcp_dir}...")
             if check_only:
                 synced += 1
                 continue
             try:
                 subprocess.run(["git", "clone", source, str(mcp_dir)], check=True)
             except subprocess.CalledProcessError as exc:
-                status("fail", f"Failed to clone {name}: {exc}")
+                print_status_line("fail", f"Failed to clone {name}: {exc}")
                 failed += 1
                 continue
         else:
-            print(f"  {bullet('')} Pulling latest changes in {mcp_dir}...")
+            print(f"  {icon('bullet')} Pulling latest changes in {mcp_dir}...")
             if not check_only:
                 try:
                     subprocess.run(["git", "-C", str(mcp_dir), "pull", "--ff-only"], check=True)
                 except subprocess.CalledProcessError as exc:
-                    status("warn", f"Failed to pull {name} (continuing): {exc}")
+                    print_status_line("warn", f"Failed to pull {name} (continuing): {exc}")
 
         if install_cmd:
-            print(f"  {bullet('')} Running install: {install_cmd}")
+            print(f"  {icon('bullet')} Running install: {install_cmd}")
             if check_only:
                 synced += 1
                 continue
@@ -1870,14 +2095,14 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
                 if not cmd_parts:
                     continue
                 subprocess.run(cmd_parts, check=True, cwd=str(mcp_dir))
-                status("ok", f"Successfully installed {name}")
+                print_status_line("ok", f"Successfully installed {name}")
                 synced += 1
             except subprocess.CalledProcessError as exc:
-                status("fail", f"Install failed for {name}: {exc}")
+                print_status_line("fail", f"Install failed for {name}: {exc}")
                 failed += 1
                 continue
         else:
-            status("ok", f"Synced {name} (no install needed)")
+            print_status_line("ok", f"Synced {name} (no install needed)")
             synced += 1
 
     print("")
@@ -1889,29 +2114,29 @@ def cmd_mcp_status(repo_root: Path, config: dict[str, Any]) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     mcp_servers = common_data.get("mcp_servers", {})
 
-    section("MCP Status")
+    print_section("MCP Status")
 
     for name, cfg in sorted(mcp_servers.items()):
         source = cfg.get("source")
         if source:
             mcp_dir = resolve_mcp_path(repo_root, name)
             if mcp_dir.exists():
-                status("ok", f"{name} (managed): {mcp_dir}")
+                print_status_line("ok", f"{name} (managed): {mcp_dir}")
             else:
-                status("missing", f"{name} (managed): {mcp_dir} NOT CLONED")
+                print_status_line("missing", f"{name} (managed): {mcp_dir} NOT CLONED")
         else:
-            status("ok", f"{name} (static): {cfg.get('command')} {shlex.join(cfg.get('args', []))}")
+            print_status_line("ok", f"{name} (static): {cfg.get('command')} {shlex.join(cfg.get('args', []))}")
 
     return 0
 
 
 def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
     if os.name == "nt":
-        status("fail", "RTK hook-based initialization is not supported on Windows.")
+        print_status_line("fail", "RTK hook-based initialization is not supported on Windows.")
         return 0
 
     if not shutil.which("rtk"):
-        status("fail", "rtk command not found. Install it first (e.g., via 'oooconf deps rtk').")
+        print_status_line("fail", "rtk command not found. Install it first (e.g., via 'oooconf deps rtk').")
         return 1
 
     rows = detect_clis(parse_agent_clis(config["agent_clis"]))
@@ -1921,7 +2146,7 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
         print("No agents detected; nothing to initialize.")
         return 0
 
-    section("RTK Init")
+    print_section("RTK Init")
     print(f"Mode: {'check' if check_only else 'init'}")
 
     # Mapping of agent commands to rtk init flags
@@ -1943,7 +2168,7 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
             attempted += 1
             cmd = ["rtk", "init", "--global", *flags]
             cmd_display = shlex.join(cmd)
-            status("info", f"Initializing RTK for {agent_cmd}")
+            print_status_line("info", f"Initializing RTK for {agent_cmd}")
             print(f"  command: {cmd_display}")
 
             if check_only:
@@ -1952,10 +2177,10 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
 
             try:
                 subprocess.run(cmd, check=True)
-                status("ok", f"Successfully initialized {agent_cmd}")
+                print_status_line("ok", f"Successfully initialized {agent_cmd}")
                 synced += 1
             except subprocess.CalledProcessError as exc:
-                status("fail", f"Failed to initialize {agent_cmd}: {exc}")
+                print_status_line("fail", f"Failed to initialize {agent_cmd}: {exc}")
                 failed += 1
 
     print("")
@@ -1983,13 +2208,14 @@ if __name__ == "__main__":
                 check_only=args.check,
                 global_sync=args.global_sync,
                 materialize_secrets=args.materialize_secrets,
+                agents=args.agents,
             )
         )
     if args.command == "doctor":
         raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths))
     if args.command == "mcp":
         if args.subcommand == "sync":
-            raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check))
+            raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check, agents=args.agents))
         if args.subcommand == "add":
             raise SystemExit(
                 cmd_mcp_add(
@@ -2017,6 +2243,7 @@ if __name__ == "__main__":
                     check_only=args.check,
                     materialize_secrets=args.materialize_secrets,
                     region=args.region,
+                    agents=args.agents,
                 )
             )
     if args.command == "update":
@@ -2034,14 +2261,9 @@ if __name__ == "__main__":
         )
     if args.command == "install-scripts-build":
         raise SystemExit(cmd_install_scripts_build(root, cfg))
-    if args.command == "status":
-        raise SystemExit(cmd_mcp_status(root, cfg))
-    if args.command == "help":
-        print(main_parser.format_help())
-        raise SystemExit(0)
     if args.command == "skills":
         if args.subcommand == "sync":
-            raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check))
+            raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check, agents=args.agents))
         if args.subcommand == "view":
             raise SystemExit(cmd_skills_view(json_output=args.json, check_only=args.check))
         if args.subcommand == "add":

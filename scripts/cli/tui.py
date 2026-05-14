@@ -50,7 +50,6 @@ def _curses_select(
     instructions: str,
 ) -> list[str] | None:
     """Curses-based interactive selector."""
-    # Initialize curses to get LINES and COLS
     stdscr = curses.initscr()
     curses.noecho()
     curses.cbreak()
