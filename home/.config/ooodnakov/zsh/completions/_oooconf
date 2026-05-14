@@ -23,10 +23,10 @@ _oooconf_commands=(
   'check:alias for doctor'
   'preview:alias for dry-run'
   'upgrade:alias for update'
+  'wm:switch or manage window managers'
   'help:show help'
   'minimal:run minimal setup'
   'komorebi:manage Komorebi window manager'
-  'wm:switch or manage window managers'
 )
 typeset -ga _oooconf_global_opts
 _oooconf_global_opts=(
@@ -1967,6 +1967,11 @@ _oooconf_main() {
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_update
           ;;
+        wm)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_wm
+          ;;
         help)
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
@@ -1981,11 +1986,6 @@ _oooconf_main() {
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_komorebi
-          ;;
-        wm)
-          words=("${(@)words[i,-1]}")
-          CURRENT=$(( CURRENT - i + 1 ))
-          _oooconf_wm
           ;;
       esac
       ;;

@@ -26,10 +26,10 @@ function Get-OooconfCompletions {
         'check',
         'preview',
         'upgrade',
+        'wm',
         'help',
         'minimal',
-        'komorebi',
-        'wm'
+        'komorebi'
     )
 
     $OooconfGlobalOptions = @(

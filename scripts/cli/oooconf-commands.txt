@@ -18,3 +18,4 @@ version
 check
 preview
 upgrade
+wm
