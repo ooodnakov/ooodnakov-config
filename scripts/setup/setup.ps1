@@ -1046,7 +1046,7 @@ function Update-SessionEnvironment {
     }
 
     if (Test-VerboseMode) {
-        Write-Output "Refreshed session PATH."
+        Write-UiLine -Role ok -Message "Refreshed session PATH."
     }
 }
 
@@ -1060,7 +1060,7 @@ function Invoke-ActionWithSpinner {
     )
 
     if ($DryRun) {
-        Write-Output "[dry-run] $Description"
+        Write-UiLine -Role hint -Message "[dry-run] $Description"
         return $true
     }
 
@@ -1077,14 +1077,14 @@ function Invoke-ActionWithSpinner {
             if (Test-Interactive) {
                 Write-Host ("`r[ok] $Description")
             } else {
-                Write-Output "[ok] $Description"
+                Write-UiLine -Role ok -Message "[ok] $Description"
             }
             return $true
         } catch {
             if (Test-Interactive) {
                 Write-Host ("`r[failed] $Description")
             } else {
-                Write-Output "[failed] $Description"
+                Write-UiLine -Role fail -Message "[failed] $Description"
             }
             if (Test-Path $stdoutLog) {
                 Get-Content -LiteralPath $stdoutLog -ErrorAction SilentlyContinue | Write-Output
@@ -1153,14 +1153,14 @@ function Invoke-ActionWithSpinner {
         if ($interactive) {
             Write-Host "`r[ok] $Description                            "
         } else {
-            Write-Output "`r[ok] $Description"
+            Write-UiLine -Role ok -Message "[ok] $Description"
         }
         return $true
     } else {
         if ($interactive) {
             Write-Host "`r[failed] $Description                        "
         } else {
-            Write-Output "`r[failed] $Description"
+            Write-UiLine -Role fail -Message "[failed] $Description"
         }
         Add-Failure $Description
         return $false
@@ -1176,7 +1176,7 @@ function Invoke-Action {
     )
 
     if ($DryRun) {
-        Write-Output "[dry-run] $Description"
+        Write-UiLine -Role hint -Message "[dry-run] $Description"
         return $true
     }
 
@@ -1184,7 +1184,7 @@ function Invoke-Action {
         & $Action
         return $true
     } catch {
-        Write-Output $_
+        Write-UiLine -Role fail -Message "[failed] $Description"
         Add-Failure $Description
         return $false
     }
@@ -1199,7 +1199,7 @@ function Invoke-WithProgress {
     )
 
     if ($DryRun) {
-        Write-Output "[dry-run] $Description"
+        Write-UiLine -Role hint -Message "[dry-run] $Description"
         return 0
     }
 
@@ -1344,7 +1344,7 @@ function Backup-Target {
 
     return (Invoke-Action -Description "Backup $Target to $backupPath" -Action {
         Move-Item -LiteralPath $Target -Destination $backupPath -Force
-        Write-Output "backed up $Target -> $backupPath"
+        Write-UiLine -Role ok -Message "backed up $Target -> $backupPath"
     })
 }
 
@@ -1366,7 +1366,7 @@ function New-Symlink {
 
     if (Test-LinkMatches -Source $Source -Target $Target) {
         if (Test-VerboseMode) {
-            Write-Output "linked $Target"
+            Write-UiLine -Role ok -Message "linked $Target"
         }
         return $true
     }
@@ -1374,7 +1374,7 @@ function New-Symlink {
     return (Invoke-Action -Description "Link $Target" -Action {
         New-Item -ItemType SymbolicLink -Path $Target -Target $Source -Force | Out-Null
         if (Test-VerboseMode) {
-            Write-Output "linked $Target"
+            Write-UiLine -Role ok -Message "linked $Target"
         }
     })
 }
@@ -1432,7 +1432,7 @@ function Ensure-UserPathContains {
 
     $updated = Invoke-Action -Description "Add $PathEntry to user PATH" -Action {
         [Environment]::SetEnvironmentVariable("Path", $updatedUserPath, "User")
-        Write-Output "updated user PATH with $PathEntry"
+        Write-UiLine -Role ok -Message "updated user PATH with $PathEntry"
     }
 
     if (($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ }) -notcontains $PathEntry) {
@@ -1511,13 +1511,13 @@ function Install-Chocolatey {
     }
 
     if ($DryRun) {
-        Write-Output "[dry-run] Install Chocolatey"
+        Write-UiLine -Role hint -Message "[dry-run] Install Chocolatey"
         Add-DependencySummary "choco: install preview"
         return $false
     }
 
     try {
-        Write-Output "Installing Chocolatey..."
+        Write-UiLine -Role info -Message "Installing Chocolatey..."
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
         Invoke-RestMethod -Uri "https://community.chocolatey.org/install.ps1" | Invoke-Expression

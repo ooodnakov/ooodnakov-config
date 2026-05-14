@@ -206,7 +206,7 @@ initialize_logging() {
 
 run_cmd() {
   if [ "$DRY_RUN" -eq 1 ]; then
-    printf '[dry-run] %s\n' "$*"
+    ui_line hint "[dry-run] $*"
     return 0
   fi
   "$@"
@@ -1025,7 +1025,7 @@ run_with_spinner() {
   label="$1"
   shift
   if [ "$DRY_RUN" -eq 1 ]; then
-    printf "[dry-run] %s: %s\n" "$label" "$*"
+    ui_line hint "[dry-run] $label: $*"
     return 0
   fi
 
@@ -1043,7 +1043,7 @@ run_with_spinner() {
       if is_interactive; then
         printf "\r[failed] %s\n" "$label" > /dev/tty
       else
-        printf "[failed] %s\n" "$label" >&2
+        ui_line fail "[failed] $label"
       fi
       cat "$logfile" >&2
       if [ "${OOODNAKOV_RECORD_SPINNER_FAILURES:-1}" != "0" ]; then
@@ -1053,7 +1053,7 @@ run_with_spinner() {
       if is_interactive; then
         printf "\r[ok] %s\n" "$label" > /dev/tty
       else
-        printf "[ok] %s\n" "$label"
+        ui_line ok "[ok] $label"
       fi
     fi
     rm -f "$logfile"
@@ -1091,13 +1091,13 @@ run_with_spinner() {
       printf "[ok] %s\n" "$label" > /dev/tty
     else
       # Overwrite the "[-] label..." line with [ok]
-      printf "\r[ok] %s\n" "$label"
+      ui_line ok "[ok] $label"
     fi
   else
     if is_interactive; then
       printf "[failed] %s\n" "$label" > /dev/tty
     else
-      printf "\r[failed] %s\n" "$label"
+      ui_line fail "[failed] $label"
     fi
     cat "$logfile" >&2
     if [ "${OOODNAKOV_RECORD_SPINNER_FAILURES:-1}" != "0" ]; then
@@ -1148,7 +1148,7 @@ run_with_retry() {
     status=$?
     if [ "$attempt" -lt "$attempts" ]; then
       retry_delay="$attempt"
-      printf '[retry] %s after %ss\n' "$label" "$retry_delay" >&2
+      ui_line hint "[retry] $label after ${retry_delay}s"
       sleep "$retry_delay"
     fi
     attempt=$((attempt + 1))
@@ -1164,7 +1164,7 @@ record_failure() {
   local label
   label="$1"
   FAILURES+=("$label")
-  printf "\r[failed] %s\n" "$label" >&2
+  ui_line fail "[failed] $label"
 }
 
 detect_package_manager() {
