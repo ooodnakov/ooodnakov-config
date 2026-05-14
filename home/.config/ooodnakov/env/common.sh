@@ -1,11 +1,12 @@
-export EDITOR="${EDITOR:-nvim}"
+export EDITOR="${EDITOR:-$HOME/.local/share/ooodnakov-config/bin/nvim}"
 export VISUAL="${VISUAL:-$EDITOR}"
 export PAGER="${PAGER:-less}"
 export LESS="-FRX"
+export YAZI_CONFIG_HOME="${YAZI_CONFIG_HOME:-$HOME/.config/yazi}"
 
 export SUDO_EDITOR="${SUDO_EDITOR:-$EDITOR}"
 snvim() {
-  sudo -E "$SUDO_EDITOR" "$@"
+  sudo env "PATH=$HOME/.local/share/ooodnakov-config/bin:$HOME/.local/bin:$PATH" "$EDITOR" "$@"
 }
 
 path_prepend() {

@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Make scripts importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.generate_dependency_lock import parse_managed_tools
+from scripts.generate.generate_dependency_lock import parse_managed_tools
 
 
 def test_parse_managed_tools():

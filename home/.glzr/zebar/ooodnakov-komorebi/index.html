@@ -405,7 +405,7 @@
       if (focused) { button.setAttribute('aria-current', 'true'); }
       button.setAttribute('aria-label', `Workspace ${workspace.name}${focused ? ' (current)' : ''}`);
       button.title = workspace.displayName || `Workspace ${workspace.name}`;
-      button.onclick = () => komorebiOutput.runCommand(`focus workspace ${workspace.name}`);
+      button.onclick = () => komorebiOutput.runCommand(`focus-named-workspace ${workspace.name}`);
 
       label.className = 'workspace-label';
       label.innerText = workspace.name;

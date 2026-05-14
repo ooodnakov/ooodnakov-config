@@ -21,6 +21,8 @@ local config = Config:init()
    :append(require('config.general'))
    :append(require('config.launch'))
 
+require('config.plugins').apply_to_config(config.options)
+
 local local_override_path = wezterm.home_dir .. '/.config/ooodnakov/local/wezterm.lua'
 local handle = io.open(local_override_path, 'r')
 if handle then
@@ -31,5 +33,4 @@ if handle then
    end
 end
 
-config.color_scheme = "Noctalia"
 return config.options

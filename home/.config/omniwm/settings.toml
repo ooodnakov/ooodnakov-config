@@ -85,7 +85,7 @@ useCustomFrame = false
 widthPercent = 70.0
 
 [state]
-commandPaletteLastMode = "windows"
+commandPaletteLastMode = "menu"
 hiddenBarIsCollapsed = true
 
 [statusBar]
