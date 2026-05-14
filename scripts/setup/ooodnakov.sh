@@ -1823,7 +1823,8 @@ case "$command" in
     exec_setup_command completions 1 "$@"
     ;;
   link)
-    run_python "$REPO_ROOT/scripts/link_manager.py" "$@"
+    require_repo_script "$SETUP"
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" exec "$SETUP" link "$@"
     ;;
   dry-run)
     if [ "$dry_run_requested" -eq 1 ]; then
