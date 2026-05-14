@@ -120,8 +120,12 @@ ui_cmd_icon() {
       completions) printf '󰩫' ;;
       link) printf '🔗' ;;
       shell) printf '󱆃' ;;
+      color) printf '󰏘' ;;
       secrets) printf '󰠮' ;;
       agents) printf '󰭹' ;;
+      check) printf '󰓙' ;;
+      preview) printf '󰜉' ;;
+      upgrade) printf '󰚰' ;;
       *) printf '󰘍' ;;
     esac
   else
@@ -140,8 +144,12 @@ ui_cmd_icon() {
       completions) printf '[comp]' ;;
       link) printf '[link]' ;;
       shell) printf '[sh]' ;;
+      color) printf '[clr]' ;;
       secrets) printf '[sec]' ;;
       agents) printf '[agt]' ;;
+      check) printf '[doc]' ;;
+      preview) printf '[dry]' ;;
+      upgrade) printf '[up]' ;;
       *) printf '[cmd]' ;;
     esac
   fi
@@ -249,13 +257,96 @@ ui_line() {
   printf '%s %s\n' "$(ui_colorize "$role" "$(ui_icon "$role")")" "$*"
 }
 
+ui_repeat_char() {
+  local char="$1"
+  local count="$2"
+  local i
+
+  for ((i = 0; i < count; i += 1)); do
+    printf '%s' "$char"
+  done
+}
+
+ui_banner_row() {
+  local text="$1"
+  local width="$2"
+  local left="$3"
+  local right="$4"
+  local padding left_padding right_padding
+
+  padding=$((width - ${#text}))
+  if [ "$padding" -lt 0 ]; then
+    padding=0
+  fi
+  left_padding=$((padding / 2))
+  right_padding=$((padding - left_padding))
+  ui_colorize "section" "${left}$(ui_repeat_char ' ' "$left_padding")${text}$(ui_repeat_char ' ' "$right_padding")${right}"
+  printf '\n'
+}
+
+ui_banner() {
+  local width=58
+  local horizontal='-'
+  local top_left='+'
+  local top_right='+'
+  local bottom_left='+'
+  local bottom_right='+'
+  local left='|'
+  local right='|'
+  local platform_line='Linux / Windows / macOS'
+
+  if ui_use_nerd_font; then
+    horizontal='─'
+    top_left='┌'
+    top_right='┐'
+    bottom_left='└'
+    bottom_right='┘'
+    left='│'
+    right='│'
+    platform_line='Linux • Windows • macOS'
+  fi
+
+  ui_colorize "section" "${top_left}$(ui_repeat_char "$horizontal" "$width")${top_right}"
+  printf '\n'
+  ui_banner_row "oooconf" "$width" "$left" "$right"
+  ui_banner_row "reproducible dotfiles manager" "$width" "$left" "$right"
+  ui_banner_row "$platform_line" "$width" "$left" "$right"
+  ui_colorize "section" "${bottom_left}$(ui_repeat_char "$horizontal" "$width")${bottom_right}"
+  printf '\n'
+}
+
+ui_separator() {
+  local rule_char='-'
+  ui_use_nerd_font && rule_char='─'
+  ui_colorize "muted" "$(ui_repeat_char "$rule_char" 54)"
+  printf '\n'
+}
+
+ui_spacer() {
+  printf '\n'
+}
+
 ui_section() {
   local title="$1"
   local rule_char='-'
   ui_use_nerd_font && rule_char='─'
   ui_line section "$title"
-  ui_colorize muted "$(printf '%*s' "$((${#title}+3))" '' | tr ' ' "$rule_char")"
+  ui_colorize muted "$(ui_repeat_char "$rule_char" "$((${#title}+3))")"
   printf '\n'
+}
+
+ui_section_fancy() {
+  local icon_name="$1"
+  local title="$2"
+  local rule_char='-'
+  local icon_text title_text rule
+
+  ui_use_nerd_font && rule_char='─'
+  icon_text="$(ui_colorize "hint" "$(ui_cmd_icon "$icon_name")")"
+  title_text="$(ui_colorize "section" "$title")"
+  printf '  %s  %s\n' "$icon_text" "$title_text"
+  rule="$(ui_repeat_char "$rule_char" "$((${#title}+6))")"
+  printf '  %s\n' "$(ui_colorize "muted" "$rule")"
 }
 
 ui_command_row() {
@@ -278,10 +369,10 @@ ui_render_help_block() {
       Usage:*)
         printf '%s\n' "$(ui_colorize "section" "$line")"
         ;;
-      Examples:|Environment\ overrides:|Subcommands:|Global\ options:|Mode\ values:|Aliases:|Getting\ help:|Common\ workflows:|Repo\ root:)
+      Examples:|Environment\ overrides:|Subcommands:|Global\ options:|Mode\ values:|Aliases:|Note:|Getting\ help:|Common\ workflows:|Repo\ root:|UI\ controls:|Themes:|Forgit\ alias\ modes:|Typo\ handling\ modes:|PSFzf\ options:|Prompt\ options:|Auto\ UV\ environment\ options:)
         printf '%s\n' "$(ui_colorize "info" "$line")"
         ;;
-      "  oooconf "*|"  OOODNAKOV_"*|"  eval \"\$(oooconf "*)
+      "  oooconf "*|"       oooconf "*|"  OOODNAKOV_"*|"  OOOCONF_"*|"  eval \"\$(oooconf "*|"  ./scripts/"*)
         printf '%s\n' "$(ui_colorize "hint" "$line")"
         ;;
       *)
@@ -883,44 +974,37 @@ handle_shell_command() {
 
   case "$subcommand" in
     ""|-h|--help|help)
-      cat <<'EOF'
-Usage:
-  oooconf shell status
-  oooconf shell prompt [p10k|ohmyposh|status]
-  oooconf shell prompt-style [verbose|concise|status]
-  oooconf shell forgit-aliases [plain|forgit|status]
-  oooconf shell typo-handling [silent|suggest|help|status]
-  oooconf shell psfzf-tab [enabled|disabled|status]
-  oooconf shell psfzf-git [enabled|disabled|status]
-  oooconf shell auto-uv-env [enabled|quiet|status]
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf shell status
+       oooconf shell prompt [p10k|ohmyposh|status]
+       oooconf shell prompt-style [verbose|concise|status]
+       oooconf shell forgit-aliases [plain|forgit|status]
+       oooconf shell typo-handling [silent|suggest|help|status]
+       oooconf shell psfzf-tab [enabled|disabled|status]
+       oooconf shell psfzf-git [enabled|disabled|status]
+       oooconf shell auto-uv-env [enabled|quiet|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
-
 Forgit alias modes:
   plain   keep plain git aliases like gd/gco and define glo as git log
   forgit  enable upstream forgit aliases like glo/gd/gco
   status  show the currently configured mode
-
 Typo handling modes:
   silent   exit 1 without printing anything for wrong commands
   suggest  print only the closest suggestion when available
   help     print the unknown command, suggestion, and full help
-
 PSFzf options:
   psfzf-tab  enable or disable fzf-based tab completion in PowerShell
   psfzf-git  enable or disable fzf-based git keybindings in PowerShell
   status     show the currently configured mode
-
 Prompt options:
   prompt        switch only the zsh prompt engine between Powerlevel10k and Oh My Posh
   prompt-style  switch all managed prompts between verbose and concise layouts
   status        show the currently configured mode
-
 Auto UV environment options:
   enabled   show activation/deactivation messages for Python venvs
   quiet     suppress activation/deactivation messages
   status    show the currently configured mode
-
 Examples:
   oooconf shell status
   oooconf shell prompt status
@@ -1068,21 +1152,21 @@ handle_color_command() {
       printf '%s\n' "${KNOWN_COLOR_THEMES[@]}" "${KNOWN_COLOR_MODES[@]}"
       ;;
     help|-h|--help)
-      cat <<'EOF'
-Usage:
-  oooconf color status
-  oooconf color list
-  oooconf color <theme>
-  oooconf color dark
-  oooconf color light
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf color [status|list|<theme>]
 
-Select a unified oooconf CLI color theme and dark/light mode.
-Available themes:
+Set or inspect the oooconf CLI color theme.
+Themes:
   default, catppuccin, gruvbox, nord, tokyonight, noctalia
 Available modes:
   dark, light
 This also syncs theme-friendly overrides for yazi, wezterm local override, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
 Status output also reports detected nvim and oh-my-posh theme config state.
+Examples:
+  oooconf color status                 # print current theme and synced config state
+  oooconf color list                   # list available themes
+  oooconf color catppuccin             # switch to Catppuccin colors
+  oooconf color noctalia               # switch to Noctalia colors
 EOF
       ;;
     dark|light)
@@ -1208,40 +1292,57 @@ print_version() {
 }
 
 usage() {
-  ui_section "oooconf"
-  printf '%s\n\n' "Usage: oooconf [global options] <command> [command options]"
-  printf '%s\n' "$(ui_colorize "section" "oooconf — reproducible cross-platform dotfiles manager" )"
-  printf '%s\n' "$(ui_colorize "info" "Global options:" )"
+  ui_banner
+  ui_spacer
+  printf '%s\n' "$(ui_colorize "section" "Usage: oooconf [global options] <command> [command options]")"
+  printf '%s\n' "$(ui_colorize "muted" "A reproducible cross-platform dotfiles manager with setup, health checks, secrets, and shell tooling.")"
+
+  ui_spacer
+  ui_separator
+  ui_section_fancy "version" "Global options"
   cat <<EOF
   -C, --repo-root PATH  run against a specific repo checkout
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
+      --skip-deps       skip dependency installation
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
 EOF
-  printf '\n%s\n' "$(ui_colorize "info" "Commands:")"
-  printf '  %s\n' "$(ui_colorize "hint" "Setup:")"
+
+  ui_spacer
+  ui_separator
+  ui_section_fancy "install" "Setup"
   ui_command_row "bootstrap" "clone/update repo then run install"
   ui_command_row "install" "apply managed config and optional dependency installs"
   ui_command_row "deps" "install optional dependencies only"
   ui_command_row "update" "pull repo with --ff-only, then re-run install"
-  printf '  %s\n' "$(ui_colorize "hint" "Inspect & Validate:")"
+
+  ui_spacer
+  ui_section_fancy "doctor" "Inspect & Validate"
   ui_command_row "doctor" "validate managed symlinks, shell runtimes, and required commands"
   ui_command_row "dry-run" "preview install flow without mutating filesystem"
   ui_command_row "version" "print CLI version and repo root"
-  printf '  %s\n' "$(ui_colorize "hint" "Manage State:")"
+
+  ui_spacer
+  ui_section_fancy "lock" "Manage State"
   ui_command_row "delete" "remove managed links and restore latest backups"
   ui_command_row "remove" "remove managed links only (no backup restore)"
   ui_command_row "lock" "regenerate dependency lock artifacts from pinned refs"
   ui_command_row "update-pins" "compare/update pinned refs and refresh lock artifacts"
   ui_command_row "completions" "regenerate tracked shell completions (autogen + oooconf)"
-  printf '  %s\n' "$(ui_colorize "hint" "Shell / Secrets / Agents:")"
+  ui_command_row "link" "inspect or manage links from the symlink manifest"
+
+  ui_spacer
+  ui_section_fancy "shell" "Shell / Secrets / Agents"
   ui_command_row "shell" "manage local shell preferences such as forgit aliases"
   ui_command_row "color" "set a unified oooconf CLI color theme"
   ui_command_row "secrets" "sync or validate local secret env files"
   ui_command_row "agents" "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
-  cat <<EOF
+
+  ui_spacer
+  ui_separator
+  cat <<EOF | ui_render_help_block
 Aliases:
   check -> doctor
   preview -> dry-run
@@ -1250,6 +1351,10 @@ Getting help:
   oooconf --help                     show this message
   oooconf help <command>             show command-specific help
   oooconf help secrets               show secrets subcommand help
+UI controls:
+  OOOCONF_COLOR=always|never|auto    override color output
+  OOOCONF_ASCII=1                    force ASCII icons and borders
+  OOOCONF_THEME=<theme>              set the CLI color theme for this run
 Common workflows:
   # Initial setup on a new machine:
   oooconf bootstrap
@@ -1318,7 +1423,7 @@ Examples:
   oooconf deps                         # interactive picker (when gum available)
   oooconf deps <key...>                # specific tools (see optional-deps.toml for keys)
   oooconf deps --dry-run               # preview installation
-  oooconf deps --all                  # install all dependency keys
+  oooconf deps --all                   # install all dependency keys
 EOF
       ;;
     update)
@@ -1653,8 +1758,9 @@ exec_setup_command() {
   local setup_command="$1"
   local supports_dry_run="$2"
   shift 2
-  local _all_flag=""
-  [ "$all_deps_requested" -eq 1 ] && _all_flag="--all"
+  local setup_args=()
+  [ "$all_deps_requested" -eq 1 ] && [ "$setup_command" = "deps" ] && setup_args+=("--all")
+  setup_args+=("$@")
 
   require_repo_script "$SETUP"
   if [ "$dry_run_requested" -eq 1 ]; then
@@ -1663,15 +1769,15 @@ exec_setup_command() {
       exit 1
     fi
     if [ "$yes_optional_requested" -eq 1 ]; then
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "$@"
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "${setup_args[@]}"
     fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "$@"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "${setup_args[@]}"
   fi
 
   if [ "$yes_optional_requested" -eq 1 ]; then
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "$@"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "${setup_args[@]}"
   fi
-  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "$@"
+  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "${setup_args[@]}"
 }
 
 require_no_dry_run() {
