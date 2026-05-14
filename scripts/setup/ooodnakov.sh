@@ -587,7 +587,7 @@ get_typo_handling_mode() {
     fi
   fi
 
-  printf 'help\n'
+  printf 'suggest\n'
 }
 
 get_psfzf_tab_mode() {

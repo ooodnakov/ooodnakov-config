@@ -884,7 +884,7 @@ function Get-TypoHandlingMode {
         }
     }
 
-    return "help"
+    return "suggest"
 }
 
 function Get-PsfzfTabMode {
