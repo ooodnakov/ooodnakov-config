@@ -168,6 +168,7 @@ _oooconf_install() {
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--skip-deps[skip dependency installation]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -190,6 +191,7 @@ _oooconf_deps() {
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--all[select all dependency keys at once]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -212,6 +214,7 @@ _oooconf_update() {
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--all[select all dependency keys at once]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
