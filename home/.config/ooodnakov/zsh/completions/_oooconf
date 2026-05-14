@@ -24,9 +24,9 @@ _oooconf_commands=(
   'preview:alias for dry-run'
   'upgrade:alias for update'
   'wm:switch or manage window managers'
+  'komorebi:manage Komorebi window manager'
   'help:show help'
   'minimal:run minimal setup'
-  'komorebi:manage Komorebi window manager'
 )
 typeset -ga _oooconf_global_opts
 _oooconf_global_opts=(
@@ -1522,13 +1522,15 @@ _oooconf_wm() {
     'start:start default window manager'
     'stop:stop default window manager'
     'reload:reload default window manager'
-    'bar:manage bar and zebar'
+    'bar:manage status bar'
     'komorebi:manage Komorebi integration'
   )
   local -a values
   values=(
     'komorebi:Komorebi'
     'glazewm:GlazeWM'
+    'aerospace:Aerospace'
+    'omniwm:OmniWM'
   )
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
@@ -1628,6 +1630,8 @@ _oooconf_wm_set() {
   values=(
     'komorebi:Komorebi'
     'glazewm:GlazeWM'
+    'aerospace:Aerospace'
+    'omniwm:OmniWM'
   )
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
@@ -1683,11 +1687,11 @@ _oooconf_wm_bar() {
   typeset -A opt_args
   local -a subcmds
   subcmds=(
-    'set:set default bar type (zebar, yabs)'
-    'zebar-config:manage zebar configs (status, list, set, install)'
-    'stop:stop zebar and komorebi-bar (keep komorebi running)'
-    'start:start zebar with configured settings'
-    'reload:restart zebar (stop then start)'
+    'set:set default bar type'
+    'status:show bar status'
+    'start:start bar'
+    'stop:stop bar'
+    'reload:reload bar'
   )
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
@@ -1717,18 +1721,11 @@ _oooconf_wm_bar() {
             _oooconf_wm_bar_set
             return
             ;;
-          zebar-config)
-            child_name=zebar-config
+          status)
+            child_name=status
             words=("${(@)words[i,-1]}")
             CURRENT=$(( CURRENT - i + 1 ))
-            _oooconf_wm_bar_zebar_config
-            return
-            ;;
-          stop)
-            child_name=stop
-            words=("${(@)words[i,-1]}")
-            CURRENT=$(( CURRENT - i + 1 ))
-            _oooconf_wm_bar_stop
+            _oooconf_wm_bar_status
             return
             ;;
           start)
@@ -1736,6 +1733,13 @@ _oooconf_wm_bar() {
             words=("${(@)words[i,-1]}")
             CURRENT=$(( CURRENT - i + 1 ))
             _oooconf_wm_bar_start
+            return
+            ;;
+          stop)
+            child_name=stop
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_wm_bar_stop
             return
             ;;
           reload)
@@ -1758,6 +1762,7 @@ _oooconf_wm_bar_set() {
   values=(
     'zebar:Zebar'
     'yabs:YASB'
+    'sketchybar:Sketchybar'
   )
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
@@ -1772,19 +1777,7 @@ _oooconf_wm_bar_set() {
   esac
 }
 
-_oooconf_wm_bar_zebar_config() {
-  local context state line
-  typeset -A opt_args
-  local -a opts_with_args
-  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
-  _arguments -C \
-    '*:arg:->args'
-
-  case $state in
-  esac
-}
-
-_oooconf_wm_bar_stop() {
+_oooconf_wm_bar_status() {
   local context state line
   typeset -A opt_args
   local -a opts_with_args
@@ -1797,6 +1790,18 @@ _oooconf_wm_bar_stop() {
 }
 
 _oooconf_wm_bar_start() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_wm_bar_stop() {
   local context state line
   typeset -A opt_args
   local -a opts_with_args
@@ -1972,6 +1977,11 @@ _oooconf_main() {
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_wm
           ;;
+        komorebi)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_komorebi
+          ;;
         help)
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
@@ -1981,11 +1991,6 @@ _oooconf_main() {
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_minimal
-          ;;
-        komorebi)
-          words=("${(@)words[i,-1]}")
-          CURRENT=$(( CURRENT - i + 1 ))
-          _oooconf_komorebi
           ;;
       esac
       ;;

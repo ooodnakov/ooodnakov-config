@@ -27,9 +27,9 @@ function Get-OooconfCompletions {
         'preview',
         'upgrade',
         'wm',
+        'komorebi',
         'help',
-        'minimal',
-        'komorebi'
+        'minimal'
     )
 
     $OooconfGlobalOptions = @(
@@ -564,7 +564,7 @@ function Get-OooconfCompletions {
         'wm' = @{
             Options = @()
             OptionsWithArgs = @()
-            Values = @('komorebi', 'glazewm')
+            Values = @('komorebi', 'glazewm', 'aerospace', 'omniwm')
             Subcommands = @('status', 'set', 'start', 'stop', 'reload', 'bar', 'komorebi')
             OptionValues = @{
             }
@@ -573,7 +573,7 @@ function Get-OooconfCompletions {
             Options = @()
             OptionsWithArgs = @()
             Values = @()
-            Subcommands = @('set', 'zebar-config', 'stop', 'start', 'reload')
+            Subcommands = @('set', 'status', 'start', 'stop', 'reload')
             OptionValues = @{
             }
         }
@@ -588,7 +588,7 @@ function Get-OooconfCompletions {
         'wm:bar:set' = @{
             Options = @()
             OptionsWithArgs = @()
-            Values = @('zebar', 'yabs')
+            Values = @('zebar', 'yabs', 'sketchybar')
             Subcommands = @()
             OptionValues = @{
             }
@@ -601,7 +601,7 @@ function Get-OooconfCompletions {
             OptionValues = @{
             }
         }
-        'wm:bar:stop' = @{
+        'wm:bar:status' = @{
             Options = @()
             OptionsWithArgs = @()
             Values = @()
@@ -609,7 +609,7 @@ function Get-OooconfCompletions {
             OptionValues = @{
             }
         }
-        'wm:bar:zebar-config' = @{
+        'wm:bar:stop' = @{
             Options = @()
             OptionsWithArgs = @()
             Values = @()
@@ -636,7 +636,7 @@ function Get-OooconfCompletions {
         'wm:set' = @{
             Options = @()
             OptionsWithArgs = @()
-            Values = @('komorebi', 'glazewm')
+            Values = @('komorebi', 'glazewm', 'aerospace', 'omniwm')
             Subcommands = @()
             OptionValues = @{
             }

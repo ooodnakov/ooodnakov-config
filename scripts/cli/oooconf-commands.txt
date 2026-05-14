@@ -19,3 +19,4 @@ check
 preview
 upgrade
 wm
+komorebi

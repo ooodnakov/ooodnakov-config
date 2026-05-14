@@ -276,14 +276,14 @@ description = "manage Komorebi window manager"
 
 [commands.wm]
 description = "switch or manage window managers"
-values = { "komorebi" = "Komorebi", "glazewm" = "GlazeWM" }
+values = { "komorebi" = "Komorebi", "glazewm" = "GlazeWM", "aerospace" = "Aerospace", "omniwm" = "OmniWM" }
 
 [commands.wm.subcommands.status]
 description = "show window manager status"
 
 [commands.wm.subcommands.set]
 description = "set default window manager"
-values = { "komorebi" = "Komorebi", "glazewm" = "GlazeWM" }
+values = { "komorebi" = "Komorebi", "glazewm" = "GlazeWM", "aerospace" = "Aerospace", "omniwm" = "OmniWM" }
 
 [commands.wm.subcommands.start]
 description = "start default window manager"
@@ -295,23 +295,23 @@ description = "stop default window manager"
 description = "reload default window manager"
 
 [commands.wm.subcommands.bar]
-description = "manage bar and zebar"
+description = "manage status bar"
 
 [commands.wm.subcommands.bar.subcommands.set]
-description = "set default bar type (zebar, yabs)"
-values = { "zebar" = "Zebar", "yabs" = "YASB" }
+description = "set default bar type"
+values = { "zebar" = "Zebar", "yabs" = "YASB", "sketchybar" = "Sketchybar" }
 
-[commands.wm.subcommands.bar.subcommands.zebar-config]
-description = "manage zebar configs (status, list, set, install)"
-
-[commands.wm.subcommands.bar.subcommands.stop]
-description = "stop zebar and komorebi-bar (keep komorebi running)"
+[commands.wm.subcommands.bar.subcommands.status]
+description = "show bar status"
 
 [commands.wm.subcommands.bar.subcommands.start]
-description = "start zebar with configured settings"
+description = "start bar"
+
+[commands.wm.subcommands.bar.subcommands.stop]
+description = "stop bar"
 
 [commands.wm.subcommands.bar.subcommands.reload]
-description = "restart zebar (stop then start)"
+description = "reload bar"
 
 [commands.wm.subcommands.komorebi]
 description = "manage Komorebi integration"
