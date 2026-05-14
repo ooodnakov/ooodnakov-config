@@ -1911,6 +1911,7 @@ function Show-Usage {
     Write-UiSpacer
     Write-UiSeparator
     Write-UiSectionFancy -IconName "install" -Title "Setup"
+    Write-UiCommandRow -CommandName "bootstrap" -Description "clone/update repo then run install"
     Write-UiCommandRow -CommandName "install" -Description "apply managed config and optional dependency installs"
     Write-UiCommandRow -CommandName "deps" -Description "install optional dependencies only"
     Write-UiCommandRow -CommandName "update" -Description "pull repo with --ff-only, then re-run install"
