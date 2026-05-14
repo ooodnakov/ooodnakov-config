@@ -18,7 +18,7 @@ _oooconf_commands=(
   'agents:detect/sync/doctor/provider/update AGENTS.md workflows'
   'secrets:sync or validate local secret env files'
   'shell:manage local shell preferences'
-  'color:set a unified oooconf CLI color theme'
+  'color:set a unified oooconf CLI color theme and mode'
   'version:show version information'
   'check:alias for doctor'
   'preview:alias for dry-run'
@@ -294,6 +294,8 @@ _oooconf_update_pins() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--apply[apply pin updates]' \
+    '--offline[skip remote HEAD resolution]' \
+    '--dry-run[skip report and lock writes]' \
     '*:arg:->args'
 
   case $state in
@@ -1439,7 +1441,9 @@ _oooconf_color() {
   local -a values
   values=(
     'status:show status'
-    'list:list themes'
+    'list:list themes and modes'
+    'dark:use dark mode'
+    'light:use light mode'
     'default:default theme'
     'catppuccin:Catppuccin'
     'gruvbox:Gruvbox'

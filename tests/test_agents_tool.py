@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -284,3 +286,124 @@ def test_cmd_install_check_mode_can_plan_selected_agents(tmp_path, capsys):
     assert rc == 0
     assert "Plan: install OpenAI Codex CLI via pnpm" in out
     assert "Plan: install Gemini CLI via pnpm" in out
+
+
+def test_supports_nerd_font_output(monkeypatch):
+    class MockStdout:
+        def __init__(self, tty=True, encoding="utf-8"):
+            self._tty = tty
+            self.encoding = encoding
+
+        def isatty(self):
+            return self._tty
+
+    # Test OOOCONF_ASCII=1
+    monkeypatch.setenv("OOOCONF_ASCII", "1")
+    assert agents_tool.supports_nerd_font_output() is False
+    monkeypatch.delenv("OOOCONF_ASCII")
+
+    # Test not a TTY
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=False))
+    assert agents_tool.supports_nerd_font_output() is False
+
+    # Test is a TTY but not UTF
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=True, encoding="ascii"))
+    assert agents_tool.supports_nerd_font_output() is False
+
+    # Test is a TTY and UTF
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=True, encoding="utf-8"))
+    assert agents_tool.supports_nerd_font_output() is True
+
+
+def test_supports_color_output(monkeypatch):
+    class MockStdout:
+        def __init__(self, tty=True):
+            self._tty = tty
+
+        def isatty(self):
+            return self._tty
+
+    # Test OOOCONF_COLOR=0/false/never
+    for val in ["0", "false", "never"]:
+        monkeypatch.setenv("OOOCONF_COLOR", val)
+        assert agents_tool.supports_color_output() is False
+
+    # Test NO_COLOR
+    monkeypatch.delenv("OOOCONF_COLOR", raising=False)
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert agents_tool.supports_color_output() is False
+    monkeypatch.delenv("NO_COLOR")
+
+    # Test OOOCONF_COLOR=1/true/always
+    for val in ["1", "true", "always"]:
+        monkeypatch.setenv("OOOCONF_COLOR", val)
+        assert agents_tool.supports_color_output() is True
+
+    # Test FORCE_COLOR
+    monkeypatch.delenv("OOOCONF_COLOR", raising=False)
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    assert agents_tool.supports_color_output() is True
+    monkeypatch.delenv("FORCE_COLOR")
+
+    # Test TTY fallback
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=True))
+    assert agents_tool.supports_color_output() is True
+    monkeypatch.setattr(sys, "stdout", MockStdout(tty=False))
+    assert agents_tool.supports_color_output() is False
+
+
+def test_run_install_spec_post_install_safe_execution(monkeypatch, capsys):
+    from agents_tool import AgentUpdateSpec, run_install_spec
+
+    monkeypatch.setattr(shutil, "which", lambda x: f"/mock/bin/{x}" if x in ("npm", "pnpm", "uv") else None)
+
+    executed_commands = []
+
+    def mock_run(args, **kwargs):
+        executed_commands.append(args)
+
+        class MockSubprocessResult:
+            stdout = ""
+
+        return MockSubprocessResult()
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    spec = AgentUpdateSpec(
+        name="Test Agent",
+        command="testcmd",
+        preferred="npm",
+        package="test-pkg",
+        install_script="node mock_install.cjs; rm -rf /",
+    )
+
+    result = run_install_spec(spec, check_only=False)
+
+    assert result == (True, True)
+    assert executed_commands[0] == ["/mock/bin/pnpm", "add", "-g", "test-pkg@latest"]
+    assert executed_commands[1] == ["node", "mock_install.cjs;", "rm", "-rf", "/"]
+
+
+def test_run_install_spec_post_install_catches_shlex_value_error(monkeypatch, capsys):
+    from agents_tool import AgentUpdateSpec, run_install_spec
+
+    monkeypatch.setattr(shutil, "which", lambda x: f"/mock/bin/{x}" if x in ("npm", "pnpm", "uv") else None)
+
+    def mock_run(args, **kwargs):
+        class MockSubprocessResult:
+            stdout = ""
+
+        return MockSubprocessResult()
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    spec = AgentUpdateSpec(
+        name="Test Agent",
+        command="testcmd",
+        preferred="npm",
+        package="test-pkg",
+        install_script='node "unclosed quote',
+    )
+
+    result = run_install_spec(spec, check_only=False)
+    assert result == (False, False)

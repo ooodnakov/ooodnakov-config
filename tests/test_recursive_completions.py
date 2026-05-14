@@ -161,7 +161,9 @@ options = { "--flag" = "deep flag" }
 
 
 def test_repo_completion_spec_uses_optional_deps_as_shared_definition() -> None:
-    spec = load_cli_spec(REPO_ROOT / "scripts/cli/oooconf-cli-spec.toml", extra_definitions=load_dependency_definitions())
+    spec = load_cli_spec(
+        REPO_ROOT / "scripts/cli/oooconf-cli-spec.toml", extra_definitions=load_dependency_definitions()
+    )
     nodes = {node.key: node for node in walk_commands(spec.commands, spec)}
 
     assert "agents:mcp:sync" in nodes
@@ -175,7 +177,9 @@ def test_repo_completion_spec_uses_optional_deps_as_shared_definition() -> None:
 
 
 def test_generated_files_are_current() -> None:
-    spec = load_cli_spec(REPO_ROOT / "scripts/cli/oooconf-cli-spec.toml", extra_definitions=load_dependency_definitions())
+    spec = load_cli_spec(
+        REPO_ROOT / "scripts/cli/oooconf-cli-spec.toml", extra_definitions=load_dependency_definitions()
+    )
     commands = load_commands(REPO_ROOT / "scripts/cli/oooconf-commands.txt")
 
     assert (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8") == render_zsh(
@@ -356,7 +360,9 @@ description = "leaf command"
 
 
 def test_powershell_command_regex_accepts_windows_backslash_paths() -> None:
-    spec = load_cli_spec(REPO_ROOT / "scripts/cli/oooconf-cli-spec.toml", extra_definitions=load_dependency_definitions())
+    spec = load_cli_spec(
+        REPO_ROOT / "scripts/cli/oooconf-cli-spec.toml", extra_definitions=load_dependency_definitions()
+    )
     ps = render_powershell(["install"], spec)
 
     assert "(^|[\\\\\\\\/])(oooconf|o)" in ps

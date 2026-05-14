@@ -108,7 +108,7 @@ Phase-2 dependency audit ergonomics are implemented with:
 
 - `oooconf lock` (or `.\scripts\ooodnakov.ps1 lock`) to regenerate lock artifacts from pinned refs
 - `oooconf update-pins` to compare pinned refs with remote HEAD and append an audit summary
-- `oooconf update-pins --apply` to update pinned refs in `scripts/setup.sh`, then regenerate lock artifacts
+- `oooconf update-pins --apply` to update pinned refs in `scripts/optional-deps.toml`, then regenerate lock artifacts
 - `oooconf agents detect` to detect configured AI coding agent CLIs available on `PATH`
 - `oooconf agents sync` to update managed shared AGENTS.md policy sections from tracked snippets
 - `oooconf agents doctor` to verify AGENTS.md managed sections and check common MCP/skills markers in default agent config paths
@@ -121,7 +121,6 @@ Phase-2 dependency audit ergonomics are implemented with:
 - `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic. Helper scripts use `uv run` if `uv` is available to ensure they run with the pinned Python version and a consistent environment. If `uv` is not present, they fall back to the system `python3`.
 - autogen third-party tool completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.
 - `oooconf` command completions are generated from the canonical recursive CLI spec (`scripts/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/generate_oooconf_completions.py`. Shared completion definitions, such as dependency keys and provider regions, are referenced by name from command nodes instead of hardcoded in shell-specific generators.
-
 
 ## Phase-3 ergonomics
 

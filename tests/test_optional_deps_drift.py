@@ -117,7 +117,9 @@ def test_oooconf_completions_command_wires_generator() -> None:
     assert 'run_python "$OOOCONF_COMPLETIONS_GENERATOR"' in setup_sh
 
     setup_ps1 = (REPO_ROOT / "scripts/setup/setup.ps1").read_text(encoding="utf-8")
-    assert '$OooconfCompletionsGenerator = Join-Path $PSScriptRoot "cli/generate_oooconf_completions.py"' in setup_ps1
+    assert (
+        '$OooconfCompletionsGenerator = Join-Path $RepoRoot "scripts/cli/generate_oooconf_completions.py"' in setup_ps1
+    )
     assert "$null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()" in setup_ps1
 
     ooosh = (REPO_ROOT / "scripts/setup/ooodnakov.sh").read_text(encoding="utf-8")

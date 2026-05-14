@@ -12,7 +12,7 @@ def download_pwsh():
     urllib.request.urlretrieve(url, "/tmp/pwsh.tar.gz")
     os.makedirs("/tmp/pwsh_dir", exist_ok=True)
     with tarfile.open("/tmp/pwsh.tar.gz") as tar:
-        tar.extractall(path="/tmp/pwsh_dir")
+        tar.extractall(path="/tmp/pwsh_dir", filter="data")
     os.chmod("/tmp/pwsh_dir/pwsh", 0o755)
     print("Done")
 

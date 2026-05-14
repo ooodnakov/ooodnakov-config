@@ -40,7 +40,7 @@ local keys = {
    { key = 'F10', mods = mod.SUPER, action = act.SendKey { key = 'F10' } },
    { key = 'F11', mods = mod.SUPER, action = act.SendKey { key = 'F11' } },
    { key = 'F12', mods = mod.SUPER, action = act.SendKey { key = 'F12' } },
-   
+
    { key = 'f',   mods = mod.SUPER, action = act.Search({ CaseInSensitiveString = '' }) },
    {
       key = 'u',

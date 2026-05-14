@@ -238,7 +238,7 @@ function Get-OooconfCompletions {
         'color' = @{
             Options = @()
             OptionsWithArgs = @()
-            Values = @('status', 'list', 'default', 'catppuccin', 'gruvbox', 'nord', 'tokyonight', 'noctalia')
+            Values = @('status', 'list', 'dark', 'light', 'default', 'catppuccin', 'gruvbox', 'nord', 'tokyonight', 'noctalia')
             Subcommands = @()
             OptionValues = @{
             }
@@ -538,7 +538,7 @@ function Get-OooconfCompletions {
             }
         }
         'update-pins' = @{
-            Options = @('--apply')
+            Options = @('--apply', '--offline', '--dry-run')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()

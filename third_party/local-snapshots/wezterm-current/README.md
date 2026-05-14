@@ -34,13 +34,13 @@
 
   GPU + Adapter combo is selected based on the following criteria:
 
-  1.  <details>
+  1. <details>
       <summary>Best GPU available</summary>
 
       `Discrete` > `Integrated` > `Other` (for `wgpu`'s OpenGl implementation on Discrete GPU) > `Cpu`
       </details>
 
-  2.  <details>
+  2. <details>
       <summary>Best graphics API available (based off my very scientific scroll a big log file in Neovim test 😁)</summary>
 
       > :bulb:<br>
@@ -59,7 +59,7 @@
 
 ### Getting Started
 
-- ##### Requirements:
+- #### Requirements
 
   - <details>
       <summary><b>WezTerm</b></summary>
@@ -99,6 +99,7 @@
         ```sh
         choco install wezterm -y
         ```
+
       </details>
 
     - <details>
@@ -117,6 +118,7 @@
         scoop bucket add k https://github.com/KevinSilvester/scoop-bucket
         scoop install k/wezterm-nightly
         ```
+
       </details>
 
     > :bulb:<br>
@@ -142,6 +144,7 @@
         sudo port selfupdate
         sudo port install wezterm
         ```
+
       </details>
 
     - <details>
@@ -158,6 +161,7 @@
         ```sh
         brew install --cask wezterm@nightly --no-quarantine --greedy-latest
         ```
+
       </details>
 
     ---
@@ -194,17 +198,18 @@
 
 &nbsp;
 
-- ##### Steps:
+- ##### Steps
 
-  1.  ```sh
+  1. ```sh
       # On Windows and Unix systems
       git clone https://github.com/KevinSilvester/wezterm-config.git ~/.config/wezterm
       ```
-  2.  And Done!!! 🎉🎉
+
+  2. And Done!!! 🎉🎉
 
 &nbsp;
 
-- ##### Things You Might Want to Change:
+- ##### Things You Might Want to Change
 
   - [./config/domains.lua](./config/domains.lua) for custom SSH/WSL domains
   - [./config/launch.lua](./config/launch.lua) for preferred shells and its paths

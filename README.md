@@ -116,7 +116,7 @@ Primary commands:
 - `oooconf bootstrap`: clone/update repo then run install (Unix only)
 - `oooconf lock`: regenerate dependency lock artifacts
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
-- `oooconf update-pins --apply`: update pinned refs in setup scripts, then regenerate lock artifacts
+- `oooconf update-pins --apply`: update pinned refs in `scripts/optional-deps.toml`, then regenerate lock artifacts
 - `oooconf link`: create or update symlinks from manifest (also runs automatically during install)
 - `oooconf completions`: regenerate tracked completion files (autogen zsh + `oooconf` command completions)
 - `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
@@ -150,7 +150,7 @@ Secrets commands:
 - `oooconf shell prompt-style [verbose|concise|status]`: switch all managed prompts between the full multi-segment layout and a compact layout
 - `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
 - `oooconf shell auto-uv-env [enabled|quiet|status]`: control Python virtualenv activation message verbosity
-- `oooconf color [status|list|<theme>]`: select a unified CLI color theme (`default`, `catppuccin`, `gruvbox`, `nord`, `tokyonight`, `noctalia`). When unset, `oooconf` prefers existing tracked tool themes (WezTerm/Neovim) before falling back to `default`; theme changes sync local overrides for Yazi, WezTerm, Komorebi (including bar config), SketchyBar colors, Zebar CSS vars, and a themed Oh My Posh config under `~/.config/ooodnakov/local/ohmyposh/`, and `status` reports detected Neovim/Oh My Posh config state.
+- `oooconf color [status|list|<theme>|dark|light]`: select a unified CLI color theme (`default`, `catppuccin`, `gruvbox`, `nord`, `tokyonight`, `noctalia`) and dark/light mode. When unset, `oooconf` prefers existing tracked tool themes (WezTerm/Neovim) before falling back to `default`; theme changes sync local overrides for Yazi, WezTerm, Komorebi (including bar config), SketchyBar colors, Zebar CSS vars, and a themed Oh My Posh config under `~/.config/ooodnakov/local/ohmyposh/`, and `status` reports detected Neovim/Oh My Posh config state.
 
 Window manager commands (Windows):
 
@@ -249,7 +249,6 @@ The setup scripts intentionally do not try to provision a full workstation from 
 | **Linux**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **macOS**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
-
 
 See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 
@@ -449,6 +448,7 @@ If you'd like to make changes to the configuration, testing your changes against
 You can use `pre-commit` to ensure code is formatted properly and passes linting checks before committing.
 
 Install `pre-commit` and run it locally:
+
 ```bash
 uv tool install pre-commit
 pre-commit install

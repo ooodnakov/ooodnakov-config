@@ -1,6 +1,6 @@
 # Dependency Lock
 
-Generated from `scripts/setup.sh` pinned dependency refs.
+Generated from `scripts/optional-deps.toml` managed tool refs.
 
 Generated at (UTC): `2026-04-18T22:10:13+00:00`
 

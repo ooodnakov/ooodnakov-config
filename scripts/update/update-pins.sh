@@ -35,14 +35,16 @@ run_python() {
 usage() {
   ui_line section "update-pins"
   cat <<'EOF'
-Usage: ./scripts/update-pins.sh [--apply]
+Usage: ./scripts/update/update-pins.sh [--apply] [--offline] [--dry-run]
 
-Checks pinned git refs declared in scripts/setup.sh against remote HEAD commits,
+Checks pinned git refs declared in scripts/optional-deps.toml against remote HEAD commits,
 updates the automated pin-check section in docs/imports/upstream-audit.md,
 and regenerates lock artifacts.
 
 Options:
-  --apply  update *_REF values in scripts/setup.sh to remote HEAD commits
+  --apply    update refs in scripts/optional-deps.toml to remote HEAD commits
+  --offline  parse pins without resolving remote HEAD commits
+  --dry-run  do not write report or lock artifacts
 EOF
 }
 
@@ -50,6 +52,8 @@ args=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --apply) args+=("--apply") ;;
+    --offline) args+=("--offline") ;;
+    --dry-run) args+=("--dry-run") ;;
     -h|--help) usage; exit 0 ;;
     *) ui_line fail "unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac
