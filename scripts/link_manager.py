@@ -220,6 +220,7 @@ def _matches_exclude(path: Path, exclude_patterns: list[str]) -> bool:
         # Glob-style: check if pattern matches end (e.g., "*.lock")
         if "*" in pattern:
             import fnmatch
+
             if fnmatch.fnmatch(path_str, pattern):
                 return True
             if fnmatch.fnmatch(path.name, pattern):
@@ -227,7 +228,9 @@ def _matches_exclude(path: Path, exclude_patterns: list[str]) -> bool:
     return False
 
 
-def discover_links(repo_root: Path | str, manifest: dict, platform: str = "linux", explicit_links: list = None) -> list[dict]:
+def discover_links(
+    repo_root: Path | str, manifest: dict, platform: str = "linux", explicit_links: list = None
+) -> list[dict]:
     """Discover symlinks by scanning configured directories.
 
     Args:
@@ -266,6 +269,7 @@ def discover_links(repo_root: Path | str, manifest: dict, platform: str = "linux
                 source = str(entry.resolve()).replace("\\", "/")
 
                 # Skip if ANY explicit entry (from full manifest) restricts this key to a different platform
+                skip = False
                 if explicit_links:
                     for link in explicit_links:
                         if link.get("key") == key:
@@ -276,11 +280,13 @@ def discover_links(repo_root: Path | str, manifest: dict, platform: str = "linux
                     continue
 
                 target = expand_path_template(f"{{CONFIG_HOME}}/{key}", platform)
-                discovered.append({
-                    "key": key,
-                    "source": source,
-                    "target": target,
-                })
+                discovered.append(
+                    {
+                        "key": key,
+                        "source": source,
+                        "target": target,
+                    }
+                )
         except PermissionError as e:
             print(f"Warning: permission denied scanning {scan_path}: {e}", file=sys.stderr)
             continue
@@ -320,11 +326,13 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None) -> l
             # Override target from local
             override = local_links[key]
             target = override.get("target", link["target"])
-            result.append({
-                "key": key,
-                "source": link["source"],
-                "target": target,
-            })
+            result.append(
+                {
+                    "key": key,
+                    "source": link["source"],
+                    "target": target,
+                }
+            )
             existing_keys.add(key)
         else:
             result.append(link)
@@ -335,11 +343,13 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None) -> l
     for key, override in local_links.items():
         if key not in existing_keys:
             # This is a new entry from local
-            result.append({
-                "key": key,
-                "source": override.get("source", ""),
-                "target": override.get("target", ""),
-            })
+            result.append(
+                {
+                    "key": key,
+                    "source": override.get("source", ""),
+                    "target": override.get("target", ""),
+                }
+            )
 
     return result
 
@@ -369,7 +379,9 @@ def get_all_links(repo_root: Path | str) -> list[tuple[str, str, str | None]]:
     # Discover auto links
     # Merge explicit (precedence) and discovered
     all_links = []
-    platform_filtered = [l for l in all_explicit_links if _platform_matches(l.get("only"), l.get("except"), platform)]
+    platform_filtered = [
+        link for link in all_explicit_links if _platform_matches(link.get("only"), link.get("except"), platform)
+    ]
     explicit_dict = {link["key"]: link for link in platform_filtered if link.get("key")}
 
     # Discover auto links
@@ -388,19 +400,14 @@ def get_all_links(repo_root: Path | str) -> list[tuple[str, str, str | None]]:
     # Local overrides - use same path pattern as other ooodnakov local files
     # i.e., repo_root/home/.config/ooodnakov/local/links.local.toml
     local_path = repo_root / "home" / ".config" / "ooodnakov" / "local" / "links.local.toml"
-    merged = merge_with_local(
-        [{"key": key, "source": src, "target": tgt} for src, tgt, key in all_links],
-        local_path
-    )
+    merged = merge_with_local([{"key": key, "source": src, "target": tgt} for src, tgt, key in all_links], local_path)
 
     return [(link["source"], link["target"], link["key"]) for link in merged]
 
 
 def cli() -> int:
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Dotfiles symlink manager"
-    )
+    parser = argparse.ArgumentParser(description="Dotfiles symlink manager")
     parser.add_argument(
         "--repo-root",
         type=Path,
@@ -432,9 +439,6 @@ def cli() -> int:
         script_dir = Path(__file__).parent.resolve()
         args.repo_root = script_dir.parent
 
-    # Determine platform
-    platform = args.platform or get_platform()
-
     # Get links
     links = get_all_links(args.repo_root)
 
@@ -448,12 +452,7 @@ def cli() -> int:
 
     # Output
     if args.format == "json":
-        output = {
-            "links": [
-                {"key": k, "source": s, "target": t}
-                for s, t, k in links
-            ]
-        }
+        output = {"links": [{"key": k, "source": s, "target": t} for s, t, k in links]}
         print(json.dumps(output, indent=2))
     else:
         for source, target, key in links:
