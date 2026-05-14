@@ -1,0 +1,90 @@
+[discovery]
+autolink_dirs = ["home/.config", "home/.local", "home/.glzr"]
+exclude = [
+  "home/.config/ooodnakov",
+  "home/.config/ooodnakov/bin",
+  "home/.config/ooodnakov/local",
+]
+
+[[links]]
+key = "zshrc"
+source = "home/.zshrc"
+target = "{HOME}/.zshrc"
+
+[[links]]
+key = "oooconf-bin"
+source = "home/.config/ooodnakov/bin/oooconf"
+target = "{LOCAL_BIN}/oooconf"
+
+[[links]]
+key = "o-bin"
+source = "home/.config/ooodnakov/bin/o"
+target = "{LOCAL_BIN}/o"
+
+[[links]]
+key = "noctalia"
+source = "home/.config/noctalia"
+target = "{CONFIG_HOME}/noctalia"
+only = "linux"
+
+[[links]]
+key = "aerospace"
+source = "home/.config/aerospace"
+target = "{CONFIG_HOME}/aerospace"
+only = "macos"
+
+[[links]]
+key = "omniwm"
+source = "home/.config/omniwm"
+target = "{CONFIG_HOME}/omniwm"
+only = "macos"
+
+[[links]]
+key = "borders"
+source = "home/.config/borders"
+target = "{CONFIG_HOME}/borders"
+only = "macos"
+
+[[links]]
+key = "sketchybar"
+source = "home/.config/sketchybar"
+target = "{CONFIG_HOME}/sketchybar"
+only = "macos"
+
+# --- Windows-only ---
+
+[[links]]
+key = "komorebi-config"
+source = "home/.config/komorebi/komorebi.json"
+target = "{HOME}/komorebi.json"
+only = "windows"
+
+[[links]]
+key = "komorebi-bar"
+source = "home/.config/komorebi/komorebi.bar.json"
+target = "{HOME}/komorebi.bar.json"
+only = "windows"
+
+[[links]]
+key = "komorebi-apps"
+source = "home/.config/komorebi/applications.json"
+target = "{HOME}/applications.json"
+only = "windows"
+
+[[links]]
+key = "whkdrc"
+source = "home/.config/komorebi/whkdrc"
+target = "{CONFIG_HOME}/whkdrc"
+only = "windows"
+
+[[links]]
+key = "glazewm"
+source = "home/.glzr/glazewm"
+target = "{HOME}/.glzr/glazewm"
+only = "windows"
+
+[[links]]
+key = "zebar"
+source = "home/.glzr/zebar"
+target = "{HOME}/.glzr/zebar"
+only = "windows"

@@ -46,20 +46,20 @@ jobs:
 
       - name: Shell syntax checks
         run: |
-          bash -n scripts/setup.sh
-          bash -n scripts/ooodnakov.sh
-          bash -n scripts/delete.sh
-          bash -n scripts/update-pins.sh
-          bash -n scripts/minimal-setup.sh
+          bash -n scripts/setup/setup.sh
+          bash -n scripts/setup/ooodnakov.sh
+          bash -n scripts/setup/delete.sh
+          bash -n scripts/update/update-pins.sh
+          bash -n scripts/setup/minimal-setup.sh
           bash -n bootstrap.sh
 
       - name: Shellcheck
         run: |
-          shellcheck scripts/setup.sh scripts/ooodnakov.sh scripts/delete.sh scripts/update-pins.sh scripts/minimal-setup.sh bootstrap.sh
+          shellcheck scripts/setup/setup.sh scripts/setup/ooodnakov.sh scripts/setup/delete.sh scripts/update/update-pins.sh scripts/setup/minimal-setup.sh bootstrap.sh
 
       - name: Validate lock artifacts are reproducible
         run: |
-          uv run python scripts/generate_dependency_lock.py
+          uv run python scripts/generate/generate_dependency_lock.py
           git diff --exit-code deps.lock.json docs/dependency-lock.md
 
       - name: Managed Neovim/WezTerm config smoke checks
@@ -74,16 +74,16 @@ jobs:
 
       - name: Oooconf smoke tests (install --dry-run, doctor, lock)
         run: |
-          bash scripts/ooodnakov.sh install --dry-run --yes-optional
+          bash scripts/setup/ooodnakov.sh install --dry-run --yes-optional
 
           TEMP_HOME="$(mktemp -d)"
           set +e
-          HOME="$TEMP_HOME" XDG_CONFIG_HOME="$TEMP_HOME/.config" bash scripts/ooodnakov.sh doctor
+          HOME="$TEMP_HOME" XDG_CONFIG_HOME="$TEMP_HOME/.config" bash scripts/setup/ooodnakov.sh doctor
           doctor_status=$?
           set -e
           test "$doctor_status" -ne 0
 
-          bash scripts/ooodnakov.sh lock
+          bash scripts/setup/ooodnakov.sh lock
           git diff --exit-code deps.lock.json docs/dependency-lock.md
 
       - name: Optional deps parser/drift tests
@@ -116,8 +116,8 @@ jobs:
         shell: pwsh
         run: |
           $scripts = @(
-            "scripts/setup.ps1",
-            "scripts/ooodnakov.ps1"
+            "scripts/setup/setup.ps1",
+            "scripts/setup/ooodnakov.ps1"
           )
           foreach ($script in $scripts) {
             $null = $errors = $null
@@ -156,7 +156,7 @@ jobs:
       - name: Oooconf smoke tests (install --dry-run, doctor, lock)
         shell: pwsh
         run: |
-          ./scripts/ooodnakov.ps1 install --dry-run --yes-optional
+          ./scripts/setup/ooodnakov.ps1 install --dry-run --yes-optional
 
           $tempHome = Join-Path $env:RUNNER_TEMP "oooconf-smoke-home"
           New-Item -ItemType Directory -Path $tempHome -Force | Out-Null
@@ -169,7 +169,7 @@ jobs:
 
             $doctorFailed = $false
             try {
-              ./scripts/ooodnakov.ps1 doctor
+              ./scripts/setup/ooodnakov.ps1 doctor
             } catch {
               $doctorFailed = $true
               Write-Host "[ok] doctor failed on fresh HOME as expected"
@@ -187,7 +187,7 @@ jobs:
             }
           }
 
-          ./scripts/ooodnakov.ps1 lock
+          ./scripts/setup/ooodnakov.ps1 lock
           git diff --exit-code deps.lock.json docs/dependency-lock.md
 
       - name: Optional deps parser/drift tests

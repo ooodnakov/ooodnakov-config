@@ -256,24 +256,42 @@ if bindkey -M menuselect >/dev/null 2>&1; then
   bindkey -M menuselect '\r' .accept-line
 fi
 
-for p10k_theme_file in \
-  "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme" \
-  "$HOME/.oh-my-zsh/custom/themes/powerlevel10k/powerlevel10k.zsh-theme" \
-  "/usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme"; do
-  if [ -f "$p10k_theme_file" ]; then
-    source "$p10k_theme_file"
-    break
+case "${OOOCONF_ZSH_PROMPT:-p10k}" in
+  ohmyposh)
+    ooodnakov_omp_config="${OOOCONF_OMP_CONFIG:-$HOME/.config/ohmyposh/ooodnakov.omp.json}"
+    if (( $+commands[oh-my-posh] )) && [[ -r "$ooodnakov_omp_config" ]]; then
+      eval "$(oh-my-posh init zsh --config "$ooodnakov_omp_config")"
+    elif (( $+commands[oh-my-posh] )); then
+      print -u2 "oooconf: oh-my-posh config is missing at $ooodnakov_omp_config; falling back to Powerlevel10k."
+      OOOCONF_ZSH_PROMPT=p10k
+    else
+      print -u2 "oooconf: oh-my-posh is missing; run 'oooconf install oh-my-posh' or 'oooconf shell prompt p10k'."
+      OOOCONF_ZSH_PROMPT=p10k
+    fi
+    ;;
+esac
+
+if [[ "${OOOCONF_ZSH_PROMPT:-p10k}" != ohmyposh ]]; then
+  for p10k_theme_file in \
+    "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme" \
+    "$HOME/.oh-my-zsh/custom/themes/powerlevel10k/powerlevel10k.zsh-theme" \
+    "/usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme"; do
+    if [ -f "$p10k_theme_file" ]; then
+      source "$p10k_theme_file"
+      break
+    fi
+  done
+
+  if (( ! $+functions[p10k] )); then
+    print -u2 "oooconf: powerlevel10k is missing at $OOODNAKOV_SHARE_HOME/powerlevel10k; run 'oooconf install' to restore the managed prompt."
   fi
-done
+  unset p10k_theme_file
 
-if (( ! $+functions[p10k] )); then
-  print -u2 "oooconf: powerlevel10k is missing at $OOODNAKOV_SHARE_HOME/powerlevel10k; run 'oooconf install' to restore the managed prompt."
+  if [ -f "$OOODNAKOV_CONFIG_HOME/p10k.zsh" ]; then
+    source "$OOODNAKOV_CONFIG_HOME/p10k.zsh"
+  fi
 fi
-unset p10k_theme_file
-
-if [ -f "$OOODNAKOV_CONFIG_HOME/p10k.zsh" ]; then
-  source "$OOODNAKOV_CONFIG_HOME/p10k.zsh"
-fi
+unset ooodnakov_omp_config
 
 if [[ -f "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" ]]; then
   # Guard against duplicate hook registration when the profile is re-sourced.
@@ -296,8 +314,7 @@ fi
 
 [[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
 
-# To customize prompt, run `p10k configure` or edit ~/.config/ooodnakov/p10k.zsh.
-[[ ! -f ~/.config/ooodnakov/p10k.zsh ]] || source ~/.config/ooodnakov/p10k.zsh
+# To customize the Powerlevel10k prompt, edit ~/.config/ooodnakov/p10k.zsh.
 
 unalias x 2>/dev/null
 [ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.

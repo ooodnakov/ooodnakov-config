@@ -39,6 +39,7 @@ Use Grok tools when the task benefits from real-time research, code execution, v
 | Simple text generation            | `chat`                               | Default for straightforward requests |
 
 **Operating notes**:
+
 - `grok_agent` is the highest-level tool — only enable the capabilities you actually need.
 - Prefer narrower tools (`web_search`, `code_executor`, etc.) when the task is focused.
 - For citations, set `include_inline_citations=true` when supported.
@@ -74,7 +75,9 @@ rtk prettier --check
 
 # Git (clean output)
 rtk git status / diff / log
+
 ```
+
 Use `rtk <any command>` as a safe passthrough for everything else.
 <!-- oooconf:rtk:end -->
 

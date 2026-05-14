@@ -6,14 +6,14 @@ repos:
         entry: bash -n
         language: system
         types: [shell]
-        files: ^(scripts/(setup|ooodnakov|delete|update-pins|minimal-setup)\.sh|bootstrap\.sh)$
+        files: ^(scripts/(setup/setup|setup/ooodnakov|setup/delete|update/update-pins|setup/minimal-setup)\.sh|bootstrap\.sh)$
 
       - id: shellcheck
         name: Shellcheck
         entry: shellcheck
         language: system
         types: [shell]
-        files: ^(scripts/(setup|ooodnakov|delete|update-pins|minimal-setup)\.sh|bootstrap\.sh)$
+        files: ^(scripts/(setup/setup|setup/ooodnakov|setup/delete|update/update-pins|setup/minimal-setup)\.sh|bootstrap\.sh)$
 
       - id: ruff-check
         name: Ruff lint
@@ -29,7 +29,7 @@ repos:
 
       - id: lockfile-reproducibility
         name: Lockfile reproducibility
-        entry: bash -c 'uv run python scripts/generate_dependency_lock.py && git diff --exit-code deps.lock.json docs/dependency-lock.md'
+        entry: bash -c 'uv run python scripts/generate/generate_dependency_lock.py && git diff --exit-code deps.lock.json docs/dependency-lock.md'
         language: system
         pass_filenames: false
         always_run: true
@@ -43,3 +43,10 @@ repos:
         exclude: ^third_party/
       - id: check-yaml
         exclude: ^third_party/
+
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.41.0
+    hooks:
+      - id: markdownlint
+        args: ["-c", ".markdownlint.json"]
+        exclude: ^third_party/upstream/ezsh/

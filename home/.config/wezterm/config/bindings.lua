@@ -205,10 +205,9 @@ local keys = {
    { key = 'w',     mods = mod.SUPER,     action = act.CloseCurrentPane({ confirm = false }) },
 
    -- panes: navigation
-   { key = 'k',     mods = mod.SUPER,     action = act.ActivatePaneDirection('Up') },
-   { key = 'j',     mods = mod.SUPER,     action = act.ActivatePaneDirection('Down') },
-   { key = 'h',     mods = mod.SUPER,     action = act.ActivatePaneDirection('Left') },
-   { key = 'l',     mods = mod.SUPER,     action = act.ActivatePaneDirection('Right') },
+   -- Smart pane navigation for these keys is installed by config.plugins via
+   -- mrjones2014/smart-splits.nvim so the same shortcuts can cross Neovim and
+   -- WezTerm pane boundaries.
    {
       key = 'p',
       mods = mod.SUPER_REV,
@@ -275,7 +274,7 @@ local mouse_bindings = {
 return {
    disable_default_key_bindings = true,
    -- disable_default_mouse_bindings = true,
-   leader = { key = 'Space', mods = mod.SUPER_REV },
+   leader = { key = 'Space', mods = 'SHIFT' },
    keys = keys,
    key_tables = key_tables,
    mouse_bindings = mouse_bindings,

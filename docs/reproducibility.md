@@ -122,11 +122,10 @@ Phase-2 dependency audit ergonomics are implemented with:
 - autogen third-party tool completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.
 - `oooconf` command completions are generated from the canonical recursive CLI spec (`scripts/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/generate_oooconf_completions.py`. Shared completion definitions, such as dependency keys and provider regions, are referenced by name from command nodes instead of hardcoded in shell-specific generators.
 
-
 ## Phase-3 ergonomics
 
 - `oooconf` command (plus alias `o`) is linked by Unix setup so the unified CLI can be invoked from any directory.
 - `oooconf deps` uses `gum choose --no-limit` when available to provide a terminal multi-select picker for optional dependencies, and it can bootstrap `gum` first when interactive package installation is allowed. In the current picker, use arrow keys to move, `x` to toggle items, and `Enter` to continue.
 - Unix and PowerShell setup runs write per-run logs under `~/.local/state/ooodnakov-config/logs/`, with `setup-latest.log` copied or linked to the latest run for debugging.
 - PowerShell shared environment exports `OOODNAKOV_CONFIG_HOME`, `OOODNAKOV_SHARE_HOME`, `OOODNAKOV_STATE_HOME`, and `OOODNAKOV_CACHE_HOME`, and prepends both `~/.local/bin` and `~/.local/share/ooodnakov-config/bin` when present.
-- WezTerm startup supports `OOODNAKOV_WEZTERM_WORKSPACE` and `OOODNAKOV_WEZTERM_CWD` for project-scoped startup defaults without editing tracked config.
+- WezTerm startup supports `OOODNAKOV_WEZTERM_WORKSPACE` and `OOODNAKOV_WEZTERM_CWD` for project-scoped startup defaults without editing tracked config. The managed plugin layer is declared in `home/.config/wezterm/config/plugins.lua`; WezTerm clones those HTTPS plugins into its runtime plugin cache on first launch, while repo-local tab/status rendering stays tracked under `home/.config/wezterm/events/` for deterministic cross-platform behavior.
