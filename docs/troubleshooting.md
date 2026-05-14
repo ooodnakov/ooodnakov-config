@@ -32,6 +32,8 @@ oooconf install
 
 `oooconf doctor` validates that the pinned Oh My Zsh, Powerlevel10k, and zsh plugin checkouts exist under `~/.local/share/ooodnakov-config/` and contain the files sourced by the managed profile. `oooconf install` retries failed git syncs, including an HTTP/1.1 fallback for transient GitHub TLS/HTTP failures.
 
+To switch only zsh between Powerlevel10k and Oh My Posh, run `oooconf shell prompt p10k` or `oooconf shell prompt ohmyposh` and open a new zsh session. To reduce prompt verbosity across managed prompt engines, run `oooconf shell prompt-style concise`; restore the full layout with `oooconf shell prompt-style verbose`.
+
 ## Completion generation issues
 
 - **Completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview). This regenerates tracked files under `home/.config/ooodnakov/zsh/completions/autogen` and refreshes `oooconf` command completion scripts.

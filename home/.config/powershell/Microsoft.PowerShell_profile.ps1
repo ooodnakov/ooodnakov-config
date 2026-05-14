@@ -1,3 +1,4 @@
+if (Test-Path "$HOME\.x-cmd.root\local\data\pwsh\_index.ps1") { Set-ExecutionPolicy Bypass -Scope Process; . "$HOME\.x-cmd.root\local\data\pwsh\_index.ps1" };  # boot up x-cmd.
 $ConfigRoot = Join-Path $HOME ".config/ooodnakov"
 $DefaultPromptConfig = Join-Path $HOME ".config/ohmyposh/ooodnakov.omp.json"
 $PromptConfig = if ($env:OOOCONF_OMP_CONFIG -and (Test-Path $env:OOOCONF_OMP_CONFIG)) { $env:OOOCONF_OMP_CONFIG } else { $DefaultPromptConfig }
