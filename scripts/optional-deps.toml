@@ -44,6 +44,18 @@ tools_dir = "~/.local/share/ooodnakov-config/tools"
 keys = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
 
 [[deps]]
+key = "brew"
+display = "brew"
+description = "Homebrew package manager (macOS/Linux)"
+check = "brew --version"
+linux.manager = "custom"
+linux.command = "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+macos.manager = "custom"
+macos.command = "installed via setup.sh if not present"
+windows.manager = "custom"
+windows.command = "not available on Windows"
+
+[[deps]]
 key = "wget"
 display = "wget"
 description = "downloading auxiliary assets and parity with ezsh tooling"
