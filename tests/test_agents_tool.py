@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -284,3 +286,60 @@ def test_cmd_install_check_mode_can_plan_selected_agents(tmp_path, capsys):
     assert rc == 0
     assert "Plan: install OpenAI Codex CLI via pnpm" in out
     assert "Plan: install Gemini CLI via pnpm" in out
+
+
+def test_run_install_spec_post_install_safe_execution(monkeypatch, capsys):
+    from agents_tool import AgentUpdateSpec, run_install_spec
+
+    monkeypatch.setattr(shutil, "which", lambda x: f"/mock/bin/{x}" if x in ("npm", "pnpm", "uv") else None)
+
+    executed_commands = []
+
+    def mock_run(args, **kwargs):
+        executed_commands.append(args)
+
+        class MockSubprocessResult:
+            stdout = ""
+
+        return MockSubprocessResult()
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    spec = AgentUpdateSpec(
+        name="Test Agent",
+        command="testcmd",
+        preferred="npm",
+        package="test-pkg",
+        install_script="node mock_install.cjs; rm -rf /",
+    )
+
+    result = run_install_spec(spec, check_only=False)
+
+    assert result == (True, True)
+    assert executed_commands[0] == ["/mock/bin/pnpm", "add", "-g", "test-pkg@latest"]
+    assert executed_commands[1] == ["node", "mock_install.cjs;", "rm", "-rf", "/"]
+
+
+def test_run_install_spec_post_install_catches_shlex_value_error(monkeypatch, capsys):
+    from agents_tool import AgentUpdateSpec, run_install_spec
+
+    monkeypatch.setattr(shutil, "which", lambda x: f"/mock/bin/{x}" if x in ("npm", "pnpm", "uv") else None)
+
+    def mock_run(args, **kwargs):
+        class MockSubprocessResult:
+            stdout = ""
+
+        return MockSubprocessResult()
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+    spec = AgentUpdateSpec(
+        name="Test Agent",
+        command="testcmd",
+        preferred="npm",
+        package="test-pkg",
+        install_script='node "unclosed quote',
+    )
+
+    result = run_install_spec(spec, check_only=False)
+    assert result == (False, False)

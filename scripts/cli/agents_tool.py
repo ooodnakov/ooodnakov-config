@@ -1191,8 +1191,14 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
                 continue
             print_status_line("info", f"Running post-install step: {line}")
             try:
-                subprocess.run(line, shell=True, check=True)
+                cmd_parts = shlex.split(line)
+                if not cmd_parts:
+                    continue
+                subprocess.run(cmd_parts, check=True)
                 print_status_line("ok", "Post-install step succeeded")
+            except ValueError as exc:
+                print_status_line("fail", f"Post-install step failed to parse: {exc}")
+                return False, False
             except subprocess.CalledProcessError as exc:
                 print_status_line("fail", f"Post-install step failed: {exc}")
                 return False, False
