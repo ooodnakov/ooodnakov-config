@@ -975,7 +975,7 @@ function Add-Failure {
     )
 
     $script:Failures.Add($Item) | Out-Null
-    Write-Output "[failed] $Item"
+    Write-UiLine -Role fail -Message "[failed] $Item"
 }
 
 function Start-SetupLogging {
@@ -2569,36 +2569,31 @@ function Add-NewlyAvailableCommand {
 }
 
 function Write-Summary {
-    Write-Output ""
-    if ($script:NewlyAvailableCommands.Count -gt 0) {
-        Write-Output "Newly available commands:"
-        foreach ($cmd in $script:NewlyAvailableCommands) {
-            Write-Output "  - $cmd is now available"
+    Write-UiSpacer
+    if ($script:DependencySummary.Count -gt 0) {
+        Write-UiSectionFancy -IconName "install" -Title "Dependency summary"
+        foreach ($item in $script:DependencySummary) {
+            if (-not (Test-VerboseMode) -and ($item -match ": present$" -or $item -match ": skipped$")) {
+                continue
+            }
+            Write-UiLine -Role ok -Message "  - $item"
         }
-        Write-Output ""
     }
 
-    Write-Output "Dependency summary:"
-    $verbose = Test-VerboseMode
-    foreach ($item in $script:DependencySummary) {
-        if (-not $verbose -and ($item -match ": present$" -or $item -match ": skipped$")) {
-            continue
+    if ($script:ToolSummary.Count -gt 0) {
+        Write-UiSectionFancy -IconName "tool" -Title "Managed setup"
+        foreach ($item in $script:ToolSummary) {
+            if (-not (Test-VerboseMode) -and ($item -match ": linked$" -or $item -match ": linked into " -or $item -match "^ensured directory: " -or $item -match ": plugins synced$")) {
+                continue
+            }
+            Write-UiLine -Role ok -Message "  - $item"
         }
-        Write-Output "  - $item"
-    }
-
-    Write-Output "Managed setup:"
-    foreach ($item in $script:ToolSummary) {
-        if (-not $verbose -and ($item -match ": linked$" -or $item -match ": linked into " -or $item -match "^ensured directory: " -or $item -match ": plugins synced$")) {
-            continue
-        }
-        Write-Output "  - $item"
     }
 
     if ($script:Failures.Count -gt 0) {
-        Write-Output "Failures:"
+        Write-UiSectionFancy -IconName "fail" -Title "Failures"
         foreach ($item in $script:Failures) {
-            Write-Output "  - $item"
+            Write-UiLine -Role fail -Message "  - $item"
         }
     }
 }
@@ -2612,11 +2607,11 @@ function Test-DoctorLink {
     )
 
     if (Test-LinkMatches -Source $Source -Target $Target) {
-        Write-Output "[ok] $Target -> $Source"
+        Write-UiLine -Role ok -Message "$Target -> $Source"
         return
     }
 
-    Write-Output "[missing] $Target (expected symlink to $Source)"
+    Write-UiLine -Role missing -Message "$Target (expected symlink to $Source)"
     $script:Failures.Add("doctor link $Target") | Out-Null
 }
 
@@ -2627,11 +2622,11 @@ function Test-DoctorCommand {
     )
 
     if (Test-AnyCommand -Names @($Name)) {
-        Write-Output "[ok] command: $Name"
+        Write-UiLine -Role ok -Message "command: $Name"
         return
     }
 
-    Write-Output "[missing] command: $Name"
+    Write-UiLine -Role missing -Message "command: $Name"
     $script:Failures.Add("doctor command $Name") | Out-Null
 }
 
@@ -2669,17 +2664,17 @@ function Test-DoctorDependency {
     }
 
     if (Test-OptionalDependencyPresent -Key $Spec.Key) {
-        Write-Output "[ok] dependency: $($Spec.Key)"
+        Write-UiLine -Role ok -Message "dependency: $($Spec.Key)"
         return
     }
 
     if ($Required) {
-        Write-Output "[missing] dependency: $($Spec.Key)"
+        Write-UiLine -Role missing -Message "dependency: $($Spec.Key)"
         $script:Failures.Add("doctor dependency $($Spec.Key)") | Out-Null
         return
     }
 
-    Write-Output "[optional] dependency: $($Spec.Key) not installed"
+    Write-UiLine -Role hint -Message "dependency: $($Spec.Key) not installed"
 }
 
 function Test-DoctorOptionalCommand {
@@ -2689,15 +2684,15 @@ function Test-DoctorOptionalCommand {
     )
 
     if (Test-AnyCommand -Names @($Name)) {
-        Write-Output "[ok] optional command: $Name"
+        Write-UiLine -Role ok -Message "optional command: $Name"
         return
     }
 
-    Write-Output "[optional] command: $Name not installed"
+    Write-UiLine -Role hint -Message "command: $Name not installed"
 }
 
 function Test-Doctor {
-    Write-Output "Running doctor checks..."
+    Write-UiLine -Role info -Message "Running doctor checks..."
 
     # Read links from manifest via link_manager.py for doctor checks
     $linkOutput = python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null
@@ -2760,18 +2755,19 @@ function Test-Doctor {
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
     if ($userPathParts -contains $LocalBinDir) {
-        Write-Output "[ok] user PATH contains $LocalBinDir"
+        Write-UiLine -Role ok -Message "user PATH contains $LocalBinDir"
     } else {
-        Write-Output "[missing] user PATH entry: $LocalBinDir"
+        Write-UiLine -Role missing -Message "user PATH entry: $LocalBinDir"
         $script:Failures.Add("doctor user PATH") | Out-Null
     }
 
     if ($script:Failures.Count -gt 0) {
-        Write-Output "`nDoctor found $($script:Failures.Count) issue(s). Run 'oooconf install' to try fixing them."
+        Write-UiSpacer
+        Write-UiLine -Role fail -Message "Doctor found $($script:Failures.Count) issue(s). Run 'oooconf install' to try fixing them."
         return
     }
 
-    Write-Output "Doctor checks passed."
+    Write-UiLine -Role ok -Message "Doctor checks passed."
 }
 
 function Invoke-Install {
