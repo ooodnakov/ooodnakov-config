@@ -247,8 +247,8 @@ description = "configure uv auto activation messaging"
 values = { "enabled" = "enabled", "quiet" = "quiet", "status" = "show status" }
 
 [commands.color]
-description = "set a unified oooconf CLI color theme"
-values = { "status" = "show status", "list" = "list themes", "default" = "default theme", "catppuccin" = "Catppuccin", "gruvbox" = "Gruvbox", "nord" = "Nord", "tokyonight" = "Tokyo Night", "noctalia" = "Noctalia" }
+description = "set a unified oooconf CLI color theme and mode"
+values = { "status" = "show status", "list" = "list themes and modes", "dark" = "use dark mode", "light" = "use light mode", "default" = "default theme", "catppuccin" = "Catppuccin", "gruvbox" = "Gruvbox", "nord" = "Nord", "tokyonight" = "Tokyo Night", "noctalia" = "Noctalia" }
 
 [commands.help]
 description = "show help"
