@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEFAULT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REPO_ROOT="${OOODNAKOV_REPO_ROOT:-$DEFAULT_REPO_ROOT}"
 PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
-SETUP="$REPO_ROOT/scripts/setup.sh"
-DELETE="$REPO_ROOT/scripts/delete.sh"
+SETUP="$REPO_ROOT/scripts/setup/setup.sh"
+DELETE="$REPO_ROOT/scripts/setup/delete.sh"
 BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
-GEN_LOCK="$REPO_ROOT/scripts/generate_dependency_lock.py"
-UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
-RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
-AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
-SYNC_COLOR_THEME="$REPO_ROOT/scripts/sync_color_theme.py"
-COMMANDS_FILE="$REPO_ROOT/scripts/oooconf-commands.txt"
+GEN_LOCK="$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
+UPDATE_PINS="$REPO_ROOT/scripts/update/update-pins.sh"
+RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
+AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
+SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
+COMMANDS_FILE="$REPO_ROOT/scripts/cli/oooconf-commands.txt"
 KNOWN_COMMANDS=()
 KNOWN_SHELL_SUBCOMMANDS=(status prompt prompt-style forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
@@ -1455,14 +1455,14 @@ while [ "$#" -gt 0 ]; do
     -C|--repo-root)
       [ "$#" -ge 2 ] || { echo "Missing value for $1" >&2; exit 1; }
       REPO_ROOT="$2"
-      SETUP="$REPO_ROOT/scripts/setup.sh"
-      DELETE="$REPO_ROOT/scripts/delete.sh"
+      SETUP="$REPO_ROOT/scripts/setup/setup.sh"
+      DELETE="$REPO_ROOT/scripts/setup/delete.sh"
       BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
-      GEN_LOCK="$REPO_ROOT/scripts/generate_dependency_lock.py"
-      UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
-      RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
-      AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
-      SYNC_COLOR_THEME="$REPO_ROOT/scripts/sync_color_theme.py"
+      GEN_LOCK="$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
+      UPDATE_PINS="$REPO_ROOT/scripts/update/update-pins.sh"
+      RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
+      AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
+      SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
       shift 2
       ;;
     --print-repo-root)
@@ -1614,7 +1614,7 @@ case "$command" in
     exec_setup_command deps 1 "$@"
   ;;
   minimal)
-    exec "$REPO_ROOT/scripts/minimal-setup.sh"
+    exec "$REPO_ROOT/scripts/setup/minimal-setup.sh"
   ;;
 
   update)
@@ -1627,7 +1627,7 @@ case "$command" in
     exec_setup_command completions 1 "$@"
     ;;
   link)
-    exec_setup_command link 1 "$@"
+    run_python "$REPO_ROOT/scripts/link_manager.py" "$@"
     ;;
   dry-run)
     if [ "$dry_run_requested" -eq 1 ]; then

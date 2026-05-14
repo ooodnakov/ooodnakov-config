@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.sync_color_theme import (
+from scripts.lib.sync_color_theme import (
     CSS_MANAGED_BEGIN,
     CSS_MANAGED_END,
     KOMOREBI_THEME_BY_THEME,

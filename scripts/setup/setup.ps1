@@ -29,10 +29,10 @@ if ($MyInvocation.InvocationName -eq ".") {
     return
 }
 
-$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$OptionalDepsScript = Join-Path $PSScriptRoot "read_optional_deps.py"
-$AutogenCompletionsManifest = Join-Path $PSScriptRoot "autogen-completions.txt"
-$OooconfCompletionsGenerator = Join-Path $PSScriptRoot "generate_oooconf_completions.py"
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$OptionalDepsScript = Join-Path $RepoRoot "scripts/cli/read_optional_deps.py"
+$AutogenCompletionsManifest = Join-Path $RepoRoot "scripts/generate/autogen-completions.txt"
+$OooconfCompletionsGenerator = Join-Path $RepoRoot "scripts/cli/generate_oooconf_completions.py"
 $HomeDir = $HOME
 $ConfigHome = Join-Path $HomeDir ".config"
 $DataHome = Join-Path $HomeDir ".local/share"
@@ -56,7 +56,7 @@ $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 # These variables are removed. Use Get-DepInfo or Get-ManagedTool instead.
 function Get-ManagedTool {
     param([string]$Name, [string]$Field = "ref")
-    $json = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("managed-tools") | ConvertFrom-Json
+    $json = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("managed-tools") | ConvertFrom-Json
     if ($json.PSObject.Properties.Name -contains $Name) {
         $json.$Name.$Field
     } else {
@@ -67,7 +67,7 @@ function Get-ManagedTool {
 function Get-DepInfo {
     param([string]$Key)
     # Returns hashtable with ver, url, bin, check, etc.
-    $json = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("json") | ConvertFrom-Json
+    $json = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("json") | ConvertFrom-Json
     $dep = $json | Where-Object { $_.key -eq $Key } | Select-Object -First 1
     if ($dep) { $dep } else { @{} }
 }
@@ -2585,7 +2585,7 @@ function Get-MinimalDependencyKeys {
 
     $keys = @()
     try {
-        $raw = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("minimal") 2>$null
+        $raw = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("minimal") 2>$null
         if ($raw) {
             $keys = @($raw -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
         }
@@ -2875,7 +2875,7 @@ try {
 
     # Handle --minimal flag
     if ($requestedDependencyKeys -contains "--minimal") {
-        $minimalKeys = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("minimal")
+        $minimalKeys = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("minimal")
         $requestedDependencyKeys = @($minimalKeys -split ' ' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
         Write-Information "Installing minimal setup: $($requestedDependencyKeys -join ', ')" -InformationAction Continue
     }

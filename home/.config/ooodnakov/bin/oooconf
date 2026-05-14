@@ -18,4 +18,4 @@ resolve_self() {
 SCRIPT_DIR="$(resolve_self "${BASH_SOURCE[0]}")"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
-exec env OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$REPO_ROOT/scripts/ooodnakov.sh" "$@"
+exec env OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$REPO_ROOT/scripts/setup/ooodnakov.sh" "$@"

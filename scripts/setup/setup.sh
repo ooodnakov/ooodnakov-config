@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
-OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/read_optional_deps.py"
-AUTOGEN_COMPLETIONS_MANIFEST="$REPO_ROOT/scripts/autogen-completions.txt"
-OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/generate_oooconf_completions.py"
+OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/cli/read_optional_deps.py"
+AUTOGEN_COMPLETIONS_MANIFEST="$REPO_ROOT/scripts/generate/autogen-completions.txt"
+OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/cli/generate_oooconf_completions.py"
 HOME_DIR="${HOME}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME_DIR/.local/share}"
@@ -61,7 +61,7 @@ get_managed_tool() {
 get_dep_field() {
   local key="$1"
   local field="$2"
-  run_python scripts/read_optional_deps.py field "$key" "$field"
+  run_python scripts/cli/read_optional_deps.py field "$key" "$field"
 }
 
 is_interactive() {
@@ -3105,7 +3105,7 @@ case "$COMMAND" in
     INSTALL_OPTIONAL=always
     ;;
   minimal)
-    "$REPO_ROOT/scripts/minimal-setup.sh"
+    "$REPO_ROOT/scripts/setup/minimal-setup.sh"
     ;;
   completions) ;;
   link)

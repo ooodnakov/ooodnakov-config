@@ -9,7 +9,7 @@ from pathlib import Path
 from oooconf_cli_spec import CliSpec, Command, load_cli_spec, shell_safe_name
 from read_optional_deps import load_deps
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 COMMANDS_FILE = REPO_ROOT / "scripts" / "oooconf-commands.txt"
 CLI_SPEC_FILE = REPO_ROOT / "scripts" / "oooconf-cli-spec.toml"
 ZSH_OUTPUT = REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf"

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from cli_ui import bullet, section, status
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SETUP_SH = REPO_ROOT / "scripts" / "setup.sh"
 REPORT_PATH = REPO_ROOT / "docs" / "imports" / "upstream-audit.md"
 GEN_LOCK = REPO_ROOT / "scripts" / "generate_dependency_lock.py"

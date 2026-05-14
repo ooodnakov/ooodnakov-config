@@ -456,9 +456,14 @@ def cli() -> int:
         }
         print(json.dumps(output, indent=2))
     else:
+        # Print table header
+        print(f"{'KEY':<20} {'SOURCE':<55} {'TARGET'}")
+        print(f"{'-'*20} {'-'*55} {'-'*30}")
         for source, target, key in links:
-            key_part = f"{key}|" if key else ""
-            print(f"{key_part}{source}|{target}")
+            key_str = key or "-"
+            source_short = source.replace(str(args.repo_root), ".") if len(source) > 55 else source
+            target_short = target if len(target) <= 30 else "..." + target[-27:]
+            print(f"{key_str:<20} {source_short:<55} {target_short}")
 
     if args.dry_run:
         print(f"\n[Dry-run] Would process {len(links)} links", file=sys.stderr)

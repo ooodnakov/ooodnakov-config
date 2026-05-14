@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$RepoRoot = if ($env:OOODNAKOV_REPO_ROOT) { $env:OOODNAKOV_REPO_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot "..")).Path }
+$RepoRoot = if ($env:OOODNAKOV_REPO_ROOT) { $env:OOODNAKOV_REPO_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path }
 $HomeDir = if ($env:HOME) { $env:HOME } else { $HOME }
 $ConfigHome = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HomeDir ".config" }
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/backups" }
