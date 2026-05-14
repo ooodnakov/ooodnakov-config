@@ -1228,7 +1228,7 @@ EOF
       ;;
     deps)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf deps [--dry-run] [dependency-key...]
+Usage: oooconf deps [--dry-run] [--all] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
 gum-based multi-select picker is used when available.
@@ -1238,6 +1238,7 @@ Examples:
   oooconf deps                         # interactive picker (when gum available)
   oooconf deps <key...>                # specific tools (see optional-deps.toml for keys)
   oooconf deps --dry-run               # preview installation
+  oooconf deps --all                  # install all dependency keys
 EOF
       ;;
     update)
@@ -1448,6 +1449,7 @@ require_repo_script() {
 dry_run_requested=0
 yes_optional_requested=0
 skip_deps_requested=0
+all_deps_requested=0
 command=""
 
 while [ "$#" -gt 0 ]; do
@@ -1488,6 +1490,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --yes-optional)
       yes_optional_requested=1
+      shift
+      ;;
+    --all)
+      all_deps_requested=1
       shift
       ;;
     --skip-deps)
@@ -1549,6 +1555,7 @@ if should_normalize_global_flags "$command"; then
       --skip-deps)
         skip_deps_requested=1
         ;;
+      --all)        all_deps_requested=1        ;;
       *)
         normalized_args+=("$arg")
         ;;
@@ -1565,6 +1572,7 @@ exec_setup_command() {
   local setup_command="$1"
   local supports_dry_run="$2"
   shift 2
+local _all_flag=\  [ $all_deps_requested -eq 1 ] && _all_flag=--all
 
   require_repo_script "$SETUP"
   if [ "$dry_run_requested" -eq 1 ]; then
