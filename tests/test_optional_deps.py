@@ -11,7 +11,7 @@ import pytest
 
 # Make scripts importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.read_optional_deps import load_deps, output_catalog, output_json
+from scripts.cli.read_optional_deps import load_deps, output_catalog, output_json
 
 SUBPROCESS_TIMEOUT_SECONDS = int(os.environ.get("OOOCONF_TEST_TIMEOUT", "180"))
 
@@ -186,7 +186,7 @@ def test_defaults_loading():
 
 def test_minimal_keys_command_and_legacy_alias(capsys):
     """Test minimal key output and the legacy alias used by older setup scripts."""
-    from scripts.read_optional_deps import main
+    from scripts.cli.read_optional_deps import main
 
     expected = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
     original_argv = sys.argv[:]
@@ -205,7 +205,7 @@ def test_minimal_keys_command_and_legacy_alias(capsys):
 def test_invalid_key_handling():
     """Test graceful handling of unknown keys."""
     result = subprocess.run(
-        ["uv", "run", "scripts/read_optional_deps.py", "get", "nonexistentkey"],
+        ["uv", "run", "scripts/cli/read_optional_deps.py", "get", "nonexistentkey"],
         capture_output=True,
         text=True,
         timeout=SUBPROCESS_TIMEOUT_SECONDS,
@@ -216,7 +216,7 @@ def test_invalid_key_handling():
 def test_completions_generator():
     """Test that completions generator uses the central parser without hard-coded lists."""
     result = subprocess.run(
-        ["uv", "run", "scripts/generate_oooconf_completions.py"],
+        ["uv", "run", "scripts/cli/generate_oooconf_completions.py"],
         capture_output=True,
         text=True,
         cwd=Path(__file__).parent.parent,
@@ -232,16 +232,16 @@ def test_shell_scripts_syntax_and_dry_run():
         pytest.skip("Bash shell-script validation runs in the Unix CI jobs")
 
     # Bash syntax (only .sh files; Python is tested via pytest/ruff)
-    for script in ["scripts/setup.sh", "scripts/ooodnakov.sh", "scripts/delete.sh"]:
+    for script in ["scripts/setup/setup.sh", "scripts/setup/ooodnakov.sh", "scripts/setup/delete.sh"]:
         result = _bash_syntax_check(script)
         assert result.returncode == 0, f"{script} has syntax errors: {result.stderr}"
 
     # Basic dry-run test for setup (tests the central TOML path and refactored parser)
-    result = _run_normalized_bash_script("scripts/ooodnakov.sh", "deps", "--dry-run", "rtk")
+    result = _run_normalized_bash_script("scripts/setup/ooodnakov.sh", "deps", "--dry-run", "rtk")
     assert result.returncode == 0, f"dry-run failed: {result.stderr}"
     assert any(k in result.stdout.lower() for k in ["dry-run", "rtk", "dependency summary", "complete"])
 
-    result = _run_normalized_bash_script("scripts/ooodnakov.sh", "deps", "--minimal", "--dry-run")
+    result = _run_normalized_bash_script("scripts/setup/ooodnakov.sh", "deps", "--minimal", "--dry-run")
     assert result.returncode == 0, f"minimal dry-run failed: {result.stderr}"
     assert "oh-my-posh" in result.stdout
     assert "dependency summary" in result.stdout.lower()
@@ -253,7 +253,7 @@ def test_shell_scripts_syntax_and_dry_run():
                 "pwsh",
                 "-NoProfile",
                 "-Command",
-                "Import-Module PSScriptAnalyzer -ErrorAction SilentlyContinue; if ($?) { Invoke-ScriptAnalyzer -Path scripts/setup.ps1 -Severity Error } else { exit 0 }",
+                "Import-Module PSScriptAnalyzer -ErrorAction SilentlyContinue; if ($?) { Invoke-ScriptAnalyzer -Path scripts/setup/setup.ps1 -Severity Error } else { exit 0 }",
             ],
             capture_output=True,
             text=True,

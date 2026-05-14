@@ -60,7 +60,7 @@ Why this matters for `oooconf`:
 
 ## Strengthening decisions applied in this repo
 
-1. Added `oooconf agents skills view` to expose a shared marketplace/catalog view through `pnpm dlx skills view`.
+1. Added `oooconf agents skills view` to expose a shared marketplace/catalog listing through `pnpm dlx skills ls -g`.
 2. Kept `oooconf agents skills sync` as declarative install from `skill_specs` for reproducibility.
 3. Fixed OpenCode global sync to use `mcp` object format instead of generic `mcpServers`.
 4. Added MCP add workflow safeguards (`--multi`, `--preview`, validation, command normalization) before writing shared data.

@@ -47,7 +47,7 @@ def test_unix_help_smoke() -> None:
         pytest.skip("bash is not available")
 
     result = subprocess.run(
-        ["bash", "scripts/ooodnakov.sh", "--help"],
+        ["bash", "scripts/setup/ooodnakov.sh", "--help"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -65,7 +65,7 @@ def test_unix_command_help_smoke(command: str) -> None:
         pytest.skip("bash is not available")
 
     result = subprocess.run(
-        ["bash", "scripts/ooodnakov.sh", "help", command],
+        ["bash", "scripts/setup/ooodnakov.sh", "help", command],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,

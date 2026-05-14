@@ -56,6 +56,29 @@ Do not treat `third_party/` as active config unless the user explicitly asks to 
 - Keep cross-platform behavior in shared config only when it is safe on Linux, Windows, and macOS.
 - Put host-specific behavior in local override examples or documented local files, not in tracked base config.
 
+## Symlink manifest
+
+When adding or modifying symlinks, relevant files are:
+
+| File | Role |
+|------|------|
+| `scripts/link_manager.py` | Engine: manifest parsing, auto-discovery, platform filtering, local override merging |
+| `scripts/links.toml` | Canonical manifest of all managed symlinks |
+| `scripts/setup.sh` / `scripts/setup.ps1` | Consumers: call `link_manager.py` to get link list, then create symlinks |
+
+**Adding a new config folder:**
+
+The preferred approach is to create the directory under `home/.config/` (or `home/.local/` or `home/.glzr/`). Auto-discovery handles it automatically — no manifest edit needed.
+
+Only add an explicit `[[links]]` entry in `scripts/links.toml` for:
+- Files (not directories), e.g., `home/.zshrc`
+- Platform-specific links (`only` or `except` tags)
+- Non-standard targets that do not follow the `{CONFIG_HOME}/<key>` convention
+
+**Machine-local overrides:**
+
+The local overrides file is at `home/.config/ooodnakov/local/links.local.toml` (i.e., `{CONFIG_HOME}/ooodnakov/local/links.local.toml`). This file is never tracked in git. It supports target overrides, new links, and platform tag overrides. See `docs/symlink-manifest.md` for the full format and examples.
+
 ## Shell config policy
 
 - Shared portable environment belongs in:
