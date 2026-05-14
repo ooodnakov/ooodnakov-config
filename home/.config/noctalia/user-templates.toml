@@ -14,4 +14,3 @@
 #[templates.placeholder]
 #input_path = "/etc/xdg/quickshell/noctalia-shell/Assets/Templates/noctalia.json"
 #output_path = "/home/odnakov/.cache/noctalia/placeholder.json"
-

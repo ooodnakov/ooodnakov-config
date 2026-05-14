@@ -122,7 +122,6 @@ Phase-2 dependency audit ergonomics are implemented with:
 - autogen third-party tool completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.
 - `oooconf` command completions are generated from the canonical recursive CLI spec (`scripts/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/generate_oooconf_completions.py`. Shared completion definitions, such as dependency keys and provider regions, are referenced by name from command nodes instead of hardcoded in shell-specific generators.
 
-
 ## Phase-3 ergonomics
 
 - `oooconf` command (plus alias `o`) is linked by Unix setup so the unified CLI can be invoked from any directory.
