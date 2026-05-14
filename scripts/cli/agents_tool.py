@@ -65,14 +65,14 @@ class AgentUpdateSpec:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
+    main_parser = argparse.ArgumentParser(
         prog="oooconf agents",
         description="Detect AI agent CLIs and manage shared AGENTS.md instructions.",
     )
-    parser.add_argument("--repo-root", default=None, help="Repo root containing oooconf agent config.")
-    parser.add_argument("--config", default=None, help="Override agent config JSON path.")
+    main_parser.add_argument("--repo-root", default=None, help="Repo root containing oooconf agent config.")
+    main_parser.add_argument("--config", default=None, help="Override agent config JSON path.")
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = main_parser.add_subparsers(dest="command", required=True)
 
     detect_parser = subparsers.add_parser("detect", help="Detect known agent CLIs available on PATH.")
     detect_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output.")
@@ -112,7 +112,10 @@ def parse_args() -> argparse.Namespace:
     mcp_add_parser.add_argument("--multi", action="store_true", help="Allow multiple MCP entries in one JSON payload.")
     mcp_add_parser.add_argument("--preview", action="store_true", help="Show diff preview before writing.")
     mcp_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
-    subparsers.add_parser("status", help="Show status of managed MCP servers.")
+    mcp_status_parser = mcp_subparsers.add_parser("status", help="Show status of managed MCP servers.")
+
+    help_parser = subparsers.add_parser("help", help="Show this help message.")
+    help_parser.add_argument("topic", nargs="?", default=None, help="Topic to show help for.")
 
     rtk_parser = subparsers.add_parser("rtk", help="Manage RTK (Rust Token Killer) integration.")
     rtk_subparsers = rtk_parser.add_subparsers(dest="subcommand", required=True)
@@ -201,7 +204,7 @@ def parse_args() -> argparse.Namespace:
     skills_add_parser.add_argument("--sync-now", action="store_true", help="Run agents skills sync after adding.")
     skills_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
 
-    return parser.parse_args()
+    return main_parser.parse_args()
 
 
 def resolve_repo_root(repo_root: str | None) -> Path:
@@ -823,7 +826,7 @@ def cmd_sync(
         print(f"Global configs needing updates: {g_count}")
         if g_files:
             for file_path in g_files:
-                print(bullet(file_path))
+                print(f"{icon('bullet')} {file_path}")
     else:
         print("Repo-specific sync is disabled. Use --global to sync global agent configs.")
 
@@ -2031,6 +2034,11 @@ if __name__ == "__main__":
         )
     if args.command == "install-scripts-build":
         raise SystemExit(cmd_install_scripts_build(root, cfg))
+    if args.command == "status":
+        raise SystemExit(cmd_mcp_status(root, cfg))
+    if args.command == "help":
+        print(main_parser.format_help())
+        raise SystemExit(0)
     if args.command == "skills":
         if args.subcommand == "sync":
             raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check))
