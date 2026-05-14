@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-04-18T22:10:13+00:00",
+  "generated_at_utc": "2026-05-14T21:33:03+00:00",
   "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
@@ -10,12 +10,12 @@
     {
       "name": "forgit",
       "repo": "https://github.com/wfxr/forgit.git",
-      "ref": "9280ebbb01cd37b26380a16adb15d08354a9f5ee"
+      "ref": "4d54a03fd2970581ba6e908789bbef72e71ea01c"
     },
     {
       "name": "fzf-tab",
       "repo": "https://github.com/Aloxaf/fzf-tab.git",
-      "ref": "0983009f8666f11e91a2ee1f88cfdb748d14f656"
+      "ref": "e394092c17277c84cb3d234917c4ac1073102ba6"
     },
     {
       "name": "k",
@@ -30,12 +30,12 @@
     {
       "name": "nvm",
       "repo": "https://github.com/nvm-sh/nvm.git",
-      "ref": "d200a215594bdda07e130117c9d392fff29cba84"
+      "ref": "f695512c80308b3b98e6b3f4da8cf70ad472ccc8"
     },
     {
       "name": "oh-my-zsh",
       "repo": "https://github.com/ohmyzsh/ohmyzsh.git",
-      "ref": "061f773dd356df52a8bccd5e73377c012f97ef14"
+      "ref": "a07126330b9f56f12f1e00ddd29786d35d6e64d9"
     },
     {
       "name": "powerlevel10k",
