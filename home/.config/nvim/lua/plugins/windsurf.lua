@@ -18,12 +18,12 @@ return {
       gitrebase = false,
       TelescopePrompt = false,
       ["dap-repl"] = false,
-["."] = false,
+      ["."] = false,
     },
   },
-  config = function()
+  config = function(_, opts)
     local neocodeium = require("neocodeium")
-    neocodeium.setup()
+    neocodeium.setup(opts)
 
     local ok, blink = pcall(require, "blink.cmp")
     if ok then
