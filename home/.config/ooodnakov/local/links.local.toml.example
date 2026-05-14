@@ -1,0 +1,57 @@
+# links.local.toml.example
+# Machine-specific symlink overrides for ooodnakov-config
+#
+# This file lives at: home/.config/ooodnakov/local/links.local.toml
+# (i.e., {CONFIG_HOME}/ooodnakov/local/links.local.toml)
+#
+# Entries in this file take precedence over links.toml for the matching key.
+# Add new links here too (they'll be merged with the manifest).
+
+# =============================================================================
+# OVERRIDE A TARGET
+# Change where an existing link points to
+# =============================================================================
+
+# Override wezterm target to a custom location on this machine
+[links.wezterm]
+target = "/custom/wezterm/path"
+
+# Override the oooconf-bin to point to a different location
+[links.oooconf-bin]
+target = "{HOME}/.local/share/custom-bin/oooconf"
+
+# =============================================================================
+# ADD A NEW LINK
+# One not in the manifest - specify both source and target
+# =============================================================================
+
+[[links]]
+key = "my-secret-config"
+source = "home/.config/my-secret"
+target = "{HOME}/.config/my-secret"
+
+# =============================================================================
+# USE except OR only IN LOCAL OVERRIDES
+# Platform filtering works just like in links.toml
+# =============================================================================
+
+# Override noctalia on linux, but exclude it on this specific machine
+[links.noctalia]
+target = "{HOME}/.config/noctalia-custom"
+except = "linux"
+
+# New link that only applies to windows
+[[links]]
+key = "my-windows-link"
+source = "home/.config/my-windows-stuff"
+target = "{HOME}/.config/my-windows-stuff"
+only = "windows"
+
+# =============================================================================
+# {LOCAL_BIN} OVERRIDE EXAMPLE
+# Put a binary somewhere other than ~/.local/bin
+# =============================================================================
+
+# Override o-bin to live in a custom bin directory
+[links.o-bin]
+target = "{HOME}/.local/share/custom-bin/o"

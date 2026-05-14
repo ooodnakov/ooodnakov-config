@@ -8,25 +8,25 @@
         {
           "foreground": "#6c6c6c",
           "style": "plain",
-          "template": "\u256d\u2500",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}╭─{{ end }}",
           "type": "text"
         },
         {
           "background": "#444444",
           "foreground": "#eeeeee",
           "style": "plain",
-          "template": " {{ .Icon }} ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }} {{ .Icon }} {{ end }}",
           "type": "os"
         },
         {
           "background": "#444444",
           "foreground": "#0087af",
           "style": "plain",
-          "template": "<#949494>\u2502</> {{ .Path }} ",
+          "template": "<#949494>│</> {{ if eq .Env.OOOCONF_PROMPT_STYLE \"concise\" }}{{ .Folder }}{{ else }}{{ .Path }}{{ end }} ",
           "properties": {
             "style": "full",
-            "home_icon": "\uf015 ~",
-            "folder_icon": "\uf07c"
+            "home_icon": " ~",
+            "folder_icon": ""
           },
           "type": "path"
         },
@@ -41,28 +41,28 @@
             "fetch_upstream_icon": true
           },
           "style": "plain",
-          "template": "<#949494>\u2502 </>{{ .HEAD }}{{ if gt .Ahead 0 }} \uf062 {{ .Ahead }}{{ end }}{{ if gt .Behind 0 }} \uf063{{ .Behind }}{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0 }} \ueb4b {{ .StashCount }}{{ end }} ",
+          "template": "<#949494>│ </>{{ .HEAD }}{{ if gt .Ahead 0 }}  {{ .Ahead }}{{ end }}{{ if gt .Behind 0 }} {{ .Behind }}{{ end }}{{ if .Working.Changed }}  {{ .Working.String }}{{ end }}{{ if .Staging.Changed }}  {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0 }}  {{ .StashCount }}{{ end }} ",
           "type": "git"
         },
         {
           "background": "transparent",
           "foreground": "#444444",
           "style": "plain",
-          "template": "\uE0B0",
+          "template": "",
           "type": "text"
         }
       ]
     },
     {
       "alignment": "right",
-      "filler": "<#6c6c6c>\u00b7</>",
+      "filler": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}<#6c6c6c>·</>{{ end }}",
       "type": "prompt",
       "segments": [
         {
           "background": "transparent",
           "foreground": "#444444",
           "style": "plain",
-          "template": "\uE0B2",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}{{ end }}",
           "type": "text"
         },
         {
@@ -75,28 +75,28 @@
             "always_enabled": true
           },
           "style": "plain",
-          "template": " {{ if gt .Code 0 }}\uf00d{{ else }}\uf00c{{ end }} ",
+          "template": " {{ if gt .Code 0 }}{{ else }}{{ end }} ",
           "type": "status"
         },
         {
           "background": "#444444",
           "foreground": "#a8a8a8",
           "style": "plain",
-          "template": "<#949494>\u2502</> {{ .FormattedMs }}\uf252 ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}<#949494>│</> {{ .FormattedMs }} {{ end }}",
           "type": "executiontime"
         },
         {
           "background": "#444444",
           "foreground": "#dfaf00",
           "style": "plain",
-          "template": "{{ if .Env.DIRENV_FILE }}<#949494>\u2502</> \u25BC {{ end }}",
+          "template": "{{ if and (ne .Env.OOOCONF_PROMPT_STYLE \"concise\") .Env.DIRENV_FILE }}<#949494>│</> ▼ {{ end }}",
           "type": "text"
         },
         {
           "background": "#444444",
           "foreground": "#00afaf",
           "style": "plain",
-          "template": "{{ if .Venv }}<#949494>\u2502</> \ue235 {{ .Venv }} {{ end }}",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}{{ if .Venv }}<#949494>│</>  {{ .Venv }} {{ end }}{{ end }}",
           "type": "python",
           "properties": {
             "display_mode": "context",
@@ -107,13 +107,13 @@
           "background": "#444444",
           "foreground": "#5f8787",
           "style": "plain",
-          "template": "<#949494>\u2502</> <#a8a8a8>at </>{{ .CurrentDate | date \"15:04:05\" }} \uf017 ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}<#949494>│</> <#a8a8a8>at </>{{ .CurrentDate | date \"15:04:05\" }}  {{ end }}",
           "type": "time"
         },
         {
           "foreground": "#6c6c6c",
           "style": "plain",
-          "template": " \u2500\u256e ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }} ─╮ {{ end }}",
           "type": "text"
         }
       ]
@@ -126,7 +126,7 @@
         {
           "foreground": "#6c6c6c",
           "style": "plain",
-          "template": "\u2570\u2500",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}╰─{{ end }}",
           "type": "text"
         },
         {
@@ -138,7 +138,7 @@
             "always_enabled": true
           },
           "style": "plain",
-          "template": "\u276f ",
+          "template": "❯ ",
           "type": "status"
         }
       ]
@@ -150,7 +150,7 @@
         {
           "foreground": "#6c6c6c",
           "style": "plain",
-          "template": "\u2500\u256f ",
+          "template": "{{ if ne .Env.OOOCONF_PROMPT_STYLE \"concise\" }}─╯ {{ end }}",
           "type": "text"
         }
       ]
@@ -164,7 +164,7 @@
     "foreground_templates": [
       "{{ if gt .Code 0 }}#ff0000{{ end }}"
     ],
-    "template": "\u276f "
+    "template": "❯ "
   },
   "version": 3
 }

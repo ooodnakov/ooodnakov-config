@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("agents_tool", ROOT / "scripts/agents_tool.py")
+spec = importlib.util.spec_from_file_location("agents_tool", ROOT / "scripts/cli/agents_tool.py")
 agents_tool = importlib.util.module_from_spec(spec)
 assert spec is not None and spec.loader is not None
 sys.modules["agents_tool"] = agents_tool
@@ -88,6 +88,15 @@ def test_skills_add_check_mode(tmp_path):
     assert rc == 0
     data = common_data.read_text(encoding="utf-8")
     assert "vercel-labs/agent-skills" not in data
+
+
+def test_skills_view_check_mode_uses_global_ls(capsys):
+    rc = agents_tool.cmd_skills_view(json_output=True, check_only=True)
+
+    assert rc == 0
+    output = capsys.readouterr().out
+    assert "pnpm dlx skills ls -g --json" in output
+    assert "skills view" not in output
 
 
 def test_parse_mcp_json_inputs_multi():

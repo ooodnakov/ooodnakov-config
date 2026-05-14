@@ -24,9 +24,9 @@ return {
 	cursor_blink_rate = 650,
 
 	-- color scheme
-	colors = colors,
+	-- colors = colors,
 
-	background = nil,
+	background = backdrops:initial_options(true),
 
 	-- scrollbar
 	enable_scroll_bar = true,
@@ -53,7 +53,6 @@ return {
 		bottom = '2cell',
 	},
 	adjust_window_size_when_changing_font_size = false,
-	window_close_confirmation = "NeverPrompt",
 	window_frame = {
 		active_titlebar_bg = "#090909",
 		inactive_titlebar_bg = "#090909",
