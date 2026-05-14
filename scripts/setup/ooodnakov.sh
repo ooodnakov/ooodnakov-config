@@ -1572,7 +1572,8 @@ exec_setup_command() {
   local setup_command="$1"
   local supports_dry_run="$2"
   shift 2
-local _all_flag=\  [ $all_deps_requested -eq 1 ] && _all_flag=--all
+  local _all_flag=""
+  [ "$all_deps_requested" -eq 1 ] && _all_flag="--all"
 
   require_repo_script "$SETUP"
   if [ "$dry_run_requested" -eq 1 ]; then
