@@ -8,7 +8,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from cli_ui import bullet, section, status
+SCRIPTS_CLI_DIR = Path(__file__).resolve().parents[1] / "cli"
+if str(SCRIPTS_CLI_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_CLI_DIR))
+
+from cli_ui import bullet, section, status  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SETUP_SH = REPO_ROOT / "scripts" / "setup.sh"

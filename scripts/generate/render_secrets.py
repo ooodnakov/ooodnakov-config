@@ -12,7 +12,11 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from cli_ui import bullet, section, status
+SCRIPTS_CLI_DIR = Path(__file__).resolve().parents[1] / "cli"
+if str(SCRIPTS_CLI_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_CLI_DIR))
+
+from cli_ui import bullet, section, status  # noqa: E402
 
 DEFAULT_TEMPLATE_RELATIVE_PATH = Path("home/.config/ooodnakov/secrets/env.template")
 DEFAULT_CONFIG_RELATIVE_PATH = Path(".config/ooodnakov")
