@@ -18,7 +18,7 @@ return {
       gitrebase = false,
       TelescopePrompt = false,
       ["dap-repl"] = false,
-      [".") = false,
+["."] = false,
     },
   },
   config = function()
