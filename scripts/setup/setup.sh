@@ -3124,6 +3124,7 @@ case "$COMMAND" in
         exit 1
       }
     done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text) || exit 1
+    exit 0
     ;;
   *)
     usage >&2
