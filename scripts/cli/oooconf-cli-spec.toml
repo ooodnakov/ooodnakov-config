@@ -78,7 +78,7 @@ completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.sync]
 description = "append or update shared AGENTS.md block"
-options = { "--repo-root" = "set repo root path", "--config" = "config path", "--check" = "check only", "--global" = "sync global config", "--materialize-secrets" = "materialize secret-backed values" }
+options = { "--repo-root" = "set repo root path", "--config" = "config path", "--check" = "check only", "--global" = "sync global config", "--materialize-secrets" = "materialize secret-backed values", "--agents" = "filter to specific agents (interactive if omitted)" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.doctor]
@@ -91,7 +91,7 @@ description = "manage Model Context Protocol (MCP) servers"
 
 [commands.agents.subcommands.mcp.subcommands.sync]
 description = "synchronize managed MCP servers"
-options = { "--check" = "check only" }
+options = { "--check" = "check only", "--agents" = "filter to specific agents (interactive if omitted)" }
 
 [commands.agents.subcommands.mcp.subcommands.status]
 description = "show managed MCP status"
@@ -115,7 +115,7 @@ description = "configure model/API providers for agent CLIs"
 
 [commands.agents.subcommands.provider.subcommands.sync]
 description = "sync a provider backend into supported agent configs"
-options = { "--check" = "check only", "--materialize-secrets" = "materialize secret-backed values", "--region" = "provider region" }
+options = { "--check" = "check only", "--materialize-secrets" = "materialize secret-backed values", "--region" = "provider region", "--agents" = "filter to specific agents (interactive if omitted)" }
 option_value_sets = { "--region" = "regions" }
 
 [commands.agents.subcommands.update]
@@ -137,7 +137,7 @@ description = "manage agent skills and extensions"
 
 [commands.agents.subcommands.skills.subcommands.sync]
 description = "synchronize configured skill specs across agents"
-options = { "--check" = "check only" }
+options = { "--check" = "check only", "--agents" = "filter to specific agents (interactive if omitted)" }
 
 [commands.agents.subcommands.skills.subcommands.view]
 description = "list global shared skills catalog via pnpm dlx"

@@ -19,6 +19,8 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     tomllib = None
 
+from tui import is_interactive, interactive_select
+
 MANAGED_BEGIN = "<!-- oooconf:agents-common:start -->"
 MANAGED_END = "<!-- oooconf:agents-common:end -->"
 RTK_BEGIN = "<!-- oooconf:rtk:start -->"
@@ -169,6 +171,11 @@ def parse_args() -> argparse.Namespace:
     sync_parser.add_argument(
         "--global", dest="global_sync", action="store_true", help="Also sync MCP servers to global agent configs."
     )
+    sync_parser.add_argument(
+        "--agents",
+        nargs="*",
+        help="Filter sync to specific agents by name or key.",
+    )
 
     doctor_parser = subparsers.add_parser(
         "doctor", help="Validate AGENTS.md managed block and check common MCP/skills in agent config paths."
@@ -183,6 +190,13 @@ def parse_args() -> argparse.Namespace:
     mcp_subparsers = mcp_parser.add_subparsers(dest="subcommand", required=True)
     mcp_sync_parser = mcp_subparsers.add_parser("sync", help="Synchronize (clone/pull/install) managed MCP servers.")
     mcp_sync_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
+    mcp_sync_parser.add_argument(
+        "--agents",
+        metavar="AGENT",
+        nargs="*",
+        default=None,
+        help="Restrict sync to specific agents. If omitted, interactive mode.",
+    )
     mcp_add_parser = mcp_subparsers.add_parser("add", help="Add an MCP server entry to common-data.json.")
     mcp_add_parser.add_argument("--name", help="Optional MCP server name (otherwise inferred from JSON key).")
     mcp_add_parser.add_argument(
@@ -261,6 +275,13 @@ def parse_args() -> argparse.Namespace:
         default="global",
         help="MiniMax endpoint region to configure (default: global).",
     )
+    provider_sync_parser.add_argument(
+        "--agents",
+        metavar="AGENT",
+        nargs="*",
+        default=None,
+        help="Restrict sync to specific agents (e.g., claude codex opencode). If omitted, interactive mode.",
+    )
 
     skills_parser = subparsers.add_parser(
         "skills",
@@ -270,6 +291,13 @@ def parse_args() -> argparse.Namespace:
     skills_sync_parser = skills_subparsers.add_parser("sync", help="Synchronize configured skill_specs across agents.")
     skills_sync_parser.add_argument(
         "--check", action="store_true", help="Print planned skill installs without executing."
+    )
+    skills_sync_parser.add_argument(
+        "--agents",
+        metavar="AGENT",
+        nargs="*",
+        default=None,
+        help="Restrict sync to specific agents. If omitted, interactive mode.",
     )
     skills_view_parser = skills_subparsers.add_parser(
         "view",
@@ -929,6 +957,7 @@ def cmd_sync(
     check_only: bool,
     global_sync: bool,
     materialize_secrets: bool = False,
+    agents: list[str] | None = None,
 ) -> int:
     common_text = get_platform_common_text(repo_root, config)
 
@@ -941,6 +970,23 @@ def cmd_sync(
         merged_data = load_common_data(repo_root, config, include_local=True)
         managed_block_global = render_markdown_block(common_text, merged_data)
         config_targets = parse_agent_targets(config["agent_configs"])
+
+        # Filter to selected agents if not all specified
+        if agents is None and not check_only and is_interactive():
+            agent_names = [t.name for t in config_targets]
+            selected = interactive_select(
+                agent_names,
+                title="Select agents to sync",
+                instructions="SPACE toggle  ENTER confirm  A all  N none  Q quit",
+            )
+            if selected is None:
+                print("Aborted.")
+                return 1
+            agents = selected
+
+        if agents is not None:
+            config_targets = [t for t in config_targets if t.name in agents]
+
         g_count, g_files = sync_global_configs(
             repo_root,
             config_targets,
@@ -1409,15 +1455,34 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
     return 1 if failed else 0
 
 
-def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     skill_specs = common_data.get("skill_specs", [])
     if not skill_specs:
         print("No skill_specs configured.", file=sys.stderr)
         return 0
 
+    # Get unique agent keys from skill specs
+    spec_agents = sorted(set(s.get("agent", "").lower() for s in skill_specs if s.get("agent")))
+    if agents is None and not check_only and is_interactive():
+        agents = interactive_select(spec_agents, title="Select agents to sync skills for")
+        if agents is None:
+            print_status_line("info", "Cancelled.")
+            return 0
+        if not agents:
+            print_status_line("info", "No agents selected.")
+            return 0
+
+    if agents:
+        skill_specs = [s for s in skill_specs if s.get("agent", "").lower() in [a.lower() for a in agents]]
+        if not skill_specs:
+            print_status_line("warn", f"No skill specs match agents: {', '.join(agents)}")
+            return 0
+
     print_section("Agent Skills Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
+    if agents:
+        print(f"Agents: {', '.join(agents)}")
 
     attempted = 0
     failed = 0
@@ -1848,30 +1913,15 @@ def replace_or_append_toml_table(content: str, table: str, rendered: str) -> tup
     return updated, True
 
 
-def render_codex_minimax_provider(region: str) -> str:
-    endpoints = minimax_endpoints(region)
-    return (
-        "[model_providers.minimax]\n"
-        'name = "MiniMax Chat Completions API"\n'
-        f'base_url = "{endpoints["openai_base_url"]}"\n'
-        f'env_key = "{MINIMAX_ENV_KEY}"\n'
-        'env_key_instructions = "Export MINIMAX_API_KEY before starting Codex."\n'
-        'wire_api = "chat"\n'
-        "requires_openai_auth = false\n"
-        "request_max_retries = 4\n"
-        "stream_max_retries = 10\n"
-        "stream_idle_timeout_ms = 300000\n"
-    )
-
-
 def render_codex_minimax_profile() -> str:
     return f'[profiles.minimax]\nmodel = "{MINIMAX_CODEX_MODEL}"\nmodel_provider = "minimax"\n'
 
 
-def append_codex_minimax_config(path: Path, region: str, check_only: bool) -> bool:
+def append_codex_minimax_config(path: Path, region: str, materialize_secrets: bool, check_only: bool) -> bool:
     current = path.read_text(encoding="utf-8") if path.exists() else ""
+    api_key = os.environ.get(MINIMAX_ENV_KEY)
     updated, provider_changed = replace_or_append_toml_table(
-        current, "model_providers.minimax", render_codex_minimax_provider(region)
+        current, "model_providers.minimax", render_codex_minimax_provider(region, materialize_secrets and api_key is not None, api_key)
     )
     updated, profile_changed = replace_or_append_toml_table(updated, "profiles.minimax", render_codex_minimax_profile())
     changed = provider_changed or profile_changed
@@ -1882,20 +1932,28 @@ def append_codex_minimax_config(path: Path, region: str, check_only: bool) -> bo
     return changed
 
 
+def render_codex_minimax_provider(region: str, materialize_secrets: bool = False, api_key: str | None = None) -> str:
+    endpoints = minimax_endpoints(region)
+    key_value = api_key if materialize_secrets and api_key is not None else MINIMAX_ENV_KEY
+    return (
+        "[model_providers.minimax]\n"
+        'name = "MiniMax Chat Completions API"\n'
+        f'base_url = "{endpoints["openai_base_url"]}"\n'
+        f'env_key = "{key_value}"\n'
+        'env_key_instructions = "Export MINIMAX_API_KEY before starting Codex."\n'
+        'wire_api = "chat"\n'
+        "requires_openai_auth = false\n"
+        "request_max_retries = 4\n"
+        "stream_max_retries = 10\n"
+        "stream_idle_timeout_ms = 300000\n"
+    )
+
+
 def cmd_provider_sync(
-    config: dict[str, Any], provider: str, check_only: bool, materialize_secrets: bool, region: str
+    config: dict[str, Any], provider: str, check_only: bool, materialize_secrets: bool, region: str, agents: list[str] | None = None
 ) -> int:
     if provider != "minimax":
         print_status_line("fail", f"Unsupported provider: {provider}")
-        return 1
-
-    print_section("Agent Provider Sync")
-    print(f"Provider: {provider}")
-    print(f"Region: {region}")
-    print(f"Mode: {'check' if check_only else 'sync'}")
-
-    if materialize_secrets and not os.environ.get(MINIMAX_ENV_KEY):
-        print_status_line("fail", f"{MINIMAX_ENV_KEY} is not set; refusing to materialize an empty API key.")
         return 1
 
     targets = parse_agent_targets(config["agent_configs"])
@@ -1904,18 +1962,40 @@ def cmd_provider_sync(
         "OpenCode": upsert_opencode_minimax_config,
         "OpenAI Codex CLI": append_codex_minimax_config,
     }
+
+    # Filter to only supported agents
+    supported_names = sorted(supported.keys())
+    if agents is None and not check_only and is_interactive():
+        agents = interactive_select(supported_names, title="Select agents to configure provider")
+        if agents is None:
+            print_status_line("info", "Cancelled.")
+            return 0
+        if not agents:
+            print_status_line("info", "No agents selected.")
+            return 0
+
+    print_section("Agent Provider Sync")
+    print(f"Provider: {provider}")
+    print(f"Region: {region}")
+    print(f"Mode: {'check' if check_only else 'sync'}")
+    if agents:
+        print(f"Agents: {', '.join(agents)}")
+
+    if materialize_secrets and not os.environ.get(MINIMAX_ENV_KEY):
+        print_status_line("fail", f"{MINIMAX_ENV_KEY} is not set; refusing to materialize an empty API key.")
+        return 1
+
     changed_paths: list[Path] = []
 
     for target in targets:
         updater = supported.get(target.name)
         if updater is None or not target.default_paths:
             continue
+        if agents is not None and target.name not in agents:
+            continue
         path = existing_default_path(target.default_paths) or Path(target.default_paths[0]).expanduser()
         try:
-            if target.name == "OpenAI Codex CLI":
-                changed = updater(path, region, check_only)  # type: ignore[misc]
-            else:
-                changed = updater(path, region, materialize_secrets, check_only)  # type: ignore[misc]
+            changed = updater(path, region, materialize_secrets, check_only)  # type: ignore[misc]
         except Exception as exc:
             print_status_line("fail", f"{target.name}: failed to update {path}: {exc}")
             return 1
@@ -1938,7 +2018,7 @@ def cmd_provider_sync(
     return 1 if check_only and changed_paths else 0
 
 
-def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     mcp_servers = common_data.get("mcp_servers", {})
     managed_mcps = {name: cfg for name, cfg in mcp_servers.items() if "source" in cfg}
@@ -1947,8 +2027,26 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
         print("No managed MCP servers (with 'source') configured.")
         return 0
 
+    mcp_names = sorted(managed_mcps.keys())
+    if agents is None and not check_only and is_interactive():
+        agents = interactive_select(mcp_names, title="Select MCP servers to sync")
+        if agents is None:
+            print_status_line("info", "Cancelled.")
+            return 0
+        if not agents:
+            print_status_line("info", "No MCP servers selected.")
+            return 0
+
+    if agents:
+        managed_mcps = {name: cfg for name, cfg in managed_mcps.items() if name in agents}
+        if not managed_mcps:
+            print_status_line("warn", f"No managed MCP servers match: {', '.join(agents)}")
+            return 0
+
     print_section("MCP Sync")
     print(f"Mode: {'check' if check_only else 'sync'}")
+    if agents:
+        print(f"Agents: {', '.join(agents)}")
 
     attempted = 0
     failed = 0
@@ -2110,13 +2208,14 @@ if __name__ == "__main__":
                 check_only=args.check,
                 global_sync=args.global_sync,
                 materialize_secrets=args.materialize_secrets,
+                agents=args.agents,
             )
         )
     if args.command == "doctor":
         raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths))
     if args.command == "mcp":
         if args.subcommand == "sync":
-            raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check))
+            raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check, agents=args.agents))
         if args.subcommand == "add":
             raise SystemExit(
                 cmd_mcp_add(
@@ -2144,6 +2243,7 @@ if __name__ == "__main__":
                     check_only=args.check,
                     materialize_secrets=args.materialize_secrets,
                     region=args.region,
+                    agents=args.agents,
                 )
             )
     if args.command == "update":
@@ -2163,7 +2263,7 @@ if __name__ == "__main__":
         raise SystemExit(cmd_install_scripts_build(root, cfg))
     if args.command == "skills":
         if args.subcommand == "sync":
-            raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check))
+            raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check, agents=args.agents))
         if args.subcommand == "view":
             raise SystemExit(cmd_skills_view(json_output=args.json, check_only=args.check))
         if args.subcommand == "add":
