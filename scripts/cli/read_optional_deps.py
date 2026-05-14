@@ -10,7 +10,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TOML_PATH = REPO_ROOT / "scripts" / "optional-deps.toml"
 
 

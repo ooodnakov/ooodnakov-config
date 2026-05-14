@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEFAULT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEFAULT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REPO_ROOT="${OOODNAKOV_REPO_ROOT:-$DEFAULT_REPO_ROOT}"
 PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
-SETUP="$REPO_ROOT/scripts/setup.sh"
-DELETE="$REPO_ROOT/scripts/delete.sh"
+SETUP="$REPO_ROOT/scripts/setup/setup.sh"
+DELETE="$REPO_ROOT/scripts/setup/delete.sh"
 BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
-GEN_LOCK="$REPO_ROOT/scripts/generate_dependency_lock.py"
-UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
-RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
-AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
-SYNC_COLOR_THEME="$REPO_ROOT/scripts/sync_color_theme.py"
-COMMANDS_FILE="$REPO_ROOT/scripts/oooconf-commands.txt"
+GEN_LOCK="$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
+UPDATE_PINS="$REPO_ROOT/scripts/update/update-pins.sh"
+RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
+AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
+SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
+COMMANDS_FILE="$REPO_ROOT/scripts/cli/oooconf-commands.txt"
 KNOWN_COMMANDS=()
 KNOWN_SHELL_SUBCOMMANDS=(status prompt prompt-style forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
 KNOWN_SHELL_FORGIT_MODES=(plain forgit status)
@@ -118,6 +118,7 @@ ui_cmd_icon() {
       lock) printf '󰌾' ;;
       update-pins) printf '󱥂' ;;
       completions) printf '󰩫' ;;
+      link) printf '🔗' ;;
       shell) printf '󱆃' ;;
       secrets) printf '󰠮' ;;
       agents) printf '󰭹' ;;
@@ -137,6 +138,7 @@ ui_cmd_icon() {
       lock) printf '[lock]' ;;
       update-pins) printf '[pins]' ;;
       completions) printf '[comp]' ;;
+      link) printf '[link]' ;;
       shell) printf '[sh]' ;;
       secrets) printf '[sec]' ;;
       agents) printf '[agt]' ;;
@@ -1291,7 +1293,7 @@ EOF
       ;;
     install)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf install [--dry-run] [--yes-optional]
+Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps]
 
 Apply managed config and optional dependency installation.
 Creates symlinks from tracked config in home/ to their target locations,
@@ -1300,12 +1302,13 @@ allowed.
 Examples:
   oooconf install                      # interactive dependency prompts
   oooconf install --yes-optional       # auto-accept all optional installs
+  oooconf install --skip-deps          # apply config without dependency installs
   oooconf install --dry-run            # preview without making changes
 EOF
       ;;
     deps)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf deps [--dry-run] [dependency-key...]
+Usage: oooconf deps [--dry-run] [--all] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
 gum-based multi-select picker is used when available.
@@ -1315,6 +1318,7 @@ Examples:
   oooconf deps                         # interactive picker (when gum available)
   oooconf deps <key...>                # specific tools (see optional-deps.toml for keys)
   oooconf deps --dry-run               # preview installation
+  oooconf deps --all                  # install all dependency keys
 EOF
       ;;
     update)
@@ -1409,6 +1413,18 @@ This does not install dependencies; it only rebuilds completion files.
 Examples:
   oooconf completions                  # rebuild tracked completion files
   oooconf completions --dry-run        # preview generation actions
+EOF
+      ;;
+    link)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf link [--dry-run]
+
+Create or update symlinks from tracked config in home/ to their target
+locations, backing up any replaced files. Reads from links.toml manifest
+with auto-discovery for home/.config, home/.local, and home/.glzr.
+Examples:
+  oooconf link                       # create/update all manifest links
+  oooconf link --dry-run            # preview without making changes
 EOF
       ;;
     agents)
@@ -1512,6 +1528,8 @@ require_repo_script() {
 
 dry_run_requested=0
 yes_optional_requested=0
+skip_deps_requested=0
+all_deps_requested=0
 command=""
 
 while [ "$#" -gt 0 ]; do
@@ -1519,14 +1537,14 @@ while [ "$#" -gt 0 ]; do
     -C|--repo-root)
       [ "$#" -ge 2 ] || { echo "Missing value for $1" >&2; exit 1; }
       REPO_ROOT="$2"
-      SETUP="$REPO_ROOT/scripts/setup.sh"
-      DELETE="$REPO_ROOT/scripts/delete.sh"
+      SETUP="$REPO_ROOT/scripts/setup/setup.sh"
+      DELETE="$REPO_ROOT/scripts/setup/delete.sh"
       BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
-      GEN_LOCK="$REPO_ROOT/scripts/generate_dependency_lock.py"
-      UPDATE_PINS="$REPO_ROOT/scripts/update-pins.sh"
-      RENDER_SECRETS="$REPO_ROOT/scripts/render_secrets.py"
-      AGENTS_TOOL="$REPO_ROOT/scripts/agents_tool.py"
-      SYNC_COLOR_THEME="$REPO_ROOT/scripts/sync_color_theme.py"
+      GEN_LOCK="$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
+      UPDATE_PINS="$REPO_ROOT/scripts/update/update-pins.sh"
+      RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
+      AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
+      SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
       shift 2
       ;;
     --print-repo-root)
@@ -1552,6 +1570,14 @@ while [ "$#" -gt 0 ]; do
       ;;
     --yes-optional)
       yes_optional_requested=1
+      shift
+      ;;
+    --all)
+      all_deps_requested=1
+      shift
+      ;;
+    --skip-deps)
+      skip_deps_requested=1
       shift
       ;;
     help)
@@ -1606,6 +1632,10 @@ if should_normalize_global_flags "$command"; then
       --yes-optional)
         yes_optional_requested=1
         ;;
+      --skip-deps)
+        skip_deps_requested=1
+        ;;
+      --all)        all_deps_requested=1        ;;
       *)
         normalized_args+=("$arg")
         ;;
@@ -1622,6 +1652,8 @@ exec_setup_command() {
   local setup_command="$1"
   local supports_dry_run="$2"
   shift 2
+  local _all_flag=""
+  [ "$all_deps_requested" -eq 1 ] && _all_flag="--all"
 
   require_repo_script "$SETUP"
   if [ "$dry_run_requested" -eq 1 ]; then
@@ -1630,15 +1662,15 @@ exec_setup_command() {
       exit 1
     fi
     if [ "$yes_optional_requested" -eq 1 ]; then
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" "$setup_command" --dry-run "$@"
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "$@"
     fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" "$setup_command" --dry-run "$@"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "$@"
   fi
 
   if [ "$yes_optional_requested" -eq 1 ]; then
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always "$SETUP" "$setup_command" "$@"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "$@"
   fi
-  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" "$setup_command" "$@"
+  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "$@"
 }
 
 require_no_dry_run() {
@@ -1671,7 +1703,7 @@ case "$command" in
     exec_setup_command deps 1 "$@"
   ;;
   minimal)
-    exec "$REPO_ROOT/scripts/minimal-setup.sh"
+    exec "$REPO_ROOT/scripts/setup/minimal-setup.sh"
   ;;
 
   update)
@@ -1682,6 +1714,9 @@ case "$command" in
     ;;
   completions)
     exec_setup_command completions 1 "$@"
+    ;;
+  link)
+    run_python "$REPO_ROOT/scripts/link_manager.py" "$@"
     ;;
   dry-run)
     if [ "$dry_run_requested" -eq 1 ]; then

@@ -14,6 +14,7 @@ _oooconf_commands=(
   'lock:regenerate dependency lock artifacts'
   'update-pins:check or update pinned refs'
   'completions:regenerate tracked completion files'
+  'link:create or update symlinks from manifest'
   'agents:detect/sync/doctor/provider/update AGENTS.md workflows'
   'secrets:sync or validate local secret env files'
   'shell:manage local shell preferences'
@@ -22,10 +23,10 @@ _oooconf_commands=(
   'check:alias for doctor'
   'preview:alias for dry-run'
   'upgrade:alias for update'
-  'komorebi:manage Komorebi window manager'
-  'wm:switch or manage window managers'
   'help:show help'
   'minimal:run minimal setup'
+  'komorebi:manage Komorebi window manager'
+  'wm:switch or manage window managers'
 )
 typeset -ga _oooconf_global_opts
 _oooconf_global_opts=(
@@ -167,6 +168,7 @@ _oooconf_install() {
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--skip-deps[skip dependency installation]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -189,6 +191,7 @@ _oooconf_deps() {
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--all[select all dependency keys at once]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -211,6 +214,7 @@ _oooconf_update() {
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--all[select all dependency keys at once]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -297,6 +301,19 @@ _oooconf_update_pins() {
 }
 
 _oooconf_completions() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    '--dry-run[preview actions without changing files]' \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_link() {
   local context state line
   typeset -A opt_args
   local -a opts_with_args
@@ -1903,6 +1920,11 @@ _oooconf_main() {
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_completions
           ;;
+        link)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_link
+          ;;
         agents)
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
@@ -1943,16 +1965,6 @@ _oooconf_main() {
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_update
           ;;
-        komorebi)
-          words=("${(@)words[i,-1]}")
-          CURRENT=$(( CURRENT - i + 1 ))
-          _oooconf_komorebi
-          ;;
-        wm)
-          words=("${(@)words[i,-1]}")
-          CURRENT=$(( CURRENT - i + 1 ))
-          _oooconf_wm
-          ;;
         help)
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
@@ -1962,6 +1974,16 @@ _oooconf_main() {
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_minimal
+          ;;
+        komorebi)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_komorebi
+          ;;
+        wm)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_wm
           ;;
       esac
       ;;

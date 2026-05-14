@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HOME_DIR="${HOME}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
@@ -111,28 +111,44 @@ case "$RESTORE_MODE" in
     ;;
 esac
 
-remove_managed_link "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
-remove_managed_link "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"
-remove_managed_link "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm"
-remove_managed_link "$REPO_ROOT/home/.config/yazi" "$CONFIG_HOME/yazi"
-remove_managed_link "$REPO_ROOT/home/.config/niri" "$CONFIG_HOME/niri"
-remove_managed_link "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov"
-remove_managed_link "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json"
-remove_managed_link "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1"
-remove_managed_link "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf"
-remove_managed_link "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o"
+if command -v py > /dev/null 2>&1; then
+  while IFS='|' read -r key source target; do
+    [ -z "$target" ] && continue
+    remove_managed_link "$source" "$target"
+  done < <(py scripts/link_manager.py --repo-root "$REPO_ROOT" --format text 2>/dev/null) || true
+else
+  # Fallback to hardcoded pairs
+  remove_managed_link "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
+  remove_managed_link "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"
+  remove_managed_link "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm"
+  remove_managed_link "$REPO_ROOT/home/.config/yazi" "$CONFIG_HOME/yazi"
+  remove_managed_link "$REPO_ROOT/home/.config/niri" "$CONFIG_HOME/niri"
+  remove_managed_link "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov"
+  remove_managed_link "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json"
+  remove_managed_link "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1"
+  remove_managed_link "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf"
+  remove_managed_link "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o"
+fi
 
 remove_font_dir
 
 if [ "$RESTORE_MODE" = "restore" ]; then
-  restore_backup "$HOME_DIR/.zshrc"
-  restore_backup "$CONFIG_HOME/zsh"
-  restore_backup "$CONFIG_HOME/wezterm"
-  restore_backup "$CONFIG_HOME/yazi"
-  restore_backup "$CONFIG_HOME/niri"
-  restore_backup "$CONFIG_HOME/ooodnakov"
-  restore_backup "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json"
-  restore_backup "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1"
+  if command -v py > /dev/null 2>&1; then
+    while IFS='|' read -r key source target; do
+      [ -z "$target" ] && continue
+      restore_backup "$target"
+    done < <(py scripts/link_manager.py --repo-root "$REPO_ROOT" --format text 2>/dev/null) || true
+  else
+    # Fallback to hardcoded targets
+    restore_backup "$HOME_DIR/.zshrc"
+    restore_backup "$CONFIG_HOME/zsh"
+    restore_backup "$CONFIG_HOME/wezterm"
+    restore_backup "$CONFIG_HOME/yazi"
+    restore_backup "$CONFIG_HOME/niri"
+    restore_backup "$CONFIG_HOME/ooodnakov"
+    restore_backup "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json"
+    restore_backup "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1"
+  fi
 fi
 
 echo

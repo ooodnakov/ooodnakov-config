@@ -9,16 +9,16 @@ if ($null -eq $IsWindows) { $IsWindows = $true }
 $RepoRoot = if ($env:OOODNAKOV_REPO_ROOT) {
     $env:OOODNAKOV_REPO_ROOT
 } else {
-    (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+    (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 }
-$SetupScript = Join-Path $PSScriptRoot "setup.ps1"
-$DeleteScript = Join-Path $PSScriptRoot "delete.ps1"
-$GenerateLockScript = Join-Path $PSScriptRoot "generate_dependency_lock.py"
-$UpdatePinsScript = Join-Path $PSScriptRoot "update_pins.py"
-$RenderSecretsScript = Join-Path $PSScriptRoot "render_secrets.py"
-$AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
-$SyncColorThemeScript = Join-Path $PSScriptRoot "sync_color_theme.py"
-$CommandsFile = Join-Path $PSScriptRoot "oooconf-commands.txt"
+$SetupScript = Join-Path $RepoRoot "scripts/setup/setup.ps1"
+$DeleteScript = Join-Path $RepoRoot "scripts/setup/delete.ps1"
+$GenerateLockScript = Join-Path $RepoRoot "scripts/generate/generate_dependency_lock.py"
+$UpdatePinsScript = Join-Path $RepoRoot "scripts/update/update_pins.py"
+$RenderSecretsScript = Join-Path $RepoRoot "scripts/generate/render_secrets.py"
+$AgentsToolScript = Join-Path $RepoRoot "scripts/cli/agents_tool.py"
+$SyncColorThemeScript = Join-Path $RepoRoot "scripts/lib/sync_color_theme.py"
+$CommandsFile = Join-Path $RepoRoot "scripts/cli/oooconf-commands.txt"
 
 function Get-KnownCommands {
     $fallback = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "color", "version", "check", "preview", "upgrade")
@@ -1781,7 +1781,7 @@ function Get-SuggestionFromList {
     return $null
 }
 
-$AgentsToolScript = Join-Path $PSScriptRoot "agents_tool.py"
+$AgentsToolScript = Join-Path $RepoRoot "scripts/cli/agents_tool.py"
 
 function Get-Version {
     if (Get-Command git -ErrorAction SilentlyContinue) {
@@ -1816,6 +1816,7 @@ function Show-Usage {
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
+      --skip-deps       skip dependency installation
   -V, --version         show CLI version information
       --print-repo-root print the resolved repo root and exit
 "@
@@ -1849,14 +1850,14 @@ function Show-Usage {
     upgrade -> update
 Note:
   bootstrap is Unix-only in this wrapper.
-  On Windows, run `scripts/setup.ps1 install` for initial setup.
+  On Windows, run `scripts/setup/setup.ps1 install` for initial setup.
 Getting help:
   oooconf --help                     show this message
   oooconf help <command>             show command-specific help
   oooconf help secrets               show secrets subcommand help
 Common workflows:
   # Initial setup on Windows:
-  ./scripts/setup.ps1 install
+  ./scripts/setup/setup.ps1 install
   # Preview what install would do:
   oooconf dry-run
   # Apply config and install dependencies:
@@ -1868,6 +1869,21 @@ Common workflows:
 function Show-CommandUsage {
     param($command)
     switch ($command) {
+        "install" {
+            Write-UiHelpBlock @"
+Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps]
+
+Apply managed config and optional dependency installation.
+Creates symlinks from tracked config in home/ to their target locations,
+backing up any replaced files. Optionally installs dependencies when
+allowed.
+Examples:
+  oooconf install                      # interactive dependency prompts
+  oooconf install --yes-optional       # auto-accept all optional installs
+  oooconf install --skip-deps          # apply config without dependency installs
+  oooconf install --dry-run            # preview without making changes
+"@
+        }
         "deps" {
             Write-UiHelpBlock @"
 Usage: oooconf deps [--dry-run] [dependency-key...]
@@ -1908,6 +1924,18 @@ Examples:
   oooconf --yes-optional dry-run       # preview with dependency installs
 "@
         }
+        "link" {
+            Write-UiHelpBlock @"
+Usage: oooconf link [--dry-run]
+
+Create or update symlinks from tracked config in home/ to their target
+locations, backing up any replaced files. Reads from links.toml manifest
+with auto-discovery for home/.config, home/.local, and home/.glzr.
+Examples:
+  oooconf link                       # create/update all manifest links
+  oooconf link --dry-run            # preview without making changes
+"@
+        }
         "delete" {
             Write-UiHelpBlock @"
 Usage: oooconf delete
@@ -1933,7 +1961,7 @@ Examples:
 Usage: oooconf lock
 
 Regenerate dependency lock artifacts from pinned refs in setup scripts.
-Reads pinned versions from scripts/setup.ps1 (or setup.sh) and writes
+Reads pinned versions from scripts/setup/setup.ps1 (or setup.sh) and writes
 the resolved lock file to deps.lock.json.
 Examples:
   oooconf lock                         # regenerate lock artifact
@@ -2195,6 +2223,7 @@ function Require-PythonRuntime {
 
 $dryRunRequested = $false
 $yesOptionalRequested = $false
+$skipDepsRequested = $false
 $command = $null
 $remaining = [System.Collections.Generic.List[string]]::new()
 
@@ -2254,6 +2283,9 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         "--yes-optional" {
             $yesOptionalRequested = $true
         }
+        "--skip-deps" {
+            $skipDepsRequested = $true
+        }
         "help" {
             if ($i + 1 -lt $Arguments.Count) {
                 Show-CommandUsage (Resolve-CommandAlias -CommandName $Arguments[$i + 1])
@@ -2302,6 +2334,7 @@ if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
             "-n" { $dryRunRequested = $true }
             "--dry-run" { $dryRunRequested = $true }
             "--yes-optional" { $yesOptionalRequested = $true }
+            "--skip-deps" { $skipDepsRequested = $true }
             default { $normalizedRemaining += $arg }
         }
     }
@@ -2324,14 +2357,14 @@ function Invoke-SetupCommand {
         if (-not $SupportsDryRun) {
             throw "--dry-run is not supported for $SetupCommand"
         }
-        & $SetupScript $SetupCommand -DryRun @RemainingArgs
+        & $SetupScript $SetupCommand -DryRun -SkipDeps:$skipDepsRequested @RemainingArgs
         if ($LASTEXITCODE -ne 0) {
             throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
         }
         return
     }
 
-    & $SetupScript $SetupCommand @RemainingArgs
+    & $SetupScript $SetupCommand -SkipDeps:$skipDepsRequested @RemainingArgs
     if ($LASTEXITCODE -ne 0) {
         throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
     }
@@ -2419,6 +2452,13 @@ switch ($command) {
             exit 0
         }
         Invoke-WmCommand -WmArgs $remaining
+    }
+    "link" {
+        if ($remaining.Count -gt 0 -and $remaining[0] -in @("-h", "--help", "help")) {
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs @("--help")
+        } else {
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs $remaining
+        }
     }
     default {
         $suggestion = Get-CommandSuggestion -InputCommand $command

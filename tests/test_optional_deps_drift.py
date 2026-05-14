@@ -9,7 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.read_optional_deps import load_deps, normalized_deps  # noqa: E402
+from scripts.cli.read_optional_deps import load_deps, normalized_deps  # noqa: E402
 
 
 def _catalog_keys() -> list[str]:
@@ -43,7 +43,7 @@ def test_completion_keys_match_optional_deps_catalog() -> None:
 
 
 def test_completions_generator_uses_canonical_parser() -> None:
-    content = (REPO_ROOT / "scripts/generate_oooconf_completions.py").read_text(encoding="utf-8")
+    content = (REPO_ROOT / "scripts/cli/generate_oooconf_completions.py").read_text(encoding="utf-8")
     assert "from read_optional_deps import load_deps" in content
     assert "from oooconf_cli_spec import CliSpec, Command, load_cli_spec, shell_safe_name" in content
     assert "def parse_optional_deps" not in content
@@ -75,7 +75,7 @@ def test_spec_driven_subcommand_descriptions_are_emitted() -> None:
     assert "detect:detect configured agent CLIs on PATH" in zsh_content
     assert "forgit-aliases:toggle plain vs forgit git aliases" in zsh_content
 
-    spec_content = (REPO_ROOT / "scripts/oooconf-cli-spec.toml").read_text(encoding="utf-8")
+    spec_content = (REPO_ROOT / "scripts/cli/oooconf-cli-spec.toml").read_text(encoding="utf-8")
     assert "[commands.agents.subcommands.detect]" in spec_content
     assert "[commands.agents.subcommands.mcp.subcommands.sync]" in spec_content
     assert "[commands.shell.subcommands.forgit-aliases]" in spec_content
@@ -112,32 +112,32 @@ def test_top_level_command_values_are_emitted() -> None:
 
 
 def test_oooconf_completions_command_wires_generator() -> None:
-    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
-    assert 'OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/generate_oooconf_completions.py"' in setup_sh
+    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
+    assert 'OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/cli/generate_oooconf_completions.py"' in setup_sh
     assert 'run_python "$OOOCONF_COMPLETIONS_GENERATOR"' in setup_sh
 
-    setup_ps1 = (REPO_ROOT / "scripts/setup.ps1").read_text(encoding="utf-8")
-    assert '$OooconfCompletionsGenerator = Join-Path $PSScriptRoot "generate_oooconf_completions.py"' in setup_ps1
+    setup_ps1 = (REPO_ROOT / "scripts/setup/setup.ps1").read_text(encoding="utf-8")
+    assert '$OooconfCompletionsGenerator = Join-Path $PSScriptRoot "cli/generate_oooconf_completions.py"' in setup_ps1
     assert "$null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()" in setup_ps1
 
-    ooosh = (REPO_ROOT / "scripts/ooodnakov.sh").read_text(encoding="utf-8")
+    ooosh = (REPO_ROOT / "scripts/setup/ooodnakov.sh").read_text(encoding="utf-8")
     assert "completions)" in ooosh
     assert 'exec_setup_command completions 1 "$@"' in ooosh
 
-    ooops1 = (REPO_ROOT / "scripts/ooodnakov.ps1").read_text(encoding="utf-8")
+    ooops1 = (REPO_ROOT / "scripts/setup/ooodnakov.ps1").read_text(encoding="utf-8")
     assert '"completions" {' in ooops1
     assert 'Invoke-SetupCommand -SetupCommand "completions" -SupportsDryRun -RemainingArgs $remaining' in ooops1
 
 
 def test_setup_dispatch_uses_handler_metadata() -> None:
-    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
+    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
     assert 'handler_func="maybe_install_${handler//-/_}"' in setup_sh
     assert (
         'case "$key" in'
         not in setup_sh.split("install_optional_dependency_from_catalog()", 1)[1].split("run_with_spinner()", 1)[0]
     )
 
-    setup_ps1 = (REPO_ROOT / "scripts/setup.ps1").read_text(encoding="utf-8")
+    setup_ps1 = (REPO_ROOT / "scripts/setup/setup.ps1").read_text(encoding="utf-8")
     install_fn = setup_ps1.split("function Install-OptionalDependencyFromSpec", 1)[1]
     assert "switch ($handler)" in install_fn
 
@@ -145,7 +145,7 @@ def test_setup_dispatch_uses_handler_metadata() -> None:
 def test_unix_handlers_have_setup_sh_implementations() -> None:
     """Ensure handler-based bash dispatch doesn't silently fall back for unix-special handlers."""
     deps = load_deps()["deps"]
-    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
+    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
 
     missing: list[str] = []
     for dep in deps:
@@ -167,7 +167,7 @@ def test_unix_handlers_have_setup_sh_implementations() -> None:
 
 
 def test_setup_optional_deps_cache_lookups_are_literal_safe() -> None:
-    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
+    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
 
     pipe_lookup = setup_sh.split("lookup_pipe_cache_value()", 1)[1].split("optional_dependency_check_command()", 1)[0]
     assert "printf '%s\\n' \"$cache\"" in pipe_lookup
@@ -185,7 +185,7 @@ def test_setup_optional_deps_cache_lookups_are_literal_safe() -> None:
 
 
 def test_setup_fast_path_only_applies_to_default_dependency_check() -> None:
-    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
+    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
     check_fn = setup_sh.split("check_dependency_status()", 1)[1].split("maybe_install_dependency()", 1)[0]
 
     assert 'check_cmd="$(optional_dependency_check_command "$command_name")"' in check_fn
@@ -223,8 +223,8 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     unix_managers = {dep["manager"] for platform in ("linux", "macos") for dep in normalized_deps(platform)}
     windows_managers = {dep["manager"] for dep in normalized_deps("windows")}
 
-    setup_sh = (REPO_ROOT / "scripts/setup.sh").read_text(encoding="utf-8")
-    setup_ps1 = (REPO_ROOT / "scripts/setup.ps1").read_text(encoding="utf-8")
+    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
+    setup_ps1 = (REPO_ROOT / "scripts/setup/setup.ps1").read_text(encoding="utf-8")
 
     expected_unix = {"", "apt", "brew", "cargo", "curl", "custom", "download", "github-release", "pip", "pnpm"}
     expected_windows = {"", "cargo", "choco", "custom", "download", "github-release", "pip", "pnpm", "scoop", "winget"}

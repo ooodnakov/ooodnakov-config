@@ -17,6 +17,7 @@ function Get-OooconfCompletions {
         'lock',
         'update-pins',
         'completions',
+        'link',
         'agents',
         'secrets',
         'shell',
@@ -25,10 +26,10 @@ function Get-OooconfCompletions {
         'check',
         'preview',
         'upgrade',
-        'komorebi',
-        'wm',
         'help',
-        'minimal'
+        'minimal',
+        'komorebi',
+        'wm'
     )
 
     $OooconfGlobalOptions = @(
@@ -259,7 +260,7 @@ function Get-OooconfCompletions {
             }
         }
         'deps' = @{
-            Options = @('--dry-run', '--yes-optional', '-h', '--help')
+            Options = @('--dry-run', '--yes-optional', '--all', '-h', '--help')
             OptionsWithArgs = @()
             Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar')
             Subcommands = @()
@@ -291,7 +292,7 @@ function Get-OooconfCompletions {
             }
         }
         'install' = @{
-            Options = @('--dry-run', '--yes-optional', '-h', '--help')
+            Options = @('--dry-run', '--yes-optional', '--skip-deps', '-h', '--help')
             OptionsWithArgs = @()
             Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar')
             Subcommands = @()
@@ -300,6 +301,14 @@ function Get-OooconfCompletions {
         }
         'komorebi' = @{
             Options = @()
+            OptionsWithArgs = @()
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+            }
+        }
+        'link' = @{
+            Options = @('--dry-run')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
@@ -521,7 +530,7 @@ function Get-OooconfCompletions {
             }
         }
         'update' = @{
-            Options = @('--dry-run', '--yes-optional', '-h', '--help')
+            Options = @('--dry-run', '--yes-optional', '--all', '-h', '--help')
             OptionsWithArgs = @()
             Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar')
             Subcommands = @()

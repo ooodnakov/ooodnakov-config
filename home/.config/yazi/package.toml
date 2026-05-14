@@ -1,22 +1,54 @@
-[plugin]
-deps = []
+[[plugin.deps]]
+use = "yazi-rs/plugins:full-border"
+rev = "1db18bb"
+hash = "dec79a43f91c9eb71243aa7690dffded"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:chmod"
+rev = "1db18bb"
+hash = "ed178d62e083f45b92da8db8ec9d0d13"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:git"
+rev = "1db18bb"
+hash = "8f31a11b21a4c104658f528f88f1a620"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:jump-to-char"
+rev = "1db18bb"
+hash = "6e67c36d6c25fc84cb0976aac8a3ff5"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:piper"
+rev = "1db18bb"
+hash = "bef05511fab6c6414990eb48003582b9"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:zoom"
+rev = "1db18bb"
+hash = "95b6348b374ab93067073759987d84ce"
+
+[[plugin.deps]]
+use = "Lil-Dank/lazygit"
+rev = "e73fd74"
+hash = "e467330cba1935c99c89c3cfb078389c"
 
 [[flavor.deps]]
 use = "AdithyanA2005/nord"
 rev = "bdf0bd4"
-hash = "816970e00d643d3e8213b430d2148aec"
+hash = "dd096f4b7352b1737dd0b22aea8448b2"
 
 [[flavor.deps]]
 use = "bennyyip/gruvbox-dark"
 rev = "619fdc5"
-hash = "d4c7003ec6dc4efd5d3a050d5c2f2575"
+hash = "a2640557497f7bf5ccf0c5349fa9c615"
 
 [[flavor.deps]]
 use = "yazi-rs/flavors:catppuccin-latte"
 rev = "0670801"
-hash = "b8f46853c27707115f25f3423a47bd38"
+hash = "e207c84b429a7d491cb11602cb2d3b3a"
 
 [[flavor.deps]]
 use = "BennyOe/tokyo-night"
 rev = "8e6296f"
-hash = "d9da921c3bd37ba32ee27a8a7a40461f"
+hash = "49258e379077f4b0d2e62dfdb131c7d"

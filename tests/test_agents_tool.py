@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("agents_tool", ROOT / "scripts/agents_tool.py")
+spec = importlib.util.spec_from_file_location("agents_tool", ROOT / "scripts/cli/agents_tool.py")
 agents_tool = importlib.util.module_from_spec(spec)
 assert spec is not None and spec.loader is not None
 sys.modules["agents_tool"] = agents_tool

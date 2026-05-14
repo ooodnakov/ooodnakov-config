@@ -4,8 +4,8 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/read_optional_deps.py"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/cli/read_optional_deps.py"
 PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
 
 # shellcheck source=/dev/null
@@ -29,7 +29,7 @@ echo "Installing minimal core tools: $MINIMAL_KEYS"
 echo "(non-interactive with --yes-optional)"
 
 # shellcheck disable=SC2086 # MINIMAL_KEYS is a trusted, space-delimited key list from optional-deps.toml.
-"$REPO_ROOT/scripts/ooodnakov.sh" deps --yes-optional $MINIMAL_KEYS
+"$REPO_ROOT/scripts/setup/ooodnakov.sh" deps --yes-optional $MINIMAL_KEYS
 
 echo ""
 echo "Minimal setup complete. Run 'oooconf deps' for additional optional tools."

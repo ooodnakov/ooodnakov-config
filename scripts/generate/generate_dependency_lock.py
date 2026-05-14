@@ -7,10 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # Make local scripts importable (cli_ui, etc.)
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "cli"))
 from cli_ui import status
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 JSON_LOCK = REPO_ROOT / "deps.lock.json"
 MD_LOCK = REPO_ROOT / "docs" / "dependency-lock.md"
 
@@ -20,7 +20,7 @@ def parse_managed_tools() -> list[dict[str, str]]:
     import subprocess
 
     data = subprocess.run(
-        ["uv", "run", "scripts/read_optional_deps.py", "managed-tools"],
+        ["uv", "run", "scripts/cli/read_optional_deps.py", "managed-tools"],
         capture_output=True,
         text=True,
         check=True,

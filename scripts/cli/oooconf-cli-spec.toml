@@ -28,17 +28,17 @@ description = "clone or update the repo, then run install"
 
 [commands.install]
 description = "apply managed config"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--skip-deps" = "skip dependency installation", "-h" = "show help", "--help" = "show help" }
 value_set = "deps_keys"
 
 [commands.deps]
 description = "install optional dependencies only"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--all" = "select all dependency keys at once", "-h" = "show help", "--help" = "show help" }
 value_set = "deps_keys"
 
 [commands.update]
 description = "update the repo, then re-run install"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--all" = "select all dependency keys at once", "-h" = "show help", "--help" = "show help" }
 value_set = "deps_keys"
 
 [commands.doctor]
@@ -62,6 +62,10 @@ options = { "--apply" = "apply pin updates" }
 
 [commands.completions]
 description = "regenerate tracked completion files"
+options = { "--dry-run" = "preview actions without changing files" }
+
+[commands.link]
+description = "create or update symlinks from manifest"
 options = { "--dry-run" = "preview actions without changing files" }
 
 [commands.agents]

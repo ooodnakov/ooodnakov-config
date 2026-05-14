@@ -15,5 +15,5 @@ Host router
     User root
 
 Host think
-    HostName 192.168.1.138
+    HostName 192.168.1.158
     User th
