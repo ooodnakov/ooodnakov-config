@@ -99,6 +99,7 @@ ui_icon() {
     ok) printf '✓' ;;
     warn) printf '⚠' ;;
     fail) printf '✗' ;;
+    missing) printf '✗' ;;
     info) printf 'ℹ' ;;
     hint) printf '→' ;;
     *) printf '•' ;;
@@ -209,7 +210,7 @@ ui_colorize() {
         *) code='1;38;5;221' ;;
       esac
       ;;
-    fail)
+    fail|missing)
       case "$theme" in
         catppuccin:dark) code='1;38;5;203' ;;
         gruvbox:dark) code='1;38;5;167' ;;
@@ -219,6 +220,18 @@ ui_colorize() {
         catppuccin:light|gruvbox:light|tokyonight:light|default:light|noctalia:light) code='1;38;5;124' ;;
         nord:light) code='1;38;5;131' ;;
         *) code='1;38;5;203' ;;
+      esac
+      ;;
+    outdated)
+      case "$theme" in
+        catppuccin:dark) code='1;38;5;181' ;;
+        gruvbox:dark) code='1;38;5;214' ;;
+        nord:dark) code='1;38;5;109' ;;
+        tokyonight:dark) code='1;38;5;180' ;;
+        noctalia:dark) code='1;38;5;109' ;;
+        catppuccin:light|gruvbox:light|tokyonight:light|default:light|noctalia:light) code='1;38;5;130' ;;
+        nord:light) code='1;38;5;131' ;;
+        *) code='1;38;5;215' ;;
       esac
       ;;
     info)
