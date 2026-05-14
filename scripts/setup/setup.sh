@@ -186,7 +186,7 @@ initialize_logging() {
     mkdir -p "$active_log_root" || {
       LOG_FILE=""
       LOG_LATEST=""
-      echo "warning: failed to create log directory under $LOG_ROOT or $active_log_root" >&2
+      ui_line warn "failed to create log directory under $LOG_ROOT or $active_log_root"
       return 0
     }
   fi
@@ -201,7 +201,7 @@ initialize_logging() {
   fi
 
   ln -sfn "$LOG_FILE" "$LOG_LATEST" 2>/dev/null || cp -f "$LOG_FILE" "$LOG_LATEST"
-  is_verbose && echo "Logging to $LOG_FILE"
+  is_verbose && ui_line info "Logging to $LOG_FILE"
 }
 
 run_cmd() {
@@ -658,7 +658,7 @@ ensure_gum_for_optional_selector() {
     return 1
   fi
 
-  printf "gum is required for the multi-select dependency picker.\n" > /dev/tty
+  ui_line hint "gum is required for the multi-select dependency picker"
   if ! prompt_yes_no "Install gum now and continue with the picker?"; then
     return 1
   fi
@@ -685,11 +685,11 @@ choose_optional_dependencies_without_gum() {
   done < <(optional_dependency_catalog)
 
   if [ "${#all_keys[@]}" -eq 0 ]; then
-    echo "All optional dependencies are already present." >&2
+    ui_line info "All optional dependencies are already present."
     return 2
   fi
 
-  echo "Available optional dependencies:" >&2
+  ui_line info "Available optional dependencies:"
   local i
   for (( i = 0; i < ${#all_keys[@]}; i++ )); do
     printf "  %-10s %s\n" "${all_keys[$i]}" "${all_labels[$i]}" >&2
@@ -714,7 +714,7 @@ choose_optional_dependencies_without_gum() {
   local wanted
   for wanted in "${wanted_keys[@]}"; do
     if ! optional_dependency_exists "$wanted"; then
-      echo "Unknown dependency key: $wanted" >&2
+      ui_line fail "Unknown dependency key: $wanted"
       return 1
     fi
   done
@@ -738,7 +738,7 @@ choose_optional_dependencies_with_gum() {
   done < <(optional_dependency_catalog)
 
   if [ "${#options[@]}" -eq 0 ]; then
-    echo "All optional dependencies are already present." >&2
+    ui_line info "All optional dependencies are already present."
     return 2
   fi
 
@@ -1041,7 +1041,8 @@ run_with_spinner() {
     status=$?
     if [ $status -ne 0 ]; then
       if is_interactive; then
-        printf "\r[failed] %s\n" "$label" > /dev/tty
+        printf "\r" > /dev/tty
+        ui_line fail "[failed] $label"
       else
         ui_line fail "[failed] $label"
       fi
@@ -1051,7 +1052,8 @@ run_with_spinner() {
       fi
     else
       if is_interactive; then
-        printf "\r[ok] %s\n" "$label" > /dev/tty
+        printf "\r" > /dev/tty
+        ui_line ok "[ok] $label"
       else
         ui_line ok "[ok] $label"
       fi
@@ -1088,14 +1090,16 @@ run_with_spinner() {
 
   if [ $status -eq 0 ]; then
     if is_interactive; then
-      printf "[ok] %s\n" "$label" > /dev/tty
+      printf "\r" > /dev/tty
+      ui_line ok "[ok] $label"
     else
       # Overwrite the "[-] label..." line with [ok]
       ui_line ok "[ok] $label"
     fi
   else
     if is_interactive; then
-      printf "[failed] %s\n" "$label" > /dev/tty
+      printf "\r" > /dev/tty
+      ui_line fail "[failed] $label"
     else
       ui_line fail "[failed] $label"
     fi
@@ -1238,7 +1242,7 @@ check_pip_dependency_status() {
 
   if eval "$check_cmd" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ]; then
-      printf "[ok] %s is present.\n" "$command_name"
+      ui_line ok "$command_name is present"
     fi
     DEPENDENCY_SUMMARY+=("$command_name: present")
     return 0
@@ -1254,7 +1258,7 @@ check_dependency_status() {
   log_name="${2:-$1}"
 
   if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
-    printf "[-] Checking %s...\r" "$log_name" > /dev/tty
+    printf "[-] %s...\r" "$log_name" > /dev/tty
   fi
 
   # Use check command from central TOML if available, fallback to command -v.
@@ -1267,9 +1271,10 @@ check_dependency_status() {
   if [ "$check_cmd" = "command -v $command_name" ] && command -v "$command_name" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ]; then
       if is_interactive && is_verbose; then
-        printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
+        printf "\r" > /dev/tty
+        ui_line ok "$log_name is present"
       else
-        printf "[ok] %s is present.\n" "$log_name"
+        ui_line ok "$log_name is present"
       fi
     fi
     DEPENDENCY_SUMMARY+=("$log_name: present")
@@ -1279,9 +1284,10 @@ check_dependency_status() {
   if eval "$check_cmd" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ]; then
       if is_interactive && is_verbose; then
-        printf "\r[ok] %s is present.             \n" "$log_name" > /dev/tty
+        printf "\r" > /dev/tty
+        ui_line ok "$log_name is present"
       else
-        printf "[ok] %s is present.\n" "$log_name"
+        ui_line ok "$log_name is present"
       fi
     fi
     DEPENDENCY_SUMMARY+=("$log_name: present")
@@ -1309,7 +1315,7 @@ maybe_install_dependency() {
   fi
 
   if [ "$manager" = "none" ]; then
-    echo "missing optional dependency: $command_name ($description)" >&2
+    ui_line missing "optional dependency: $command_name ($description)"
     DEPENDENCY_SUMMARY+=("$command_name: missing (no supported package manager)")
     return 1
   fi
