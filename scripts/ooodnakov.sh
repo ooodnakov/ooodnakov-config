@@ -154,8 +154,10 @@ ui_colorize() {
     printf '%s' "$text"
     return 0
   fi
-  theme="${__OOOCONF_THEME_CACHE:=$(get_oooconf_theme)}"
-  theme="${theme}:$(get_oooconf_color_mode)"
+  if [ -z "${__OOOCONF_THEME_CACHE:-}" ]; then
+    __OOOCONF_THEME_CACHE="$(get_oooconf_theme):$(get_oooconf_color_mode)"
+  fi
+  theme="$__OOOCONF_THEME_CACHE"
   case "$role" in
     section)
       case "$theme" in
@@ -619,6 +621,8 @@ set_oooconf_theme() {
   upsert_override_line "$env_ps1" "$OOOCONF_COLOR_MODE_VAR" "\$env:$OOOCONF_COLOR_MODE_VAR = '$color_mode'"
   upsert_override_line "$env_zsh" "$OOOCONF_OMP_CONFIG_VAR" "export $OOOCONF_OMP_CONFIG_VAR=\"$omp_config_path\""
   upsert_override_line "$env_ps1" "$OOOCONF_OMP_CONFIG_VAR" "\$env:$OOOCONF_OMP_CONFIG_VAR = '$omp_config_path'"
+
+  __OOOCONF_THEME_CACHE="$mode:$color_mode"
 
   ui_line ok "oooconf theme set to $mode ($color_mode)"
   ui_line info "zsh: $env_zsh"

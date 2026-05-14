@@ -842,7 +842,10 @@ YAZI_THEME_BY_NAME = {
     "light": {
         "default": "default",
         "catppuccin": "catppuccin-latte",
-        "gruvbox": "gruvbox-light",
+        # yazi-rs/flavors lists gruvbox-dark, but there is no bundled or
+        # declared gruvbox-light flavor in this repo. Keep light mode on the
+        # installed flavor rather than writing a missing flavor name.
+        "gruvbox": "gruvbox-dark",
         "nord": "nord",
         "tokyonight": "tokyo-night",
         "noctalia": "default",

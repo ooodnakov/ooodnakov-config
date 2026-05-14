@@ -381,3 +381,14 @@ def test_set_yazi_theme_forces_selected_dark_flavor(tmp_path: Path, monkeypatch)
     text = (tmp_path / ".xdg-config" / "ooodnakov" / "local" / "yazi" / "theme.toml").read_text(encoding="utf-8")
     assert 'dark = "gruvbox-dark"' in text
     assert 'light = "gruvbox-dark"' in text
+
+
+def test_set_yazi_theme_keeps_gruvbox_light_on_installed_flavor(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".xdg-config"))
+
+    set_yazi_theme("gruvbox", "light")
+
+    text = (tmp_path / ".xdg-config" / "ooodnakov" / "local" / "yazi" / "theme.toml").read_text(encoding="utf-8")
+    assert 'dark = "gruvbox-dark"' in text
+    assert 'light = "gruvbox-dark"' in text
+    assert "gruvbox-light" not in text
