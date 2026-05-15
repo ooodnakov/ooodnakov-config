@@ -123,7 +123,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:mcp:sync' = @{
-            Options = @('--check')
+            Options = @('--check', '--agents')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
@@ -139,7 +139,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:provider:sync' = @{
-            Options = @('--check', '--materialize-secrets', '--region')
+            Options = @('--check', '--materialize-secrets', '--region', '--agents')
             OptionsWithArgs = @('--region')
             Values = @()
             Subcommands = @()
@@ -180,7 +180,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:skills:sync' = @{
-            Options = @('--check')
+            Options = @('--check', '--agents')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
@@ -204,7 +204,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:sync' = @{
-            Options = @('--repo-root', '--config', '--check', '--global', '--materialize-secrets')
+            Options = @('--repo-root', '--config', '--check', '--global', '--materialize-secrets', '--agents')
             OptionsWithArgs = @('--repo-root', '--config')
             Values = @()
             Subcommands = @()

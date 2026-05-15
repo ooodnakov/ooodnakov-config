@@ -1,10 +1,10 @@
 [discovery]
 autolink_dirs = ["home/.config", "home/.local", "home/.glzr"]
-exclude = [
-  "home/.config/ooodnakov",
-  "home/.config/ooodnakov/bin",
-  "home/.config/ooodnakov/local",
-]
+# exclude = [
+#   "home/.config/ooodnakov",
+#   "home/.config/ooodnakov/bin",
+#   "home/.config/ooodnakov/local",
+# ]
 
 [[links]]
 key = "zshrc"

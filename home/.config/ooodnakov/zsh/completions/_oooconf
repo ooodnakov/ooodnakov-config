@@ -475,6 +475,7 @@ _oooconf_agents_sync() {
     '--check[check only]' \
     '--global[sync global config]' \
     '--materialize-secrets[materialize secret-backed values]' \
+    '--agents[filter to specific agents (interactive if omitted)]' \
     '*:arg:->args'
 
   case $state in
@@ -560,6 +561,7 @@ _oooconf_agents_mcp_sync() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--check[check only]' \
+    '--agents[filter to specific agents (interactive if omitted)]' \
     '*:arg:->args'
 
   case $state in
@@ -712,6 +714,7 @@ _oooconf_agents_provider_sync() {
     '--check[check only]' \
     '--materialize-secrets[materialize secret-backed values]' \
     '--region[provider region]:value:(global china)' \
+    '--agents[filter to specific agents (interactive if omitted)]' \
     '*:arg:->args'
 
   case $state in
@@ -840,6 +843,7 @@ _oooconf_agents_skills_sync() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--check[check only]' \
+    '--agents[filter to specific agents (interactive if omitted)]' \
     '*:arg:->args'
 
   case $state in

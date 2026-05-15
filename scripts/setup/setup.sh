@@ -33,7 +33,7 @@ PROGRESS_TOTAL=0
 PROGRESS_CURRENT=0
 PROGRESS_TITLE=""
 NEOVIM_MIN_VERSION="${OOODNAKOV_NEOVIM_MIN_VERSION:-0.10.0}"
-NEOVIM_VERSION="${OOODNAKOV_NEOVIM_VERSION:-}";
+NEOVIM_VERSION="${OOODNAKOV_NEOVIM_VERSION:-}"
 LINK_MANAGER="$REPO_ROOT/scripts/link_manager.py"
 
 # shellcheck source=/dev/null
@@ -69,17 +69,17 @@ get_dep_field() {
 
 is_interactive() {
   case "$INTERACTIVE" in
-    always) return 0 ;;
-    never) return 1 ;;
-    auto) [ -t 1 ] && [ -r /dev/tty ] ;;
-    *) return 1 ;;
+  always) return 0 ;;
+  never) return 1 ;;
+  auto) [ -t 1 ] && [ -r /dev/tty ] ;;
+  *) return 1 ;;
   esac
 }
 
 is_verbose() {
   case "$VERBOSE" in
-    1|[Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Oo][Nn]|[Vv][Ee][Rr][Bb][Oo][Ss][Ee]) return 0 ;;
-    *) return 1 ;;
+  1 | [Tt][Rr][Uu][Ee] | [Yy][Ee][Ss] | [Oo][Nn] | [Vv][Ee][Rr][Bb][Oo][Ss][Ee]) return 0 ;;
+  *) return 1 ;;
   esac
 }
 
@@ -113,7 +113,7 @@ progress_step() {
   fi
   empty=$((width - filled))
   bar="$(printf '%*s' "$filled" '' | tr ' ' '█')$(printf '%*s' "$empty" '' | tr ' ' '░')"
-  printf '\r[%s] %3d%% (%d/%d) %s' "$bar" "$percent" "$PROGRESS_CURRENT" "$PROGRESS_TOTAL" "$description" > /dev/tty
+  printf '\r[%s] %3d%% (%d/%d) %s' "$bar" "$percent" "$PROGRESS_CURRENT" "$PROGRESS_TOTAL" "$description" >/dev/tty
 }
 
 usage() {
@@ -202,6 +202,11 @@ initialize_logging() {
 
   ln -sfn "$LOG_FILE" "$LOG_LATEST" 2>/dev/null || cp -f "$LOG_FILE" "$LOG_LATEST"
   is_verbose && ui_line info "Logging to $LOG_FILE"
+  return 0
+}
+
+bullet() {
+  ui_line info "$*"
 }
 
 run_cmd() {
@@ -218,33 +223,32 @@ prompt_yes_no() {
   local reply
 
   case "$INSTALL_OPTIONAL" in
-    always) return 0 ;;
-    never) return 1 ;;
-    prompt) ;;
-    *) ;;
+  always) return 0 ;;
+  never) return 1 ;;
+  prompt) ;;
+  *) ;;
   esac
 
   if ! is_interactive; then
     return 1
   fi
 
-  printf "%s [y/N] " "$prompt" > /dev/tty
-  read -r reply < /dev/tty
+  printf "%s [y/N] " "$prompt" >/dev/tty
+  read -r reply </dev/tty
   case "$reply" in
-    y|Y|yes|YES) return 0 ;;
-    *) return 1 ;;
+  y | Y | yes | YES) return 0 ;;
+  *) return 1 ;;
   esac
 }
 
 detect_platform() {
   case "$(uname -s)" in
-    Linux*) echo "linux" ;;
-    Darwin*) echo "macos" ;;
-    CYGWIN*|MINGW*|MSYS*|Windows*) echo "windows" ;;
-    *) echo "unknown" ;;
+  Linux*) echo "linux" ;;
+  Darwin*) echo "macos" ;;
+  CYGWIN* | MINGW* | MSYS* | Windows*) echo "windows" ;;
+  *) echo "unknown" ;;
   esac
 }
-
 
 load_optional_deps_platform_catalog_cache() {
   if [ -z "$OPTIONAL_DEPS_PLATFORM_CATALOG_CACHE" ]; then
@@ -274,8 +278,8 @@ lookup_pipe_cache_value() {
   local cache key
   cache="$1"
   key="$2"
-  printf '%s\n' "$cache" \
-    | awk -F'|' -v expected="$key" '$1 == expected { print substr($0, index($0, FS) + 1); exit }'
+  printf '%s\n' "$cache" |
+    awk -F'|' -v expected="$key" '$1 == expected { print substr($0, index($0, FS) + 1); exit }'
 }
 
 optional_dependency_check_command() {
@@ -302,8 +306,8 @@ optional_dependency_install_info_line() {
   key="$1"
   us="$(printf '\037')"
   load_optional_deps_install_info_cache
-  printf '%s\n' "$OPTIONAL_DEPS_INSTALL_INFO_CACHE" \
-    | awk -F"$us" -v expected="$key" '$1 == expected { print; exit }'
+  printf '%s\n' "$OPTIONAL_DEPS_INSTALL_INFO_CACHE" |
+    awk -F"$us" -v expected="$key" '$1 == expected { print; exit }'
 }
 
 optional_dependency_applicable() {
@@ -491,8 +495,8 @@ optional_dependency_field() {
   field="$2"
 
   case "$field" in
-    handler) optional_dependency_handler "$key" ;;
-    *) run_python "$OPTIONAL_DEPS_SCRIPT" field "$key" "$field" 2>/dev/null || true ;;
+  handler) optional_dependency_handler "$key" ;;
+  *) run_python "$OPTIONAL_DEPS_SCRIPT" field "$key" "$field" 2>/dev/null || true ;;
   esac
 }
 
@@ -503,15 +507,15 @@ resolve_package_manager_for_dependency() {
   declared_manager="$2"
 
   case "$declared_manager" in
-    apt)
-      case "$detected_manager" in
-        apt|dnf|pacman|zypper) printf '%s\n' "$detected_manager" ;;
-        *) printf '%s\n' "$declared_manager" ;;
-      esac
-      ;;
-    *)
-      printf '%s\n' "$declared_manager"
-      ;;
+  apt)
+    case "$detected_manager" in
+    apt | dnf | pacman | zypper) printf '%s\n' "$detected_manager" ;;
+    *) printf '%s\n' "$declared_manager" ;;
+    esac
+    ;;
+  *)
+    printf '%s\n' "$declared_manager"
+    ;;
   esac
 }
 
@@ -524,8 +528,8 @@ optional_dependency_selected() {
   fi
 
   case ",$selected_optional_key_csv," in
-    *,"$key",*) return 0 ;;
-    *) return 1 ;;
+  *,"$key",*) return 0 ;;
+  *) return 1 ;;
   esac
 }
 
@@ -534,7 +538,6 @@ optional_dependency_present() {
   # No more hard-coded list or overrides — sole source of truth is the TOML.
   check_dependency_status "$1" "$1" >/dev/null 2>&1
 }
-
 
 gum_apt_repo_configured() {
   [ -f /etc/apt/keyrings/charm.gpg ] || return 1
@@ -602,20 +605,20 @@ install_gum_package() {
   manager="$1"
 
   case "$manager" in
-    brew|pacman)
-      install_packages "$manager" gum
-      ;;
-    apt)
-      setup_gum_apt_repo || return 1
-      install_packages apt gum
-      ;;
-    dnf|zypper)
-      setup_gum_rpm_repo || return 1
-      install_packages "$manager" gum
-      ;;
-    *)
-      return 1
-      ;;
+  brew | pacman)
+    install_packages "$manager" gum
+    ;;
+  apt)
+    setup_gum_apt_repo || return 1
+    install_packages apt gum
+    ;;
+  dnf | zypper)
+    setup_gum_rpm_repo || return 1
+    install_packages "$manager" gum
+    ;;
+  *)
+    return 1
+    ;;
   esac
 }
 
@@ -691,19 +694,19 @@ choose_optional_dependencies_without_gum() {
 
   ui_line info "Available optional dependencies:"
   local i
-  for (( i = 0; i < ${#all_keys[@]}; i++ )); do
+  for ((i = 0; i < ${#all_keys[@]}; i++)); do
     printf "  %-10s %s\n" "${all_keys[$i]}" "${all_labels[$i]}" >&2
   done
   echo >&2
   printf "Enter space/comma-separated keys to install (or empty to skip): " >&2
-  if ! read -r selection < /dev/tty; then
+  if ! read -r selection </dev/tty; then
     # User cancelled (Ctrl+C) — treat as "user declined"
     return 3
   fi
 
   selection="$(echo "$selection" | tr ',' ' ')"
   local -a wanted_keys=()
-  read -ra wanted_keys <<< "$selection"
+  read -ra wanted_keys <<<"$selection"
 
   if [ "${#wanted_keys[@]}" -eq 0 ]; then
     # User entered nothing — treat as "user declined"
@@ -719,7 +722,10 @@ choose_optional_dependencies_without_gum() {
     fi
   done
 
-  selected_keys_csv="$(IFS=,; printf '%s' "${wanted_keys[*]}")"
+  selected_keys_csv="$(
+    IFS=,
+    printf '%s' "${wanted_keys[*]}"
+  )"
   printf '%s\n' "$selected_keys_csv"
 }
 
@@ -750,20 +756,20 @@ choose_optional_dependencies_with_gum() {
     gum_args+=("$opt")
   done
 
-  selection="$(gum choose "${gum_args[@]}" < /dev/tty 2>/dev/tty)" || {
+  selection="$(gum choose "${gum_args[@]}" </dev/tty 2>/dev/tty)" || {
     # Reset terminal state after gum exits (prevents hang on subsequent invocations)
-    stty sane < /dev/tty 2>/dev/null || true
+    stty sane </dev/tty 2>/dev/null || true
     # gum returned non-zero: 1 = user cancelled (Esc), 130 = interrupted
     # Treat as "user declined" with no selections.
     return 3
   }
   # Reset terminal state after gum exits
-  stty sane < /dev/tty 2>/dev/null || true
+  stty sane </dev/tty 2>/dev/null || true
 
   if [ -n "$selection" ]; then
     while IFS=$'\t' read -r selected_key _; do
       [ -n "$selected_key" ] && selected_keys+=("$selected_key")
-    done <<< "$selection"
+    done <<<"$selection"
   fi
 
   if [ "${#selected_keys[@]}" -eq 0 ]; then
@@ -786,22 +792,22 @@ maybe_install_fastfetch() {
   fi
 
   case "$manager" in
-    apt)
-      if apt_package_available "fastfetch"; then
-        maybe_install_dependency apt fastfetch fastfetch "system information tool"
-      elif command -v brew >/dev/null 2>&1; then
-        if prompt_yes_no "fastfetch not found in APT. Install via Homebrew instead?"; then
-          maybe_install_dependency brew fastfetch fastfetch "system information tool"
-        else
-          DEPENDENCY_SUMMARY+=("fastfetch: skipped (APT package unavailable and brew install declined)")
-        fi
+  apt)
+    if apt_package_available "fastfetch"; then
+      maybe_install_dependency apt fastfetch fastfetch "system information tool"
+    elif command -v brew >/dev/null 2>&1; then
+      if prompt_yes_no "fastfetch not found in APT. Install via Homebrew instead?"; then
+        maybe_install_dependency brew fastfetch fastfetch "system information tool"
       else
-        DEPENDENCY_SUMMARY+=("fastfetch: missing (APT package unavailable and brew not found)")
+        DEPENDENCY_SUMMARY+=("fastfetch: skipped (APT package unavailable and brew install declined)")
       fi
-      ;;
-    *)
-      maybe_install_dependency "$manager" fastfetch fastfetch "system information tool"
-      ;;
+    else
+      DEPENDENCY_SUMMARY+=("fastfetch: missing (APT package unavailable and brew not found)")
+    fi
+    ;;
+  *)
+    maybe_install_dependency "$manager" fastfetch fastfetch "system information tool"
+    ;;
   esac
 }
 
@@ -933,12 +939,12 @@ install_optional_dependency_from_catalog() {
   if [ -n "$info" ]; then
     local us
     us="$(printf '\037')"
-    IFS="$us" read -r _ description declared_manager package_name command_name winget_id choco_id _ platform_url asset_name handler <<< "$info"
+    IFS="$us" read -r _ description declared_manager package_name command_name winget_id choco_id _ platform_url asset_name handler <<<"$info"
   else
     description="$(optional_dependency_label "$key")"
     info="$(optional_dependency_install_info "$key" || true)"
     handler="$(optional_dependency_field "$key" "handler")"
-    IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ platform_url asset_name <<< "$info"
+    IFS='|' read -r declared_manager package_name command_name winget_id choco_id _ platform_url asset_name <<<"$info"
   fi
   install_manager="$(resolve_package_manager_for_dependency "$detected_manager" "$declared_manager")"
 
@@ -956,67 +962,67 @@ install_optional_dependency_from_catalog() {
   fi
 
   case "$install_manager" in
-    custom|curl)
-      maybe_note_dependency "$command_name" "$description (manual installer: $install_manager)"
-      ;;
-    winget)
-      maybe_note_dependency "$command_name" "$description (Windows winget package: ${winget_id:-$package_name})"
-      ;;
-    choco)
-      maybe_note_dependency "$command_name" "$description (Windows choco package: ${choco_id:-$package_name})"
-      ;;
-    pnpm)
-      if optional_dependency_selected "$key"; then
-        local pnpm_cmd
-        if ! ensure_pnpm_available; then
-          DEPENDENCY_SUMMARY+=("$command_name: missing (pnpm unavailable; install pnpm first)")
-          return 0
-        fi
-        pnpm_cmd="$(resolve_pnpm_command 2>/dev/null || true)"
-        if [ -z "$pnpm_cmd" ]; then
-          DEPENDENCY_SUMMARY+=("$command_name: missing (pnpm unavailable; install pnpm first)")
-          return 0
-        fi
-        run_with_spinner "Installing $description via pnpm" "$pnpm_cmd" add -g "$package_name"
-        if command -v "$command_name" >/dev/null 2>&1; then
-          DEPENDENCY_SUMMARY+=("$command_name: installed via pnpm")
-        else
-          DEPENDENCY_SUMMARY+=("$command_name: install attempted via pnpm")
-        fi
-      fi
-      ;;
-    pip)
-      local python_cmd
-      python_cmd="python3"
-      if ! command -v "$python_cmd" >/dev/null 2>&1; then
-        DEPENDENCY_SUMMARY+=("$command_name: missing (python3 unavailable for pip)")
+  custom | curl)
+    maybe_note_dependency "$command_name" "$description (manual installer: $install_manager)"
+    ;;
+  winget)
+    maybe_note_dependency "$command_name" "$description (Windows winget package: ${winget_id:-$package_name})"
+    ;;
+  choco)
+    maybe_note_dependency "$command_name" "$description (Windows choco package: ${choco_id:-$package_name})"
+    ;;
+  pnpm)
+    if optional_dependency_selected "$key"; then
+      local pnpm_cmd
+      if ! ensure_pnpm_available; then
+        DEPENDENCY_SUMMARY+=("$command_name: missing (pnpm unavailable; install pnpm first)")
         return 0
       fi
+      pnpm_cmd="$(resolve_pnpm_command 2>/dev/null || true)"
+      if [ -z "$pnpm_cmd" ]; then
+        DEPENDENCY_SUMMARY+=("$command_name: missing (pnpm unavailable; install pnpm first)")
+        return 0
+      fi
+      run_with_spinner "Installing $description via pnpm" "$pnpm_cmd" add -g "$package_name"
+      if command -v "$command_name" >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("$command_name: installed via pnpm")
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: install attempted via pnpm")
+      fi
+    fi
+    ;;
+  pip)
+    local python_cmd
+    python_cmd="python3"
+    if ! command -v "$python_cmd" >/dev/null 2>&1; then
+      DEPENDENCY_SUMMARY+=("$command_name: missing (python3 unavailable for pip)")
+      return 0
+    fi
+    if check_pip_dependency_status "$command_name" "$python_cmd"; then
+      return 0
+    fi
+    if ! python_has_pip "$python_cmd"; then
+      DEPENDENCY_SUMMARY+=("$command_name: missing (pip unavailable for $python_cmd)")
+      return 0
+    fi
+    if optional_dependency_selected "$key"; then
+      run_with_spinner "Installing $description via pip" "$python_cmd" -m pip install --user --upgrade "$package_name"
       if check_pip_dependency_status "$command_name" "$python_cmd"; then
-        return 0
+        DEPENDENCY_SUMMARY+=("$command_name: installed via pip")
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: install attempted via pip")
       fi
-      if ! python_has_pip "$python_cmd"; then
-        DEPENDENCY_SUMMARY+=("$command_name: missing (pip unavailable for $python_cmd)")
-        return 0
-      fi
-      if optional_dependency_selected "$key"; then
-        run_with_spinner "Installing $description via pip" "$python_cmd" -m pip install --user --upgrade "$package_name"
-        if check_pip_dependency_status "$command_name" "$python_cmd"; then
-          DEPENDENCY_SUMMARY+=("$command_name: installed via pip")
-        else
-          DEPENDENCY_SUMMARY+=("$command_name: install attempted via pip")
-        fi
-      fi
-      ;;
-    github-release)
-      maybe_install_github_release "$key" "$description" "$package_name" "$command_name" "$platform_url" "$asset_name"
-      ;;
-    "")
-      maybe_note_dependency "$command_name" "$description (no package manager declared)"
-      ;;
-    *)
-      maybe_install_dependency "$install_manager" "$command_name" "$package_name" "$description"
-      ;;
+    fi
+    ;;
+  github-release)
+    maybe_install_github_release "$key" "$description" "$package_name" "$command_name" "$platform_url" "$asset_name"
+    ;;
+  "")
+    maybe_note_dependency "$command_name" "$description (no package manager declared)"
+    ;;
+  *)
+    maybe_install_dependency "$install_manager" "$command_name" "$package_name" "$description"
+    ;;
   esac
 }
 
@@ -1032,7 +1038,7 @@ run_with_spinner() {
   if ! is_verbose; then
     local logfile status
     if is_interactive; then
-      printf "[-] %s..." "$label" > /dev/tty
+      printf "[-] %s..." "$label" >/dev/tty
     fi
     logfile="$(mktemp)"
     (
@@ -1041,7 +1047,7 @@ run_with_spinner() {
     status=$?
     if [ $status -ne 0 ]; then
       if is_interactive; then
-        printf "\r" > /dev/tty
+        printf "\r" >/dev/tty
         ui_line fail "[failed] $label"
       else
         ui_line fail "[failed] $label"
@@ -1052,7 +1058,7 @@ run_with_spinner() {
       fi
     else
       if is_interactive; then
-        printf "\r" > /dev/tty
+        printf "\r" >/dev/tty
         ui_line ok "[ok] $label"
       else
         ui_line ok "[ok] $label"
@@ -1077,11 +1083,11 @@ run_with_spinner() {
 
   if is_interactive; then
     while kill -0 "$pid" 2>/dev/null; do
-      printf "\r[%s] %s" "${frames[$spinner_index]}" "$label" > /dev/tty
+      printf "\r[%s] %s" "${frames[$spinner_index]}" "$label" >/dev/tty
       spinner_index=$(((spinner_index + 1) % ${#frames[@]}))
       sleep 0.12
     done
-    printf "\r" > /dev/tty
+    printf "\r" >/dev/tty
   fi
 
   wait "$pid"
@@ -1090,7 +1096,7 @@ run_with_spinner() {
 
   if [ $status -eq 0 ]; then
     if is_interactive; then
-      printf "\r" > /dev/tty
+      printf "\r" >/dev/tty
       ui_line ok "[ok] $label"
     else
       # Overwrite the "[-] label..." line with [ok]
@@ -1098,7 +1104,7 @@ run_with_spinner() {
     fi
   else
     if is_interactive; then
-      printf "\r" > /dev/tty
+      printf "\r" >/dev/tty
       ui_line fail "[failed] $label"
     else
       ui_line fail "[failed] $label"
@@ -1118,7 +1124,7 @@ retry_attempt_count() {
   attempts="${OOODNAKOV_GIT_SYNC_ATTEMPTS:-3}"
 
   case "$attempts" in
-    ""|*[!0-9]*) attempts=3 ;;
+  "" | *[!0-9]*) attempts=3 ;;
   esac
 
   if [ "$attempts" -lt 1 ]; then
@@ -1192,28 +1198,28 @@ install_packages() {
   manager="$1"
   shift
   case "$manager" in
-    apt)
-      if [ "$APT_UPDATED" -eq 0 ]; then
-        run_with_spinner "Updating apt package index" sudo apt-get -qq update
-        APT_UPDATED=1
-      fi
-      run_with_spinner "Installing packages: $*" sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@"
-      ;;
-    dnf)
-      run_with_spinner "Installing packages: $*" sudo dnf install -y "$@"
-      ;;
-    pacman)
-      run_with_spinner "Installing packages: $*" sudo pacman -Sy --needed --noconfirm "$@"
-      ;;
-    zypper)
-      run_with_spinner "Installing packages: $*" sudo zypper install -y "$@"
-      ;;
-    brew)
-      run_with_spinner "Installing packages: $*" env HOMEBREW_NO_AUTO_UPDATE=1 brew install "$@"
-      ;;
-    *)
-      return 1
-      ;;
+  apt)
+    if [ "$APT_UPDATED" -eq 0 ]; then
+      run_with_spinner "Updating apt package index" sudo apt-get -qq update
+      APT_UPDATED=1
+    fi
+    run_with_spinner "Installing packages: $*" sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@"
+    ;;
+  dnf)
+    run_with_spinner "Installing packages: $*" sudo dnf install -y "$@"
+    ;;
+  pacman)
+    run_with_spinner "Installing packages: $*" sudo pacman -Sy --needed --noconfirm "$@"
+    ;;
+  zypper)
+    run_with_spinner "Installing packages: $*" sudo zypper install -y "$@"
+    ;;
+  brew)
+    run_with_spinner "Installing packages: $*" env HOMEBREW_NO_AUTO_UPDATE=1 brew install "$@"
+    ;;
+  *)
+    return 1
+    ;;
   esac
 }
 
@@ -1258,7 +1264,7 @@ check_dependency_status() {
   log_name="${2:-$1}"
 
   if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
-    printf "[-] %s...\r" "$log_name" > /dev/tty
+    printf "[-] %s...\r" "$log_name" >/dev/tty
   fi
 
   # Use check command from central TOML if available, fallback to command -v.
@@ -1271,7 +1277,7 @@ check_dependency_status() {
   if [ "$check_cmd" = "command -v $command_name" ] && command -v "$command_name" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ]; then
       if is_interactive && is_verbose; then
-        printf "\r" > /dev/tty
+        printf "\r" >/dev/tty
         ui_line ok "$log_name is present"
       else
         ui_line ok "$log_name is present"
@@ -1284,7 +1290,7 @@ check_dependency_status() {
   if eval "$check_cmd" >/dev/null 2>&1; then
     if [ "$DRY_RUN" -ne 1 ]; then
       if is_interactive && is_verbose; then
-        printf "\r" > /dev/tty
+        printf "\r" >/dev/tty
         ui_line ok "$log_name is present"
       else
         ui_line ok "$log_name is present"
@@ -1295,7 +1301,7 @@ check_dependency_status() {
   fi
 
   if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
-    printf "\r" > /dev/tty
+    printf "\r" >/dev/tty
   fi
   return 1
 }
@@ -1339,12 +1345,12 @@ maybe_install_dependency() {
     fi
     if prompt_yes_no "Install $command_name for $description via cargo?"; then
       case "$package_name" in
-        http*|git@*)
-          run_with_spinner "Installing $command_name from Git via cargo" cargo install --locked --git "$package_name"
-          ;;
-        *)
-          run_with_spinner "Installing $command_name via cargo" cargo install "$package_name"
-          ;;
+      http* | git@*)
+        run_with_spinner "Installing $command_name from Git via cargo" cargo install --locked --git "$package_name"
+        ;;
+      *)
+        run_with_spinner "Installing $command_name via cargo" cargo install "$package_name"
+        ;;
       esac
       if command -v "$command_name" >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/$command_name" ]; then
         DEPENDENCY_SUMMARY+=("$command_name: installed")
@@ -1360,7 +1366,7 @@ maybe_install_dependency() {
 
   if [ "$manager" = "apt" ] && ! apt_package_available "$package_name"; then
     if is_interactive; then
-      echo "APT package not available: $package_name ($description); skipping automatic install." > /dev/tty
+      echo "APT package not available: $package_name ($description); skipping automatic install." >/dev/tty
     fi
     DEPENDENCY_SUMMARY+=("$command_name: missing (apt package unavailable)")
     return 0
@@ -1393,16 +1399,16 @@ version_gte() {
 
   left="$(normalize_semver "$1")"
   right="$(normalize_semver "$2")"
-  IFS=. read -r -a left_parts <<< "$left"
-  IFS=. read -r -a right_parts <<< "$right"
+  IFS=. read -r -a left_parts <<<"$left"
+  IFS=. read -r -a right_parts <<<"$right"
 
   for i in 0 1 2 3; do
     left_value="${left_parts[$i]:-0}"
     right_value="${right_parts[$i]:-0}"
-    if (( left_value > right_value )); then
+    if ((left_value > right_value)); then
       return 0
     fi
-    if (( left_value < right_value )); then
+    if ((left_value < right_value)); then
       return 1
     fi
   done
@@ -1454,18 +1460,18 @@ download_to_file() {
 
 github_release_system() {
   case "$(uname -s)" in
-    Linux) printf '%s\n' linux ;;
-    Darwin) printf '%s\n' darwin ;;
-    *) return 1 ;;
+  Linux) printf '%s\n' linux ;;
+  Darwin) printf '%s\n' darwin ;;
+  *) return 1 ;;
   esac
 }
 
 github_release_arch() {
   case "$(uname -m)" in
-    x86_64|amd64) printf '%s\n' x86_64 ;;
-    aarch64|arm64) printf '%s\n' aarch64 ;;
-    i386|i686) printf '%s\n' i686 ;;
-    *) return 1 ;;
+  x86_64 | amd64) printf '%s\n' x86_64 ;;
+  aarch64 | arm64) printf '%s\n' aarch64 ;;
+  i386 | i686) printf '%s\n' i686 ;;
+  *) return 1 ;;
   esac
 }
 
@@ -1485,12 +1491,12 @@ archive_stem() {
   local name="$1"
   name="${name##*/}"
   case "$name" in
-    *.tar.gz) name="${name%.tar.gz}" ;;
-    *.tgz) name="${name%.tgz}" ;;
-    *.zip) name="${name%.zip}" ;;
-    *.tar.xz) name="${name%.tar.xz}" ;;
-    *.tar.bz2) name="${name%.tar.bz2}" ;;
-    *) name="${name%.*}" ;;
+  *.tar.gz) name="${name%.tar.gz}" ;;
+  *.tgz) name="${name%.tgz}" ;;
+  *.zip) name="${name%.zip}" ;;
+  *.tar.xz) name="${name%.tar.xz}" ;;
+  *.tar.bz2) name="${name%.tar.bz2}" ;;
+  *) name="${name%.*}" ;;
   esac
   printf '%s\n' "$name"
 }
@@ -1550,26 +1556,26 @@ maybe_install_github_release() {
   fi
 
   case "$asset_name" in
-    *.zip)
-      if ! command -v unzip >/dev/null 2>&1 && ! command -v bsdtar >/dev/null 2>&1; then
-        if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name archive extraction needs unzip or bsdtar. Install unzip and retry?"; then
-          install_packages "$PACKAGE_MANAGER" unzip
-        else
-          DEPENDENCY_SUMMARY+=("$command_name: missing (requires unzip or bsdtar)")
-          return 1
-        fi
+  *.zip)
+    if ! command -v unzip >/dev/null 2>&1 && ! command -v bsdtar >/dev/null 2>&1; then
+      if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name archive extraction needs unzip or bsdtar. Install unzip and retry?"; then
+        install_packages "$PACKAGE_MANAGER" unzip
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: missing (requires unzip or bsdtar)")
+        return 1
       fi
-      ;;
-    *.tar.gz|*.tgz|*.tar.xz|*.tar.bz2)
-      if ! command -v tar >/dev/null 2>&1; then
-        if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name archive extraction needs tar. Install tar and retry?"; then
-          install_packages "$PACKAGE_MANAGER" tar
-        else
-          DEPENDENCY_SUMMARY+=("$command_name: missing (requires tar)")
-          return 1
-        fi
+    fi
+    ;;
+  *.tar.gz | *.tgz | *.tar.xz | *.tar.bz2)
+    if ! command -v tar >/dev/null 2>&1; then
+      if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "$command_name archive extraction needs tar. Install tar and retry?"; then
+        install_packages "$PACKAGE_MANAGER" tar
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: missing (requires tar)")
+        return 1
       fi
-      ;;
+    fi
+    ;;
   esac
 
   install_root="$STATE_HOME/tools/$key/v${version}"
@@ -1586,8 +1592,8 @@ maybe_install_github_release() {
     }
 
     case "$asset_name" in
-      *.zip) extract_zip_archive "$archive_path" "$install_root" || return 1 ;;
-      *) run_with_spinner "Extracting $asset_name" tar -xf "$archive_path" -C "$install_root" || return 1 ;;
+    *.zip) extract_zip_archive "$archive_path" "$install_root" || return 1 ;;
+    *) run_with_spinner "Extracting $asset_name" tar -xf "$archive_path" -C "$install_root" || return 1 ;;
     esac
 
     if [ "$DRY_RUN" -eq 1 ]; then
@@ -1629,26 +1635,26 @@ install_pinned_neovim_unix() {
   os="$(uname -s)"
 
   case "$os:$(uname -m)" in
-    Linux:x86_64|Linux:amd64)
-      asset_name="nvim-linux-x86_64.tar.gz"
-      extracted_dir="nvim-linux-x86_64"
-      ;;
-    Linux:aarch64|Linux:arm64)
-      asset_name="nvim-linux-arm64.tar.gz"
-      extracted_dir="nvim-linux-arm64"
-      ;;
-    Darwin:x86_64|Darwin:amd64)
-      asset_name="nvim-macos-x86_64.tar.gz"
-      extracted_dir="nvim-macos-x86_64"
-      ;;
-    Darwin:aarch64|Darwin:arm64)
-      asset_name="nvim-macos-arm64.tar.gz"
-      extracted_dir="nvim-macos-arm64"
-      ;;
-    *)
-      echo "Unsupported platform for pinned Neovim install: $os $(uname -m)" >&2
-      return 1
-      ;;
+  Linux:x86_64 | Linux:amd64)
+    asset_name="nvim-linux-x86_64.tar.gz"
+    extracted_dir="nvim-linux-x86_64"
+    ;;
+  Linux:aarch64 | Linux:arm64)
+    asset_name="nvim-linux-arm64.tar.gz"
+    extracted_dir="nvim-linux-arm64"
+    ;;
+  Darwin:x86_64 | Darwin:amd64)
+    asset_name="nvim-macos-x86_64.tar.gz"
+    extracted_dir="nvim-macos-x86_64"
+    ;;
+  Darwin:aarch64 | Darwin:arm64)
+    asset_name="nvim-macos-arm64.tar.gz"
+    extracted_dir="nvim-macos-arm64"
+    ;;
+  *)
+    echo "Unsupported platform for pinned Neovim install: $os $(uname -m)" >&2
+    return 1
+    ;;
   esac
 
   release_url="https://github.com/neovim/neovim/releases/download/v${version}/${asset_name}"
@@ -1680,24 +1686,24 @@ maybe_install_neovim() {
 
   version_before="$(get_nvim_version 2>/dev/null || true)"
   if [ -n "$version_before" ] && is_interactive; then
-    echo "Detected Neovim $version_before, but LazyVim requires >= $NEOVIM_MIN_VERSION." > /dev/tty
+    echo "Detected Neovim $version_before, but LazyVim requires >= $NEOVIM_MIN_VERSION." >/dev/tty
   fi
 
   case "$(uname -s)" in
-    Linux|Darwin)
-      if prompt_yes_no "Install pinned Neovim v${version} from the official GitHub release?"; then
-        if install_pinned_neovim_unix && have_supported_nvim; then
-          DEPENDENCY_SUMMARY+=("nvim: installed official v$(get_nvim_version)")
-          return 0
-        fi
-        DEPENDENCY_SUMMARY+=("nvim: official install attempted")
-        return 1
+  Linux | Darwin)
+    if prompt_yes_no "Install pinned Neovim v${version} from the official GitHub release?"; then
+      if install_pinned_neovim_unix && have_supported_nvim; then
+        DEPENDENCY_SUMMARY+=("nvim: installed official v$(get_nvim_version)")
+        return 0
       fi
-      ;;
-    *)
-      DEPENDENCY_SUMMARY+=("nvim: missing (unsupported platform for release install)")
+      DEPENDENCY_SUMMARY+=("nvim: official install attempted")
       return 1
-      ;;
+    fi
+    ;;
+  *)
+    DEPENDENCY_SUMMARY+=("nvim: missing (unsupported platform for release install)")
+    return 1
+    ;;
   esac
 
   version_after="$(get_nvim_version 2>/dev/null || true)"
@@ -1755,15 +1761,21 @@ maybe_install_rtk() {
   arch="$(uname -m)"
 
   case "$arch" in
-    x86_64) arch="x86_64" ;;
-    aarch64|arm64) arch="aarch64" ;;
-    *) DEPENDENCY_SUMMARY+=("rtk: unsupported architecture $arch"); return 1 ;;
+  x86_64) arch="x86_64" ;;
+  aarch64 | arm64) arch="aarch64" ;;
+  *)
+    DEPENDENCY_SUMMARY+=("rtk: unsupported architecture $arch")
+    return 1
+    ;;
   esac
 
   case "$os" in
-    linux) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-${arch}-unknown-linux-musl.tar.gz" ;;
-    darwin) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-${arch}-apple-darwin.tar.gz" ;;
-    *) DEPENDENCY_SUMMARY+=("rtk: unsupported OS $os"); return 1 ;;
+  linux) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-${arch}-unknown-linux-musl.tar.gz" ;;
+  darwin) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-${arch}-apple-darwin.tar.gz" ;;
+  *)
+    DEPENDENCY_SUMMARY+=("rtk: unsupported OS $os")
+    return 1
+    ;;
   esac
 
   tmp_dir="$(mktemp -d)"
@@ -1777,12 +1789,12 @@ maybe_install_rtk() {
   else
     # Fallback to cargo if direct download failed
     if command -v cargo >/dev/null 2>&1; then
-       run_with_spinner "Installing rtk via cargo (fallback)" cargo install --git https://github.com/rtk-ai/rtk
-       if command -v rtk >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/rtk" ]; then
-         DEPENDENCY_SUMMARY+=("rtk: installed (via cargo fallback)")
-         rm -rf "$tmp_dir"
-         return 0
-       fi
+      run_with_spinner "Installing rtk via cargo (fallback)" cargo install --git https://github.com/rtk-ai/rtk
+      if command -v rtk >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/rtk" ]; then
+        DEPENDENCY_SUMMARY+=("rtk: installed (via cargo fallback)")
+        rm -rf "$tmp_dir"
+        return 0
+      fi
     fi
     DEPENDENCY_SUMMARY+=("rtk: install attempted")
   fi
@@ -1866,45 +1878,45 @@ maybe_install_eza() {
   fi
 
   case "$manager" in
-    brew|pacman|zypper)
-      if prompt_yes_no "Install eza for modern ls aliases?"; then
-        install_packages "$manager" eza
-        if command -v eza >/dev/null 2>&1; then
-          DEPENDENCY_SUMMARY+=("eza: installed")
-        else
-          DEPENDENCY_SUMMARY+=("eza: install attempted")
-        fi
-      else
-        DEPENDENCY_SUMMARY+=("eza: skipped")
-      fi
-      ;;
-    dnf)
-      DEPENDENCY_SUMMARY+=("eza: manual install recommended on Fedora 42+")
-      if is_interactive; then
-        echo "eza upstream notes Fedora 42+ may require manual install or cargo; skipping automatic dnf install." > /dev/tty
-      fi
-      ;;
-    apt)
-      if ! prompt_yes_no "Install eza modern ls aliases via the gierens Debian/Ubuntu APT repo?"; then
-        DEPENDENCY_SUMMARY+=("eza: skipped")
-        return 0
-      fi
-
-      if ! setup_eza_apt_repo; then
-        DEPENDENCY_SUMMARY+=("eza: install attempted")
-        return 0
-      fi
-
-      install_packages apt eza
+  brew | pacman | zypper)
+    if prompt_yes_no "Install eza for modern ls aliases?"; then
+      install_packages "$manager" eza
       if command -v eza >/dev/null 2>&1; then
         DEPENDENCY_SUMMARY+=("eza: installed")
       else
         DEPENDENCY_SUMMARY+=("eza: install attempted")
       fi
-      ;;
-    *)
-      DEPENDENCY_SUMMARY+=("eza: missing (manual install)")
-      ;;
+    else
+      DEPENDENCY_SUMMARY+=("eza: skipped")
+    fi
+    ;;
+  dnf)
+    DEPENDENCY_SUMMARY+=("eza: manual install recommended on Fedora 42+")
+    if is_interactive; then
+      echo "eza upstream notes Fedora 42+ may require manual install or cargo; skipping automatic dnf install." >/dev/tty
+    fi
+    ;;
+  apt)
+    if ! prompt_yes_no "Install eza modern ls aliases via the gierens Debian/Ubuntu APT repo?"; then
+      DEPENDENCY_SUMMARY+=("eza: skipped")
+      return 0
+    fi
+
+    if ! setup_eza_apt_repo; then
+      DEPENDENCY_SUMMARY+=("eza: install attempted")
+      return 0
+    fi
+
+    install_packages apt eza
+    if command -v eza >/dev/null 2>&1; then
+      DEPENDENCY_SUMMARY+=("eza: installed")
+    else
+      DEPENDENCY_SUMMARY+=("eza: install attempted")
+    fi
+    ;;
+  *)
+    DEPENDENCY_SUMMARY+=("eza: missing (manual install)")
+    ;;
   esac
 }
 
@@ -1942,33 +1954,33 @@ maybe_install_wezterm() {
   fi
 
   case "$manager" in
-    apt)
-      if prompt_yes_no "Install WezTerm terminal via official APT repo?"; then
-        setup_wezterm_apt_repo && install_packages apt wezterm
-        if command -v wezterm >/dev/null 2>&1; then
-          DEPENDENCY_SUMMARY+=("wezterm: installed")
-        else
-          DEPENDENCY_SUMMARY+=("wezterm: install attempted")
-        fi
+  apt)
+    if prompt_yes_no "Install WezTerm terminal via official APT repo?"; then
+      setup_wezterm_apt_repo && install_packages apt wezterm
+      if command -v wezterm >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("wezterm: installed")
       else
-        DEPENDENCY_SUMMARY+=("wezterm: skipped")
+        DEPENDENCY_SUMMARY+=("wezterm: install attempted")
       fi
-      ;;
-    brew)
-      if prompt_yes_no "Install WezTerm terminal via brew?"; then
-        install_packages brew wezterm
-        if command -v wezterm >/dev/null 2>&1; then
-          DEPENDENCY_SUMMARY+=("wezterm: installed")
-        else
-          DEPENDENCY_SUMMARY+=("wezterm: install attempted")
-        fi
+    else
+      DEPENDENCY_SUMMARY+=("wezterm: skipped")
+    fi
+    ;;
+  brew)
+    if prompt_yes_no "Install WezTerm terminal via brew?"; then
+      install_packages brew wezterm
+      if command -v wezterm >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("wezterm: installed")
       else
-        DEPENDENCY_SUMMARY+=("wezterm: skipped")
+        DEPENDENCY_SUMMARY+=("wezterm: install attempted")
       fi
-      ;;
-    *)
-      maybe_note_dependency wezterm "WezTerm terminal (manual install recommended)"
-      ;;
+    else
+      DEPENDENCY_SUMMARY+=("wezterm: skipped")
+    fi
+    ;;
+  *)
+    maybe_note_dependency wezterm "WezTerm terminal (manual install recommended)"
+    ;;
   esac
 }
 
@@ -2022,53 +2034,53 @@ maybe_install_q() {
   fi
 
   case "$manager" in
-    apt)
-      if ! prompt_yes_no "Install q text-as-data CLI via the natesales Debian/Ubuntu APT repo?"; then
-        DEPENDENCY_SUMMARY+=("q: skipped")
-        return 0
-      fi
+  apt)
+    if ! prompt_yes_no "Install q text-as-data CLI via the natesales Debian/Ubuntu APT repo?"; then
+      DEPENDENCY_SUMMARY+=("q: skipped")
+      return 0
+    fi
 
-      if ! setup_q_apt_repo; then
-        DEPENDENCY_SUMMARY+=("q: install attempted")
-        return 0
-      fi
+    if ! setup_q_apt_repo; then
+      DEPENDENCY_SUMMARY+=("q: install attempted")
+      return 0
+    fi
 
-      install_packages apt q
-      if command -v q >/dev/null 2>&1; then
-        DEPENDENCY_SUMMARY+=("q: installed")
-      else
-        DEPENDENCY_SUMMARY+=("q: install attempted")
-      fi
-      ;;
-    pacman)
-      if command -v yay >/dev/null 2>&1; then
-        aur_helper="yay"
-      elif command -v paru >/dev/null 2>&1; then
-        aur_helper="paru"
-      else
-        DEPENDENCY_SUMMARY+=("q: missing (Arch install requires yay or paru for AUR package q-dns-git)")
-        return 0
-      fi
+    install_packages apt q
+    if command -v q >/dev/null 2>&1; then
+      DEPENDENCY_SUMMARY+=("q: installed")
+    else
+      DEPENDENCY_SUMMARY+=("q: install attempted")
+    fi
+    ;;
+  pacman)
+    if command -v yay >/dev/null 2>&1; then
+      aur_helper="yay"
+    elif command -v paru >/dev/null 2>&1; then
+      aur_helper="paru"
+    else
+      DEPENDENCY_SUMMARY+=("q: missing (Arch install requires yay or paru for AUR package q-dns-git)")
+      return 0
+    fi
 
-      if ! prompt_yes_no "Install q via Arch AUR package q-dns-git using $aur_helper?"; then
-        DEPENDENCY_SUMMARY+=("q: skipped")
-        return 0
-      fi
+    if ! prompt_yes_no "Install q via Arch AUR package q-dns-git using $aur_helper?"; then
+      DEPENDENCY_SUMMARY+=("q: skipped")
+      return 0
+    fi
 
-      run_with_spinner "Installing q from AUR package q-dns-git via $aur_helper" \
-        "$aur_helper" -S --needed --noconfirm q-dns-git
-      if command -v q >/dev/null 2>&1; then
-        DEPENDENCY_SUMMARY+=("q: installed")
-      else
-        DEPENDENCY_SUMMARY+=("q: install attempted")
-      fi
-      ;;
-    none)
-      DEPENDENCY_SUMMARY+=("q: missing (no supported package manager)")
-      ;;
-    *)
-      maybe_install_dependency "$manager" q q "q text-as-data CLI"
-      ;;
+    run_with_spinner "Installing q from AUR package q-dns-git via $aur_helper" \
+      "$aur_helper" -S --needed --noconfirm q-dns-git
+    if command -v q >/dev/null 2>&1; then
+      DEPENDENCY_SUMMARY+=("q: installed")
+    else
+      DEPENDENCY_SUMMARY+=("q: install attempted")
+    fi
+    ;;
+  none)
+    DEPENDENCY_SUMMARY+=("q: missing (no supported package manager)")
+    ;;
+  *)
+    maybe_install_dependency "$manager" q q "q text-as-data CLI"
+    ;;
   esac
 }
 
@@ -2083,8 +2095,8 @@ maybe_install_p7zip() {
   fi
 
   case "$manager" in
-    apt) package_name="p7zip-full" ;;
-    brew) package_name="p7zip" ;;
+  apt) package_name="p7zip-full" ;;
+  brew) package_name="p7zip" ;;
   esac
 
   maybe_install_dependency "$manager" 7z "$package_name" "archive preview and extraction for yazi"
@@ -2101,8 +2113,8 @@ maybe_install_poppler() {
   fi
 
   case "$manager" in
-    apt) package_name="poppler-utils" ;;
-    brew) package_name="poppler" ;;
+  apt) package_name="poppler-utils" ;;
+  brew) package_name="poppler" ;;
   esac
 
   maybe_install_dependency "$manager" pdftotext "$package_name" "PDF preview support for yazi"
@@ -2639,7 +2651,7 @@ ensure_ssh_include() {
   if ! grep -Fqx "$include_line" "$ssh_config"; then
     if [ "$DRY_RUN" -eq 1 ]; then
       printf '[dry-run] prepend SSH include in %s\n' "$ssh_config"
-    elif printf "%s\n\n" "$include_line" | cat - "$ssh_config" > "$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
+    elif printf "%s\n\n" "$include_line" | cat - "$ssh_config" >"$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
       :
     else
       record_failure "Updating SSH include config"
@@ -2665,7 +2677,10 @@ generate_autogen_completions() {
   local target_dir
   target_dir="$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
   local spec binary description output_file completion_cmd
-  [ "$DRY_RUN" -eq 1 ] && { echo "[dry-run] Generating autogen completions in $target_dir"; return 0; }
+  [ "$DRY_RUN" -eq 1 ] && {
+    echo "[dry-run] Generating autogen completions in $target_dir"
+    return 0
+  }
 
   mkdir -p "$target_dir"
 
@@ -2676,13 +2691,13 @@ generate_autogen_completions() {
 
   while IFS= read -r spec; do
     case "$spec" in
-      ""|\#*) continue ;;
+    "" | \#*) continue ;;
     esac
-    IFS='|' read -r binary description output_file completion_cmd <<< "$spec"
+    IFS='|' read -r binary description output_file completion_cmd <<<"$spec"
     if command -v "$binary" >/dev/null 2>&1; then
       run_with_spinner "$description" sh -c "cd '$REPO_ROOT' && $completion_cmd > '$target_dir/$output_file'"
     fi
-  done < "$AUTOGEN_COMPLETIONS_MANIFEST"
+  done <"$AUTOGEN_COMPLETIONS_MANIFEST"
 }
 
 generate_oooconf_completions() {
@@ -2879,7 +2894,7 @@ print_summary() {
     ui_section "Managed tools"
     for item in "${TOOL_SUMMARY[@]}"; do
       if ! is_verbose && [[ "$item" == *": linked" || "$item" == *": synced" || "$item" == "ensured directory: "* || "$item" == *": linked into "* || "$item" == *": permissions normalized" || "$item" == *": install.py succeeded" ]]; then
-         continue
+        continue
       fi
       bullet "$item"
     done
@@ -3058,7 +3073,7 @@ install_optional_dependencies() {
   PACKAGE_MANAGER="$manager"
 
   if [ "$manager" != "none" ] && [ "$manager" != "brew" ] && is_interactive; then
-    is_verbose && printf "Refreshing sudo credentials before dependency installation...\n" > /dev/tty
+    is_verbose && printf "Refreshing sudo credentials before dependency installation...\n" >/dev/tty
     sudo -v || return 1
   fi
 
@@ -3070,7 +3085,7 @@ install_optional_dependencies() {
 
   while IFS='|' read -r key label description; do
     [ -n "$key" ] || continue
-    install_optional_dependency_if_selected "$key" install_optional_dependency_from_catalog "$key" "$manager"
+    install_optional_dependency_if_selected "$key" install_optional_dependency_from_catalog "$key" "$manager" || true
   done < <(optional_dependency_catalog)
 }
 
@@ -3078,150 +3093,164 @@ shift || true
 cli_selected_optional_keys=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --dry-run) DRY_RUN=1 ;;
-    --yes-optional) INSTALL_OPTIONAL=always ;;
-    --minimal) MINIMAL=1 ;;
-    --all) ALL_DEPS=1 ;;
-    -h|--help) usage; exit 0 ;;
-    --*)
-      echo "unknown option: $1" >&2
-      usage >&2
-      exit 1
-      ;;
-    *)
-      if ! optional_dependency_exists_any "$1"; then
-        echo "unknown dependency key: $1" >&2
-        suggestion="$(suggest_dependency_key "$1")"
-        if [ -n "$suggestion" ]; then
-          echo "Did you mean: $suggestion" >&2
-        fi
-        exit 1
+  --dry-run) DRY_RUN=1 ;;
+  --yes-optional) INSTALL_OPTIONAL=always ;;
+  --minimal) MINIMAL=1 ;;
+  --all) ALL_DEPS=1 ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  --*)
+    echo "unknown option: $1" >&2
+    usage >&2
+    exit 1
+    ;;
+  *)
+    if ! optional_dependency_exists_any "$1"; then
+      echo "unknown dependency key: $1" >&2
+      suggestion="$(suggest_dependency_key "$1")"
+      if [ -n "$suggestion" ]; then
+        echo "Did you mean: $suggestion" >&2
       fi
-      cli_selected_optional_keys+=("$1")
-      ;;
+      exit 1
+    fi
+    cli_selected_optional_keys+=("$1")
+    ;;
   esac
   shift
 done
 
-
 if [ "${#cli_selected_optional_keys[@]}" -gt 0 ]; then
-  selected_optional_key_csv="$(IFS=,; printf '%s' "${cli_selected_optional_keys[*]}")"
+  selected_optional_key_csv="$(
+    IFS=,
+    printf '%s' "${cli_selected_optional_keys[*]}"
+  )"
 fi
 
 case "$COMMAND" in
-  install) ;;
-  update) ;;
-  doctor) [ "$DRY_RUN" -eq 1 ] && ui_line hint "[dry-run] would run doctor checks" && exit 0; run_doctor; exit $? ;;
-  deps)
-    if [ "$MINIMAL" = 1 ]; then
-      selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')
-    elif [ "${ALL_DEPS:-0}" = 1 ]; then
-      selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "keys" | paste -sd, -)
-    fi
-    if [ -z "$selected_optional_key_csv" ] && is_interactive; then
-      if selected_optional_key_csv="$(choose_optional_dependencies_with_gum)"; then
-        :
-      else
-        _deps_gum_rc=$?
-        case $_deps_gum_rc in
+install) ;;
+update) ;;
+doctor)
+  [ "$DRY_RUN" -eq 1 ] && ui_line hint "[dry-run] would run doctor checks" && exit 0
+  run_doctor
+  exit $?
+  ;;
+deps)
+  if [ "$MINIMAL" = 1 ]; then
+    selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')
+  elif [ "${ALL_DEPS:-0}" = 1 ]; then
+    selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "keys" | paste -sd, -)
+  fi
+  if [ -z "$selected_optional_key_csv" ] && is_interactive; then
+    if selected_optional_key_csv="$(choose_optional_dependencies_with_gum)"; then
+      :
+    else
+      _deps_gum_rc=$?
+      case $_deps_gum_rc in
+      2)
+        echo "All optional dependencies are already present."
+        exit 0
+        ;;
+      3)
+        # User cancelled the gum picker (Esc) — nothing to install.
+        exit 0
+        ;;
+      1)
+        # gum not available, fall back to text prompt
+        if selected_optional_key_csv="$(choose_optional_dependencies_without_gum)"; then
+          :
+        else
+          _deps_fallback_rc=$?
+          case $_deps_fallback_rc in
           2)
             echo "All optional dependencies are already present."
             exit 0
             ;;
           3)
-            # User cancelled the gum picker (Esc) — nothing to install.
+            # User cancelled the text prompt — nothing to install.
             exit 0
             ;;
-          1)
-            # gum not available, fall back to text prompt
-            if selected_optional_key_csv="$(choose_optional_dependencies_without_gum)"; then
-              :
-            else
-              _deps_fallback_rc=$?
-              case $_deps_fallback_rc in
-                2)
-                  echo "All optional dependencies are already present."
-                  exit 0
-                  ;;
-                3)
-                  # User cancelled the text prompt — nothing to install.
-                  exit 0
-                  ;;
-                *) echo "No optional dependencies selected." >&2; exit 1 ;;
-              esac
-            fi
+          *)
+            echo "No optional dependencies selected." >&2
+            exit 1
             ;;
-          *) echo "No optional dependencies selected." >&2; exit 1 ;;
-        esac
-      fi
-    elif [ -z "$selected_optional_key_csv" ] && ! is_interactive; then
-      echo "oooconf deps needs explicit dependency keys in non-interactive mode." >&2
-      exit 1
-    fi
-    INSTALL_OPTIONAL=always
-    ;;
-  minimal)
-    if [ "$DRY_RUN" -eq 1 ]; then
-      ui_line hint "[dry-run] would run minimal-setup.sh"
-      exit 0
-    fi
-    "$REPO_ROOT/scripts/setup/minimal-setup.sh"
-    ;;
-  completions) ;;
-  link)
-    if ! command -v python3 >/dev/null 2>&1; then
-      echo "oooconf link requires python3" >&2
-      exit 1
-    fi
-    if [ "$DRY_RUN" -eq 1 ]; then
-      ui_line hint "[dry-run] would link:"
-      while IFS='|' read -r key source target; do
-        ui_line hint "  $target -> $source"
-      done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text) || true
-      exit 0
-    fi
-    while IFS='|' read -r key source target; do
-      link_file "$source" "$target" || {
-        echo "Failed to link $target" >&2
+          esac
+        fi
+        ;;
+      *)
+        echo "No optional dependencies selected." >&2
         exit 1
-      }
-    done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text) || exit 1
-    exit 0
-    ;;
-  delete)
-    if [ "$DRY_RUN" -eq 1 ]; then
-      ui_line hint "[dry-run] would run delete.sh restore --dry-run"
-      exit 0
+        ;;
+      esac
     fi
-    "$REPO_ROOT/scripts/setup/delete.sh" restore
-    ;;
-  remove)
-    if [ "$DRY_RUN" -eq 1 ]; then
-      ui_line hint "[dry-run] would run delete.sh remove --dry-run"
-      exit 0
-    fi
-    "$REPO_ROOT/scripts/setup/delete.sh" remove
-    ;;
-  lock)
-    if [ "$DRY_RUN" -eq 1 ]; then
-      ui_line hint "[dry-run] would regenerate deps.lock.json and docs/dependency-lock.md"
-      exit 0
-    fi
-    run_python "$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
-    ;;
-  update-pins)
-    if [ "$DRY_RUN" -eq 1 ]; then
-      ui_line hint "[dry-run] would check pin drift and refresh lock artifacts"
-      exit 0
-    fi
-    "$REPO_ROOT/scripts/update/update-pins.sh"
-    ;;
-  *)
-    usage >&2
+  elif [ -z "$selected_optional_key_csv" ] && ! is_interactive; then
+    echo "oooconf deps needs explicit dependency keys in non-interactive mode." >&2
     exit 1
-    ;;
+  fi
+  INSTALL_OPTIONAL=always
+  ;;
+minimal)
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ui_line hint "[dry-run] would run minimal-setup.sh"
+    exit 0
+  fi
+  "$REPO_ROOT/scripts/setup/minimal-setup.sh"
+  ;;
+completions) ;;
+link)
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "oooconf link requires python3" >&2
+    exit 1
+  fi
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ui_line hint "[dry-run] would link:"
+    while IFS='|' read -r key source target; do
+      ui_line hint "  $target -> $source"
+    done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text) || true
+    exit 0
+  fi
+  while IFS='|' read -r key source target; do
+    link_file "$source" "$target" || {
+      echo "Failed to link $target" >&2
+      exit 1
+    }
+  done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text) || exit 1
+  exit 0
+  ;;
+delete)
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ui_line hint "[dry-run] would run delete.sh restore --dry-run"
+    exit 0
+  fi
+  "$REPO_ROOT/scripts/setup/delete.sh" restore
+  ;;
+remove)
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ui_line hint "[dry-run] would run delete.sh remove --dry-run"
+    exit 0
+  fi
+  "$REPO_ROOT/scripts/setup/delete.sh" remove
+  ;;
+lock)
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ui_line hint "[dry-run] would regenerate deps.lock.json and docs/dependency-lock.md"
+    exit 0
+  fi
+  run_python "$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
+  ;;
+update-pins)
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ui_line hint "[dry-run] would check pin drift and refresh lock artifacts"
+    exit 0
+  fi
+  "$REPO_ROOT/scripts/update/update-pins.sh"
+  ;;
+*)
+  usage >&2
+  exit 1
+  ;;
 esac
-
 
 initialize_logging
 if [ "$COMMAND" = "completions" ]; then
@@ -3296,7 +3325,7 @@ else
     "home/.config/ooodnakov|$CONFIG_HOME/ooodnakov"
   )
   for link_pair in "${managed_link_pairs[@]}"; do
-    IFS='|' read -r source_rel target_path <<< "$link_pair"
+    IFS='|' read -r source_rel target_path <<<"$link_pair"
     link_file "$REPO_ROOT/$source_rel" "$target_path" || true
   done
 fi
