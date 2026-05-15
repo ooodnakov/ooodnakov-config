@@ -22,6 +22,7 @@ return {
 	cursor_blink_ease_out = "EaseOut",
 	default_cursor_style = "BlinkingBlock",
 	cursor_blink_rate = 650,
+	force_reverse_video_cursor = true,
 
 	-- color scheme
 	-- colors = colors,
