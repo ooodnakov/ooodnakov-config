@@ -208,7 +208,10 @@ def parse_args() -> argparse.Namespace:
     mcp_add_parser.add_argument("--multi", action="store_true", help="Allow multiple MCP entries in one JSON payload.")
     mcp_add_parser.add_argument("--preview", action="store_true", help="Show diff preview before writing.")
     mcp_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
-    subparsers.add_parser("status", help="Show status of managed MCP servers.")
+    mcp_subparsers.add_parser("status", help="Show status of managed MCP servers.")
+
+    help_parser = subparsers.add_parser("help", help="Show this help message.")
+    help_parser.add_argument("topic", nargs="?", default=None, help="Topic to show help for.")
 
     rtk_parser = subparsers.add_parser("rtk", help="Manage RTK (Rust Token Killer) integration.")
     rtk_subparsers = rtk_parser.add_subparsers(dest="subcommand", required=True)
@@ -310,6 +313,8 @@ def parse_args() -> argparse.Namespace:
     skills_add_parser.add_argument("--agent", default="gemini", help="Agent sync target for this skill spec.")
     skills_add_parser.add_argument("--sync-now", action="store_true", help="Run agents skills sync after adding.")
     skills_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
+
+    subparsers.add_parser("status", help="Show status of managed MCP servers.")
 
     return parser.parse_args()
 
@@ -2190,6 +2195,17 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
 
 if __name__ == "__main__":
     args = parse_args()
+
+    if args.command == "help":
+        import sys
+        sys.argv = ["oooconf", "agents", "-h"]
+        import argparse
+        p = argparse.ArgumentParser(prog="oooconf agents", description="Detect AI agent CLIs and manage shared AGENTS.md instructions.")
+        p.add_argument("--repo-root", default=None)
+        p.add_argument("--config", default=None)
+        p.parse_args()
+        raise SystemExit(0)
+
     root = resolve_repo_root(args.repo_root)
     config_path = resolve_config_path(root, args.config)
     try:
@@ -2277,4 +2293,6 @@ if __name__ == "__main__":
                     sync_now=args.sync_now,
                 )
             )
+    if args.command == "status":
+        raise SystemExit(cmd_mcp_status(root, cfg))
     raise SystemExit(1)
