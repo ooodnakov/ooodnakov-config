@@ -2030,7 +2030,7 @@ require_repo_script() {
   fi
 }
 
-if [ "${OOODNAKOV_OOSCRIPT:-0}" = "1" ] && [ "$#" -eq 0 ]; then
+if [ "${OOODNAKOV_OOSCRIPT:-0}" = "1" ]; then
   return 0 2>/dev/null || exit 0
 fi
 

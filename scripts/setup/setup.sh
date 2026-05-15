@@ -194,10 +194,10 @@ initialize_logging() {
   LOG_FILE="$active_log_root/setup-${COMMAND}-${TIMESTAMP}.log"
   LOG_LATEST="$active_log_root/setup-latest.log"
 
-  if command -v tee >/dev/null 2>&1; then
+  if [ -n "${LOG_FILE:-}" ] && command -v tee >/dev/null 2>&1; then
     exec > >(tee -a "$LOG_FILE") 2>&1
   else
-    exec >>"$LOG_FILE" 2>&1
+    exec >>"${LOG_FILE:-/dev/null}" 2>&1
   fi
 
   ln -sfn "$LOG_FILE" "$LOG_LATEST" 2>/dev/null || cp -f "$LOG_FILE" "$LOG_LATEST"
