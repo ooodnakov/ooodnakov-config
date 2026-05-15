@@ -3111,7 +3111,7 @@ fi
 case "$COMMAND" in
   install) ;;
   update) ;;
-  doctor) run_doctor; exit $? ;;
+  doctor) [ "$DRY_RUN" -eq 1 ] && ui_line hint "[dry-run] would run doctor checks" && exit 0; run_doctor; exit $? ;;
   deps)
     if [ "$MINIMAL" = 1 ]; then
       selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')
@@ -3161,6 +3161,10 @@ case "$COMMAND" in
     INSTALL_OPTIONAL=always
     ;;
   minimal)
+    if [ "$DRY_RUN" -eq 1 ]; then
+      ui_line hint "[dry-run] would run minimal-setup.sh"
+      exit 0
+    fi
     "$REPO_ROOT/scripts/setup/minimal-setup.sh"
     ;;
   completions) ;;
@@ -3169,6 +3173,13 @@ case "$COMMAND" in
       echo "oooconf link requires python3" >&2
       exit 1
     fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+      ui_line hint "[dry-run] would link:"
+      while IFS='|' read -r key source target; do
+        ui_line hint "  $target -> $source"
+      done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text) || true
+      exit 0
+    fi
     while IFS='|' read -r key source target; do
       link_file "$source" "$target" || {
         echo "Failed to link $target" >&2
@@ -3176,6 +3187,34 @@ case "$COMMAND" in
       }
     done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text) || exit 1
     exit 0
+    ;;
+  delete)
+    if [ "$DRY_RUN" -eq 1 ]; then
+      ui_line hint "[dry-run] would run delete.sh restore --dry-run"
+      exit 0
+    fi
+    "$REPO_ROOT/scripts/setup/delete.sh" restore
+    ;;
+  remove)
+    if [ "$DRY_RUN" -eq 1 ]; then
+      ui_line hint "[dry-run] would run delete.sh remove --dry-run"
+      exit 0
+    fi
+    "$REPO_ROOT/scripts/setup/delete.sh" remove
+    ;;
+  lock)
+    if [ "$DRY_RUN" -eq 1 ]; then
+      ui_line hint "[dry-run] would regenerate deps.lock.json and docs/dependency-lock.md"
+      exit 0
+    fi
+    run_python "$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
+    ;;
+  update-pins)
+    if [ "$DRY_RUN" -eq 1 ]; then
+      ui_line hint "[dry-run] would check pin drift and refresh lock artifacts"
+      exit 0
+    fi
+    "$REPO_ROOT/scripts/update/update-pins.sh"
     ;;
   *)
     usage >&2

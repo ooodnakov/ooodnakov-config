@@ -160,9 +160,11 @@ def parse_args() -> argparse.Namespace:
 
     detect_parser = subparsers.add_parser("detect", help="Detect known agent CLIs available on PATH.")
     detect_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output.")
+    detect_parser.add_argument("--dry-run", action="store_true", help="Show what would be detected.")
 
     sync_parser = subparsers.add_parser("sync", help="Append/update a managed common block in AGENTS.md files.")
     sync_parser.add_argument("--check", action="store_true", help="Validate only; do not write files.")
+    sync_parser.add_argument("--dry-run", action="store_true", help="Show what would be written to AGENTS.md.")
     sync_parser.add_argument(
         "--materialize-secrets",
         action="store_true",
@@ -185,11 +187,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fail if no default config path exists for an agent target.",
     )
+    doctor_parser.add_argument("--dry-run", action="store_true", help="Show what checks would fail.")
 
     mcp_parser = subparsers.add_parser("mcp", help="Manage Model Context Protocol (MCP) servers.")
     mcp_subparsers = mcp_parser.add_subparsers(dest="subcommand", required=True)
     mcp_sync_parser = mcp_subparsers.add_parser("sync", help="Synchronize (clone/pull/install) managed MCP servers.")
     mcp_sync_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
+    mcp_sync_parser.add_argument("--dry-run", action="store_true", help="Show what MCP servers would be synced.")
     mcp_sync_parser.add_argument(
         "--agents",
         metavar="AGENT",
@@ -217,6 +221,7 @@ def parse_args() -> argparse.Namespace:
     rtk_subparsers = rtk_parser.add_subparsers(dest="subcommand", required=True)
     rtk_init_parser = rtk_subparsers.add_parser("init", help="Run 'rtk init --global' for all detected agents.")
     rtk_init_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
+    rtk_init_parser.add_argument("--dry-run", action="store_true", help="Show what would be initialized.")
 
     update_parser = subparsers.add_parser(
         "update",
@@ -227,6 +232,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print planned update commands without executing them.",
     )
+    update_parser.add_argument("--dry-run", action="store_true", help="Show what would be updated.")
 
     install_parser = subparsers.add_parser(
         "install",
@@ -252,6 +258,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print planned install commands without executing them.",
     )
+    install_parser.add_argument("--dry-run", action="store_true", help="Show what agents would be installed.")
 
     subparsers.add_parser(
         "install-scripts-build",
@@ -267,6 +274,7 @@ def parse_args() -> argparse.Namespace:
     provider_sync_parser.add_argument(
         "--check", action="store_true", help="Print planned config changes without writing."
     )
+    provider_sync_parser.add_argument("--dry-run", action="store_true", help="Show what would be synced.")
     provider_sync_parser.add_argument(
         "--materialize-secrets",
         action="store_true",
@@ -295,6 +303,7 @@ def parse_args() -> argparse.Namespace:
     skills_sync_parser.add_argument(
         "--check", action="store_true", help="Print planned skill installs without executing."
     )
+    skills_sync_parser.add_argument("--dry-run", action="store_true", help="Show what would be synced.")
     skills_sync_parser.add_argument(
         "--agents",
         metavar="AGENT",
@@ -926,9 +935,20 @@ def sync_global_configs(
     return len(changed), changed
 
 
-def cmd_detect(config: dict[str, Any], json_output: bool) -> int:
+def cmd_detect(config: dict[str, Any], json_output: bool, dry_run: bool = False) -> int:
     rows = detect_clis(parse_agent_clis(config["agent_clis"]))
     installed = sum(1 for row in rows if row["installed"])
+
+    if dry_run:
+        print_section("Agent CLI Detection (dry-run)")
+        for row in rows:
+            status = "ok" if row["installed"] else "missing"
+            location = row["path"] or "-"
+            print_status_line(status, f"{row['name']} ({row['command']})")
+            print(f"  path: {location}")
+        print("")
+        print(f"Summary: would detect {installed}/{len(rows)} configured agent CLIs.")
+        return 0
 
     if json_output:
         print(json.dumps({"detected": rows}, indent=2))
@@ -963,11 +983,12 @@ def cmd_sync(
     global_sync: bool,
     materialize_secrets: bool = False,
     agents: list[str] | None = None,
+    dry_run: bool = False,
 ) -> int:
     common_text = get_platform_common_text(repo_root, config)
 
-    print_section("AGENTS Sync")
-    print(f"Mode: {'check' if check_only else 'sync'}")
+    print_section("AGENTS Sync (dry-run)" if dry_run else "AGENTS Sync")
+    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
 
     g_count = 0
     g_files = []
@@ -992,6 +1013,17 @@ def cmd_sync(
         if agents is not None:
             config_targets = [t for t in config_targets if t.name in agents]
 
+        if dry_run:
+            merged_data = load_common_data(repo_root, config, include_local=True)
+            managed_block_global = render_markdown_block(common_text, merged_data)
+            print(f"Global configs that would be updated: {len(config_targets)}")
+            print(f"Managed block preview:")
+            for line in managed_block_global.split("\n")[:20]:
+                print(f"  {line}")
+            if len(managed_block_global.split("\n")) > 20:
+                print("  ...")
+            return 0
+
         g_count, g_files = sync_global_configs(
             repo_root,
             config_targets,
@@ -1015,7 +1047,7 @@ def cmd_sync(
     return 1 if check_only and global_sync and g_count > 0 else 0
 
 
-def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> int:
+def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool, dry_run: bool = False) -> int:
     # merged_data for global agent configs (includes local overrides)
     merged_data = load_common_data(repo_root, config, include_local=True)
 
@@ -1025,7 +1057,33 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool) -> i
 
     failed = False
 
-    print_section("AGENTS Doctor")
+    print_section("AGENTS Doctor (dry-run)" if dry_run else "AGENTS Doctor")
+
+    if dry_run:
+        print_section("AGENTS Doctor (dry-run)")
+        print("Agent Configs that would FAIL:")
+        dry_failures = 0
+        for result in config_results:
+            target = result.target
+            if result.existing_path is None:
+                print_status_line("warn", f"{target.name}: config path not found")
+                dry_failures += 1
+                continue
+            if result.parse_error:
+                print_status_line("fail", f"{target.name}: parse error")
+                dry_failures += 1
+                continue
+            if result.missing_mcp or result.missing_skills or result.shape_issues:
+                print_status_line("fail", f"{target.name}: missing or malformed entries")
+                dry_failures += 1
+                continue
+        missing_clis = [row for row in rows if not row["installed"]]
+        for row in missing_clis:
+            print_status_line("missing", f"{row['name']} ({row['command']})")
+            dry_failures += 1
+        print("")
+        print(f"Summary: {dry_failures} checks would fail.")
+        return 0
 
     print("Agent Configs")
     print("-------------")
@@ -1265,6 +1323,7 @@ def cmd_install(
     check_only: bool,
     install_all: bool,
     missing_only: bool,
+    dry_run: bool = False,
 ) -> int:
     specs = parse_agent_update_specs(config.get("agent_updates", []))
     if not specs:
@@ -1277,7 +1336,7 @@ def cmd_install(
     if errors:
         return 1
 
-    print_section("Agent CLI Installation")
+    print_section("Agent CLI Installation (dry-run)" if dry_run else "Agent CLI Installation")
     if install_all:
         scope = "all configured agents"
     elif agent_queries:
@@ -1286,7 +1345,7 @@ def cmd_install(
             scope = f"missing selected agents ({scope})"
     else:
         scope = "missing configured agents"
-    print(f"Mode: {'check' if check_only else 'install'}")
+    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'install'}")
     print(f"Scope: {scope}")
 
     if not selected:
@@ -1346,7 +1405,7 @@ def get_runner_bin_dir(runner: str) -> str | None:
     return None
 
 
-def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_run: bool = False) -> int:
     # First, autobuild install scripts
     if not check_only:
         cmd_install_scripts_build(repo_root, config)
@@ -1356,8 +1415,8 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
         print("No agent_updates configured.", file=sys.stderr)
         return 1
 
-    print_section("Agent CLI Updates")
-    print(f"Mode: {'check' if check_only else 'update'}")
+    print_section("Agent CLI Updates (dry-run)" if dry_run else "Agent CLI Updates")
+    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'update'}")
 
     attempted = 0
     failed = 0
@@ -1381,8 +1440,8 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
             continue
         attempted += 1
         command_display = shlex.join(command)
-        if check_only:
-            print_status_line("ok", f"{spec.name} via {runner}")
+        if check_only or dry_run:
+            print_status_line("ok", f"Plan: update {spec.name} via {runner}")
             if version_before:
                 print(f"  current version: {version_before}")
             print(f"  command: {command_display}")
@@ -1460,7 +1519,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool) -> int
     return 1 if failed else 0
 
 
-def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None) -> int:
+def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None, dry_run: bool = False) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     skill_specs = common_data.get("skill_specs", [])
     if not skill_specs:
@@ -1484,8 +1543,8 @@ def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool, a
             print_status_line("warn", f"No skill specs match agents: {', '.join(agents)}")
             return 0
 
-    print_section("Agent Skills Sync")
-    print(f"Mode: {'check' if check_only else 'sync'}")
+    print_section("Agent Skills Sync (dry-run)" if dry_run else "Agent Skills Sync")
+    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
     if agents:
         print(f"Agents: {', '.join(agents)}")
 
@@ -1537,7 +1596,7 @@ def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool, a
 
         attempted += 1
         command_display = shlex.join(command)
-        if check_only:
+        if check_only or dry_run:
             print_status_line("ok", f"Plan: {name} for {agent_cli.name}")
             print(f"  command: {command_display}")
             continue
@@ -1955,7 +2014,7 @@ def render_codex_minimax_provider(region: str, materialize_secrets: bool = False
 
 
 def cmd_provider_sync(
-    config: dict[str, Any], provider: str, check_only: bool, materialize_secrets: bool, region: str, agents: list[str] | None = None
+    config: dict[str, Any], provider: str, check_only: bool, materialize_secrets: bool, region: str, agents: list[str] | None = None, dry_run: bool = False
 ) -> int:
     if provider != "minimax":
         print_status_line("fail", f"Unsupported provider: {provider}")
@@ -1979,10 +2038,10 @@ def cmd_provider_sync(
             print_status_line("info", "No agents selected.")
             return 0
 
-    print_section("Agent Provider Sync")
+    print_section("Agent Provider Sync (dry-run)" if dry_run else "Agent Provider Sync")
     print(f"Provider: {provider}")
     print(f"Region: {region}")
-    print(f"Mode: {'check' if check_only else 'sync'}")
+    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
     if agents:
         print(f"Agents: {', '.join(agents)}")
 
@@ -2023,7 +2082,7 @@ def cmd_provider_sync(
     return 1 if check_only and changed_paths else 0
 
 
-def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None) -> int:
+def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None, dry_run: bool = False) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     mcp_servers = common_data.get("mcp_servers", {})
     managed_mcps = {name: cfg for name, cfg in mcp_servers.items() if "source" in cfg}
@@ -2048,8 +2107,8 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agen
             print_status_line("warn", f"No managed MCP servers match: {', '.join(agents)}")
             return 0
 
-    print_section("MCP Sync")
-    print(f"Mode: {'check' if check_only else 'sync'}")
+    print_section("MCP Sync (dry-run)" if dry_run else "MCP Sync")
+    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
     if agents:
         print(f"Agents: {', '.join(agents)}")
 
@@ -2064,6 +2123,17 @@ def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agen
 
         attempted += 1
         print_status_line("info", f"Syncing {name} ({source})")
+
+        if dry_run:
+            if not mcp_dir.exists():
+                print(f"  {icon('bullet')} Would clone into {mcp_dir}")
+            else:
+                print(f"  {icon('bullet')} Would pull latest changes in {mcp_dir}")
+            if install_cmd:
+                print(f"  {icon('bullet')} Would run install: {install_cmd}")
+            else:
+                print(f"  {icon('bullet')} No install needed")
+            continue
 
         if not mcp_dir.parent.exists():
             if not check_only:
@@ -2135,7 +2205,7 @@ def cmd_mcp_status(repo_root: Path, config: dict[str, Any]) -> int:
     return 0
 
 
-def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> int:
+def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool, dry_run: bool = False) -> int:
     if os.name == "nt":
         print_status_line("fail", "RTK hook-based initialization is not supported on Windows.")
         return 0
@@ -2151,8 +2221,8 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
         print("No agents detected; nothing to initialize.")
         return 0
 
-    print_section("RTK Init")
-    print(f"Mode: {'check' if check_only else 'init'}")
+    print_section("RTK Init (dry-run)" if dry_run else "RTK Init")
+    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'init'}")
 
     # Mapping of agent commands to rtk init flags
     # rtk supports: claude (default), cursor, gemini, opencode, codex
@@ -2176,7 +2246,7 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool) -> i
             print_status_line("info", f"Initializing RTK for {agent_cmd}")
             print(f"  command: {cmd_display}")
 
-            if check_only:
+            if check_only or dry_run:
                 synced += 1
                 continue
 
@@ -2215,7 +2285,7 @@ if __name__ == "__main__":
         raise SystemExit(1)
 
     if args.command == "detect":
-        raise SystemExit(cmd_detect(cfg, json_output=args.json))
+        raise SystemExit(cmd_detect(cfg, json_output=args.json, dry_run=args.dry_run))
     if args.command == "sync":
         raise SystemExit(
             cmd_sync(
@@ -2225,13 +2295,14 @@ if __name__ == "__main__":
                 global_sync=args.global_sync,
                 materialize_secrets=args.materialize_secrets,
                 agents=args.agents,
+                dry_run=args.dry_run,
             )
         )
     if args.command == "doctor":
-        raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths))
+        raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths, dry_run=args.dry_run))
     if args.command == "mcp":
         if args.subcommand == "sync":
-            raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check, agents=args.agents))
+            raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check, agents=args.agents, dry_run=args.dry_run))
         if args.subcommand == "add":
             raise SystemExit(
                 cmd_mcp_add(
@@ -2249,7 +2320,7 @@ if __name__ == "__main__":
             raise SystemExit(cmd_mcp_status(root, cfg))
     if args.command == "rtk":
         if args.subcommand == "init":
-            raise SystemExit(cmd_rtk_init(root, cfg, check_only=args.check))
+            raise SystemExit(cmd_rtk_init(root, cfg, check_only=args.check, dry_run=args.dry_run))
     if args.command == "provider":
         if args.subcommand == "sync":
             raise SystemExit(
@@ -2260,10 +2331,11 @@ if __name__ == "__main__":
                     materialize_secrets=args.materialize_secrets,
                     region=args.region,
                     agents=args.agents,
+                    dry_run=args.dry_run,
                 )
             )
     if args.command == "update":
-        raise SystemExit(cmd_update(root, cfg, check_only=args.check))
+        raise SystemExit(cmd_update(root, cfg, check_only=args.check, dry_run=args.dry_run))
     if args.command == "install":
         raise SystemExit(
             cmd_install(
@@ -2273,13 +2345,14 @@ if __name__ == "__main__":
                 check_only=args.check,
                 install_all=args.all,
                 missing_only=args.missing,
+                dry_run=args.dry_run,
             )
         )
     if args.command == "install-scripts-build":
         raise SystemExit(cmd_install_scripts_build(root, cfg))
     if args.command == "skills":
         if args.subcommand == "sync":
-            raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check, agents=args.agents))
+            raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check, agents=args.agents, dry_run=args.dry_run))
         if args.subcommand == "view":
             raise SystemExit(cmd_skills_view(json_output=args.json, check_only=args.check))
         if args.subcommand == "add":

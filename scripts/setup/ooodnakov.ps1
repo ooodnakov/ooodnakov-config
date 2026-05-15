@@ -2509,8 +2509,10 @@ function Invoke-DeleteCommand {
         [Parameter(Mandatory = $true)][string]$DeleteMode,
         [string[]]$RemainingArgs = @()
     )
-    Assert-NoDryRun -CommandName $CommandName
     $env:OOODNAKOV_REPO_ROOT = $RepoRoot
+    if ($dryRunRequested) {
+        $RemainingArgs = @("--dry-run") + $RemainingArgs
+    }
     & $DeleteScript $DeleteMode @RemainingArgs
 }
 
@@ -2540,12 +2542,18 @@ switch ($command) {
         & $SetupScript install -DryRun @remaining
     }
     "lock" {
-        Assert-NoDryRun -CommandName "lock"
-        Run-Python -ScriptPath $GenerateLockScript -ScriptArgs $remaining
+        $lockArgs = $remaining
+        if ($dryRunRequested) {
+            $lockArgs = @("--dry-run") + $lockArgs
+        }
+        Run-Python -ScriptPath $GenerateLockScript -ScriptArgs $lockArgs
     }
     "update-pins" {
-        Assert-NoDryRun -CommandName "update-pins"
-        Run-Python -ScriptPath $UpdatePinsScript -ScriptArgs $remaining
+        $updatePinsArgs = $remaining
+        if ($dryRunRequested) {
+            $updatePinsArgs = @("--dry-run") + $updatePinsArgs
+        }
+        Run-Python -ScriptPath $UpdatePinsScript -ScriptArgs $updatePinsArgs
     }
     "completions" {
         Invoke-SetupCommand -SetupCommand "completions" -SupportsDryRun -RemainingArgs $remaining

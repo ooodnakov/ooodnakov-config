@@ -113,7 +113,7 @@ $script:TranscriptStarted = $false
 $script:StepTotal = 0
 $script:StepCurrent = 0
 $script:StepActivity = ""
-$ValidSetupCommands = @("install", "update", "doctor", "deps", "completions")
+$ValidSetupCommands = @("install", "update", "doctor", "deps", "completions", "minimal", "link")
 
 # Run a Python script, preferring `uv run` when available.
 function Run-Python {
@@ -2998,6 +2998,10 @@ try {
             Invoke-Install -ContinueProgress
         }
         "doctor" {
+            if ($DryRun) {
+                Write-Output "[dry-run] would run doctor checks"
+                return
+            }
             Test-Doctor
         }
         "deps" {
@@ -3009,11 +3013,19 @@ try {
             Start-StepProgress -Total 4 -Activity "oooconf deps"
             Step-Progress -Status "Preparing dependency install paths"
             foreach ($dir in @($DataHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir)) {
-                Ensure-Directory -Path $dir | Out-Null
+                if ($DryRun) {
+                    Write-Output "[dry-run] ensure directory $dir"
+                } else {
+                    Ensure-Directory -Path $dir | Out-Null
+                }
             }
 
             Step-Progress -Status "Installing selected optional dependencies"
-            Install-OptionalDependencies
+            if ($DryRun) {
+                Write-Output "[dry-run] install optional dependencies: $($script:SelectedOptionalKeys -join ', ')"
+            } else {
+                Install-OptionalDependencies
+            }
             Step-Progress -Status "Writing dependency summary"
             Write-Summary
             Write-Output ""
@@ -3023,14 +3035,50 @@ try {
         "completions" {
             Start-StepProgress -Total 4 -Activity "oooconf completions"
             Step-Progress -Status "Preparing completion output path"
-            Ensure-Directory -Path (Join-Path $RepoRoot "home/.config/ooodnakov/zsh/completions/autogen") | Out-Null
+            $completionsDir = Join-Path $RepoRoot "home/.config/ooodnakov/zsh/completions/autogen"
+            if ($DryRun) {
+                Write-Output "[dry-run] ensure directory $completionsDir"
+            } else {
+                Ensure-Directory -Path $completionsDir | Out-Null
+            }
             Step-Progress -Status "Generating tracked autogen completions"
-            Generate-AutogenCompletions
+            if (-not $DryRun) {
+                Generate-AutogenCompletions
+            }
             Step-Progress -Status "Generating oooconf command completions"
-            Generate-OooconfCompletions
+            if (-not $DryRun) {
+                Generate-OooconfCompletions
+            }
             Write-Output ""
             Write-Output "Completion generation complete."
             Step-Progress -Status "Done"
+        }
+        "minimal" {
+            if ($DryRun) {
+                Write-Output "[dry-run] would run minimal-setup.sh"
+                return
+            }
+            & (Join-Path $RepoRoot "scripts/setup/minimal-setup.ps1")
+        }
+        "link" {
+            if ($DryRun) {
+                Write-Output "[dry-run] would link:"
+                python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null | ForEach-Object {
+                    $parts = $_ -split '\|'
+                    if ($parts.Count -ge 3) {
+                        Write-Output "[dry-run]   $($parts[2]) -> $($parts[1])"
+                    }
+                }
+                return
+            }
+            python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null | ForEach-Object {
+                $parts = $_ -split '\|'
+                if ($parts.Count -ge 3) {
+                    $source = $parts[1]
+                    $target = $parts[2]
+                    New-Symlink -Source $source -Target $target | Out-Null
+                }
+            }
         }
     }
 } finally {

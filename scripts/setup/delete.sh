@@ -5,7 +5,23 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HOME_DIR="${HOME}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
-RESTORE_MODE="${1:-restore}"
+RESTORE_MODE="restore"
+DRY_RUN="0"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    restore|remove)
+      RESTORE_MODE="$1"
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 ui_is_interactive() {
   [ -t 1 ]
@@ -50,6 +66,10 @@ remove_managed_link() {
     local current
     current="$(readlink "$target")"
     if [ "$current" = "$source" ]; then
+      if [ "$DRY_RUN" = "1" ]; then
+        ui_line info "[dry-run] Would remove $target"
+        return 0
+      fi
       rm -f "$target"
       ui_line ok "removed $target"
     fi
@@ -78,6 +98,10 @@ restore_backup() {
 
   backup="$(latest_backup_for "$target" || true)"
   if [ -n "$backup" ] && [ ! -e "$target" ] && [ ! -L "$target" ]; then
+    if [ "$DRY_RUN" = "1" ]; then
+      ui_line info "[dry-run] Would restore $target from $backup"
+      return 0
+    fi
     mv "$backup" "$target"
     ui_line ok "restored $target"
   fi

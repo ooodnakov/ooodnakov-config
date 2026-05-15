@@ -15,6 +15,12 @@ run_python() {
   oooconf_run_python "$REPO_ROOT" "$@"
 }
 
+DRY_RUN=false
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN=true
+  shift
+fi
+
 echo "=== ooodnakov minimal setup ==="
 echo "Reading core tools from optional-deps.toml [minimal] section..."
 
@@ -23,6 +29,14 @@ MINIMAL_KEYS=$(run_python "$OPTIONAL_DEPS_SCRIPT" minimal)
 if [ -z "$MINIMAL_KEYS" ]; then
   echo "No minimal keys defined. Check [minimal] in optional-deps.toml."
   exit 1
+fi
+
+if $DRY_RUN; then
+  echo "Dry run — would install minimal core tools: $MINIMAL_KEYS"
+  echo "(non-interactive with --yes-optional)"
+  echo ""
+  echo "Run without --dry-run to install."
+  exit 0
 fi
 
 echo "Installing minimal core tools: $MINIMAL_KEYS"

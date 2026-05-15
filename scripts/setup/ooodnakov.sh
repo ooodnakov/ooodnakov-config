@@ -1862,35 +1862,38 @@ EOF
       ;;
     delete)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf delete
+Usage: oooconf delete [--dry-run]
 
 Remove managed links and restore the latest backups when available.
 Use this to undo the managed config and return to your previous state.
 Backup files are stored in ~/.local/state/ooodnakov-config/backups/.
 Examples:
   oooconf delete                       # restore from backups
+  oooconf delete --dry-run            # preview without making changes
 EOF
       ;;
     remove)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf remove
+Usage: oooconf remove [--dry-run]
 
 Remove managed links without restoring backups.
 Use this when you want to cleanly remove the managed config without
 attempting to restore previous configurations.
 Examples:
   oooconf remove                       # clean removal
+  oooconf remove --dry-run            # preview without making changes
 EOF
       ;;
     lock)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf lock
+Usage: oooconf lock [--dry-run]
 
 Regenerate dependency lock artifacts from managed tool refs.
 Reads pinned versions from scripts/optional-deps.toml and writes
 the resolved lock file to deps.lock.json.
 Examples:
   oooconf lock                         # regenerate lock artifact
+  oooconf lock --dry-run              # preview without making changes
 EOF
       ;;
     update-pins)
@@ -1994,6 +1997,16 @@ Examples:
 Environment overrides:
   OOODNAKOV_SECRETS_BACKEND
   OOODNAKOV_BW_SERVER
+EOF
+      ;;
+    minimal)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf minimal [--dry-run]
+
+Install minimal required dependencies for managed config.
+Examples:
+  oooconf minimal                       # install minimal deps
+  oooconf minimal --dry-run            # preview without making changes
 EOF
       ;;
     shell)
@@ -2194,9 +2207,10 @@ exec_delete_command() {
   local command_name="$1"
   local delete_mode="$2"
   shift 2
-  require_no_dry_run "$command_name"
   require_repo_script "$DELETE"
-  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$DELETE" "$delete_mode" "$@"
+  local dry_run_arg=""
+  [ "$dry_run_requested" -eq 1 ] && dry_run_arg="--dry-run"
+  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$DELETE" "$delete_mode" $dry_run_arg "$@"
 }
 
 case "$command" in
@@ -2212,7 +2226,9 @@ case "$command" in
     exec_setup_command deps 1 "$@"
   ;;
   minimal)
-    exec "$REPO_ROOT/scripts/setup/minimal-setup.sh"
+    local dry_run_arg=""
+    [ "$dry_run_requested" -eq 1 ] && dry_run_arg="--dry-run"
+    exec "$REPO_ROOT/scripts/setup/minimal-setup.sh" $dry_run_arg
   ;;
 
   update)
@@ -2243,14 +2259,16 @@ case "$command" in
     exec_delete_command remove remove "$@"
     ;;
   lock)
-    require_no_dry_run lock
-    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$GEN_LOCK" "$@"
+    local dry_run_arg=""
+    [ "$dry_run_requested" -eq 1 ] && dry_run_arg="--dry-run"
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$GEN_LOCK" $dry_run_arg "$@"
     exit $?
     ;;
   update-pins)
-    require_no_dry_run update-pins
     require_repo_script "$UPDATE_PINS"
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" "$@"
+    local dry_run_arg=""
+    [ "$dry_run_requested" -eq 1 ] && dry_run_arg="--dry-run"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" $dry_run_arg "$@"
     ;;
   agents)
     require_no_dry_run agents

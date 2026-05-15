@@ -706,8 +706,10 @@ def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
     ps1_content = render_ps1(resolved_entries, args.backend, template_path)
 
     if args.dry_run:
-        bullet(f"Would render {zsh_path}")
-        bullet(f"Would render {ps1_path}")
+        bullet(f"Backend: {args.backend}")
+        bullet(f"Template: {template_path}")
+        bullet(f"Would render: {zsh_path}")
+        bullet(f"Would render: {ps1_path}")
         status("ok", "Dry run complete.")
         return 0
 
