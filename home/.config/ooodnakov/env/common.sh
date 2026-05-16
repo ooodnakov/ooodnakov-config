@@ -1,13 +1,17 @@
-export EDITOR="${EDITOR:-$HOME/.local/share/ooodnakov-config/bin/nvim}"
+if [ -z "$EDITOR" ]; then
+  if [ -x "$HOME/.local/share/ooodnakov-config/bin/nvim" ]; then
+    export EDITOR="$HOME/.local/share/ooodnakov-config/bin/nvim"
+  else
+    export EDITOR="$(command -v nvim 2>/dev/null || echo '/usr/bin/nvim')"
+  fi
+fi
 export VISUAL="${VISUAL:-$EDITOR}"
 export PAGER="${PAGER:-less}"
 export LESS="-FRX"
 export YAZI_CONFIG_HOME="${YAZI_CONFIG_HOME:-$HOME/.config/yazi}"
 
 export SUDO_EDITOR="${SUDO_EDITOR:-$EDITOR}"
-snvim() {
-  sudo env "PATH=$HOME/.local/share/ooodnakov-config/bin:$HOME/.local/bin:$PATH" "$EDITOR" "$@"
-}
+alias snvim="sudo -e"
 
 path_prepend() {
   case ":$PATH:" in
@@ -29,8 +33,10 @@ path_prepend "$NPM_PACKAGES/bin"
 
 export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 path_prepend "$PNPM_HOME"
+path_prepend "$PNPM_HOME/bin"
 
 if ! command -v o >/dev/null 2>&1 && command -v oooconf >/dev/null 2>&1; then
+
   o() {
     oooconf "$@"
   }

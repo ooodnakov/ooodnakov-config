@@ -41,7 +41,7 @@
         "preferredPlayer": "spotify",
         "spectrumFrameRate": 144,
         "spectrumMirrored": true,
-        "visualizerType": "wave",
+        "visualizerType": "mirrored",
         "volumeFeedback": false,
         "volumeFeedbackSoundFile": "",
         "volumeOverdrive": false,
@@ -200,6 +200,12 @@
                     "width": 200
                 },
                 {
+                    "id": "plugin:mirror-mirror"
+                },
+                {
+                    "id": "plugin:plugin-manager"
+                },
+                {
                     "defaultSettings": {
                         "colorHistory": [
                         ],
@@ -240,34 +246,6 @@
                         "tooltipOption": "everything"
                     },
                     "id": "plugin:weather-indicator"
-                },
-                {
-                    "defaultSettings": {
-                        "completedCount": 0,
-                        "count": 0,
-                        "current_page_id": 0,
-                        "exportEmptySections": false,
-                        "exportFormat": "markdown",
-                        "exportPath": "~/Documents",
-                        "isExpanded": false,
-                        "pages": [
-                            {
-                                "id": 0,
-                                "name": "General"
-                            }
-                        ],
-                        "priorityColors": {
-                            "high": "#f44336",
-                            "low": "#9e9e9e",
-                            "medium": "#2196f3"
-                        },
-                        "showBackground": true,
-                        "showCompleted": true,
-                        "todos": [
-                        ],
-                        "useCustomColors": false
-                    },
-                    "id": "plugin:todo"
                 },
                 {
                     "defaultSettings": {
@@ -348,7 +326,9 @@
                         "Telegram Desktop",
                         "steam",
                         "Vesktop",
-                        "Cachy-Update"
+                        "Cachy-Update",
+                        "DL speed: 38,9 MiB/s\nUP speed: 0 B/s",
+                        "net.lutris.Lutris"
                     ]
                 },
                 {
@@ -811,7 +791,7 @@
         "swapWarningThreshold": 80,
         "tempCriticalThreshold": 90,
         "tempWarningThreshold": 80,
-        "useCustomColors": false,
+        "useCustomColors": true,
         "warningColor": "#94e2d5"
     },
     "templates": {
