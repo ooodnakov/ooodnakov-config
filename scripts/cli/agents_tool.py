@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import importlib
 import json
 import os
 import re
@@ -19,7 +20,13 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     tomllib = None
 
-from tui import is_interactive, interactive_select
+SCRIPTS_CLI_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_CLI_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_CLI_DIR))
+
+_tui = importlib.import_module("tui")
+is_interactive = _tui.is_interactive
+interactive_select = _tui.interactive_select
 
 MANAGED_BEGIN = "<!-- oooconf:agents-common:start -->"
 MANAGED_END = "<!-- oooconf:agents-common:end -->"
@@ -1017,7 +1024,7 @@ def cmd_sync(
             merged_data = load_common_data(repo_root, config, include_local=True)
             managed_block_global = render_markdown_block(common_text, merged_data)
             print(f"Global configs that would be updated: {len(config_targets)}")
-            print(f"Managed block preview:")
+            print("Managed block preview:")
             for line in managed_block_global.split("\n")[:20]:
                 print(f"  {line}")
             if len(managed_block_global.split("\n")) > 20:
@@ -1519,7 +1526,9 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
     return 1 if failed else 0
 
 
-def cmd_skills_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None, dry_run: bool = False) -> int:
+def cmd_skills_sync(
+    repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None, dry_run: bool = False
+) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     skill_specs = common_data.get("skill_specs", [])
     if not skill_specs:
@@ -1985,7 +1994,9 @@ def append_codex_minimax_config(path: Path, region: str, materialize_secrets: bo
     current = path.read_text(encoding="utf-8") if path.exists() else ""
     api_key = os.environ.get(MINIMAX_ENV_KEY)
     updated, provider_changed = replace_or_append_toml_table(
-        current, "model_providers.minimax", render_codex_minimax_provider(region, materialize_secrets and api_key is not None, api_key)
+        current,
+        "model_providers.minimax",
+        render_codex_minimax_provider(region, materialize_secrets and api_key is not None, api_key),
     )
     updated, profile_changed = replace_or_append_toml_table(updated, "profiles.minimax", render_codex_minimax_profile())
     changed = provider_changed or profile_changed
@@ -2014,7 +2025,13 @@ def render_codex_minimax_provider(region: str, materialize_secrets: bool = False
 
 
 def cmd_provider_sync(
-    config: dict[str, Any], provider: str, check_only: bool, materialize_secrets: bool, region: str, agents: list[str] | None = None, dry_run: bool = False
+    config: dict[str, Any],
+    provider: str,
+    check_only: bool,
+    materialize_secrets: bool,
+    region: str,
+    agents: list[str] | None = None,
+    dry_run: bool = False,
 ) -> int:
     if provider != "minimax":
         print_status_line("fail", f"Unsupported provider: {provider}")
@@ -2082,7 +2099,9 @@ def cmd_provider_sync(
     return 1 if check_only and changed_paths else 0
 
 
-def cmd_mcp_sync(repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None, dry_run: bool = False) -> int:
+def cmd_mcp_sync(
+    repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None, dry_run: bool = False
+) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     mcp_servers = common_data.get("mcp_servers", {})
     managed_mcps = {name: cfg for name, cfg in mcp_servers.items() if "source" in cfg}
@@ -2268,9 +2287,13 @@ if __name__ == "__main__":
 
     if args.command == "help":
         import sys
+
         sys.argv = ["oooconf", "agents", "-h"]
         import argparse
-        p = argparse.ArgumentParser(prog="oooconf agents", description="Detect AI agent CLIs and manage shared AGENTS.md instructions.")
+
+        p = argparse.ArgumentParser(
+            prog="oooconf agents", description="Detect AI agent CLIs and manage shared AGENTS.md instructions."
+        )
         p.add_argument("--repo-root", default=None)
         p.add_argument("--config", default=None)
         p.parse_args()
@@ -2352,7 +2375,9 @@ if __name__ == "__main__":
         raise SystemExit(cmd_install_scripts_build(root, cfg))
     if args.command == "skills":
         if args.subcommand == "sync":
-            raise SystemExit(cmd_skills_sync(root, cfg, check_only=args.check, agents=args.agents, dry_run=args.dry_run))
+            raise SystemExit(
+                cmd_skills_sync(root, cfg, check_only=args.check, agents=args.agents, dry_run=args.dry_run)
+            )
         if args.subcommand == "view":
             raise SystemExit(cmd_skills_view(json_output=args.json, check_only=args.check))
         if args.subcommand == "add":

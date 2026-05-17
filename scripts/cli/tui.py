@@ -1,4 +1,5 @@
 """Interactive TUI components using stdlib curses."""
+
 from __future__ import annotations
 
 import curses
@@ -18,14 +19,11 @@ def is_interactive() -> bool:
     if explicit == "1":
         return True
 
-    # bash uses [ -t 1 ] which checks stdout fd 1
+    # bash uses [ -t 1 ] which checks stdout fd 1.
     if hasattr(sys.stdout, "fileno") and os.isatty(sys.stdout.fileno()):
         return True
-    # Fallback: stdin TTY (some environments redirect stdout but keep stdin interactive)
+    # Fallback: stdin TTY for direct terminal prompts with redirected stdout.
     if hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
-        return True
-    # Heuristic: TERM is set and not CI = likely interactive terminal even if TTY check fails
-    if os.environ.get("TERM") and not os.environ.get("CI"):
         return True
     return False
 

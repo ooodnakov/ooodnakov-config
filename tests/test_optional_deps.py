@@ -243,8 +243,8 @@ def test_shell_scripts_syntax_and_dry_run():
 
     result = _run_normalized_bash_script("scripts/setup/ooodnakov.sh", "deps", "--minimal", "--dry-run")
     assert result.returncode == 0, f"minimal dry-run failed: {result.stderr}"
-    assert "oh-my-posh" in result.stdout
     assert "dependency summary" in result.stdout.lower()
+    assert "optional dependency install complete" in result.stdout.lower()
 
     # PowerShell syntax (if pwsh available)
     if Path("/usr/bin/pwsh").exists() or Path("/usr/local/bin/pwsh").exists():

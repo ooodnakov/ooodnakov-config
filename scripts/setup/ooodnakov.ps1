@@ -2336,6 +2336,10 @@ function Require-PythonRuntime {
     throw "python3 or uv is required."
 }
 
+if ($MyInvocation.InvocationName -eq ".") {
+    return
+}
+
 $dryRunRequested = $false
 $yesOptionalRequested = $false
 $skipDepsRequested = $false

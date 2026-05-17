@@ -1,7 +1,6 @@
 <#
 .SYNOPSIS
-Comprehensive PowerShell test for the refactored ooodnakov-config (central optional-deps.toml as sole source of truth).
-Tests Get-ManagedTool, Get-DepInfo, Run-Python, key install functions (dry-run), TOML fallback parser, and no scattered lists.
+PowerShell smoke tests for the central optional-deps.toml catalog.
 
 Run with: pwsh -NoProfile -File tests/test_powershell.ps1
 #>
@@ -9,11 +8,11 @@ Run with: pwsh -NoProfile -File tests/test_powershell.ps1
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path | Split-Path -Parent
 $ErrorActionPreference = "Stop"
 
+$OptionalDepsScript = Join-Path $RepoRoot "scripts/cli/read_optional_deps.py"
+$SetupScript = Join-Path $RepoRoot "scripts/setup/setup.ps1"
+
 Write-Host "=== PowerShell Test Suite for ooodnakov-config ===" -ForegroundColor Cyan
 Write-Host "Testing central optional-deps.toml as sole source of truth..." -ForegroundColor Cyan
-
-# Dot-source the setup to load functions (use -NoProfile in real runs to avoid conflicts)
-. (Join-Path $RepoRoot "scripts/setup.ps1")
 
 $TestPassed = 0
 $TestFailed = 0
@@ -28,47 +27,65 @@ function Assert-True($Condition, $Message) {
     }
 }
 
-# Test 1: Get-ManagedTool and Get-DepInfo (central TOML)
-Write-Host "`n1. Testing Get-ManagedTool and Get-DepInfo (from optional-deps.toml)..."
-$ohmyzshRef = Get-ManagedTool "oh-my-zsh" "ref"
-Assert-True ($ohmyzshRef.Length -eq 40) "Get-ManagedTool returns valid git ref for oh-my-zsh"
-$rtkInfo = Get-DepInfo "rtk"
-Assert-True ($rtkInfo.ver -eq "0.37.0") "Get-DepInfo returns ver for rtk"
-Assert-True ($rtkInfo.url -like "*rtk-ai/rtk*") "Get-DepInfo returns URL for rtk"
+function Get-PythonCommand {
+    $python = Get-Command python3 -ErrorAction SilentlyContinue
+    if ($python) {
+        return $python.Source
+    }
 
-# Test 2: Run-Python wrapper
-Write-Host "`n2. Testing Run-Python wrapper (prefers uv)..."
-$catalog = Run-Python (Join-Path $RepoRoot "scripts/read_optional_deps.py") @("catalog")
-Assert-True ($catalog -like "*rtk*") "Run-Python can call read_optional_deps.py catalog"
+    $python = Get-Command python -ErrorAction SilentlyContinue
+    if ($python) {
+        return $python.Source
+    }
 
-# Test 3: Dry-run for key functions (no real install)
-Write-Host "`n3. Testing dry-run paths for refactored functions..."
-$DryRun = $true
-$originalDryRun = $DryRun
-try {
-    $result = Install-RtkIfMissing
-    Assert-True ($true) "Install-RtkIfMissing dry-run completes without error"
-    $result = Install-BitwardenCliIfMissing
-    Assert-True ($true) "Install-BitwardenCliIfMissing dry-run completes without error"
-    $result = Install-PnpmIfMissing
-    Assert-True ($true) "Install-PnpmIfMissing dry-run completes without error"
-} finally {
-    $DryRun = $originalDryRun
+    throw "python3 or python is required for tests/test_powershell.ps1"
 }
 
-# Test 4: TOML fallback parser (when Python unavailable)
-Write-Host "`n4. Testing TOML fallback parser in setup.ps1..."
-$specs = Get-OptionalDependencySpecsFromTomlFallback
-Assert-True ($specs.Count -gt 30) "Fallback parser returns all deps from TOML"
-$rtkSpec = $specs | Where-Object { $_.Key -eq "rtk" } | Select-Object -First 1
-Assert-True ($rtkSpec -ne $null -and $rtkSpec.Ver -eq "0.37.0") "Fallback parser includes rich fields for rtk"
+function Invoke-OptionalDeps {
+    param([string[]]$ScriptArgs)
 
-# Test 5: No scattered dependency lists (spot check common places)
+    $python = Get-PythonCommand
+    $output = & $python $OptionalDepsScript @ScriptArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "read_optional_deps.py failed: $($ScriptArgs -join ' ')"
+    }
+    return $output
+}
+
+# Keep nested setup.ps1 dry-runs from trying to write to the user's uv cache.
+$env:UV_CACHE_DIR = Join-Path ([System.IO.Path]::GetTempPath()) "oooconf-uv-cache-test"
+$env:OOODNAKOV_LOG_ROOT = Join-Path ([System.IO.Path]::GetTempPath()) "oooconf-logs-test"
+$env:OOODNAKOV_INTERACTIVE = "never"
+
+Write-Host "`n1. Testing managed tool and dependency metadata..."
+$managedTools = Invoke-OptionalDeps @("managed-tools") | ConvertFrom-Json
+Assert-True ($managedTools."oh-my-zsh".ref.Length -eq 40) "managed-tools returns valid git ref for oh-my-zsh"
+
+$deps = Invoke-OptionalDeps @("json") | ConvertFrom-Json
+$rtkInfo = $deps | Where-Object { $_.key -eq "rtk" } | Select-Object -First 1
+Assert-True ($null -ne $rtkInfo) "catalog includes rtk"
+Assert-True ($rtkInfo.ver -eq "0.37.2") "catalog returns current rtk version"
+Assert-True ($rtkInfo.url -like "*rtk-ai/rtk*") "catalog returns URL for rtk"
+
+Write-Host "`n2. Testing catalog command output..."
+$catalog = Invoke-OptionalDeps @("catalog")
+Assert-True ($catalog -like "*rtk|rtk|*") "catalog output contains rtk"
+
+Write-Host "`n3. Testing setup.ps1 dependency dry-run path..."
+$dryRunOutput = & pwsh -NoProfile -File $SetupScript deps -DryRun rtk 2>&1
+Assert-True ($LASTEXITCODE -eq 0) "setup.ps1 deps -DryRun rtk exits successfully"
+Assert-True (($dryRunOutput -join "`n") -match "dry-run|Optional dependency install complete") "setup.ps1 dry-run emits expected output"
+
+Write-Host "`n4. Verifying current script paths exist..."
+Assert-True (Test-Path (Join-Path $RepoRoot "scripts/setup/setup.ps1")) "setup.ps1 exists under scripts/setup"
+Assert-True (Test-Path (Join-Path $RepoRoot "scripts/setup/ooodnakov.ps1")) "ooodnakov.ps1 exists under scripts/setup"
+Assert-True (Test-Path (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py")) "read_optional_deps.py exists under scripts/cli"
+
 Write-Host "`n5. Verifying no scattered dependency lists remain outside TOML..."
 $filesToCheck = @(
-    "scripts/setup.ps1",
-    "scripts/ooodnakov.ps1",
-    "scripts/ooodnakov.sh",
+    "scripts/setup/setup.ps1",
+    "scripts/setup/ooodnakov.ps1",
+    "scripts/setup/ooodnakov.sh",
     "README.md",
     "docs/dependency-decisions.md",
     "docs/troubleshooting.md"

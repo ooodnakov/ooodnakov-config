@@ -31,13 +31,14 @@ if ($MyInvocation.InvocationName -eq ".") {
     return
 }
 
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+
 # Dot-source ooodnakov.ps1 for shared UI functions
 $OooconfPs1Path = Join-Path $RepoRoot "scripts/setup/ooodnakov.ps1"
 if (Test-Path $OooconfPs1Path) {
     . $OooconfPs1Path
 }
 
-$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $OptionalDepsScript = Join-Path $RepoRoot "scripts/cli/read_optional_deps.py"
 $AutogenCompletionsManifest = Join-Path $RepoRoot "scripts/generate/autogen-completions.txt"
 $OooconfCompletionsGenerator = Join-Path $RepoRoot "scripts/cli/generate_oooconf_completions.py"
@@ -2101,7 +2102,7 @@ function Install-RtkIfMissing {
     }
 
     $rtkInfo = Get-DepInfo "rtk"
-    $rtkVer = if ($rtkInfo.ver) { $rtkInfo.ver } else { "0.37.0" }
+    $rtkVer = if ($rtkInfo.ver) { $rtkInfo.ver } else { "0.37.2" }
     $installRoot = Join-Path $ShareHome "tools/rtk/v$rtkVer"
     $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "rtk-windows-$rtkVer.zip"
     $releaseUrl = "https://github.com/rtk-ai/rtk/releases/download/v$rtkVer/rtk-x86_64-pc-windows-msvc.zip"

@@ -108,7 +108,7 @@ def test_top_level_command_values_are_emitted() -> None:
         encoding="utf-8"
     )
     assert "'wm' = @{" in pwsh_content
-    assert "Values = @('komorebi', 'glazewm')" in pwsh_content
+    assert "Values = @('komorebi', 'glazewm', 'aerospace', 'omniwm')" in pwsh_content
 
 
 def test_oooconf_completions_command_wires_generator() -> None:
@@ -173,7 +173,7 @@ def test_setup_optional_deps_cache_lookups_are_literal_safe() -> None:
 
     pipe_lookup = setup_sh.split("lookup_pipe_cache_value()", 1)[1].split("optional_dependency_check_command()", 1)[0]
     assert "printf '%s\\n' \"$cache\"" in pipe_lookup
-    assert "| awk -F'|'" in pipe_lookup
+    assert re.search(r"\|\s+awk -F'\|'", pipe_lookup)
     assert "substr($0, index($0, FS) + 1)" in pipe_lookup
     assert '$1=""' not in pipe_lookup
     assert "<<EOF" not in pipe_lookup
@@ -182,7 +182,7 @@ def test_setup_optional_deps_cache_lookups_are_literal_safe() -> None:
         "optional_dependency_applicable()", 1
     )[0]
     assert "printf '%s\\n' \"$OPTIONAL_DEPS_INSTALL_INFO_CACHE\"" in install_lookup
-    assert '| awk -F"$us"' in install_lookup
+    assert re.search(r'\|\s+awk -F"\$us"', install_lookup)
     assert "<<EOF" not in install_lookup
 
 
@@ -233,7 +233,7 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     assert unix_managers == expected_unix
     assert windows_managers == expected_windows
 
-    for pattern in ["custom|curl)", "pnpm)", "pip)", "github-release)", '"")']:
+    for pattern in ["custom | curl)", "pnpm)", "pip)", "github-release)", '"")']:
         assert pattern in setup_sh
     for manager in ["apt", "brew", "cargo"]:
         assert f'if [ "$manager" = "{manager}" ]' in setup_sh or f"{manager})" in setup_sh

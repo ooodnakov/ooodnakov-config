@@ -106,10 +106,12 @@ def test_managed_zshrc_tolerates_missing_oh_my_zsh(tmp_path: Path) -> None:
     env.update(
         {
             "HOME": str(tmp_path),
-            "XDG_CONFIG_HOME": str(REPO_ROOT / "home/.config"),
+            "XDG_CONFIG_HOME": str(tmp_path / "config"),
+            "ZDOTDIR": str(REPO_ROOT / "home/.config/zsh"),
             "XDG_DATA_HOME": str(tmp_path / "share"),
             "XDG_STATE_HOME": str(tmp_path / "state"),
             "XDG_CACHE_HOME": str(tmp_path / "cache"),
+            "OOOCONF_ZSH_PROMPT": "p10k",
         }
     )
     result = subprocess.run(
