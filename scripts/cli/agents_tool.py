@@ -1005,7 +1005,7 @@ def cmd_sync(
         config_targets = parse_agent_targets(config["agent_configs"])
 
         # Filter to selected agents if not all specified
-        if agents is None and not check_only and is_interactive():
+        if agents is None and not check_only and not dry_run and is_interactive():
             agent_names = [t.name for t in config_targets]
             selected = interactive_select(
                 agent_names,
