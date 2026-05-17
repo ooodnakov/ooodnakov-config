@@ -8,13 +8,6 @@
       ],
       "description": "headless browser automation and web testing"
     },
-    "windows-mcp": {
-      "command": "uvx",
-      "args": [
-        "windows-mcp"
-      ],
-      "description": "Windows system inspection and automation (processes, windows, registry)"
-    },
     "context7": {
       "command": "pnpm",
       "args": [
@@ -36,47 +29,10 @@
       ],
       "description": "GitHub API access (repositories, issues, PRs)"
     },
-    "godot": {
-      "source": "https://github.com/Coding-Solo/godot-mcp",
-      "command": "node",
-      "args": [
-        "{mcp_dir}/build/index.js"
-      ],
-      "install": "pnpm install && pnpm run build",
-      "description": "Godot engine editor interaction"
-    },
-    "gemini-webapi": {
-      "source": "https://github.com/AndyShaman/gemini-webapi-mcp",
-      "command": "uv",
-      "args": [
-        "--directory",
-        "{mcp_dir}",
-        "run",
-        "gemini-webapi-mcp"
-      ],
-      "env": {
-        "GEMINI_PSIDTS": "{GEMINI_PSIDTS}",
-        "GEMINI_PSID": "{GEMINI_PSID}"
-      },
-      "install": "uv sync",
-      "description": "Unofficial Gemini Web API access"
-    },
-    "grok_mcp": {
-      "source": "https://github.com/merterbak/Grok-MCP",
-      "command": "uv",
-      "args": [
-        "--directory",
-        "{mcp_dir}",
-        "run",
-        "python",
-        "main.py"
-      ],
-      "install": "uv sync",
-      "description": "xAI Grok API access"
-    },
     "ssh-mcp-openwrt": {
-      "command": "npx",
+      "command": "pnpm",
       "args": [
+        "dlx",
         "ssh-mcp",
         "-y",
         "--",
@@ -87,8 +43,9 @@
       ]
     },
     "ssh-mcp-orange": {
-      "command": "npx",
+      "command": "pnpm",
       "args": [
+        "dlx",
         "ssh-mcp",
         "-y",
         "--",
@@ -100,31 +57,7 @@
     }
   },
   "skills": [
-    "Dotfiles portability review (Linux + Windows + macOS safety)",
-    "Shell bootstrap audit (idempotency and dry-run behavior)",
-    "Secrets hygiene review (template references vs local plaintext files)",
-    "Full-control sandbox management (system-level Danger Mode)",
-    "Manual approval flow orchestration (safety-first review policy)",
-    "Cross-agent MCP server bridging (Codex + Claude + Gemini compatibility)"
   ],
   "skill_specs": [
-    {
-      "name": "skill-creator",
-      "agent": "gemini",
-      "source": "https://github.com/google-gemini/gemini-cli/tree/main/packages/cli/bundle/builtin/skill-creator",
-      "description": "Expert guidance for creating new Gemini CLI skills"
-    },
-    {
-      "name": "grok-mcp",
-      "agent": "gemini",
-      "source": "https://github.com/ooodnakov/Grok-MCP",
-      "description": "xAI Grok API integration and search capabilities"
-    },
-    {
-      "name": "caveman",
-      "agent": "gemini",
-      "source": "https://github.com/JuliusBrussee/caveman",
-      "description": "Command compression and token-optimization skill pack"
-    }
   ]
 }
