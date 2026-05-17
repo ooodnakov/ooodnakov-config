@@ -2226,7 +2226,7 @@ case "$command" in
     exec_setup_command deps 1 "$@"
   ;;
   minimal)
-    local dry_run_arg=""
+    dry_run_arg=""
     [ "$dry_run_requested" -eq 1 ] && dry_run_arg="--dry-run"
     exec "$REPO_ROOT/scripts/setup/minimal-setup.sh" $dry_run_arg
   ;;
@@ -2259,14 +2259,14 @@ case "$command" in
     exec_delete_command remove remove "$@"
     ;;
   lock)
-    local dry_run_arg=""
+    dry_run_arg=""
     [ "$dry_run_requested" -eq 1 ] && dry_run_arg="--dry-run"
     OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$GEN_LOCK" $dry_run_arg "$@"
     exit $?
     ;;
   update-pins)
     require_repo_script "$UPDATE_PINS"
-    local dry_run_arg=""
+    dry_run_arg=""
     [ "$dry_run_requested" -eq 1 ] && dry_run_arg="--dry-run"
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" $dry_run_arg "$@"
     ;;

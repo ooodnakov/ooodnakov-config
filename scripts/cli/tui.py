@@ -7,6 +7,7 @@ import sys
 
 try:
     import curses
+
     _CURSES_AVAILABLE = True
 except ImportError:
     curses = None

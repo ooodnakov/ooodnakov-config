@@ -2,7 +2,7 @@
 
 ## Goals
 
-This repo should let you make a fresh Linux, Windows, or future macOS machine converge on the same terminal experience with minimal manual edits.
+This repo should let you make a fresh Linux, Windows, or macOS machine converge on the same terminal experience with minimal manual edits.
 
 ## Design
 
@@ -12,7 +12,7 @@ Tracked files:
 - base WezTerm config
 - base LazyVim/Neovim config
 - PowerShell profile
-- Python `uv` environment (`pyproject.toml`, `.python-version`, `uv.lock`)
+- Python `uv` environment metadata (`pyproject.toml`, `.python-version`; `.venv/` and `uv.lock` are ignored local artifacts)
 - prompt config
 - shared environment files
 - shared SSH host definitions
@@ -81,7 +81,7 @@ The fastest Unix bootstrap path is still `curl ... | bash`, but that is a trust 
 For a new machine or any time you want to inspect changes first, prefer:
 
 1. clone the repo
-2. review `bootstrap.sh`, `scripts/setup.sh`, and the tracked config under `home/`
+2. review `bootstrap.sh`, `scripts/setup/setup.sh`, and the tracked config under `home/`
 3. run the repo-local `oooconf` entrypoint directly
 
 That keeps the initial setup auditable while preserving the same install behavior.
@@ -92,7 +92,7 @@ The primary entrypoints are:
 
 - repo-local `./home/.config/ooodnakov/bin/oooconf` before first install on Unix
 - `oooconf` (and alias `o`) after Unix setup links them into `~/.local/bin/oooconf` and `~/.local/bin/o`
-- `.\scripts\ooodnakov.ps1` before Windows setup
+- `.\home\.config\ooodnakov\bin\oooconf.ps1` before Windows setup
 - `oooconf` (and alias `o`) after Windows setup links `oooconf.ps1`/`oooconf.cmd` and `o.ps1`/`o.cmd` into `~/.local/bin`
 
 On Windows, setup also links the tracked PowerShell profile into both `~/.config/powershell/Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path so the managed XDG-style file and the loaded profile stay aligned.
@@ -106,7 +106,7 @@ Phase-1 setup ergonomics are implemented with:
 
 Phase-2 dependency audit ergonomics are implemented with:
 
-- `oooconf lock` (or `.\scripts\ooodnakov.ps1 lock`) to regenerate lock artifacts from pinned refs
+- `oooconf lock` (or `.\home\.config\ooodnakov\bin\oooconf.ps1 lock`) to regenerate lock artifacts from pinned refs
 - `oooconf update-pins` to compare pinned refs with remote HEAD and append an audit summary
 - `oooconf update-pins --apply` to update pinned refs in `scripts/optional-deps.toml`, then regenerate lock artifacts
 - `oooconf agents detect` to detect configured AI coding agent CLIs available on `PATH`
@@ -119,8 +119,8 @@ Phase-2 dependency audit ergonomics are implemented with:
 - `oooconf agents sync --global` to sync MCP configs with environment-backed secret rendering, including `env_vars` passthrough and `{env_var}` placeholders resolved from the current shell environment
 - MiniMax provider sync uses `MINIMAX_API_KEY` from machine-local environment for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is used, which should be avoided in tracked or shared files
 - `update-pins` workflows are implemented in Python so both Unix and PowerShell CLIs use the same logic. Helper scripts use `uv run` if `uv` is available to ensure they run with the pinned Python version and a consistent environment. If `uv` is not present, they fall back to the system `python3`.
-- autogen third-party tool completion specs are sourced from `scripts/autogen-completions.txt` for both Bash and PowerShell setup flows.
-- `oooconf` command completions are generated from the canonical recursive CLI spec (`scripts/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/generate_oooconf_completions.py`. Shared completion definitions, such as dependency keys and provider regions, are referenced by name from command nodes instead of hardcoded in shell-specific generators.
+- autogen third-party tool completion specs are sourced from `scripts/generate/autogen-completions.txt` for both Bash and PowerShell setup flows.
+- `oooconf` command completions are generated from the canonical recursive CLI spec (`scripts/cli/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/cli/generate_oooconf_completions.py`. Shared completion definitions, such as dependency keys and provider regions, are referenced by name from command nodes instead of hardcoded in shell-specific generators.
 
 ## Phase-3 ergonomics
 

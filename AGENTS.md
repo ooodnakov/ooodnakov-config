@@ -23,19 +23,22 @@ Authoritative managed config lives in:
 - `home/.zshrc`
 - `home/.config/zsh/`
 - `home/.config/wezterm/`
+- `home/.config/yazi/`
+- `home/.config/nvim/`
 - `home/.config/powershell/`
 - `home/.config/ohmyposh/`
 - `home/.config/ooodnakov/`
+- desktop/window-manager trees under `home/.config/{niri,noctalia,komorebi,aerospace,omniwm,sketchybar,borders}/` and `home/.glzr/`
 
 Bootstrap behavior lives in:
 
-- `scripts/setup.sh`
-- `scripts/setup.ps1`
+- `scripts/setup/setup.sh`
+- `scripts/setup/setup.ps1`
 
 The unified CLI entrypoint lives in:
 
-- `scripts/ooodnakov.sh` (Unix)
-- `scripts/ooodnakov.ps1` (PowerShell)
+- `scripts/setup/ooodnakov.sh` (Unix)
+- `scripts/setup/ooodnakov.ps1` (PowerShell)
 
 Shell completions live in:
 
@@ -64,7 +67,7 @@ When adding or modifying symlinks, relevant files are:
 |------|------|
 | `scripts/link_manager.py` | Engine: manifest parsing, auto-discovery, platform filtering, local override merging |
 | `scripts/links.toml` | Canonical manifest of all managed symlinks |
-| `scripts/setup.sh` / `scripts/setup.ps1` | Consumers: call `link_manager.py` to get link list, then create symlinks |
+| `scripts/setup/setup.sh` / `scripts/setup/setup.ps1` | Consumers: call `link_manager.py` to get link list, then create symlinks |
 
 **Adding a new config folder:**
 
@@ -77,7 +80,7 @@ Only add an explicit `[[links]]` entry in `scripts/links.toml` for:
 
 **Machine-local overrides:**
 
-The local overrides file is at `home/.config/ooodnakov/local/links.local.toml` (i.e., `{CONFIG_HOME}/ooodnakov/local/links.local.toml`). This file is never tracked in git. It supports target overrides, new links, and platform tag overrides. See `docs/symlink-manifest.md` for the full format and examples.
+The local overrides file is at `home/.config/ooodnakov/local/links.local.toml` (i.e., `{CONFIG_HOME}/ooodnakov/local/links.local.toml`). This file is never tracked in git. It supports target overrides and new `[links.<key>]` entries; platform tag filtering belongs in `scripts/links.toml`. See `docs/symlink-manifest.md` for the full current format and examples.
 
 ## Shell config policy
 
@@ -150,10 +153,13 @@ When structure or setup behavior changes, update the relevant docs:
 After changing shell bootstrap logic, validate:
 
 ```bash
-bash -n scripts/setup.sh
+bash -n scripts/setup/setup.sh
+bash -n scripts/setup/ooodnakov.sh
+bash -n scripts/setup/delete.sh
+bash -n scripts/setup/minimal-setup.sh
 ```
 
-If PowerShell setup changes and `pwsh` is available, validate those scripts too.
+If PowerShell setup changes and `pwsh` is available, validate active PowerShell scripts under `scripts/setup/*.ps1`, wrappers under `home/.config/ooodnakov/bin/*.ps1`, and maintained PowerShell tests under `tests/*.ps1`.
 
 After changing Python helper scripts or Python project configuration, validate:
 

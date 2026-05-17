@@ -118,7 +118,7 @@ remove_font_dir() {
 usage() {
   ui_line section "delete"
   cat <<'EOF'
-Usage: ./scripts/delete.sh [restore|remove]
+Usage: ./scripts/setup/delete.sh [restore|remove]
 
 Modes:
   restore  remove managed symlinks and restore the latest backups when available

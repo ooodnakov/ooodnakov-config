@@ -25,7 +25,11 @@ Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 
 All decisions, categories, versions, install methods, pins, and reasons are **defined exclusively** in `scripts/optional-deps.toml` (see `[managed-tools]` section and per-entry comments).
 
-Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`. The `docker` entry is intentionally a configuration helper: it does not install Docker Engine, but on systemd Linux it enables and starts existing Docker and containerd units.
+The current optional dependency catalog includes:
+
+`wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `uv`, `bw`, `node`, `pnpm`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`
+
+Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`. The `docker` entry is intentionally a configuration helper: it does not install Docker Engine, but on systemd Linux it enables and starts existing Docker and containerd units. Window-manager and agent-adjacent optional entries now include GlazeWM, Zebar, Overline Zebar widgets, RTK, and the Pi coding agent.
 
 `brew` is optional on both macOS and Linux. It uses Homebrew's official installer with the non-interactive environment flag after the normal `oooconf deps` confirmation path.
 
@@ -43,13 +47,13 @@ Run `oooconf lock` after editing the TOML.
    - For GitHub release archives, use `manager = "github-release"`, `package = "owner/repo"`, `ver`, `bin`, and platform `asset` templates with `${ver}`, `${system}`, and `${arch}` placeholders.
    - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`). The `node` and `pnpm` handlers are intentionally paired so a fresh machine with only `nvm` can bootstrap Node.js, npm, and pnpm in one optional dependency run.
 2. Add/adjust presence checks:
-   - `optional_dependency_present()` in `scripts/setup.sh`
-   - `Get-OptionalDependencyCommandNames` / `Test-OptionalDependencyPresent` in `scripts/setup.ps1`
+   - `optional_dependency_present()` in `scripts/setup/setup.sh`
+   - `Get-OptionalDependencyCommandNames` / `Test-OptionalDependencyPresent` in `scripts/setup/setup.ps1`
 3. Add custom installer handling only when needed:
-   - `install_optional_dependency_from_catalog()` in `scripts/setup.sh`
-   - `Install-OptionalDependencyFromSpec` in `scripts/setup.ps1`
+   - `install_optional_dependency_from_catalog()` in `scripts/setup/setup.sh`
+   - `Install-OptionalDependencyFromSpec` in `scripts/setup/setup.ps1`
 4. Run `oooconf lock` to regenerate lock artifacts.
-5. Regenerate tracked completions: `uv run python scripts/generate_oooconf_completions.py`
+5. Regenerate tracked completions: `uv run python scripts/cli/generate_oooconf_completions.py`
 6. Run drift checks so generated/consumer metadata stays aligned:
    - `uv run pytest tests/test_optional_deps.py tests/test_optional_deps_drift.py tests/test_static_smoke.py`
    - `bash tests/test_shell.sh`
