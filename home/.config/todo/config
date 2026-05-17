@@ -1,0 +1,11 @@
+# Managed todo.txt-cli config.
+# todo.sh reads this from ${XDG_CONFIG_HOME:-$HOME/.config}/todo/config.
+
+todo_home="${HOME:-${USERPROFILE:-.}}"
+
+export TODO_DIR="${TODO_DIR:-$todo_home/.todo}"
+export TODO_FILE="${TODO_FILE:-$TODO_DIR/todo.txt}"
+export DONE_FILE="${DONE_FILE:-$TODO_DIR/done.txt}"
+export REPORT_FILE="${REPORT_FILE:-$TODO_DIR/report.txt}"
+
+unset todo_home
