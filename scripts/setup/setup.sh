@@ -815,6 +815,76 @@ maybe_install_k() {
   maybe_note_dependency k "manual install if you want the standalone k command"
 }
 
+add_homebrew_to_current_path() {
+  local brew_bin
+  for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+    if [ -x "$brew_bin" ]; then
+      eval "$("$brew_bin" shellenv)"
+      return 0
+    fi
+  done
+  return 1
+}
+
+maybe_install_brew() {
+  local _manager
+  _manager="$1"
+
+  if check_dependency_status "brew" "brew"; then
+    return 0
+  fi
+
+  case "$(detect_platform)" in
+  linux | macos) ;;
+  *)
+    DEPENDENCY_SUMMARY+=("brew: skipped (macOS/Linux only)")
+    return 0
+    ;;
+  esac
+
+  if ! prompt_yes_no "Install Homebrew package manager with the official install script?"; then
+    is_verbose && echo "skipping Homebrew" >&2
+    DEPENDENCY_SUMMARY+=("brew: skipped")
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    local manager
+    manager="$(detect_package_manager)"
+    if [ "$manager" != "none" ] && [ "$manager" != "brew" ]; then
+      install_packages "$manager" curl || true
+    fi
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("brew: missing (curl unavailable)")
+    return 1
+  fi
+
+  if [ ! -x /bin/bash ]; then
+    DEPENDENCY_SUMMARY+=("brew: missing (/bin/bash unavailable)")
+    return 1
+  fi
+
+  run_with_spinner "Installing Homebrew" \
+    env NONINTERACTIVE=1 /bin/bash -c '$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    DEPENDENCY_SUMMARY+=("brew: install preview")
+    return 0
+  fi
+
+  add_homebrew_to_current_path >/dev/null 2>&1 || true
+
+  if command -v brew >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("brew: installed")
+    return 0
+  fi
+
+  DEPENDENCY_SUMMARY+=("brew: install attempted")
+  return 1
+}
+
 maybe_install_dua() {
   maybe_install_dua_cli "$1"
 }

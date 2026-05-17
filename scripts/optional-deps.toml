@@ -119,6 +119,17 @@ windows.manager = "custom"
 windows.command = "installed via setup.ps1 if needed"
 
 [[deps]]
+key = "brew"
+display = "Homebrew"
+description = "Homebrew package manager for macOS and Linux"
+handler = "brew"
+check = "brew --version"
+linux.manager = "custom"
+linux.command = "official Homebrew installer"
+macos.manager = "custom"
+macos.command = "official Homebrew installer"
+
+[[deps]]
 key = "gsudo"
 display = "gsudo"
 description = "gsudo elevation helper (Windows)"

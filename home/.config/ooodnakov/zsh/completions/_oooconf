@@ -53,6 +53,7 @@ _oooconf_values_deps_keys=(
   'posh-git:PowerShell Git completions and shell integration'
   'psfzf:PowerShell fzf integration for history, files, and tab completion'
   'choco:Chocolatey package manager (Windows)'
+  'brew:Homebrew package manager for macOS and Linux'
   'gsudo:gsudo elevation helper (Windows)'
   'rg:ripgrep search tool'
   'fd:fd find alternative'

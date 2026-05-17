@@ -38,6 +38,13 @@ Add-PathEntry -PathEntry $cargoBin
 Add-PathEntry -PathEntry $shareBin
 Add-PathEntry -PathEntry $npmBin
 
+foreach ($brewBin in @("/opt/homebrew/bin", "/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin")) {
+    if (Test-Path (Join-Path $brewBin "brew")) {
+        Add-PathEntry -PathEntry $brewBin
+        break
+    }
+}
+
 $pnpmHome = if ($env:PNPM_HOME) { $env:PNPM_HOME } else { Join-Path $HOME ".local/share/pnpm" }
 $env:PNPM_HOME = $pnpmHome
 Add-PathEntry -PathEntry $pnpmHome

@@ -27,6 +27,8 @@ All decisions, categories, versions, install methods, pins, and reasons are **de
 
 Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`. The `docker` entry is intentionally a configuration helper: it does not install Docker Engine, but on systemd Linux it enables and starts existing Docker and containerd units.
 
+`brew` is optional on both macOS and Linux. It uses Homebrew's official installer with the non-interactive environment flag after the normal `oooconf deps` confirmation path.
+
 - Automated: handled via `[managed-tools]` + `install_managed_tools()`.
 - Optional: offered by `oooconf deps` (interactive picker or `--yes-optional`).
 - Manual: not offered by bootstrap (e.g. WezTerm, final editor choice).
@@ -59,6 +61,6 @@ Run `oooconf lock` after editing the TOML.
 | --- | --- | --- |
 | Linux (Debian/Ubuntu) | `apt` | manual download / archive |
 | Windows | `winget` | `choco` |
-| macOS | `brew` (planned) | — |
+| macOS | `brew` | — |
 
 The bootstrap detects the available package manager at install time and uses it. If no package manager is found, the dependency is skipped with a warning.

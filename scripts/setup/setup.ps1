@@ -717,6 +717,7 @@ function Install-OptionalDependencyFromSpec {
 
     switch ($handler) {
         "choco" { return (Install-Chocolatey) }
+        "brew" { return (Install-HomebrewIfMissing) }
         "posh-git" { return (Install-PoshGitIfMissing) }
         "psfzf" { return (Install-PSFzfIfMissing) }
         "bw" { return (Install-BitwardenCliIfMissing) }
@@ -1539,6 +1540,72 @@ function Install-Chocolatey {
     }
 
     Add-DependencySummary "choco: install attempted"
+    return $false
+}
+
+function Add-HomebrewToSessionPath {
+    $brewBins = @(
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        "/home/linuxbrew/.linuxbrew/bin"
+    )
+
+    foreach ($binDir in $brewBins) {
+        $brewPath = Join-Path $binDir "brew"
+        if (Test-Path $brewPath) {
+            $pathParts = @($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ })
+            if ($pathParts -notcontains $binDir) {
+                $env:PATH = "$binDir$([IO.Path]::PathSeparator)$env:PATH"
+            }
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Install-HomebrewIfMissing {
+    if (Test-DependencyStatus -CommandName "brew" -SummaryName "brew") { return $true }
+
+    $platform = Detect-Platform
+    if ($platform -notin @("macos", "linux")) {
+        Add-DependencySummary "brew: skipped (macOS/Linux only)"
+        return $false
+    }
+
+    if (-not (Confirm-Install "Install Homebrew package manager with the official install script?")) {
+        Add-DependencySummary "brew: skipped"
+        return $false
+    }
+
+    if (-not (Get-Command curl -ErrorAction SilentlyContinue)) {
+        Add-DependencySummary "brew: missing (curl unavailable)"
+        return $false
+    }
+
+    if (-not (Test-Path "/bin/bash")) {
+        Add-DependencySummary "brew: missing (/bin/bash unavailable)"
+        return $false
+    }
+
+    $res = Invoke-ActionWithSpinner -Description "Installing Homebrew" -Action {
+        & env NONINTERACTIVE=1 /bin/bash -c '$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'
+    }
+
+    if ($DryRun) {
+        Add-DependencySummary "brew: install preview"
+        return $true
+    }
+
+    $null = Add-HomebrewToSessionPath
+
+    if ($res -and (Get-Command brew -ErrorAction SilentlyContinue)) {
+        Add-DependencySummary "brew: installed"
+        Add-NewlyAvailableCommand -CommandNames @("brew")
+        return $true
+    }
+
+    Add-DependencySummary "brew: install attempted"
     return $false
 }
 

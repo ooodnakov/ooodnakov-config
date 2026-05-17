@@ -28,6 +28,14 @@ path_prepend "$HOME/.local/bin"
 path_prepend "$HOME/.cargo/bin"
 path_prepend "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/bin"
 
+if [ -x /opt/homebrew/bin/brew ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+elif [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
 NPM_PACKAGES="$HOME/.npm"
 path_prepend "$NPM_PACKAGES/bin"
 
