@@ -2447,7 +2447,7 @@ if (-not $command) {
 
 function Test-ShouldNormalizeGlobalFlags {
     param([Parameter(Mandatory = $true)][string]$CommandName)
-    return $CommandName -in @("bootstrap", "install", "deps", "update", "doctor", "completions", "dry-run", "delete", "remove", "lock", "update-pins", "agents")
+    return $CommandName -in @("bootstrap", "install", "deps", "update", "doctor", "completions", "dry-run", "delete", "remove", "lock", "update-pins", "agents", "link")
 }
 
 if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
@@ -2595,7 +2595,7 @@ switch ($command) {
         if ($remaining.Count -gt 0 -and $remaining[0] -in @("-h", "--help", "help")) {
             Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs @("--help")
         } else {
-            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs $remaining
+            Invoke-SetupCommand -SetupCommand "link" -SupportsDryRun -RemainingArgs $remaining
         }
     }
     default {

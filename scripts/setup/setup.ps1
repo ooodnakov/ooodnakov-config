@@ -2782,7 +2782,7 @@ function Test-Doctor {
     Write-UiLine -Role info -Message "Running doctor checks..."
 
     # Read links from manifest via link_manager.py for doctor checks
-    $linkOutput = python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null
+    $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs --repo-root "$RepoRoot" --format text 2>$null
     if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($linkOutput)) {
         $linkOutput -split "`n" | ForEach-Object {
             if ([string]::IsNullOrWhiteSpace($_)) { return }
@@ -2876,7 +2876,7 @@ function Invoke-Install {
     Install-OptionalDependencies
 
     Step-Progress -Status "Linking managed configuration"
-    $linkOutput = python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null
+    $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs --repo-root "$RepoRoot" --format text 2>$null
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($linkOutput)) {
         Write-Output "[warn] link_manager.py failed or returned no output; falling back to hardcoded links"
         if (New-Symlink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")) {
@@ -3150,7 +3150,11 @@ try {
         "link" {
             if ($DryRun) {
                 Write-Output "[dry-run] would link:"
-                python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null | ForEach-Object {
+            }
+            $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs @("--repo-root", "$RepoRoot", "--format", "text") 2>$null
+            if ($DryRun) {
+                $linkOutput -split "`n" | ForEach-Object {
+                    if ([string]::IsNullOrWhiteSpace($_)) { return }
                     $parts = $_ -split '\|'
                     if ($parts.Count -ge 3) {
                         Write-Output "[dry-run]   $($parts[2]) -> $($parts[1])"
@@ -3158,13 +3162,40 @@ try {
                 }
                 return
             }
-            python3 "$RepoRoot/scripts/link_manager.py" --repo-root "$RepoRoot" --format text 2>$null | ForEach-Object {
+            $created = 0
+            $existing = 0
+            $failed = 0
+            if (-not $DryRun) {
+                Write-UiLine -Role info -Message "Linking managed configs..."
+            }
+            $linkOutput -split "`n" | ForEach-Object {
+                if ([string]::IsNullOrWhiteSpace($_)) { return }
                 $parts = $_ -split '\|'
                 if ($parts.Count -ge 3) {
+                    $key = $parts[0]
                     $source = $parts[1]
                     $target = $parts[2]
-                    New-Symlink -Source $source -Target $target | Out-Null
+                    if (Test-LinkMatches -Source $source -Target $target) {
+                        Write-UiLine -Role hint -Message "[skip] $key -> $target"
+                        $existing++
+                    } else {
+                        if (New-Symlink -Source $source -Target $target) {
+                            Write-UiLine -Role ok -Message "[link] $key -> $target"
+                            $created++
+                        } else {
+                            Write-UiLine -Role fail -Message "[fail] $key -> $target"
+                            $failed++
+                        }
+                    }
                 }
+            }
+            Write-Output ""
+            if ($failed -gt 0) {
+                Write-UiLine -Role fail -Message "Failed: $failed | Linked: $created | Skipped: $existing"
+            } elseif ($created -gt 0) {
+                Write-UiLine -Role ok -Message "Linked: $created | Skipped: $existing"
+            } else {
+                Write-UiLine -Role hint -Message "All $existing links already exist"
             }
         }
     }
