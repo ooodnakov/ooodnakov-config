@@ -733,6 +733,12 @@ function Install-OptionalDependencyFromSpec {
             }
 
             $cliScript = Join-Path $PSScriptRoot "ooodnakov.ps1"
+            $alreadyInstalled = & pwsh -NoProfile -File $cliScript wm zebar-config list 2>$null | Where-Object { $_ -match "^\*\s+overline" }
+            if ($alreadyInstalled) {
+                Add-DependencySummary "overline-zebar: already installed"
+                return $true
+            }
+
             $res = Invoke-ActionWithSpinner -Description "Installing overline-zebar" -Action {
                 param($scriptPath)
                 & pwsh -NoProfile -File $scriptPath wm zebar-config install overline-zebar | Out-Null
