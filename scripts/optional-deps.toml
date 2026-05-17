@@ -723,6 +723,18 @@ manager = "custom"
 command = "oooconf wm zebar-config install overline-zebar"
 
 [[deps]]
+key = "pandoc"
+display = "pandoc"
+description = "document converter and universal markup transformer"
+check = "pandoc --version"
+linux.manager = "apt"
+linux.package = "pandoc"
+macos.manager = "brew"
+macos.package = "pandoc"
+windows.manager = "choco"
+windows.package = "pandoc"
+
+[[deps]]
 key = "pi-coding-agent"
 display = "pi-coding-agent"
 description = "Earendil Works coding agent for AI-assisted development"
