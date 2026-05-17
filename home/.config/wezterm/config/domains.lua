@@ -6,6 +6,7 @@ local options = {
       { name = 'sitealex', remote_address = 'sitealex' },
       { name = 'orange', remote_address = 'orange' },
       { name = 'router', remote_address = 'router' },
+      { name = 'think', remote_address = 'think' },
    },
    unix_domains = {},
    wsl_domains = {},
