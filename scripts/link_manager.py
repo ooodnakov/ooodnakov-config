@@ -294,12 +294,14 @@ def discover_links(
     return discovered
 
 
-def merge_with_local(links: list[dict], local_toml_path: Path | str | None) -> list[dict]:
+def merge_with_local(links: list[dict], local_toml_path: Path | str | None, platform: str | None = None) -> list[dict]:
     """Merge explicit links with local overrides.
 
     Args:
         links: List of link dicts from manifest.
         local_toml_path: Path to links.local.toml, or None to skip.
+        platform: Platform to use when expanding path templates. Defaults to the
+            current platform when omitted.
 
     Returns:
         Merged list of link dicts.
@@ -314,6 +316,7 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None) -> l
     with open(local_path, "rb") as f:
         local_data = tomllib.load(f)
 
+    platform = platform or get_platform()
     local_links = local_data.get("links", {})
 
     # Build dict of links by key for easy override
@@ -323,13 +326,17 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None) -> l
     for link in links:
         key = link.get("key")
         if key and key in local_links:
-            # Override target from local
+            # Override source and/or target from local, preserving the manifest
+            # values when a field is omitted. Local overrides support the same
+            # path templates as scripts/links.toml so machine-local files can
+            # remain portable across user accounts.
             override = local_links[key]
-            target = override.get("target", link["target"])
+            source = expand_path_template(override.get("source", link["source"]), platform)
+            target = expand_path_template(override.get("target", link["target"]), platform)
             result.append(
                 {
                     "key": key,
-                    "source": link["source"],
+                    "source": source,
                     "target": target,
                 }
             )
@@ -342,12 +349,13 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None) -> l
     # Add any new keys from local that weren't in original
     for key, override in local_links.items():
         if key not in existing_keys:
-            # This is a new entry from local
+            # This is a new entry from local. Expand any supported path
+            # templates before returning the merged manifest.
             result.append(
                 {
                     "key": key,
-                    "source": override.get("source", ""),
-                    "target": override.get("target", ""),
+                    "source": expand_path_template(override.get("source", ""), platform),
+                    "target": expand_path_template(override.get("target", ""), platform),
                 }
             )
 
@@ -400,7 +408,9 @@ def get_all_links(repo_root: Path | str) -> list[tuple[str, str, str | None]]:
     # Local overrides - use same path pattern as other ooodnakov local files
     # i.e., repo_root/home/.config/ooodnakov/local/links.local.toml
     local_path = repo_root / "home" / ".config" / "ooodnakov" / "local" / "links.local.toml"
-    merged = merge_with_local([{"key": key, "source": src, "target": tgt} for src, tgt, key in all_links], local_path)
+    merged = merge_with_local(
+        [{"key": key, "source": src, "target": tgt} for src, tgt, key in all_links], local_path, platform
+    )
 
     return [(link["source"], link["target"], link["key"]) for link in merged]
 

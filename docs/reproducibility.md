@@ -12,7 +12,7 @@ Tracked files:
 - base WezTerm config
 - base LazyVim/Neovim config
 - PowerShell profile
-- Python `uv` environment metadata (`pyproject.toml`, `.python-version`; `.venv/` and `uv.lock` are ignored local artifacts)
+- Python `uv` environment metadata (`pyproject.toml`, `.python-version`, tracked `uv.lock`; `.venv/` is an ignored local artifact)
 - prompt config
 - shared environment files
 - shared SSH host definitions
