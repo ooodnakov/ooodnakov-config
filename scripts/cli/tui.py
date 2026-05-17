@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
-import curses
 import os
 import sys
+
+try:
+    import curses
+    _CURSES_AVAILABLE = True
+except ImportError:
+    curses = None
+    _CURSES_AVAILABLE = False
 
 
 def is_interactive() -> bool:
@@ -13,6 +19,8 @@ def is_interactive() -> bool:
     Mirrors the bash ui_is_interactive() logic: [ -t 1 ] checks stdout TTY.
     Also checks stdin and env override for robustness.
     """
+    if not _CURSES_AVAILABLE:
+        return False
     explicit = os.environ.get("OOOCONF_INTERACTIVE", "")
     if explicit == "0":
         return False
@@ -35,6 +43,8 @@ def interactive_select(
 ) -> list[str] | None:
     """Interactive curses selector. Returns selected items or None if cancelled."""
     if not items or not is_interactive():
+        return None
+    if not _CURSES_AVAILABLE:
         return None
     try:
         return _curses_select(items, title, instructions)
@@ -123,6 +133,8 @@ def _curses_select(
 
 def confirm(prompt: str, default: bool = False) -> bool | None:
     """Ask yes/no confirmation. Returns None if cancelled."""
+    if not _CURSES_AVAILABLE:
+        return None
     try:
         return _curses_confirm(prompt, default)
     except (curses.error, OSError):
