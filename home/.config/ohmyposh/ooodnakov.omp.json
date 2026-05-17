@@ -20,6 +20,13 @@
         },
         {
           "background": "#444444",
+          "foreground": "#00af87",
+          "style": "plain",
+          "template": "{{ if .SSHSession }}{{ .UserName }}@{{ .HostName }} {{ end }}",
+          "type": "session"
+        },
+        {
+          "background": "#444444",
           "foreground": "#0087af",
           "style": "plain",
           "template": "<#949494>│</> {{ if eq .Env.OOOCONF_PROMPT_STYLE \"concise\" }}{{ .Folder }}{{ else }}{{ .Path }}{{ end }} ",
