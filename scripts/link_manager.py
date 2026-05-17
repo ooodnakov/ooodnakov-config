@@ -107,11 +107,11 @@ def expand_path_template(template: str, platform: str) -> str:
     for placeholder, value in replacements.items():
         result = result.replace(placeholder, value)
 
-    # Normalize to use forward slashes in output and os.path.join
-    # Convert any backslashes to forward slashes for cross-platform consistency
+    # Normalize paths to forward slashes for cross-platform consistency
+    # os.path operations use native separators, but we want consistent output
     if platform == "windows":
-        # On windows, os.path.join uses backslashes, but we want forward slashes
-        # for the template expansion output
+        result = result.replace("\\", "/")
+    else:
         result = result.replace("\\", "/")
 
     return result
