@@ -721,3 +721,15 @@ handler = "zebar-pack-overline"
 [deps.windows]
 manager = "custom"
 command = "oooconf wm zebar-config install overline-zebar"
+
+[[deps]]
+key = "pi-coding-agent"
+display = "pi-coding-agent"
+description = "Earendil Works coding agent for AI-assisted development"
+check = "pi-coding-agent --version"
+linux.manager = "pnpm"
+linux.package = "@earendil-works/pi-coding-agent"
+macos.manager = "pnpm"
+macos.package = "@earendil-works/pi-coding-agent"
+windows.manager = "pnpm"
+windows.package = "@earendil-works/pi-coding-agent"
