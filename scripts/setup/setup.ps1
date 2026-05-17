@@ -121,9 +121,22 @@ function Run-Python {
     param([string]$ScriptPath, [string[]]$ScriptArgs)
     $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
     if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
-        & uv run $ScriptPath @ScriptArgs
+        $prevErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $output = & uv run $ScriptPath @ScriptArgs 2>$null
+            return $output
+        } finally {
+            $ErrorActionPreference = $prevErrorAction
+        }
     } else {
-        & python3 $ScriptPath @ScriptArgs
+        $pyCmd = Get-PythonCommand
+        if ($pyCmd) {
+            & $pyCmd $ScriptPath @ScriptArgs
+        } else {
+            Write-Error "Python not found. Install Python 3.8+ or add it to your PATH."
+            exit 1
+        }
     }
 }
 
