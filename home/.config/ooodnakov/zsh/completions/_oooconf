@@ -104,6 +104,7 @@ _oooconf_values_deps_keys=(
   'glazewm:Tiling window manager for Windows'
   'zebar:Modern, customizable status bar for Windows'
   'overline-zebar:Third-party Zebar widget pack with system tray, widgets, and a config UI'
+  'pi-coding-agent:Earendil Works coding agent for AI-assisted development'
 )
 
 typeset -ga _oooconf_values_regions

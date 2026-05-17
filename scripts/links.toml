@@ -88,3 +88,8 @@ key = "zebar"
 source = "home/.glzr/zebar"
 target = "{HOME}/.glzr/zebar"
 only = "windows"
+
+[[links]]
+key = "pi"
+source = "home/.pi"
+target = "{HOME}/.pi"
