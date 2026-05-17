@@ -32,6 +32,7 @@ home/.config/zsh/.zshenv
 home/.config/zsh/.zcompdump*
 home/.glzr/glazewm/errors.log
 home/.glzr/zebar/errors.log
+home/.pi/agent/auth.json
 
 .zcompdump*
 
