@@ -876,7 +876,7 @@ def config_home() -> Path:
 
 
 def set_yazi_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
-    path = config_home() / "ooodnakov" / "local" / "yazi" / "theme.toml"
+    path = config_home() / "yazi" / "theme.toml"
     path.parent.mkdir(parents=True, exist_ok=True)
     selected_mode = normalize_mode(mode)
     selected_theme = YAZI_THEME_BY_NAME[selected_mode].get(theme, YAZI_THEME_BY_NAME[selected_mode]["default"])

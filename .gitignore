@@ -53,6 +53,7 @@ config.sublime-project
 home/.config/noctalia/plugins/*
 home/.config/niri/animations/*
 
+home/.config/yazi/theme.toml
 
 home/.glzr/zebar/ooodnakov/theme-overrides.css
 home/.glzr/zebar/ooodnakov-komorebi/theme-overrides.css
