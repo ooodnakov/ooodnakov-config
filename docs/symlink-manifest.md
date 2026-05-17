@@ -111,7 +111,7 @@ Machine-specific symlink targets are managed in:
 home/.config/ooodnakov/local/links.local.toml
 ```
 
-This file is ignored when named exactly `links.local.toml`. Copy `links.local.toml.example` as a starting point. Local override values are passed through by the current merge engine, so use concrete absolute targets rather than `{HOME}`-style templates in the local file.
+This file is ignored when named exactly `links.local.toml`. Copy `links.local.toml.example` as a starting point. Local override `source` and `target` values support the same `{HOME}`-style path templates as `scripts/links.toml`, so overrides can stay portable across machines and user accounts.
 
 Format:
 
@@ -123,11 +123,11 @@ Format:
 
 # Override wezterm target to a custom location on this machine
 [links.wezterm]
-target = "/custom/wezterm/path"
+target = "{HOME}/.config/wezterm-work"
 
 # Override the oooconf-bin to point to a different location
 [links.oooconf-bin]
-target = "/home/alice/.local/share/custom-bin/oooconf"
+target = "{DATA_HOME}/custom-bin/oooconf"
 
 # =============================================================================
 # ADD A NEW LINK
@@ -135,8 +135,8 @@ target = "/home/alice/.local/share/custom-bin/oooconf"
 # =============================================================================
 
 [links.my-secret-config]
-source = "/home/alice/.config/my-secret"
-target = "/home/alice/.config/my-secret"
+source = "{HOME}/.config/my-secret"
+target = "{CONFIG_HOME}/my-secret"
 
 # =============================================================================
 # {LOCAL_BIN} OVERRIDE
