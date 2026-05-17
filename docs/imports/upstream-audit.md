@@ -12,7 +12,7 @@ Your current local WezTerm checkout was also preserved as:
 
 - `third_party/local-snapshots/wezterm-current`
 
-These are reference snapshots only. They are not the active config installed by `scripts/setup.sh`.
+These are reference snapshots only. They are not the active config installed by `scripts/setup/setup.sh`.
 
 ## Findings
 

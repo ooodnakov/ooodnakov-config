@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Minimal setup script — installs core tools from [minimal] in optional-deps.toml.
-# Run with: ./scripts/minimal-setup.sh or oooconf minimal (after integration).
+# Run with: ./scripts/setup/minimal-setup.sh or oooconf minimal (after integration).
 
 set -euo pipefail
 

@@ -168,8 +168,8 @@ Aliases:
   preview -> dry-run
   upgrade -> update
 Getting help:
-  ./scripts/setup.sh --help              show this message
-  ./scripts/setup.sh <command> --help     show command-specific help
+  ./scripts/setup/setup.sh --help              show this message
+  ./scripts/setup/setup.sh <command> --help     show command-specific help
 UI controls:
   OOOCONF_COLOR=always|never|auto    override color output
   OOOCONF_ASCII=1                    force ASCII icons and borders

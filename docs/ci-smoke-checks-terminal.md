@@ -1,6 +1,6 @@
 # Managed Neovim + WezTerm CI Smoke Checks
 
-This note proposes low-risk CI checks for managed terminal/editor config under:
+This note documents the low-risk CI checks for managed terminal/editor config under:
 
 - `home/.config/nvim/`
 - `home/.config/wezterm/`
@@ -9,7 +9,7 @@ This note proposes low-risk CI checks for managed terminal/editor config under:
 
 - Neovim config bootstraps `lazy.nvim` by cloning from GitHub if missing, then loads plugin spec/imports via LazyVim.
 - WezTerm config is modular Lua, with dynamic event/module loading and optional local override from `~/.config/ooodnakov/local/wezterm.lua`.
-- The CI workflow runs static smoke checks for managed Neovim and WezTerm config on Linux, macOS, and Windows.
+- `.github/workflows/ci.yml` runs static smoke checks for managed Neovim and WezTerm config on Linux, macOS, and Windows, alongside shell syntax, Python lint/format, lock reproducibility, optional-dependency drift, and `oooconf` smoke checks.
 
 ## Definitely safe now (low flake risk)
 
@@ -73,15 +73,17 @@ These checks are deterministic and do not depend on GUI/session state.
 
 ## Implemented minimal checks
 
-CI starts with **static, deterministic checks only**:
+The current CI keeps terminal/editor checks **static and deterministic**:
 
 1. Validate Neovim JSON files (`lazy-lock.json`, `lazyvim.json`).
 2. Verify core Neovim/WezTerm managed entrypoint files exist.
+3. Run cross-platform `oooconf` smoke checks (`install --dry-run`, expected-failing `doctor` on a fresh HOME, and `lock`).
+4. Validate lock artifacts with `scripts/generate/generate_dependency_lock.py` and targeted optional-dependency drift tests.
 
-Why this first:
+Why this shape:
 
 - Almost zero flake risk.
-- No new CI dependencies.
+- Minimal CI dependencies beyond Python, uv, and shellcheck on Unix runners.
 - Catches accidental deletes/corruption quickly.
 - Preserves reproducibility goals while keeping CI fast.
 

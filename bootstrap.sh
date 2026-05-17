@@ -74,25 +74,58 @@ install_packages() {
   esac
 }
 
+collect_missing_bootstrap_dependencies() {
+  local cmd
+  missing_bootstrap_tools=()
+
+  for cmd in git zsh; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      missing_bootstrap_tools+=("$cmd")
+    fi
+  done
+}
+
+format_words() {
+  local words=("$@")
+  local word
+  local sep=""
+
+  for word in "${words[@]}"; do
+    printf "%s%s" "$sep" "$word"
+    sep=", "
+  done
+}
+
 ensure_bootstrap_dependencies() {
   local manager
-  manager="$(detect_package_manager)"
+  local missing=()
+  local still_missing=()
 
-  if command -v git >/dev/null 2>&1; then
+  collect_missing_bootstrap_dependencies
+  missing=("${missing_bootstrap_tools[@]}")
+  if [ "${#missing[@]}" -eq 0 ]; then
     return 0
   fi
 
+  manager="$(detect_package_manager)"
   if [ "$manager" = "none" ]; then
-    echo "git is required" >&2
+    echo "Missing required bootstrap tools: $(format_words "${missing[@]}")" >&2
+    echo "Install them manually, then re-run bootstrap." >&2
     exit 1
   fi
 
-  if prompt_yes_no "Install git, zsh, and wget before bootstrap?"; then
-    install_packages "$manager" git zsh wget
+  if prompt_yes_no "Install missing bootstrap tools ($(format_words "${missing[@]}")) with $manager?"; then
+    install_packages "$manager" "${missing[@]}"
+  else
+    echo "Missing required bootstrap tools: $(format_words "${missing[@]}")" >&2
+    echo "Install them manually, then re-run bootstrap." >&2
+    exit 1
   fi
 
-  if ! command -v git >/dev/null 2>&1; then
-    echo "git is required" >&2
+  collect_missing_bootstrap_dependencies
+  still_missing=("${missing_bootstrap_tools[@]}")
+  if [ "${#still_missing[@]}" -ne 0 ]; then
+    echo "Bootstrap prerequisites are still missing after install attempt: $(format_words "${still_missing[@]}")" >&2
     exit 1
   fi
 }

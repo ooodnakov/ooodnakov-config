@@ -5,7 +5,7 @@
 1. **Verify prerequisites** — the bootstrap assumes core tools are present. See the [Prerequisites table in the README](../README.md#prerequisites) and ensure they are installed first.
    - **Linux (Debian/Ubuntu):** `sudo apt install -y git zsh`
    - **Windows:** install PowerShell 7+ and Git, then run from `pwsh`
-2. **Clone first, run after** — avoid `curl | bash` pipelines. Clone the repo, inspect `scripts/setup.sh` (or `setup.ps1`), then run the entrypoint directly:
+2. **Clone first, run after** — avoid `curl | bash` pipelines. Clone the repo, inspect `scripts/setup/setup.sh` / `scripts/setup/ooodnakov.sh` (or the PowerShell counterparts under `scripts/setup/`), then run the entrypoint directly:
 
    ```bash
    git clone https://github.com/ooodnakov/ooodnakov-config.git "$HOME/src/ooodnakov-config"
@@ -38,7 +38,7 @@ To switch only zsh between Powerlevel10k and Oh My Posh, run `oooconf shell prom
 
 - **Completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview). This regenerates tracked files under `home/.config/ooodnakov/zsh/completions/autogen` and refreshes `oooconf` command completion scripts.
 - **A specific tool completion is missing** — the generator only emits entries for binaries currently on `PATH`; install the tool first, then re-run `oooconf completions`.
-- **Manifest parse errors** — verify `scripts/autogen-completions.txt` lines keep the `binary|description|output|command` format.
+- **Manifest parse errors** — verify `scripts/generate/autogen-completions.txt` lines keep the `binary|description|output|command` format.
 
 ## Stale or broken symlinks
 
@@ -48,10 +48,10 @@ Managed config is linked into `~/.config`. If something is misbehaving:
 # Check all managed links and key commands
 oooconf doctor
 
-# Remove all managed links without restoring backups (Unix only)
+# Remove all managed links without restoring backups
 oooconf remove
 
-# Remove managed links and restore the latest backups (Unix only)
+# Remove managed links and restore the latest backups
 oooconf delete
 
 # Re-apply from the repo

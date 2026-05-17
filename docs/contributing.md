@@ -29,14 +29,17 @@ After changing bootstrap logic, helper scripts, or Python configuration, run the
 - **Shell scripts (.sh):** Check syntax and lint using `bash -n` and `shellcheck`.
 
   ```bash
-  bash -n scripts/setup.sh
-  shellcheck scripts/setup.sh scripts/ooodnakov.sh scripts/delete.sh scripts/update-pins.sh scripts/minimal-setup.sh bootstrap.sh
+  bash -n scripts/setup/setup.sh
+  bash -n scripts/setup/ooodnakov.sh
+  bash -n scripts/setup/delete.sh
+  bash -n scripts/setup/minimal-setup.sh
+  shellcheck scripts/setup/setup.sh scripts/setup/ooodnakov.sh scripts/setup/delete.sh scripts/update/update-pins.sh scripts/setup/minimal-setup.sh bootstrap.sh
   ```
 
 - **PowerShell scripts (.ps1):** Validate using PSScriptAnalyzer via `pwsh`.
 
   ```powershell
-  Invoke-ScriptAnalyzer -Path scripts/*.ps1
+  Invoke-ScriptAnalyzer -Path scripts/setup/*.ps1, home/.config/ooodnakov/bin/*.ps1, tests/*.ps1
   ```
 
 - **Python scripts and configuration:** Validate via `ruff` and `uv`.
@@ -50,12 +53,12 @@ After changing bootstrap logic, helper scripts, or Python configuration, run the
 
 ## Updating oooconf Completions
 
-The `oooconf` completion source of truth is `scripts/oooconf-cli-spec.toml`. It is a recursive command tree: add nested commands under `subcommands`, put each command's options and positional values on that command node, and use `value_set` or `option_value_sets` when values come from a shared definition. Dependency-key completions use the `deps_keys` shared definition hydrated from `scripts/optional-deps.toml`, so do not duplicate the optional dependency catalog in generated shell code.
+The `oooconf` completion source of truth is `scripts/cli/oooconf-cli-spec.toml`. It is a recursive command tree: add nested commands under `subcommands`, put each command's options and positional values on that command node, and use `value_set` or `option_value_sets` when values come from a shared definition. Dependency-key completions use the `deps_keys` shared definition hydrated from `scripts/optional-deps.toml`, so do not duplicate the optional dependency catalog in generated shell code.
 
 After changing the CLI spec or completion generator, run:
 
 ```bash
-uv run python scripts/generate_oooconf_completions.py
+uv run python scripts/cli/generate_oooconf_completions.py
 uv run pytest tests/test_recursive_completions.py
 ```
 

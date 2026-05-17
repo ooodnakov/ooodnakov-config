@@ -1,6 +1,6 @@
 # ooodnakov-config
 
-Reproducible personal dotfiles for Linux, Windows, and future macOS machines.
+Reproducible personal dotfiles for Linux, Windows, and macOS machines.
 
 This repo tracks the opinionated base config and bootstrap logic only. Secrets, tokens, private keys, and host-specific overrides stay outside git in local files.
 
@@ -8,25 +8,21 @@ This repo tracks the opinionated base config and bootstrap logic only. Secrets, 
 
 Active tracked config lives under `home/` and includes:
 
-- `zsh` and modular zsh config
-- pinned shell dependencies and helpers
-- WezTerm config
-- Yazi config
-- Niri config under `~/.config/niri`
-- Noctalia config under `~/.config/noctalia`
-- PowerShell profile
-- `oh-my-posh` config
-- shared portable environment files
-- shared SSH host include config
-- LazyVim starter config under `~/.config/nvim`
-- AeroSpace, SketchyBar, and Borders config under `~/.config/`
+- Zsh entrypoints, modular Zsh config, pinned shell helpers, and generated completions
+- shared portable environment files plus ignored local override templates
+- WezTerm, Yazi, LazyVim/Neovim, LazyGit, LazyDocker, btop, CAVA, todo.txt, and ccstatusline config
+- PowerShell profile, PowerShell completions, Oh My Posh, and shared SSH include config
+- Linux desktop config for Niri and Noctalia
+- Windows window-manager config for Komorebi, GlazeWM, Zebar, and the `.pi` coding agent
+- macOS desktop config for AeroSpace, OmniWM, SketchyBar, and Borders
+- agent policy, MCP, provider, skill, and installer metadata under `home/.config/ooodnakov/agents/`
 
 Bootstrap and maintenance entrypoints live under `scripts/`:
 
-- `scripts/setup.sh`
-- `scripts/setup.ps1`
-- `scripts/ooodnakov.sh`
-- `scripts/ooodnakov.ps1`
+- `scripts/setup/setup.sh`
+- `scripts/setup/setup.ps1`
+- `scripts/setup/ooodnakov.sh`
+- `scripts/setup/ooodnakov.ps1`
 
 Generated lock artifacts:
 
@@ -84,7 +80,7 @@ curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/boo
 ```powershell
 git clone git@github.com:ooodnakov/ooodnakov-config.git $HOME\src\ooodnakov-config
 Set-Location $HOME\src\ooodnakov-config
-.\scripts\ooodnakov.ps1 install
+.\home\.config\ooodnakov\bin\oooconf.ps1 install
 ```
 
 After setup, `oooconf` is linked into `$HOME\.local\bin` (plus short alias wrappers `o.ps1`/`o.cmd`), and the managed PowerShell profile prepends that directory to `PATH`, so the same commands work in new sessions:
@@ -148,22 +144,25 @@ Secrets commands:
 - `oooconf shell prompt [p10k|ohmyposh|status]`: switch only the zsh prompt engine between Powerlevel10k and Oh My Posh
 - `oooconf shell prompt-style [verbose|concise|status]`: switch all managed prompts between the full multi-segment layout and a compact layout
 - `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
+- `oooconf shell typo-handling [silent|suggest|help|status]`: control typo suggestions for mistyped commands
+- `oooconf shell psfzf-tab [enabled|disabled|status]`: toggle PSFzf tab completion integration
+- `oooconf shell psfzf-git [enabled|disabled|status]`: toggle PSFzf Git helper integration
 - `oooconf shell auto-uv-env [enabled|quiet|status]`: control Python virtualenv activation message verbosity
 - `oooconf color [status|list|<theme>|dark|light]`: select a unified CLI color theme (`default`, `catppuccin`, `gruvbox`, `nord`, `tokyonight`, `noctalia`) and dark/light mode. When unset, `oooconf` prefers existing tracked tool themes (WezTerm/Neovim) before falling back to `default`; theme changes sync local overrides for Yazi, WezTerm, Komorebi (including bar config), SketchyBar colors, Zebar CSS vars, and a themed Oh My Posh config under `~/.config/ooodnakov/local/ohmyposh/`, and `status` reports detected Neovim/Oh My Posh config state.
 
-Window manager commands (Windows):
+Window manager commands:
 
-- `oooconf wm status`: shows the currently running window manager (komorebi or glazewm)
-- `oooconf wm set [komorebi|glazewm]`: stops the current WM and starts the specified one
-- `oooconf wm start`: starts the default WM (komorebi with whkd)
-- `oooconf wm stop`: stops any running WM stack (komorebi, whkd, komorebi-bar, glazewm)
-- `oooconf wm reload`: reloads the configuration of the active WM
-- `oooconf wm bar set [zebar|yabs]`: set or show the default bar type used on WM start
-- `oooconf wm bar zebar-config [status|list|set <name>|install <source>]`: manage zebar widget configs
-- `oooconf wm bar [stop|start|reload]`: stop, start, or restart the zebar bar (keeps komorebi running)
-- `oooconf wm komorebi [reload|start|stop] [--bar]`: low-level komorebi control with optional bar flag
+- `oooconf wm status`: shows the currently running window manager and bar when detectable
+- `oooconf wm set [komorebi|glazewm|aerospace|omniwm]`: selects the default window manager and starts it
+- `oooconf wm start`: starts the default window manager
+- `oooconf wm stop`: stops the managed window-manager stack for the selected platform
+- `oooconf wm reload`: reloads the active/default window manager
+- `oooconf wm bar status`: shows the running managed bar when detectable
+- `oooconf wm bar set [zebar|yabs|sketchybar]`: sets the default bar in local shell overrides
+- `oooconf wm bar [start|stop|reload]`: controls the default managed bar
+- `oooconf wm komorebi [status|start|stop|reload]`: low-level Komorebi integration commands
 
-The `default_bar_type` setting in `home/.glzr/zebar/config.yaml` controls whether `oooconf wm start` or `oooconf wm set komorebi` also launches the bar. Use `oooconf wm bar set zebar` or `oooconf wm bar set yabs` to change it.
+The default window-manager and bar choices are stored in ignored local shell overrides (`OOODNAKOV_DEFAULT_WM` and `OOODNAKOV_DEFAULT_BAR`) so host-specific desktop preferences do not enter tracked config.
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
 The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, nvm-backed Node.js, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
@@ -180,7 +179,7 @@ Shell completion:
   - Complete shell values: `oooconf secrets unlock --shell <Tab>`
 - **Zsh**: completion is provided via fzf-tab integration
   - Regenerate tracked completions: `oooconf completions`
-  - Command metadata comes from the recursive CLI tree in `scripts/oooconf-cli-spec.toml`; shared value sets such as optional dependency keys are referenced by name and expanded by the generator.
+  - Command metadata comes from the recursive CLI tree in `scripts/cli/oooconf-cli-spec.toml`; shared value sets such as optional dependency keys are referenced by name and expanded by the generator.
 
 Help system:
 

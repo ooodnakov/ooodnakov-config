@@ -12,13 +12,13 @@ scripts/link_manager.py
       │
       ├── read_links_manifest()     → explicit [[links]] entries (files, platform-tagged, non-standard targets)
       ├── discover_links()         → auto-discovered dirs from autolink_dirs (home/.config/*, home/.local/*, home/.glzr/*)
-      └── merge_with_local()       → merges home/.config/ooodnakov/local/links.local.toml overrides
+      └── merge_with_local()       → merges home/.config/ooodnakov/local/links.local.toml target/source overrides
       │
       ▼
 get_all_links()  →  [(source, target, key), ...]
       │
       ▼
-setup.sh link_file() / setup.ps1 New-Symlink
+scripts/setup/setup.sh link_file() / scripts/setup/setup.ps1 New-Symlink
       │
       ▼
   Symlinks created in $CONFIG_HOME, $HOME, etc.
@@ -28,7 +28,7 @@ setup.sh link_file() / setup.ps1 New-Symlink
 
 - `scripts/links.toml` — canonical manifest of all managed symlinks
 - `scripts/link_manager.py` — engine: manifest parsing, auto-discovery, platform filtering, local override merging
-- `scripts/setup.sh` / `scripts/setup.ps1` — consumers that call `link_manager.py` to get the link list, then create symlinks
+- `scripts/setup/setup.sh` / `scripts/setup/setup.ps1` — consumers that call `link_manager.py` to get the link list, then create symlinks
 - `home/.config/ooodnakov/local/links.local.toml` — machine-local override file (not in git)
 
 ## Manifest Format
@@ -38,12 +38,6 @@ setup.sh link_file() / setup.ps1 New-Symlink
 ```toml
 [discovery]
 autolink_dirs = ["home/.config", "home/.local", "home/.glzr"]
-exclude = [
-  "home/.config/ooodnakov",
-  "home/.config/ooodnakov/bin",
-  "home/.config/ooodnakov/local",
-]
-
 [[links]]
 key = "zshrc"
 source = "home/.zshrc"
@@ -52,18 +46,18 @@ target = "{HOME}/.zshrc"
 
 ### Discovery Section
 
-`autolink_dirs` lists directories scanned for auto-linking. Each subdirectory in those dirs becomes a symlink target unless it matches an `exclude` pattern or has an explicit `[[links]]` entry with a platform restriction.
+`autolink_dirs` lists directories scanned for auto-linking. Each subdirectory in those dirs becomes a symlink target unless it matches a configured `exclude` pattern or has an explicit `[[links]]` entry with a platform restriction. The current manifest does not define active excludes.
 
 **What is auto-linked:**
 - Every directory under `home/.config/`, `home/.local/`, and `home/.glzr/` is a candidate for linking, unless:
-  - It matches an `exclude` pattern
+  - It matches an `exclude` pattern in `scripts/links.toml` (none are active today)
   - An explicit `[[links]]` entry exists for the same `key` and that entry has an `only` or `except` platform tag that excludes the current platform
 - Auto-linked dirs always map to `{CONFIG_HOME}/<key>` — no manifest edit needed
 
 Examples: `home/.config/wezterm/` → `~/.config/wezterm`, `home/.config/yazi/` → `~/.config/yazi`, `home/.config/nvim/` → `~/.config/nvim`
 
-**What is excluded:**
-- `home/.config/ooodnakov`, `home/.config/ooodnakov/bin`, `home/.config/ooodnakov/local` — contain the repo's own tooling
+**What is auto-linked today:**
+- The current manifest has no active discovery excludes, so `home/.config/ooodnakov` is also linked into `~/.config/ooodnakov`. Its ignored `local/` children hold machine-specific overrides while tracked examples stay reproducible.
 
 **When to add an explicit `[[links]]` entry:**
 - Files (not directories), e.g., `home/.zshrc` → `~/.zshrc`
@@ -117,7 +111,7 @@ Machine-specific symlink targets are managed in:
 home/.config/ooodnakov/local/links.local.toml
 ```
 
-This file is never tracked in git. Copy `links.local.toml.example` as a starting point.
+This file is ignored when named exactly `links.local.toml`. Copy `links.local.toml.example` as a starting point. Local override values are passed through by the current merge engine, so use concrete absolute targets rather than `{HOME}`-style templates in the local file.
 
 Format:
 
@@ -133,34 +127,16 @@ target = "/custom/wezterm/path"
 
 # Override the oooconf-bin to point to a different location
 [links.oooconf-bin]
-target = "{HOME}/.local/share/custom-bin/oooconf"
+target = "/home/alice/.local/share/custom-bin/oooconf"
 
 # =============================================================================
 # ADD A NEW LINK
 # One not in the manifest - specify both source and target
 # =============================================================================
 
-[[links]]
-key = "my-secret-config"
-source = "home/.config/my-secret"
-target = "{HOME}/.config/my-secret"
-
-# =============================================================================
-# PLATFORM TAG OVERRIDE
-# Use except or only in local overrides just like in links.toml
-# =============================================================================
-
-# Override noctalia, but exclude it on this machine
-[links.noctalia]
-target = "{HOME}/.config/noctalia-custom"
-except = "linux"
-
-# New link that only applies to windows
-[[links]]
-key = "my-windows-link"
-source = "home/.config/my-windows-stuff"
-target = "{HOME}/.config/my-windows-stuff"
-only = "windows"
+[links.my-secret-config]
+source = "/home/alice/.config/my-secret"
+target = "/home/alice/.config/my-secret"
 
 # =============================================================================
 # {LOCAL_BIN} OVERRIDE
@@ -169,10 +145,10 @@ only = "windows"
 
 # Override o-bin to live in a custom bin directory
 [links.o-bin]
-target = "{HOME}/.local/share/custom-bin/o"
+target = "/home/alice/.local/share/custom-bin/o"
 ```
 
-Entries in `links.local.toml` take precedence over `links.toml` for matching keys. New keys added in `links.local.toml` are also merged in.
+Entries in `links.local.toml` take precedence over `links.toml` for matching keys. New `[links.<key>]` tables are also merged in. Platform filters (`only` / `except`) are currently supported in `scripts/links.toml`, not in local overrides.
 
 ## How to Add a New Config Folder
 
