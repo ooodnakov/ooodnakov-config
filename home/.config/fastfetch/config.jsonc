@@ -1,0 +1,144 @@
+//   _____ _____ _____ _____ _____ _____ _____ _____ ____
+//  |   __|  _  |   __|_   _|   __|   __|_   _|     |  |  |
+//  |   __|     |__   | | | |   __|   __| | | |   --|     |
+//  |__|  |__|__|_____| |_| |__|  |_____| |_| |_____|__|__|  GROUPS
+//
+//  by Bina
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "source": "~/.local/share/fastfetch/images/penrose-sky-wp.png",
+    "type": "kitty",
+    "height": 22,
+    "padding": {
+      "top": 2
+    }
+  },
+  "display": {
+    "separator": " ➜ "
+  },
+  "modules": [
+    "break",
+    {
+      "type": "title",
+      "key": "",
+      "format": " {1}"
+    },
+    "break",
+    {
+      "type": "os",
+      "key": "  OS   "
+    },
+    {
+      "type": "kernel",
+      "key": "  ├    Kernel ",
+      "keyColor": "31"
+    },
+    {
+      "type": "uptime",
+      "key": "  ├  󰔟  Uptime ",
+      "keyColor": "31"
+    },
+    {
+      "type": "shell",
+      "key": "  └    Shell  ",
+      "keyColor": "31"
+    },
+    "break",
+    {
+      "type": "wm",
+      "key": "  WM   "
+    },
+    {
+      "type": "theme",
+      "key": "  ├  󰏘  Theme  ",
+      "keyColor": "32"
+    },
+    {
+      "type": "icons",
+      "key": "  ├  󰀻  Icons  ",
+      "keyColor": "32"
+    },
+    {
+      "type": "cursor",
+      "key": "  ├  󰉱  Cursor ",
+      "keyColor": "32"
+    },
+    {
+      "type": "terminal",
+      "key": "  └    Term   ",
+      "keyColor": "32"
+    },
+    "break",
+    {
+      "type": "cpu",
+      "format": "{1} ({3}) @ {7} GHz",
+      "key": "  HW   "
+    },
+    {
+      "type": "gpu",
+      "format": "{1} {2}",
+      "key": "  ├  󰢮  GPU    ",
+      "keyColor": "33"
+    },
+    {
+      "type": "memory",
+      "key": "  ├  󰋛  RAM    ",
+      "keyColor": "33"
+    },
+    {
+      "type": "disk",
+      "key": "  ├  󰋊  Disk   ",
+      "keyColor": "33"
+    },
+    {
+      "type": "battery",
+      "key": "  └  󱟩  Battery",
+      "keyColor": "33"
+    },
+    "break",
+    {
+      "type": "localip",
+      "key": "  NET  "
+    },
+    {
+      "type": "publicip",
+      "key": "  └  󰤨  PubIP  ",
+      "keyColor": "34"
+    },
+    "break",
+    {
+      "type": "datetime",
+      "key": "  TIME "
+    },
+    "break",
+    {
+      "type": "packages",
+      "format": "{} (pacman)",
+      "key": "  PKG  "
+    },
+    {
+      "type": "custom",
+      "key": "  ├  󰭄  Rust   ",
+      "format": "1 (cargo)",
+      "keyColor": "36"
+    },
+    {
+      "type": "custom",
+      "key": "  └  󰌟  Node   ",
+      "format": "5 (npm)",
+      "keyColor": "36"
+    },
+    "break",
+    {
+      "type": "sound",
+      "key": "  SND  "
+    },
+    {
+      "type": "player",
+      "key": "  └  󰎈  Player ",
+      "keyColor": "92"
+    },
+    "break"
+  ]
+}
