@@ -34,6 +34,9 @@ home/.glzr/glazewm/errors.log
 home/.glzr/zebar/errors.log
 home/.pi/agent/auth.json
 home/.pi/agent/sessions
+home/.pi/cache
+home/.pi/context-mode/sessions
+home/.pi/memory
 
 .zcompdump*
 
