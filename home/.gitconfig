@@ -10,3 +10,6 @@
 
 [merge]
     conflictStyle = zdiff3
+[user]
+	name = ooodnakov
+	email = coolkasodnakov@gmail.com
