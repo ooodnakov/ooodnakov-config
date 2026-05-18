@@ -13,6 +13,8 @@ alias ip="ip --color=auto"
 alias myip="wget -qO- https://wtfismyip.com/text"
 alias we="curl -Ss https://wttr.in/"
 alias ff='fastfetch'
+alias du='dua i'
+alias n='nvim'
 
 # Git aliases
 

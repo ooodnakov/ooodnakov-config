@@ -7,3 +7,4 @@ wezterm|Generating wezterm completions|_wezterm|wezterm shell-completion --shell
 fd|Generating fd completions|_fd|fd --gen-completions zsh
 bat|Generating bat completions|_bat|bat --completion zsh
 hermes|Generating hermes completions|_hermes|sh scripts/generate_hermes_completion.sh
+dua|Generating dua completions|_dua|dua completions zsh
