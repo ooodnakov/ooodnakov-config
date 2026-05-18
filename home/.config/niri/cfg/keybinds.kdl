@@ -10,7 +10,6 @@ binds {
 
     // Applications.
     Mod+Return                          hotkey-overlay-title="Open Terminal: Wezterm" { spawn "wezterm"; }
-    Mod+Apostrophe                      hotkey-overlay-title="Scratch Terminal" { spawn-sh "$HOME/.config/ooodnakov/local/scripts/scratch-term.sh"; }
     Mod+CTRL+Return                     hotkey-overlay-title="Open App Launcher: noctalia launcher" { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
     Mod+B                               hotkey-overlay-title="Open Browser: zen" { spawn "zen-browser"; }
     Mod+ALT+L                           hotkey-overlay-title="Lock Screen: noctalia lock" { spawn-sh "qs -c noctalia-shell ipc call lockScreen lock"; }

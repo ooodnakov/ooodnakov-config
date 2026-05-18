@@ -1,0 +1,32 @@
+// A real workspace used as the “hidden” scratchpad location.
+workspace "scratch"
+
+// Dedicated WezTerm scratchpad window.
+// WezTerm --class changes Wayland app_id, so this app-id is reliable on niri.
+window-rule {
+    match app-id=r#"^scratch-wezterm$"#
+
+    open-floating true
+
+    // Bottom-centered. y is the gap up from the bottom edge.
+    default-floating-position x=0 y=32 relative-to="bottom"
+
+    // Tune these to taste.
+    default-column-width { proportion 0.80; }
+    default-window-height { proportion 0.60; }
+}
+
+// Keep it off normal workspaces when it first appears.
+// nscratch will summon it back to your current workspace.
+window-rule {
+    match app-id=r#"^scratch-wezterm$"#
+    open-on-workspace "scratch"
+    draw-border-with-background false
+}
+
+binds {
+    // Pick your shortcut.
+    Mod+Apostrophe {
+        spawn-sh "nscratch -id scratch-wezterm -s 'wezterm start --class scratch-wezterm --always-new-process'";
+    }
+}
