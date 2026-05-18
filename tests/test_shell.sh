@@ -8,11 +8,11 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 echo "=== Testing shell syntax (.sh files) ==="
-for script in scripts/setup/setup.sh scripts/setup/ooodnakov.sh scripts/setup/delete.sh; do
+for script in scripts/setup/setup.sh scripts/setup/ooodnakov.sh scripts/setup/delete.sh scripts/setup/lib/*.sh; do
   echo "Checking $script..."
   bash -n "$script"
 done
-echo "OK: All .sh files have valid syntax."
+echo "OK: All entrypoint and setup/lib .sh files have valid syntax."
 
 echo "=== Testing dry-run with central TOML parser ==="
 echo "Running oooconf deps --dry-run (verifies central TOML parser, no scattered lists/overrides)..."

@@ -86,6 +86,7 @@ $filesToCheck = @(
     "scripts/setup/setup.ps1",
     "scripts/setup/ooodnakov.ps1",
     "scripts/setup/ooodnakov.sh",
+    "scripts/setup/lib",
     "README.md",
     "docs/dependency-decisions.md",
     "docs/troubleshooting.md"
@@ -93,11 +94,19 @@ $filesToCheck = @(
 $badPatterns = @("bat delta", "rg fd", "gum fzf", "wezterm oh-my-posh", "bat, delta, glow")
 $foundBad = $false
 foreach ($file in $filesToCheck) {
-    $content = Get-Content (Join-Path $RepoRoot $file) -Raw
-    foreach ($pattern in $badPatterns) {
-        if ($content -match [regex]::Escape($pattern)) {
-            Write-Host "  Found old list in $file" -ForegroundColor Yellow
-            $foundBad = $true
+    $path = Join-Path $RepoRoot $file
+    $paths = if (Test-Path $path -PathType Container) {
+        Get-ChildItem -Path $path -File -Recurse -Include *.ps1,*.psm1,*.sh
+    } else {
+        Get-Item -Path $path
+    }
+    foreach ($candidate in $paths) {
+        $content = Get-Content $candidate.FullName -Raw
+        foreach ($pattern in $badPatterns) {
+            if ($content -match [regex]::Escape($pattern)) {
+                Write-Host "  Found old list in $($candidate.FullName)" -ForegroundColor Yellow
+                $foundBad = $true
+            }
         }
     }
 }

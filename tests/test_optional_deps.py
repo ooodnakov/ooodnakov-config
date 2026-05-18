@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.cli.read_optional_deps import load_deps, output_catalog, output_json
 
 SUBPROCESS_TIMEOUT_SECONDS = int(os.environ.get("OOOCONF_TEST_TIMEOUT", "180"))
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _bash_syntax_check(script: str) -> subprocess.CompletedProcess[str]:
@@ -232,7 +233,11 @@ def test_shell_scripts_syntax_and_dry_run():
         pytest.skip("Bash shell-script validation runs in the Unix CI jobs")
 
     # Bash syntax (only .sh files; Python is tested via pytest/ruff)
-    for script in ["scripts/setup/setup.sh", "scripts/setup/ooodnakov.sh", "scripts/setup/delete.sh"]:
+    shell_scripts = ["scripts/setup/setup.sh", "scripts/setup/ooodnakov.sh", "scripts/setup/delete.sh"]
+    shell_scripts.extend(
+        str(path.relative_to(REPO_ROOT)) for path in sorted((REPO_ROOT / "scripts/setup/lib").glob("*.sh"))
+    )
+    for script in shell_scripts:
         result = _bash_syntax_check(script)
         assert result.returncode == 0, f"{script} has syntax errors: {result.stderr}"
 
@@ -253,7 +258,7 @@ def test_shell_scripts_syntax_and_dry_run():
                 "pwsh",
                 "-NoProfile",
                 "-Command",
-                "Import-Module PSScriptAnalyzer -ErrorAction SilentlyContinue; if ($?) { Invoke-ScriptAnalyzer -Path scripts/setup/setup.ps1 -Severity Error } else { exit 0 }",
+                "Import-Module PSScriptAnalyzer -ErrorAction SilentlyContinue; if ($?) { Invoke-ScriptAnalyzer -Path scripts/setup/setup.ps1,scripts/setup/ooodnakov.ps1,scripts/setup/lib/*.ps1 -Severity Error } else { exit 0 }",
             ],
             capture_output=True,
             text=True,

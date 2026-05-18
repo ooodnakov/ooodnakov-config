@@ -98,6 +98,63 @@ def test_nested_command_metadata_is_emitted_for_zsh_and_powershell() -> None:
     assert "Options = @('--check')" in pwsh_content
 
 
+def _setup_bash_sources() -> str:
+    paths = [
+        "scripts/setup/setup.sh",
+        "scripts/setup/lib/setup-ui.sh",
+        "scripts/setup/lib/setup-optional-deps.sh",
+        "scripts/setup/lib/setup-installers.sh",
+        "scripts/setup/lib/setup-links.sh",
+        "scripts/setup/lib/setup-completions.sh",
+        "scripts/setup/lib/setup-summary.sh",
+        "scripts/setup/lib/setup-doctor.sh",
+    ]
+    return "\n".join((REPO_ROOT / path).read_text(encoding="utf-8") for path in paths)
+
+
+def _setup_pwsh_sources() -> str:
+    paths = [
+        "scripts/setup/setup.ps1",
+        "scripts/setup/lib/setup-installers.ps1",
+        "scripts/setup/lib/setup-ui.ps1",
+        "scripts/setup/lib/setup-optional-deps.ps1",
+        "scripts/setup/lib/setup-summary.ps1",
+        "scripts/setup/lib/setup-links.ps1",
+        "scripts/setup/lib/setup-completions.ps1",
+        "scripts/setup/lib/setup-doctor.ps1",
+        "scripts/setup/lib/setup-dispatch.ps1",
+    ]
+    return "\n".join((REPO_ROOT / path).read_text(encoding="utf-8") for path in paths)
+
+
+def _oooconf_bash_sources() -> str:
+    paths = [
+        "scripts/setup/ooodnakov.sh",
+        "scripts/setup/lib/oooconf-ui.sh",
+        "scripts/setup/lib/oooconf-shell.sh",
+        "scripts/setup/lib/oooconf-color.sh",
+        "scripts/setup/lib/oooconf-wm.sh",
+        "scripts/setup/lib/oooconf-bar.sh",
+        "scripts/setup/lib/oooconf-help.sh",
+        "scripts/setup/lib/oooconf-dispatch.sh",
+    ]
+    return "\n".join((REPO_ROOT / path).read_text(encoding="utf-8") for path in paths)
+
+
+def _oooconf_pwsh_sources() -> str:
+    paths = [
+        "scripts/setup/ooodnakov.ps1",
+        "scripts/setup/lib/oooconf-ui.ps1",
+        "scripts/setup/lib/oooconf-shell.ps1",
+        "scripts/setup/lib/oooconf-color.ps1",
+        "scripts/setup/lib/oooconf-wm.ps1",
+        "scripts/setup/lib/oooconf-bar.ps1",
+        "scripts/setup/lib/oooconf-help.ps1",
+        "scripts/setup/lib/oooconf-dispatch.ps1",
+    ]
+    return "\n".join((REPO_ROOT / path).read_text(encoding="utf-8") for path in paths)
+
+
 def test_top_level_command_values_are_emitted() -> None:
     zsh_content = (REPO_ROOT / "home/.config/ooodnakov/zsh/completions/_oooconf").read_text(encoding="utf-8")
     assert "_oooconf_wm()" in zsh_content
@@ -112,34 +169,34 @@ def test_top_level_command_values_are_emitted() -> None:
 
 
 def test_oooconf_completions_command_wires_generator() -> None:
-    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
+    setup_sh = _setup_bash_sources()
     assert 'OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/cli/generate_oooconf_completions.py"' in setup_sh
     assert 'run_python "$OOOCONF_COMPLETIONS_GENERATOR"' in setup_sh
 
-    setup_ps1 = (REPO_ROOT / "scripts/setup/setup.ps1").read_text(encoding="utf-8")
+    setup_ps1 = _setup_pwsh_sources()
     assert (
         '$OooconfCompletionsGenerator = Join-Path $RepoRoot "scripts/cli/generate_oooconf_completions.py"' in setup_ps1
     )
     assert "$null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()" in setup_ps1
 
-    ooosh = (REPO_ROOT / "scripts/setup/ooodnakov.sh").read_text(encoding="utf-8")
+    ooosh = _oooconf_bash_sources()
     assert "completions)" in ooosh
     assert 'exec_setup_command completions 1 "$@"' in ooosh
 
-    ooops1 = (REPO_ROOT / "scripts/setup/ooodnakov.ps1").read_text(encoding="utf-8")
+    ooops1 = _oooconf_pwsh_sources()
     assert '"completions" {' in ooops1
     assert 'Invoke-SetupCommand -SetupCommand "completions" -SupportsDryRun -RemainingArgs $remaining' in ooops1
 
 
 def test_setup_dispatch_uses_handler_metadata() -> None:
-    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
+    setup_sh = _setup_bash_sources()
     assert 'handler_func="maybe_install_${handler//-/_}"' in setup_sh
     assert (
         'case "$key" in'
         not in setup_sh.split("install_optional_dependency_from_catalog()", 1)[1].split("run_with_spinner()", 1)[0]
     )
 
-    setup_ps1 = (REPO_ROOT / "scripts/setup/setup.ps1").read_text(encoding="utf-8")
+    setup_ps1 = _setup_pwsh_sources()
     install_fn = setup_ps1.split("function Install-OptionalDependencyFromSpec", 1)[1]
     assert "switch ($handler)" in install_fn
 
@@ -147,7 +204,7 @@ def test_setup_dispatch_uses_handler_metadata() -> None:
 def test_unix_handlers_have_setup_sh_implementations() -> None:
     """Ensure handler-based bash dispatch doesn't silently fall back for unix-special handlers."""
     deps = load_deps()["deps"]
-    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
+    setup_sh = _setup_bash_sources()
 
     missing: list[str] = []
     for dep in deps:
@@ -169,7 +226,7 @@ def test_unix_handlers_have_setup_sh_implementations() -> None:
 
 
 def test_setup_optional_deps_cache_lookups_are_literal_safe() -> None:
-    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
+    setup_sh = _setup_bash_sources()
 
     pipe_lookup = setup_sh.split("lookup_pipe_cache_value()", 1)[1].split("optional_dependency_check_command()", 1)[0]
     assert "printf '%s\\n' \"$cache\"" in pipe_lookup
@@ -187,7 +244,7 @@ def test_setup_optional_deps_cache_lookups_are_literal_safe() -> None:
 
 
 def test_setup_fast_path_only_applies_to_default_dependency_check() -> None:
-    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
+    setup_sh = _setup_bash_sources()
     check_fn = setup_sh.split("check_dependency_status()", 1)[1].split("maybe_install_dependency()", 1)[0]
 
     assert 'check_cmd="$(optional_dependency_check_command "$command_name")"' in check_fn
@@ -225,8 +282,8 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     unix_managers = {dep["manager"] for platform in ("linux", "macos") for dep in normalized_deps(platform)}
     windows_managers = {dep["manager"] for dep in normalized_deps("windows")}
 
-    setup_sh = (REPO_ROOT / "scripts/setup/setup.sh").read_text(encoding="utf-8")
-    setup_ps1 = (REPO_ROOT / "scripts/setup/setup.ps1").read_text(encoding="utf-8")
+    setup_sh = _setup_bash_sources()
+    setup_ps1 = _setup_pwsh_sources()
 
     expected_unix = {"", "apt", "brew", "cargo", "curl", "custom", "download", "github-release", "pip", "pnpm"}
     expected_windows = {"", "cargo", "choco", "custom", "download", "github-release", "pip", "pnpm", "scoop", "winget"}
@@ -238,6 +295,7 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     for manager in ["apt", "brew", "cargo"]:
         assert f'if [ "$manager" = "{manager}" ]' in setup_sh or f"{manager})" in setup_sh
     assert "maybe_install_bw()" in setup_sh  # download manager is handled by the bw handler.
+    assert "docker daemon: no docker, continuing" in setup_sh
     assert "python3 unavailable for pip" in setup_sh
     assert 'pnpm_cmd="$(ensure_pnpm_available)' not in setup_sh
     assert "pip unavailable for $python_cmd" in setup_sh

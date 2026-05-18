@@ -145,6 +145,7 @@ When structure or setup behavior changes, update the relevant docs:
 - `docs/dependency-decisions.md`
 - `docs/architecture.md`
 - `docs/contributing.md`
+- `docs/cli-extension-guide.md`
 - `docs/ci-smoke-checks-terminal.md`
 - `third_party/README.md`
 

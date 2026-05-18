@@ -10,11 +10,12 @@ The tracked base config is intended to be safe to clone onto a new machine witho
 
 - `home/`: active tracked config that gets linked into the user profile
 - `scripts/setup/`: Unix and PowerShell setup, delete, minimal setup, and CLI dispatcher scripts
+- `scripts/setup/lib/`: sourced Bash and dot-sourced PowerShell modules that hold setup UI, optional dependency, installer, symlink, doctor, completion, summary, and `oooconf` helper logic while preserving the public entrypoint paths
 - `scripts/cli/`: recursive CLI spec, completion generation, shared UI helpers, and agent-management tooling
 - `scripts/generate/`: generated artifact and secrets rendering helpers
 - `scripts/update/`: dependency pin audit/update workflows
 - `scripts/fleet/`: TypeScript/Bun automation for multi-agent GitHub issue workflows
-- `docs/`: reproducibility notes, architecture, and import audit records
+- `docs/`: reproducibility notes, architecture, CLI extension guidance, and import audit records
 - `fonts/meslo/`: bundled prompt and terminal fonts used by the tracked defaults
 - `third_party/`: reference-only upstream trees and local snapshots for audit or extraction work
 
@@ -40,6 +41,8 @@ On Windows:
 - backups and logs live under `$HOME\.local\state\ooodnakov-config\`
 
 The install flow is intentionally idempotent. Re-running `oooconf install` should converge the machine back to the tracked state without duplicating managed artifacts.
+
+The public setup and CLI scripts (`setup.sh`, `setup.ps1`, `ooodnakov.sh`, and `ooodnakov.ps1`) are kept as entrypoints that initialize repository paths, environment-derived flags, and top-level dispatch. Their implementation details are split into mirrored Bash/PowerShell modules under `scripts/setup/lib/`; these files are sourced or dot-sourced by the entrypoints and are not meant to run setup actions by themselves.
 
 ## CLI Surface
 
