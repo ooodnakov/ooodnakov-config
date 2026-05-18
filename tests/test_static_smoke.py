@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -39,6 +40,26 @@ def test_managed_neovim_json_is_valid(path: Path) -> None:
 def test_managed_terminal_entrypoints_exist(path: Path) -> None:
     """Catch accidental removal of core managed Neovim/WezTerm entrypoints."""
     assert (REPO_ROOT / path).is_file()
+
+
+def test_setup_entrypoint_module_references_exist() -> None:
+    """Keep sourced/dot-sourced setup modules in sync with their thin entrypoints."""
+    referenced: set[Path] = set()
+    for entrypoint in ["scripts/setup/setup.sh", "scripts/setup/ooodnakov.sh"]:
+        content = (REPO_ROOT / entrypoint).read_text(encoding="utf-8")
+        referenced.update(Path(match) for match in re.findall(r'source "\$REPO_ROOT/([^"]+)"', content))
+
+    for entrypoint in ["scripts/setup/setup.ps1", "scripts/setup/ooodnakov.ps1"]:
+        content = (REPO_ROOT / entrypoint).read_text(encoding="utf-8")
+        referenced.update(
+            Path(match)
+            for match in re.findall(r'Join-Path \$RepoRoot "([^"]+)"', content)
+            if match.startswith("scripts/setup/lib/")
+        )
+
+    assert referenced, "No setup modules were referenced by entrypoints"
+    missing = [path for path in sorted(referenced) if not (REPO_ROOT / path).is_file()]
+    assert not missing, f"Missing sourced setup modules: {missing}"
 
 
 def test_unix_help_smoke() -> None:

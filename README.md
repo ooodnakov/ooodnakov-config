@@ -24,6 +24,8 @@ Bootstrap and maintenance entrypoints live under `scripts/`:
 - `scripts/setup/ooodnakov.sh`
 - `scripts/setup/ooodnakov.ps1`
 
+The setup and `oooconf` entrypoints intentionally stay stable and thin; focused implementation modules live in `scripts/setup/lib/` for setup UI, optional dependency metadata, installers, linking, doctor checks, completions, summaries, and `oooconf` UI/shell/color/window-manager/bar/help/dispatch helpers.
+
 Generated lock artifacts:
 
 - `deps.lock.json` — pinned upstream refs for setup scripts
@@ -34,7 +36,7 @@ Reference-only material lives under `third_party/` and `docs/imports/`. It is st
 
 - `home/`: managed config that gets linked into the user profile
 - `scripts/`: install, update, doctor, delete, and pin-management commands
-- `docs/`: reproducibility notes and import audits
+- `docs/`: reproducibility notes, architecture docs, CLI extension guidance, and import audits
 - `third_party/`: upstream and local reference trees
 - `fonts/meslo/`: bundled Meslo Nerd Font files used by the prompt and terminal defaults
 

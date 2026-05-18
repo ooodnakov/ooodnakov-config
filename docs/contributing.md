@@ -24,7 +24,7 @@ When adding, updating, or removing dependencies, you must regenerate the lock ar
 
 ## Validations After Shell or Bootstrap Changes
 
-After changing bootstrap logic, helper scripts, or Python configuration, run the relevant validations:
+After changing bootstrap logic, setup/CLI helper scripts, or Python configuration, run the relevant validations. Setup and `oooconf` implementation lives in `scripts/setup/lib/`; keep public entrypoints stable and put newly extracted helpers in focused Bash/PowerShell module pairs when practical:
 
 - **Shell scripts (.sh):** Check syntax and lint using `bash -n` and `shellcheck`.
 
@@ -33,6 +33,7 @@ After changing bootstrap logic, helper scripts, or Python configuration, run the
   bash -n scripts/setup/ooodnakov.sh
   bash -n scripts/setup/delete.sh
   bash -n scripts/setup/minimal-setup.sh
+  bash -n scripts/setup/lib/*.sh
   shellcheck scripts/setup/setup.sh scripts/setup/ooodnakov.sh scripts/setup/delete.sh scripts/update/update-pins.sh scripts/setup/minimal-setup.sh bootstrap.sh
   ```
 
@@ -53,7 +54,7 @@ After changing bootstrap logic, helper scripts, or Python configuration, run the
 
 ## Updating oooconf Completions
 
-The `oooconf` completion source of truth is `scripts/cli/oooconf-cli-spec.toml`. It is a recursive command tree: add nested commands under `subcommands`, put each command's options and positional values on that command node, and use `value_set` or `option_value_sets` when values come from a shared definition. Dependency-key completions use the `deps_keys` shared definition hydrated from `scripts/optional-deps.toml`, so do not duplicate the optional dependency catalog in generated shell code.
+For command design and dispatch details, start with `docs/cli-extension-guide.md`. The `oooconf` completion source of truth is `scripts/cli/oooconf-cli-spec.toml`. It is a recursive command tree: add nested commands under `subcommands`, put each command's options and positional values on that command node, and use `value_set` or `option_value_sets` when values come from a shared definition. Dependency-key completions use the `deps_keys` shared definition hydrated from `scripts/optional-deps.toml`, so do not duplicate the optional dependency catalog in generated shell code.
 
 After changing the CLI spec or completion generator, run:
 
