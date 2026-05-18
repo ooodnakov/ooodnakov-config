@@ -1,0 +1,11 @@
+{
+  "allowBrowserCookies": true,
+  "chromeProfile": "Profile 1",
+  "allowBrowserCookies": false,
+  "searchModel": "gemini-2.5-flash",
+  "summaryModel": "minimax/MiniMax-M2.7",
+  "shortcuts": {
+    "curate": "ctrl+shift+s",
+    "activity": "ctrl+shift+w"
+  }
+}

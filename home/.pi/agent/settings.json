@@ -1,3 +1,25 @@
 {
-  "lastChangelogVersion": "0.74.1"
+  "lastChangelogVersion": "0.74.1",
+  "packages": [
+    "npm:context-mode",
+    "npm:pi-subagents",
+    "npm:pi-mcp-adapter",
+    "npm:pi-web-access",
+    "npm:pi-powerline-footer",
+    "npm:pi-markdown-preview",
+    "npm:@samfp/pi-memory",
+    "npm:@ff-labs/pi-fff",
+    "npm:@ifi/oh-pi-themes",
+    "npm:@victor-software-house/pi-curated-themes"
+  ],
+  "defaultProvider": "minimax",
+  "defaultModel": "MiniMax-M2.7",
+  "powerline": {
+    "preset": "nerd",
+    "fixedEditor": false
+  },
+  "workingVibeMode": "file",
+  "workingVibe": "adventure_time",
+  "theme": "gruvbox-dark",
+  "defaultThinkingLevel": "high"
 }
