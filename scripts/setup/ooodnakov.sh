@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034,SC1091
 set -euo pipefail
 
 DEFAULT_REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 REPO_ROOT="${OOODNAKOV_REPO_ROOT:-$DEFAULT_REPO_ROOT}"
 PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
+# shellcheck source=/dev/null
+source "$PYTHON_LIB"
 SETUP="$REPO_ROOT/scripts/setup/setup.sh"
 DELETE="$REPO_ROOT/scripts/setup/delete.sh"
 BOOTSTRAP="$REPO_ROOT/bootstrap.sh"
@@ -55,6 +58,7 @@ source "$REPO_ROOT/scripts/setup/lib/oooconf-help.sh"
 source "$REPO_ROOT/scripts/setup/lib/oooconf-dispatch.sh"
 
 if [ "${OOODNAKOV_OOSCRIPT:-0}" = "1" ]; then
+  # shellcheck disable=SC2317
   return 0 2>/dev/null || exit 0
 fi
 

@@ -94,7 +94,8 @@ upsert_override_line() {
         }
       }
     ' "$target" >"$tmp_file"
-  mv "$tmp_file" "$target"
+  cat "$tmp_file" >"$target"
+  rm -f "$tmp_file"
 }
 
 get_zsh_prompt_mode() {

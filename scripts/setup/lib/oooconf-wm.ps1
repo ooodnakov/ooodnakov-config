@@ -415,7 +415,7 @@ function Invoke-WmCommand {
 
             Write-UiLine -Role info -Message "Switching to $choice..."
             # Stop everything first
-            & "$PSScriptRoot/ooodnakov.ps1" wm stop
+            & (Join-Path $RepoRoot "scripts/setup/ooodnakov.ps1") wm stop
             Start-Sleep -Milliseconds 500
 
             if ($choice -eq "komorebi") {
