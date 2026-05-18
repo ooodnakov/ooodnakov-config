@@ -22,16 +22,18 @@ function Invoke-SetupCommand {
         if (-not $SupportsDryRun) {
             throw "--dry-run is not supported for $SetupCommand"
         }
+        $global:LASTEXITCODE = 0
         & $SetupScript $SetupCommand -DryRun -SkipDeps:$skipDepsRequested @setupArgs
-        if ($LASTEXITCODE -ne 0) {
-            throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
+        if (-not $?) {
+            throw "setup $SetupCommand failed"
         }
         return
     }
 
+    $global:LASTEXITCODE = 0
     & $SetupScript $SetupCommand -SkipDeps:$skipDepsRequested @setupArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "setup $SetupCommand failed with exit code $LASTEXITCODE"
+    if (-not $?) {
+        throw "setup $SetupCommand failed"
     }
 }
 

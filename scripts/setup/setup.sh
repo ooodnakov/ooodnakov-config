@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034,SC1091
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -64,6 +65,7 @@ source "$REPO_ROOT/scripts/setup/lib/setup-doctor.sh"
 
 shift || true
 cli_selected_optional_keys=()
+selected_optional_key_csv="${OOODNAKOV_SELECTED_OPTIONAL_KEYS:-}"
 while [ "$#" -gt 0 ]; do
   case "$1" in
   --dry-run) DRY_RUN=1 ;;
@@ -283,7 +285,7 @@ install_auto_uv_env
 
 progress_step "Linking managed config files"
 if command -v python3 >/dev/null 2>&1; then
-  while IFS='|' read -r key source_rel target_path; do
+  while IFS='|' read -r _key source_rel target_path; do
     link_file "$source_rel" "$target_path" || true
   done < <(python3 "$LINK_MANAGER" --repo-root "$REPO_ROOT" --format text 2>/dev/null || true)
 else
