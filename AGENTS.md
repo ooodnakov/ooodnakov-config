@@ -54,7 +54,7 @@ Do not treat `third_party/` as active config unless the user explicitly asks to 
 ## Editing rules
 
 - Prefer changing active config in `home/` rather than editing files in `third_party/`.
-- Keep secrets out of git. Tokens, private keys, and machine-only values belong in local ignored files only.
+- Keep secrets out of git. Tokens, private keys, and machine-specific values belong in local ignored files only.
 - Preserve reproducibility. Prefer pinned versions, deterministic paths, and explicit setup steps.
 - Keep cross-platform behavior in shared config only when it is safe on Linux, Windows, and macOS.
 - Put host-specific behavior in local override examples or documented local files, not in tracked base config.
