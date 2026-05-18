@@ -51,7 +51,7 @@ return {
 		left = '0.5cell',
 		right = '0.5cell',
 		top = '0.5cell',
-		bottom = '2cell',
+		bottom = '0.5cell',
 	},
 	adjust_window_size_when_changing_font_size = false,
 	window_frame = {
