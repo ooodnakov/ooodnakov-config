@@ -62,6 +62,9 @@ exec-on-workspace-change = [
 [key-mapping]
 preset = 'qwerty'
 
+# [key-mapping.key-notation-to-key-code]
+#     apostrophe = "'"
+
 # Gaps between windows (inner-*) and between monitor edges (outer-*).
 # Possible values:
 # - Constant:     gaps.outer.top = 8
@@ -198,6 +201,7 @@ alt-tab = 'workspace-back-and-forth'
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
 alt-shift-tab = ['move-workspace-to-monitor --wrap-around next']
 
+f14 = 'exec-and-forget /Users/a.odnakov/.config/aerospace/scripts/nsp.sh com.github.wez.wezterm WezTerm'
 
 [workspace-to-monitor-force-assignment]
 
@@ -257,6 +261,10 @@ run = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'kontur.talk'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.github.wez.wezterm'
 run = 'layout floating'
 
 [[on-window-detected]]
