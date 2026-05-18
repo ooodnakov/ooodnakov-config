@@ -200,9 +200,14 @@
                     "width": 200
                 },
                 {
+                    "defaultSettings": {
+                    },
                     "id": "plugin:mirror-mirror"
                 },
                 {
+                    "defaultSettings": {
+                        "iconColor": "none"
+                    },
                     "id": "plugin:plugin-manager"
                 },
                 {
