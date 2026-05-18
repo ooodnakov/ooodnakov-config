@@ -195,7 +195,7 @@
             "right": [
                 {
                     "colorName": "primary",
-                    "hideWhenIdle": false,
+                    "hideWhenIdle": true,
                     "id": "AudioVisualizer",
                     "width": 200
                 },
