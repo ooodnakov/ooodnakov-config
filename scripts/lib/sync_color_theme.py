@@ -1153,8 +1153,21 @@ def _replace_hex_values(value: Any, replacements: dict[str, str]) -> Any:
     return value
 
 
+def _canonical_omp_source() -> Path | None:
+    """Return the path to the canonical ooodnakov.omp.json if it exists."""
+    repo_root = os.environ.get("OOODNAKOV_REPO_ROOT")
+    if repo_root:
+        canonical = Path(repo_root) / "home" / ".config" / "ohmyposh" / "ooodnakov.omp.json"
+        if canonical.exists():
+            return canonical
+    return None
+
+
 def set_oh_my_posh_theme(theme: str, mode: str = DEFAULT_COLOR_MODE) -> str:
-    source = config_home() / "ohmyposh" / "ooodnakov.omp.json"
+    # Prefer the canonical theme from the repo root if available.
+    # This ensures new features/segments added to the canonical theme
+    # are included in themed local configs when `oooconf color` is run.
+    source = _canonical_omp_source() or config_home() / "ohmyposh" / "ooodnakov.omp.json"
     if not source.exists():
         return f"oh-my-posh: skipped ({source} not found)"
 
