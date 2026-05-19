@@ -1,36 +1,35 @@
 {
   "mcp_servers": {
-    "playwright": {
-      "command": "pnpm",
-      "args": [
-        "dlx",
-        "@playwright/mcp@latest"
-      ],
-      "description": "headless browser automation and web testing"
-    },
     "context7": {
-      "command": "pnpm",
       "args": [
         "dlx",
         "@upstash/context7-mcp",
         "--api-key",
         "{CONTEXT7_API_KEY}"
       ],
+      "command": "pnpm",
+      "description": "documentation search and code examples for thousands of libraries",
       "env_vars": [
         "CONTEXT7_API_KEY"
-      ],
-      "description": "documentation search and code examples for thousands of libraries"
+      ]
     },
     "github": {
-      "command": "pnpm",
       "args": [
         "dlx",
         "@modelcontextprotocol/server-github"
       ],
+      "command": "pnpm",
       "description": "GitHub API access (repositories, issues, PRs)"
     },
-    "ssh-mcp-openwrt": {
+    "playwright": {
+      "args": [
+        "dlx",
+        "@playwright/mcp@latest"
+      ],
       "command": "pnpm",
+      "description": "headless browser automation and web testing"
+    },
+    "ssh-mcp-openwrt": {
       "args": [
         "dlx",
         "ssh-mcp",
@@ -40,10 +39,10 @@
         "--user=root",
         "--timeout=30000",
         "--maxChars=none"
-      ]
+      ],
+      "command": "pnpm"
     },
     "ssh-mcp-orange": {
-      "command": "pnpm",
       "args": [
         "dlx",
         "ssh-mcp",
@@ -53,11 +52,19 @@
         "--user=rem",
         "--timeout=30000",
         "--maxChars=none"
-      ]
+      ],
+      "command": "pnpm"
     }
   },
-  "skills": [
-  ],
   "skill_specs": [
+    {
+      "agent": "gemini",
+      "description": "Added via oooconf agents skills add (context7)",
+      "name": "context7",
+      "source": "https://github.com/context7"
+    }
+  ],
+  "skills": [
+    "context7 (gemini)"
   ]
 }
