@@ -10,7 +10,8 @@
     "npm:@samfp/pi-memory",
     "npm:@ff-labs/pi-fff",
     "npm:@ifi/oh-pi-themes",
-    "npm:@victor-software-house/pi-curated-themes"
+    "npm:@victor-software-house/pi-curated-themes",
+    "npm:pi-powerline"
   ],
   "defaultProvider": "minimax",
   "defaultModel": "MiniMax-M2.7",

@@ -5,7 +5,7 @@ local kan = sbar.add("item", "kan", {
 	update_freq = 1,
 	icon = {
 		string = "",
-		font = "MesloLGSDZ Nerd Font Mono:Regular:13.0",
+		font = "MesloLGSDZ Nerd Font Mono:Regular:20.0",
 		padding_left = 4,
 		color = colors.TEXT_GREY,
 	},

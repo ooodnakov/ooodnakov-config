@@ -5,6 +5,22 @@ local all_workspaces = {}
 local workspace_states = {}
 local spaces_ready = false
 
+local IGNORED_WORKSPACES = {
+	NSP = true,
+}
+
+local function is_ignored_workspace(sid)
+	return IGNORED_WORKSPACES[tostring(sid)] == true
+end
+
+local function normalize_workspace_id(sid)
+	return tostring(sid or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function is_ignored_workspace(sid)
+	return IGNORED_WORKSPACES[normalize_workspace_id(sid)] == true
+end
+
 local function trim(value)
 	return (value or ""):gsub("%s+$", "")
 end
@@ -112,7 +128,7 @@ local function build_current_state(callback)
 			local monitors = split_lines(monitors_raw)
 
 			if #monitors == 0 then
-					if focused_workspace ~= "" then
+					if focused_workspace ~= "" and not is_ignored_workspace(focused_workspace) then
 						local previous = workspace_states[focused_workspace]
 						state[focused_workspace] = {
 							drawing = "on",
@@ -136,7 +152,7 @@ local function build_current_state(callback)
 					return
 				end
 
-					if focused_workspace ~= "" and state[focused_workspace] == nil then
+					if focused_workspace ~= "" and not is_ignored_workspace(focused_workspace) and state[focused_workspace] == nil then
 						local previous = workspace_states[focused_workspace]
 						state[focused_workspace] = {
 							drawing = "on",
@@ -153,8 +169,15 @@ local function build_current_state(callback)
 
 			for i, mid in ipairs(monitors) do
 				run("aerospace list-workspaces --monitor " .. mid .. " --empty no", function(workspaces_raw)
-					local non_empty_workspaces = split_lines(workspaces_raw)
+					local non_empty_workspaces = {}
 
+					for _, sid in ipairs(split_lines(workspaces_raw)) do
+						sid = normalize_workspace_id(sid)
+
+						if sid ~= "" and not is_ignored_workspace(sid) then
+							table.insert(non_empty_workspaces, sid)
+						end
+					end
 					if #non_empty_workspaces == 0 then
 						finish_monitor()
 						return
@@ -265,8 +288,15 @@ end
 
 local function initialize_spaces()
 	run("aerospace list-workspaces --all", function(workspaces_raw)
-		all_workspaces = split_lines(workspaces_raw)
+		all_workspaces = {}
 
+		for _, sid in ipairs(split_lines(workspaces_raw)) do
+			sid = normalize_workspace_id(sid)
+
+			if sid ~= "" and not is_ignored_workspace(sid) then
+				table.insert(all_workspaces, sid)
+			end
+		end
 		for _, sid in ipairs(all_workspaces) do
 			local space = sbar.add("item", "space." .. sid, {
 				position = "left",
@@ -377,7 +407,7 @@ local function initialize_spaces()
 		end)
 
 		observer:subscribe("aerospace_monitor_change", function(env)
-			if env.FOCUSED_WORKSPACE and env.TARGET_MONITOR then
+			if env.FOCUSED_WORKSPACE and env.TARGET_MONITOR and not is_ignored_workspace(env.FOCUSED_WORKSPACE) then
 				sbar.set("space." .. env.FOCUSED_WORKSPACE, {
 					display = env.TARGET_MONITOR,
 				})
