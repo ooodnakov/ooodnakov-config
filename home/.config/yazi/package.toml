@@ -52,3 +52,8 @@ hash = "e207c84b429a7d491cb11602cb2d3b3a"
 use = "BennyOe/tokyo-night"
 rev = "8e6296f"
 hash = "49258e379077f4b0d2e62dfdb131c7d"
+
+[[flavor.deps]]
+use = "yazi-rs/flavors:catppuccin-frappe"
+rev = "54ab389"
+hash = "1844f850b0c5d1af511c84399c95e3d7"
