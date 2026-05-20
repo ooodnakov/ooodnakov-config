@@ -19,6 +19,7 @@ _oooconf_commands=(
   'secrets:sync or validate local secret env files'
   'shell:manage local shell preferences'
   'color:set a unified oooconf CLI color theme and mode'
+  'delta:inject or manage git-delta gitconfig'
   'version:show version information'
   'check:alias for doctor'
   'preview:alias for dry-run'
@@ -210,16 +211,34 @@ _oooconf_deps() {
 _oooconf_update() {
   local context state line
   typeset -A opt_args
-  local -a values
-  values=("${_oooconf_values_deps_keys[@]}")
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
-    '--all[select all dependency keys at once]' \
     '-h[show help]' \
     '--help[show help]' \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_delta() {
+  local context state line
+  typeset -A opt_args
+  local -a values
+  values=(
+    'inject:write delta git config to ~/.gitconfig'
+    'status:check whether delta is configured in ~/.gitconfig'
+    'remove:remove ooodnakov delta config block from ~/.gitconfig'
+  )
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    'inject[write delta git config to ~/.gitconfig]' \
+    'status[check whether delta is configured in ~/.gitconfig]' \
+    'remove[remove ooodnakov delta config block from ~/.gitconfig]' \
     '1:value:->value' \
     '*:arg:->args'
 
@@ -1958,6 +1977,11 @@ _oooconf_main() {
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_color
+          ;;
+        delta)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_delta
           ;;
         version)
           words=("${(@)words[i,-1]}")

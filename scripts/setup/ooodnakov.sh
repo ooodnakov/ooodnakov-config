@@ -42,6 +42,8 @@ OOOCONF_OMP_CONFIG_VAR="OOOCONF_OMP_CONFIG"
 OOOCONF_ZSH_PROMPT_VAR="OOOCONF_ZSH_PROMPT"
 OOOCONF_PROMPT_STYLE_VAR="OOOCONF_PROMPT_STYLE"
 
+# shellcheck source=scripts/setup/lib/oooconf-delta.sh
+source "$REPO_ROOT/scripts/setup/lib/oooconf-delta.sh"
 # shellcheck source=scripts/setup/lib/oooconf-ui.sh
 source "$REPO_ROOT/scripts/setup/lib/oooconf-ui.sh"
 # shellcheck source=scripts/setup/lib/oooconf-shell.sh
@@ -251,6 +253,9 @@ case "$command" in
     ;;
   color)
     handle_color_command "$@"
+    ;;
+  delta)
+    handle_delta_command "$@"
     ;;
   wm)
     handle_wm_command "$@"

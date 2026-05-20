@@ -1,7 +1,7 @@
 # Dot-sourced by scripts/setup/ooodnakov.ps1; do not execute directly.
 
 function Get-KnownCommands {
-    $fallback = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "color", "version", "check", "preview", "upgrade")
+    $fallback = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "color", "delta", "version", "check", "preview", "upgrade")
     if (-not (Test-Path $CommandsFile)) {
         return $fallback
     }
@@ -227,6 +227,7 @@ function Show-Usage {
     Write-UiSectionFancy -IconName "shell" -Title "Shell / Secrets / Agents"
     Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
     Write-UiCommandRow -CommandName "color" -Description "set a unified oooconf CLI color theme"
+    Write-UiCommandRow -CommandName "delta" -Description "inject or manage git-delta gitconfig"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
     Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
     Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
@@ -539,6 +540,9 @@ Examples:
   oooconf color catppuccin             # switch to Catppuccin colors
   oooconf color noctalia               # switch to Noctalia colors
 "@
+        }
+        "delta" {
+            Invoke-DeltaCommand -DeltaArgs @("help")
         }
         "wm" {
             Write-UiHelpBlock @"

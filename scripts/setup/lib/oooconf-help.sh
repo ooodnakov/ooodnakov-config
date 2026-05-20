@@ -217,6 +217,7 @@ EOF
   ui_section_fancy "shell" "Shell / Secrets / Agents"
   ui_command_row "shell" "manage local shell preferences such as forgit aliases"
   ui_command_row "color" "set a unified oooconf CLI color theme"
+  ui_command_row "delta" "inject or manage git-delta gitconfig"
   ui_command_row "secrets" "sync or validate local secret env files"
   ui_command_row "agents" "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
 
@@ -496,6 +497,9 @@ EOF
       ;;
     color)
       handle_color_command help
+      ;;
+    delta)
+      handle_delta_command help
       ;;
     version)
       cat <<'EOF' | ui_render_help_block

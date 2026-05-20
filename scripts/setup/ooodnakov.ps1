@@ -81,6 +81,7 @@ $UiAnsi = @{
 . (Join-Path $RepoRoot "scripts/setup/lib/oooconf-wm.ps1")
 . (Join-Path $RepoRoot "scripts/setup/lib/oooconf-bar.ps1")
 . (Join-Path $RepoRoot "scripts/setup/lib/oooconf-help.ps1")
+. (Join-Path $RepoRoot "scripts/setup/lib/oooconf-delta.ps1")
 . (Join-Path $RepoRoot "scripts/setup/lib/oooconf-dispatch.ps1")
 $KnownCommands = Get-KnownCommands
 
@@ -266,6 +267,9 @@ switch ($command) {
     }
     "color" {
         Invoke-ColorCommand -ColorArgs $remaining
+    }
+    "delta" {
+        Invoke-DeltaCommand -DeltaArgs $remaining
     }
     "agents" {
         Assert-NoDryRun -CommandName "agents"

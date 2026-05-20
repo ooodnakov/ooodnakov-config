@@ -38,8 +38,12 @@ value_set = "deps_keys"
 
 [commands.update]
 description = "update the repo, then re-run install"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--all" = "select all dependency keys at once", "-h" = "show help", "--help" = "show help" }
-value_set = "deps_keys"
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+
+[commands.delta]
+description = "inject or manage git-delta gitconfig"
+options = { "inject" = "write delta git config to ~/.gitconfig", "status" = "check whether delta is configured in ~/.gitconfig", "remove" = "remove ooodnakov delta config block from ~/.gitconfig" }
+values = { "inject" = "write delta git config to ~/.gitconfig", "status" = "check whether delta is configured in ~/.gitconfig", "remove" = "remove ooodnakov delta config block from ~/.gitconfig" }
 
 [commands.doctor]
 description = "validate managed links and tools"

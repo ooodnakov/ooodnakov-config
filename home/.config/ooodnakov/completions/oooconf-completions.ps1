@@ -22,6 +22,7 @@ function Get-OooconfCompletions {
         'secrets',
         'shell',
         'color',
+        'delta',
         'version',
         'check',
         'preview',
@@ -255,6 +256,14 @@ function Get-OooconfCompletions {
             Options = @()
             OptionsWithArgs = @()
             Values = @()
+            Subcommands = @()
+            OptionValues = @{
+            }
+        }
+        'delta' = @{
+            Options = @('inject', 'status', 'remove')
+            OptionsWithArgs = @()
+            Values = @('inject', 'status', 'remove')
             Subcommands = @()
             OptionValues = @{
             }
@@ -530,9 +539,9 @@ function Get-OooconfCompletions {
             }
         }
         'update' = @{
-            Options = @('--dry-run', '--yes-optional', '--all', '-h', '--help')
+            Options = @('--dry-run', '--yes-optional', '-h', '--help')
             OptionsWithArgs = @()
-            Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'brew', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar', 'pandoc', 'pi-coding-agent')
+            Values = @()
             Subcommands = @()
             OptionValues = @{
             }
