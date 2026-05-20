@@ -139,7 +139,7 @@ Changes should normally land in `home/` or `scripts/`, not by replacing active c
 
 Current validation focuses on:
 
-- shell syntax checks on Linux and macOS
+- shell syntax checks on Linux and macOS (`bash -n` on entrypoints and `scripts/setup/lib/*.sh`)
 - `shellcheck` on Linux and macOS
 - PowerShell parser validation on Windows
 - lock artifact reproducibility checks on Linux and macOS

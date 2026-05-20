@@ -40,6 +40,8 @@ The public CLI is split across a small set of files:
    - Update `README.md` for user-facing command changes.
    - Update `docs/architecture.md` for layout or responsibility changes.
    - Update `docs/reproducibility.md` when setup, install, lock, or generated-artifact behavior changes.
+   - Update [`docs/contributing.md`](docs/contributing.md) for validation or workflow changes.
+   - Update [`AGENTS.md`](../AGENTS.md) for policy-level behavioral changes.
 
 ## Command Metadata Patterns
 
