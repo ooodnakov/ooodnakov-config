@@ -35,6 +35,7 @@ After changing bootstrap logic, setup/CLI helper scripts, or Python configuratio
   bash -n scripts/setup/minimal-setup.sh
   bash -n scripts/setup/lib/*.sh
   shellcheck scripts/setup/setup.sh scripts/setup/ooodnakov.sh scripts/setup/delete.sh scripts/update/update-pins.sh scripts/setup/minimal-setup.sh bootstrap.sh
+  # Note: lib modules (scripts/setup/lib/*.sh) are syntax-checked via bash -n above; full shellcheck coverage is pending.
   ```
 
 - **PowerShell scripts (.ps1):** Validate using PSScriptAnalyzer via `pwsh`.

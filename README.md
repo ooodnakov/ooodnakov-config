@@ -435,6 +435,7 @@ Upstream inspirations:
 Reference docs:
 
 - architecture notes: [`docs/architecture.md`](docs/architecture.md)
+- CLI extension guide: [`docs/cli-extension-guide.md`](docs/cli-extension-guide.md)
 - contributing workflow: [`docs/contributing.md`](docs/contributing.md)
 - reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
 - dependency decisions: [`docs/dependency-decisions.md`](docs/dependency-decisions.md)
