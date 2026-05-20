@@ -64,3 +64,4 @@ home/.config/yazi/theme.toml
 home/.glzr/zebar/ooodnakov/theme-overrides.css
 home/.glzr/zebar/ooodnakov-komorebi/theme-overrides.css
 deps.lock.json
+home/.pi/agent/run-history.jsonl
