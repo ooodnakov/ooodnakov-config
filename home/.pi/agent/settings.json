@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.75.1",
+  "lastChangelogVersion": "0.75.4",
   "packages": [
     "npm:context-mode",
     "npm:pi-subagents",
@@ -10,8 +10,11 @@
     "npm:@samfp/pi-memory",
     "npm:@ff-labs/pi-fff",
     "npm:@ifi/oh-pi-themes",
-    "npm:@victor-software-house/pi-curated-themes",
-    "npm:pi-powerline"
+    "npm:pi-powerline",
+    "npm:@plannotator/pi-extension",
+    "npm:@juicesharp/rpiv-todo",
+    "npm:@juicesharp/rpiv-ask-user-question",
+    "npm:pi-caveman"
   ],
   "defaultProvider": "minimax",
   "defaultModel": "MiniMax-M2.7",
