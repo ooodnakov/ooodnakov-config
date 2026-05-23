@@ -42,7 +42,6 @@ options = { "--dry-run" = "preview actions without changing files", "--yes-optio
 
 [commands.delta]
 description = "inject or manage git-delta gitconfig"
-options = { "inject" = "write delta git config to ~/.gitconfig", "status" = "check whether delta is configured in ~/.gitconfig", "remove" = "remove ooodnakov delta config block from ~/.gitconfig" }
 values = { "inject" = "write delta git config to ~/.gitconfig", "status" = "check whether delta is configured in ~/.gitconfig", "remove" = "remove ooodnakov delta config block from ~/.gitconfig" }
 
 [commands.doctor]

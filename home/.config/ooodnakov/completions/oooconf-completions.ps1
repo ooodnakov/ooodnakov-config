@@ -261,7 +261,7 @@ function Get-OooconfCompletions {
             }
         }
         'delta' = @{
-            Options = @('inject', 'status', 'remove')
+            Options = @()
             OptionsWithArgs = @()
             Values = @('inject', 'status', 'remove')
             Subcommands = @()

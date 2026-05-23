@@ -236,9 +236,6 @@ _oooconf_delta() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
-    'inject[write delta git config to ~/.gitconfig]' \
-    'status[check whether delta is configured in ~/.gitconfig]' \
-    'remove[remove ooodnakov delta config block from ~/.gitconfig]' \
     '1:value:->value' \
     '*:arg:->args'
 
