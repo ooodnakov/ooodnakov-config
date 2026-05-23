@@ -12,11 +12,6 @@ source = "home/.zshrc"
 target = "{HOME}/.zshrc"
 
 [[links]]
-key = "gitconfig"
-source = "home/.gitconfig"
-target = "{HOME}/.gitconfig"
-
-[[links]]
 key = "oooconf-bin"
 source = "home/.config/ooodnakov/bin/oooconf"
 target = "{LOCAL_BIN}/oooconf"
