@@ -591,4 +591,3 @@ function Select-OptionalDependenciesWithGum {
         }
     }
 }
-

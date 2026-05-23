@@ -225,9 +225,25 @@ function Confirm-Install {
         return $false
     }
 
+    if (Get-Command gum -ErrorAction SilentlyContinue) {
+        $transcriptActive = $script:TranscriptStarted
+        if ($transcriptActive) {
+            try { Stop-Transcript | Out-Null } catch {}
+        }
+        try {
+            & gum confirm $Prompt
+            return ($LASTEXITCODE -eq 0)
+        } finally {
+            if ($transcriptActive) {
+                try { Start-Transcript -Path $script:LogFile -Append | Out-Null } catch {}
+            }
+        }
+    }
+
+
+
     $reply = Read-Host "$Prompt [y/N]"
     return $reply -match '^(?i:y|yes)$'
 }
 
 $script:OptionalDependencySpecsCache = $null
-

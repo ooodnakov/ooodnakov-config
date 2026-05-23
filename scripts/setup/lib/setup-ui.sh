@@ -186,6 +186,14 @@ prompt_yes_no() {
     return 1
   fi
 
+  if command -v gum >/dev/null 2>&1; then
+    gum confirm "$prompt" </dev/tty 2>/dev/tty
+    local status=$?
+    stty sane </dev/tty 2>/dev/null || true
+    return $status
+  fi
+
+
   printf "%s [y/N] " "$prompt" >/dev/tty
   read -r reply </dev/tty
   case "$reply" in
