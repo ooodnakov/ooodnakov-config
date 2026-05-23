@@ -102,7 +102,7 @@ local function battery_info()
          icon = discharging_icons[idx]
       end
    end
-   
+
    if icon == '' then
       return charge, icon
    end

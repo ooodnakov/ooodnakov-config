@@ -1,6 +1,6 @@
 Host site
     HostName dnakov.ooo
-    User fr 
+    User fr
 
 Host siteroot
     HostName dnakov.ooo

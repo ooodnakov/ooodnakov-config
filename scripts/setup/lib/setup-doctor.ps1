@@ -171,4 +171,3 @@ function Test-Doctor {
 
     Write-UiLine -Role ok -Message "Doctor checks passed."
 }
-

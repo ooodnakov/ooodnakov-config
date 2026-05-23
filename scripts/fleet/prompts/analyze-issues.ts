@@ -1,6 +1,6 @@
 # GitHub Issue Analyzer Prompt Template
 
-**Source:** `analyze-issues.ts` from Google Jules Skills  
+**Source:** `analyze-issues.ts` from Google Jules Skills
 **License:** Apache License 2.0
 
 ## Overview
