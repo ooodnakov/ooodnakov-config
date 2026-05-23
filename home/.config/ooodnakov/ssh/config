@@ -1,10 +1,10 @@
 Host site
-    HostName 45.12.138.163
-    User root
+    HostName dnakov.ooo
+    User fr 
 
-Host sitealex
-    HostName 45.12.138.163
-    User alex
+Host siteroot
+    HostName dnakov.ooo
+    User root
 
 Host orangehome
     HostName 192.168.1.201
