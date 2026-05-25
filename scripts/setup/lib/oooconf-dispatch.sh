@@ -25,6 +25,7 @@ exec_setup_command() {
   local supports_dry_run="$2"
   shift 2
   local setup_args=()
+  # Initialize even if empty so ${setup_args[@]+"${setup_args[@]}"} works with set -u
   [ "$all_deps_requested" -eq 1 ] && [ "$setup_command" = "deps" ] && setup_args+=("--all")
   setup_args+=("$@")
 
@@ -35,15 +36,15 @@ exec_setup_command() {
       exit 1
     fi
     if [ "$yes_optional_requested" -eq 1 ]; then
-      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "${setup_args[@]}"
+      exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run ${setup_args[@]+"${setup_args[@]}"}
     fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run "${setup_args[@]}"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" --dry-run ${setup_args[@]+"${setup_args[@]}"}
   fi
 
   if [ "$yes_optional_requested" -eq 1 ]; then
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "${setup_args[@]}"
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_INSTALL_OPTIONAL=always OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" ${setup_args[@]+"${setup_args[@]}"}
   fi
-  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" "${setup_args[@]}"
+  exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" OOODNAKOV_SKIP_DEPS="$skip_deps_requested" "$SETUP" "$setup_command" ${setup_args[@]+"${setup_args[@]}"}
 }
 
 require_no_dry_run() {

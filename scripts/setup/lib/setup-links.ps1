@@ -251,4 +251,3 @@ function Ensure-UserPathContains {
 
     return $updated
 }
-
