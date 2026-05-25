@@ -6,6 +6,14 @@ Host siteroot
     HostName dnakov.ooo
     User root
 
+Host vps
+    HostName flagle.ru
+    User de 
+
+Host vpsroot
+    HostName flagle.ru
+    User root
+
 Host orangehome
     HostName 192.168.1.201
     User rem
