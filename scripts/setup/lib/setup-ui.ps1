@@ -230,4 +230,3 @@ function Confirm-Install {
 }
 
 $script:OptionalDependencySpecsCache = $null
-

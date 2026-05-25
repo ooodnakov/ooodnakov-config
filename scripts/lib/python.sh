@@ -7,7 +7,11 @@ oooconf_run_python() {
   shift
 
   if command -v uv >/dev/null 2>&1 && [ -f "$repo_root/pyproject.toml" ] && [ -z "${UV_RUN_RECURSION_DEPTH:-}" ]; then
-    (cd "$repo_root" && uv run "$@")
+    if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ]; then
+      (cd "$repo_root" && uv run --no-sync "$@")
+    else
+      (cd "$repo_root" && uv run "$@")
+    fi
   else
     (cd "$repo_root" && python3 "$@")
   fi

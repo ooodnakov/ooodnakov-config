@@ -136,13 +136,32 @@ mkdir -p "$(dirname "$TARGET_DIR")"
 
 if [ ! -d "$TARGET_DIR/.git" ]; then
   if git ls-remote "$REPO_URL" >/dev/null 2>&1; then
+    if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ]; then
+      git clone --filter=blob:none --no-checkout --depth 1 "$REPO_URL" "$TARGET_DIR"
+      git -C "$TARGET_DIR" sparse-checkout init --cone
+      git -C "$TARGET_DIR" sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh pyproject.toml optional-deps.toml deps.lock.json .python-version LICENSE README.md
+      git -C "$TARGET_DIR" checkout "$BRANCH"
+    else
     git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"
+    fi
   else
+    if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ]; then
+      git clone --filter=blob:none --no-checkout --depth 1 "$HTTPS_REPO_URL" "$TARGET_DIR"
+      git -C "$TARGET_DIR" sparse-checkout init --cone
+      git -C "$TARGET_DIR" sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh pyproject.toml optional-deps.toml deps.lock.json .python-version LICENSE README.md
+      git -C "$TARGET_DIR" checkout "$BRANCH"
+    else
     git clone --branch "$BRANCH" "$HTTPS_REPO_URL" "$TARGET_DIR"
+    fi
   fi
 else
   git -C "$TARGET_DIR" pull --ff-only
 fi
 
-chmod +x "$TARGET_DIR/scripts/setup/setup.sh"
-exec "$TARGET_DIR/scripts/setup/setup.sh" install
+if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ]; then
+  chmod +x "$TARGET_DIR/scripts/setup/minimal-setup.sh"
+  exec "$TARGET_DIR/scripts/setup/minimal-setup.sh" --yes-optional
+else
+  chmod +x "$TARGET_DIR/scripts/setup/setup.sh"
+  exec "$TARGET_DIR/scripts/setup/setup.sh" install
+fi

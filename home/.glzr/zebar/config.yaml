@@ -33,11 +33,3 @@ providers:
 
 # Path to the HTML template for the bar.
 template_path: "ooodnakov/index.html"
-
-
-
-
-
-
-
-

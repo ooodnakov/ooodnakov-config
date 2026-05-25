@@ -8,6 +8,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/cli/read_optional_deps.py"
 PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
 
+export OOODNAKOV_MINIMAL=1
+
 # shellcheck source=/dev/null
 source "$PYTHON_LIB"
 
@@ -43,7 +45,7 @@ echo "Installing minimal core tools: $MINIMAL_KEYS"
 echo "(non-interactive with --yes-optional)"
 
 # shellcheck disable=SC2086 # MINIMAL_KEYS is a trusted, space-delimited key list from optional-deps.toml.
-"$REPO_ROOT/scripts/setup/ooodnakov.sh" deps --yes-optional $MINIMAL_KEYS
+MINIMAL=1 "$REPO_ROOT/scripts/setup/ooodnakov.sh" deps --yes-optional $MINIMAL_KEYS
 
 echo ""
 echo "Minimal setup complete. Run 'oooconf deps' for additional optional tools."

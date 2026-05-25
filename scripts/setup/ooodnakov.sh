@@ -194,7 +194,7 @@ case "$command" in
   minimal)
     dry_run_arg=""
     [ "$dry_run_requested" -eq 1 ] && dry_run_arg="--dry-run"
-    exec "$REPO_ROOT/scripts/setup/minimal-setup.sh" $dry_run_arg
+    exec "$REPO_ROOT/scripts/setup/minimal-setup.sh" $dry_run_arg --yes-optional
   ;;
 
   update)
