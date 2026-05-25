@@ -17,6 +17,7 @@ binds {
     Mod+Space hotkey-overlay-title="Launcher" { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
     Mod+S hotkey-overlay-title="Control Center" { spawn-sh "qs -c noctalia-shell ipc call controlCenter toggle"; }
     Shift+F1 hotkey-overlay-title="Open a Terminal: wezterm" { spawn "wezterm"; }
+    ALT+V                               allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call plugin:clipper toggle"; }
 
     // Please choose your own file manager.
     Mod+E                               hotkey-overlay-title="File Manager" { spawn "dolphin"; }
