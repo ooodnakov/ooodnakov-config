@@ -8,3 +8,4 @@
 
 # Optional local theme override:
 #include dark-256.theme
+#color.active=bold white on green

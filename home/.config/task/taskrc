@@ -6,10 +6,14 @@
 data.location=~/.local/share/task
 hooks.location=~/.config/task/hooks
 
-# Local file is optional. Keep secrets out of git.
+# Color theme. Relative includes resolve from this taskrc directory.
+include gruvbox.theme
+
+# Local file is optional. Keep secrets and private overrides out of git.
+# Entries here can override the managed Gruvbox defaults above.
 include ~/.config/task/local/taskrc
 
-# Color theme (uncomment one locally or in local/taskrc)
+# Alternate color themes (uncomment one locally or in local/taskrc)
 #include light-16.theme
 #include light-256.theme
 #include bubblegum-256.theme

@@ -1,0 +1,65 @@
+# Gruvbox dark theme for Taskwarrior.
+# Palette uses xterm-256 approximations:
+# bg0=color235, bg1=color237, bg2=color239, fg=color223
+# red=color167, green=color142, yellow=color214, blue=color109
+# purple=color175, aqua=color108, orange=color208, gray=color245
+
+rule.precedence.color=deleted,completed,active,keyword.,tag.,project.,overdue,scheduled,due.today,due,blocked,blocking,recurring,tagged,uda.
+
+# General decoration
+color.label=color223
+color.label.sort=bold color223
+color.alternate=on color237
+color.header=bold color214
+color.footnote=color245
+color.warning=bold color235 on color214
+color.error=bold color223 on color167
+color.debug=color109
+
+# Task states
+color.completed=color245
+color.deleted=color239
+color.active=bold color235 on color142
+color.recurring=bold color175
+color.scheduled=color109
+color.until=color108
+color.blocking=bold color235 on color214
+color.blocked=color245
+color.overdue=bold color167
+color.due.today=bold color208
+color.due=color214
+color.tagged=color108
+color.project.none=color245
+color.tag.none=color245
+
+# Priority UDA
+color.uda.priority.H=bold color167
+color.uda.priority.M=bold color214
+color.uda.priority.L=color108
+
+# Burndown/history/summary reports
+color.burndown.done=bold color235 on color142
+color.burndown.pending=color223 on color167
+color.burndown.started=color235 on color214
+color.history.add=bold color142
+color.history.delete=bold color167
+color.history.done=bold color108
+color.summary.background=on color237
+color.summary.bar=on color142
+
+# Calendar
+color.calendar.today=bold color235 on color214
+color.calendar.due=color235 on color109
+color.calendar.due.today=bold color235 on color208
+color.calendar.overdue=bold color223 on color167
+color.calendar.scheduled=color235 on color108
+color.calendar.weekend=color245
+color.calendar.holiday=color175
+color.calendar.weeknumber=color245
+
+# Sync/undo
+color.sync.added=color142
+color.sync.changed=color214
+color.sync.rejected=color167
+color.undo.after=color142
+color.undo.before=color167
