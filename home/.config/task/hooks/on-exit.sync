@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+# Sync Taskwarrior after commands that add or modify tasks.
+# Keep hook silent and non-fatal so task output/TUI exit is not disrupted.
+
+set -eu
+
+case " ${*:-} " in
+  *" command:sync "*|*" command:_show "*|*" command:show "*|*" command:diagnostics "*|*" command:diag "*)
+    exit 0
+    ;;
+esac
+
+# on-exit receives JSON only when command added/modified tasks.
+# No changed task means no sync needed.
+if ! IFS= read -r _changed_task; then
+  exit 0
+fi
+
+if ! command -v task >/dev/null 2>&1; then
+  exit 0
+fi
+
+# Disable hooks for inner sync to avoid recursive on-exit invocation.
+task rc.hooks=off sync >/dev/null 2>&1 || true
+
+exit 0

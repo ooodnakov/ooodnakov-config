@@ -17,19 +17,6 @@ alias du='dua i'
 alias n='nvim'
 alias tt='taskwarrior-tui'
 
-# Run Taskwarrior sync after leaving taskwarrior-tui.
-# `command` bypasses this function and calls the real executable.
-taskwarrior-tui() {
-  command taskwarrior-tui "$@"
-  local tui_status=$?
-
-  if (( tui_status != 127 )) && command -v task >/dev/null 2>&1; then
-    task sync
-  fi
-
-  return $tui_status
-}
-
 # Git aliases
 
 case "${OOODNAKOV_FORGIT_ALIAS_MODE:-plain}" in
