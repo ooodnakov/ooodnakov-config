@@ -1,7 +1,10 @@
+git:
+  pagers:
+    - pager: delta --dark --paging=never
 gui:
   language: en
 os:
-  editPreset: 'nvim'
+  editPreset: "nvim"
 customCommands:
   - key: "C"
     context: "files"

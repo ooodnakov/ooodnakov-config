@@ -15,6 +15,7 @@ alias we="curl -Ss https://wttr.in/"
 alias ff='fastfetch'
 alias du='dua i'
 alias n='nvim'
+alias tt='taskwarrior-tui'
 
 # Git aliases
 
