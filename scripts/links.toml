@@ -27,10 +27,24 @@ source = "home/.config/ooodnakov/bin/o"
 target = "{LOCAL_BIN}/o"
 
 [[links]]
+key = "pi"
+source = "home/.pi"
+target = "{HOME}/.pi"
+
+[[links]]
+key = "pi-lens"
+source = "home/.pi-lens"
+target = "{HOME}/.pi-lens"
+
+# --- linux-only ---
+
+[[links]]
 key = "noctalia"
 source = "home/.config/noctalia"
 target = "{CONFIG_HOME}/noctalia"
 only = "linux"
+
+# --- macos-only ---
 
 [[links]]
 key = "aerospace"
@@ -93,8 +107,3 @@ key = "zebar"
 source = "home/.glzr/zebar"
 target = "{HOME}/.glzr/zebar"
 only = "windows"
-
-[[links]]
-key = "pi"
-source = "home/.pi"
-target = "{HOME}/.pi"

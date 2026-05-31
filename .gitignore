@@ -40,6 +40,11 @@ home/.pi/agent/npm
 home/.pi/context-mode/sessions
 home/.pi/memory
 home/.pi/exa-usage.json
+home/.pi-lens/projects
+home/.pi-lens/tools
+home/.pi-lens/bin
+home/.pi-lens/sessionstart.log
+home/.pi-lens/probe-cache.json
 
 .zcompdump*
 

@@ -9,7 +9,7 @@ export VISUAL="${VISUAL:-$EDITOR}"
 export PAGER="${PAGER:-less}"
 export LESS="-FRX"
 export YAZI_CONFIG_HOME="${YAZI_CONFIG_HOME:-$HOME/.config/yazi}"
-
+export PILENS_DATA_DIR="${PILENS_DATA_DIR:-$HOME/.pi-lens/data}"
 export SUDO_EDITOR="${SUDO_EDITOR:-$EDITOR}"
 alias snvim="sudo -e"
 

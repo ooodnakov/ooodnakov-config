@@ -14,7 +14,8 @@
     "npm:@plannotator/pi-extension",
     "npm:@juicesharp/rpiv-todo",
     "npm:@juicesharp/rpiv-ask-user-question",
-    "npm:pi-caveman"
+    "npm:pi-caveman",
+    "npm:pi-lens"
   ],
   "defaultProvider": "minimax",
   "defaultModel": "MiniMax-M2.7",

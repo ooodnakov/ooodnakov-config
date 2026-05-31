@@ -11,7 +11,7 @@ $env:OOODNAKOV_SHARE_HOME = if ($env:OOODNAKOV_SHARE_HOME) { $env:OOODNAKOV_SHAR
 $env:OOODNAKOV_STATE_HOME = if ($env:OOODNAKOV_STATE_HOME) { $env:OOODNAKOV_STATE_HOME } else { Join-Path $HOME ".local/state/ooodnakov-config" }
 $env:OOODNAKOV_CACHE_HOME = if ($env:OOODNAKOV_CACHE_HOME) { $env:OOODNAKOV_CACHE_HOME } else { Join-Path $HOME ".cache/ooodnakov-config" }
 $env:YAZI_CONFIG_HOME = if ($env:YAZI_CONFIG_HOME) { $env:YAZI_CONFIG_HOME } else { Join-Path $HOME ".config/yazi" }
-
+$ENV:PILENS_DATA_DIR = Join-Path $HOME ".pi-lens" "data"
 function Add-PathEntry {
     param(
         [Parameter(Mandatory = $true)]
