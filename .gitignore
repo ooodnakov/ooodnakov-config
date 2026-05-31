@@ -38,6 +38,7 @@ home/.pi/cache
 home/.pi/agent/npm
 home/.pi/context-mode/sessions
 home/.pi/memory
+home/.pi/exa-usage.json
 
 .zcompdump*
 
