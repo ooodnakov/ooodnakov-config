@@ -1,0 +1,10 @@
+# Copy to ~/.config/task/local/taskrc and fill machine-private values.
+# ~/.config/task/local/taskrc is ignored by git.
+
+# Taskchampion sync example:
+#sync.server.origin=https:\/\/taskd.example.com
+#sync.server.client_id=00000000-0000-0000-0000-000000000000
+#sync.encryption_secret=replace-me
+
+# Optional local theme override:
+#include dark-256.theme

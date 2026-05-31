@@ -12,6 +12,11 @@ source = "home/.zshrc"
 target = "{HOME}/.zshrc"
 
 [[links]]
+key = "taskrc"
+source = "home/.config/task/taskrc"
+target = "{HOME}/.taskrc"
+
+[[links]]
 key = "oooconf-bin"
 source = "home/.config/ooodnakov/bin/oooconf"
 target = "{LOCAL_BIN}/oooconf"

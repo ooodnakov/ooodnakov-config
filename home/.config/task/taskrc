@@ -1,0 +1,27 @@
+# Managed by oooconf.
+# Portable Taskwarrior defaults live here.
+# Machine-specific sync credentials and private overrides belong in:
+#   ~/.config/task/local/taskrc
+
+data.location=~/.local/share/task
+hooks.location=~/.config/task/hooks
+
+# Local file is optional. Keep secrets out of git.
+include ~/.config/task/local/taskrc
+
+# Color theme (uncomment one locally or in local/taskrc)
+#include light-16.theme
+#include light-256.theme
+#include bubblegum-256.theme
+#include dark-16.theme
+#include dark-256.theme
+#include dark-red-256.theme
+#include dark-green-256.theme
+#include dark-blue-256.theme
+#include dark-violets-256.theme
+#include dark-yellow-green.theme
+#include dark-gray-256.theme
+#include dark-gray-blue-256.theme
+#include solarized-dark-256.theme
+#include solarized-light-256.theme
+#include no-color.theme

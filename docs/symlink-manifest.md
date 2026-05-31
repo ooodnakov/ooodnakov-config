@@ -60,7 +60,7 @@ Examples: `home/.config/wezterm/` → `~/.config/wezterm`, `home/.config/yazi/` 
 - The current manifest has no active discovery excludes, so `home/.config/ooodnakov` is also linked into `~/.config/ooodnakov`. Its ignored `local/` children hold machine-specific overrides while tracked examples stay reproducible.
 
 **When to add an explicit `[[links]]` entry:**
-- Files (not directories), e.g., `home/.zshrc` → `~/.zshrc`
+- Files (not directories), e.g., `home/.zshrc` → `~/.zshrc` or managed Taskwarrior `home/.config/task/taskrc` → `~/.taskrc`
 - Platform-specific links (`only = "windows" | "linux" | "macos"`)
 - Non-standard targets that don't follow the `{CONFIG_HOME}/<key>` convention
 

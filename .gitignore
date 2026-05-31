@@ -25,6 +25,7 @@ home/.config/ooodnakov/local/*.ssh
 home/.config/ooodnakov/local/links.local.toml
 home/.config/ooodnakov/local/agents/data.json
 home/.config/ooodnakov/cache/*
+home/.config/task/local/taskrc
 home/.config/nvim/.neoconf.json
 home/.config/omniwm/runtime-state.json
 home/.config/zsh/.zsh_history

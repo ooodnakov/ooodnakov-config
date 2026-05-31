@@ -10,7 +10,7 @@ Active tracked config lives under `home/` and includes:
 
 - Zsh entrypoints, modular Zsh config, pinned shell helpers, and generated completions
 - shared portable environment files plus ignored local override templates
-- WezTerm, Yazi, LazyVim/Neovim, LazyGit, LazyDocker, btop, CAVA, todo.txt, and ccstatusline config
+- WezTerm, Yazi, LazyVim/Neovim, LazyGit, LazyDocker, btop, CAVA, todo.txt, Taskwarrior, and ccstatusline config
 - PowerShell profile, PowerShell completions, Oh My Posh, and shared SSH include config
 - Linux desktop config for Niri and Noctalia
 - Windows window-manager config for Komorebi, GlazeWM, Zebar, and the `.pi` coding agent
@@ -340,8 +340,9 @@ Additional local-only files you may create per machine:
 - `~/.config/ooodnakov/local/env.zsh`
 - `~/.config/ooodnakov/local/env.ps1`
 - `~/.config/ooodnakov/local/wezterm.lua`
+- `~/.config/task/local/taskrc` for Taskwarrior sync credentials and private overrides
 
-Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local).
+Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local). Taskwarrior's local example lives in [`home/.config/task/local/taskrc.example`](home/.config/task/local/taskrc.example).
 
 To sync shared secrets across machines, keep Bitwarden references in the tracked template and render local plaintext files on each machine:
 
