@@ -57,6 +57,23 @@ color.calendar.weekend=color245
 color.calendar.holiday=color175
 color.calendar.weeknumber=color245
 
+# taskwarrior-tui chrome
+# These UDA styles color UI bars, panes, title, command prompt, and scrollbars.
+uda.taskwarrior-tui.style.title=bold color214
+uda.taskwarrior-tui.style.title.border=color239
+uda.taskwarrior-tui.style.navbar=bold color235 on color214
+uda.taskwarrior-tui.style.command=color223 on color237
+uda.taskwarrior-tui.style.command.error=bold color223 on color167
+uda.taskwarrior-tui.style.context.active=bold color235 on color142
+uda.taskwarrior-tui.style.report-menu.active=bold color235 on color214
+uda.taskwarrior-tui.style.report.selection=bold color235 on color109
+uda.taskwarrior-tui.style.report.scrollbar=color214
+uda.taskwarrior-tui.style.report.scrollbar.area=color239
+uda.taskwarrior-tui.style.calendar.title=bold color235 on color214
+uda.taskwarrior-tui.style.help.gauge=color142
+uda.taskwarrior-tui.scrollbar.indicator=█
+uda.taskwarrior-tui.scrollbar.area=║
+
 # Sync/undo
 color.sync.added=color142
 color.sync.changed=color214
