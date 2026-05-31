@@ -36,7 +36,11 @@ home/.glzr/zebar/errors.log
 home/.pi/agent/auth.json
 home/.pi/agent/sessions
 home/.pi/cache
+home/.pi/context-mode
 home/.pi/agent/npm
+home/.pi/agent/bin
+home/.pi/agent/mcp-cache.json
+home/.pi/agent/mcp-npx-cache.json
 home/.pi/context-mode/sessions
 home/.pi/memory
 home/.pi/exa-usage.json

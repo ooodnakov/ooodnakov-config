@@ -15,7 +15,9 @@
     "npm:@juicesharp/rpiv-todo",
     "npm:@juicesharp/rpiv-ask-user-question",
     "npm:pi-caveman",
-    "npm:pi-lens"
+    "npm:pi-lens",
+    "npm:pi-caveman",
+    "npm:@upstash/context7-mcp"
   ],
   "defaultProvider": "minimax",
   "defaultModel": "MiniMax-M2.7",
