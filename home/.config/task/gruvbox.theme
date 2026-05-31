@@ -69,7 +69,8 @@ uda.taskwarrior-tui.style.report-menu.active=bold color235 on color214
 uda.taskwarrior-tui.style.report.selection=bold color235 on color109
 uda.taskwarrior-tui.style.report.scrollbar=color214
 uda.taskwarrior-tui.style.report.scrollbar.area=color239
-uda.taskwarrior-tui.style.calendar.title=bold color235 on color214
+# Use named colors here for older taskwarrior-tui parsers; color235/color214 can render orange-on-orange in calendar headers.
+uda.taskwarrior-tui.style.calendar.title=black on yellow
 uda.taskwarrior-tui.style.help.gauge=color142
 uda.taskwarrior-tui.scrollbar.indicator=█
 uda.taskwarrior-tui.scrollbar.area=║
