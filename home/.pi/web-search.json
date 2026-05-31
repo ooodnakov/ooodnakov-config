@@ -1,11 +1,11 @@
 {
-  "allowBrowserCookies": true,
-  "chromeProfile": "Profile 1",
   "allowBrowserCookies": false,
-  "searchModel": "gemini-2.5-flash",
+  "chromeProfile": "Profile 1",
+  "searchModel": "gemma-4-31b-it",
   "summaryModel": "minimax/MiniMax-M2.7",
   "shortcuts": {
     "curate": "ctrl+shift+s",
     "activity": "ctrl+shift+w"
-  }
+  },
+  "provider": "exa"
 }
