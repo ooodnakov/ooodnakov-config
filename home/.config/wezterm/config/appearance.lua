@@ -7,9 +7,13 @@ def_window_background_opacity = 0
 if platform.is_mac then
 	def_window_background_opacity = 0.01
 end
+front_end_ = 'WebGpu'
+if platform.is_linux then
+	front_end_ = 'OpenGL'
+end
 return {
 	max_fps = 120,
-	front_end = "WebGpu", ---@type 'WebGpu' | 'OpenGL' | 'Software'
+	front_end = frpnt_end_, ---@type 'WebGpu' | 'OpenGL' | 'Software'
 	webgpu_power_preference = "HighPerformance",
 	webgpu_preferred_adapter = gpu_adapters:pick_best(),
 	-- webgpu_preferred_adapter = gpu_adapters:pick_manual('Dx12', 'IntegratedGpu'),

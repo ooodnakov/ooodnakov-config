@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.76.0",
+  "lastChangelogVersion": "0.77.0",
   "packages": [
     "npm:context-mode",
     "npm:pi-subagents",
@@ -19,8 +19,8 @@
     "npm:pi-caveman",
     "npm:@upstash/context7-mcp"
   ],
-  "defaultProvider": "minimax",
-  "defaultModel": "MiniMax-M2.7",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.5",
   "powerline": {
     "preset": "nerd",
     "fixedEditor": false

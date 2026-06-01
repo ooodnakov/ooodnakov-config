@@ -141,4 +141,7 @@ binds {
     CTRL+ALT+Delete                     { quit; }
     Mod+Shift+P                         { power-off-monitors; }
     Mod+O                               repeat=false { toggle-overview; }
+    Mod+M repeat=false {
+        spawn-sh "wl-mirror $(niri msg --json focused-output | jq -r .name)"
+    }
 }
