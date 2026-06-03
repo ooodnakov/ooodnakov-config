@@ -117,3 +117,10 @@ zstyle ':fzf-tab:complete:*' fzf-preview '
     printf "System Context: %s\n" "$word"
   fi
 '
+
+# 1. Safe safeguard if you use standard FZF history
+export FZF_CTRL_R_OPTS="--bind 'enter:accept'"
+
+# # 2. Fix for zsh-autocomplete: tells it to throw selected history 
+# # onto the command line for editing instead of running immediately.
+# bindkey '^M' accept-and-hold

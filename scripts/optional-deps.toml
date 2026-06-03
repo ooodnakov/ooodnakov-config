@@ -26,6 +26,7 @@ zsh-history-substring-search = { repo = "https://github.com/zsh-users/zsh-histor
 zsh-autocomplete = { repo = "https://github.com/marlonrichert/zsh-autocomplete.git", ref = "20f6c34f20270084b21211428afb6d2534aae8e9" }
 fzf-tab = { repo = "https://github.com/Aloxaf/fzf-tab.git", ref = "e394092c17277c84cb3d234917c4ac1073102ba6" }
 forgit = { repo = "https://github.com/wfxr/forgit.git", ref = "4d54a03fd2970581ba6e908789bbef72e71ea01c" }
+zsh-fzf-history-search = { repo = "https://github.com/joshskidmore/zsh-fzf-history-search", ref = "35df458f7d9478fa88c74af762dcd296cdfd485d" }
 you-should-use = { repo = "https://github.com/MichaelAquilina/zsh-you-should-use.git", ref = "ff371d6a11b653e1fa8dda4e61c896c78de26bfa" }
 powerlevel10k = { repo = "https://github.com/romkatv/powerlevel10k.git", ref = "604f19a9eaa18e76db2e60b8d446d5f879065f90" }
 auto-uv-env = { repo = "https://github.com/ashwch/auto-uv-env.git", ref = "76589a0fe4a3eaba9817b7195b9fc05ef4139289" }

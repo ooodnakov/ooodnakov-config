@@ -15,8 +15,8 @@ alias snvim="sudo -e"
 
 path_prepend() {
   case ":$PATH:" in
-    *":$1:"*) ;;
-    *) export PATH="$1:$PATH" ;;
+  *":$1:"*) ;;
+  *) export PATH="$1:$PATH" ;;
   esac
 }
 
@@ -57,5 +57,7 @@ export NVM_DIR="$HOME/.nvm"
 if [ -f "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/marker/marker.sh" ]; then
   . "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/marker/marker.sh"
 fi
-
+nvm use --silent stable >/dev/null
+path_prepend "$NVM_DIR/versions/node/$(nvm current)/bin"
+hash -r
 unset -f path_prepend

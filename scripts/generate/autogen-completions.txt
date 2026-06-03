@@ -8,3 +8,5 @@ fd|Generating fd completions|_fd|fd --gen-completions zsh
 bat|Generating bat completions|_bat|bat --completion zsh
 hermes|Generating hermes completions|_hermes|sh scripts/generate_hermes_completion.sh
 dua|Generating dua completions|_dua|dua completions zsh
+npm|Generate npm comepltions|_npm|npm completion
+spotatui|Generate spotatui comepltions|_npm|spotatui --completions zsh

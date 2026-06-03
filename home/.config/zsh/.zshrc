@@ -77,7 +77,7 @@ plugins=(
   docker
   python
   web-search
-  history-substring-search
+  zsh-fzf-history-search
   you-should-use
   zsh-syntax-highlighting
   zsh-autocomplete
@@ -311,6 +311,7 @@ if [[ -f "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" ]]; then
 fi
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+bindkey '^R' fzf_history_search
 
 [[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
 
