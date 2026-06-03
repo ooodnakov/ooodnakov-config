@@ -3,4 +3,4 @@
 
     spawn-sh-at-startup "qs -c noctalia-shell"
     spawn-sh-at-startup "$HOME/.config/ooodnakov/local/scripts/niri-order-workspaces.sh"
-    spawn-sh-at-startup "vicinae"
+    spawn-sh-at-startup "vicinae server"

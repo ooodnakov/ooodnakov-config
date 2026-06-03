@@ -49,3 +49,9 @@
         match namespace=r#"^org\.wezfurlong\.wezterm$"#
         place-within-backdrop true
     }
+
+    layer-rule {
+        match namespace="vicinae"
+
+        place-within-backdrop true
+    }
