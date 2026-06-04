@@ -163,4 +163,3 @@ _ssh_forward_advanced() {
         _arguments '1:hosts:($hosts -r)' '2:ports:(80 443 3000 5432 8080 27017)' '3:ports:(80 443 3000 5432 8080 27017)'
     fi
 }
-compdef _ssh_forward_advanced ssh-forward/

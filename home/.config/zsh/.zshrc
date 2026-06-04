@@ -203,6 +203,11 @@ if (( $+functions[compdef] )); then
   esac
 fi
 
+# Custom SSH forward completion (defined in .zshrc.d/10-shell.zsh)
+if (( $+functions[_ssh_forward_advanced] )); then
+  compdef _ssh_forward_advanced ssh-forward
+fi
+
 if (( $+commands[zoxide] )); then
   eval "$(zoxide init zsh --cmd z)"
 fi
@@ -322,6 +327,18 @@ unalias x 2>/dev/null
 unalias h 2>/dev/null
 
 [ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.
+
+# Re-add pnpm after x-cmd so it takes precedence over brew
+# Only modify PATH if pnpm is not already at position 1
+if [ -n "$PNPM_HOME" ] && [ "$path[1]" != "$PNPM_HOME" ]; then
+  # Remove any existing pnpm entries
+  path=("${(@)path:#$PNPM_HOME}" "${(@)path:#$PNPM_HOME/bin}")
+  # Prepend pnpm at front
+  path=("$PNPM_HOME" "$PNPM_HOME/bin" "$path[@]")
+fi
+
+# Remove duplicate PATH entries (x-cmd adds duplicates)
+typeset -U path
 
 function y() {
 	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
