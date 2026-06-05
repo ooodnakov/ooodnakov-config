@@ -18,6 +18,7 @@ elseif platform.is_win then
    workspace_switcher.zoxide_path = 'C:\\Users\\coolk\\AppData\\Local\\UniGetUI\\Chocolatey\\bin\\zoxide.exe'
 end
 local smart_splits = wezterm.plugin.require('https://github.com/mrjones2014/smart-splits.nvim')
+local ai_commander = wezterm.plugin.require('https://github.com/dimao/ai-commander.wezterm')
 
 local M = {}
 
@@ -28,6 +29,25 @@ if platform.is_mac then
 else
    mod.SUPER = 'ALT'
    mod.SUPER_REV = 'ALT|CTRL'
+end
+
+local function env(name)
+   local value = os.getenv(name)
+   if value == '' then
+      return nil
+   end
+
+   return value
+end
+
+local function ai_provider()
+   if env('ANTHROPIC_API_KEY') then
+      return 'anthropic'
+   elseif env('OPENAI_API_KEY') then
+      return 'openai'
+   end
+
+   return 'anthropic'
 end
 
 local function basename(path)
@@ -92,6 +112,38 @@ end
 
 local plugin_keys = {
    {
+      key = 'X',
+      mods = 'ALT|SHIFT',
+      action = wezterm.action_callback(function(window, pane)
+         ai_commander.show_prompt(window, pane)
+      end),
+      desc = 'Ask AI Commander to generate shell commands',
+   },
+   {
+      key = 'X',
+      mods = 'CTRL|SHIFT',
+      action = wezterm.action_callback(function(window, pane)
+         ai_commander.show_last_results(window, pane)
+      end),
+      desc = 'Show last AI Commander command results',
+   },
+   {
+      key = 'H',
+      mods = 'ALT|SHIFT',
+      action = wezterm.action_callback(function(window, pane)
+         ai_commander.show_history(window, pane)
+      end),
+      desc = 'Show AI Commander prompt history',
+   },
+   {
+      key = 'A',
+      mods = 'CTRL|SHIFT',
+      action = wezterm.action_callback(function(window, pane)
+         ai_commander.show_ask_inline(window, pane)
+      end),
+      desc = 'Ask AI Commander in a split pane',
+   },
+   {
       key = 's',
       mods = 'LEADER',
       action = workspace_switcher.switch_workspace(),
@@ -126,6 +178,15 @@ local plugin_keys = {
 }
 
 function M.apply_to_config(config)
+   ai_commander.apply_to_config(config, {
+      provider = ai_provider(),
+      api_key = {
+         anthropic = env('ANTHROPIC_API_KEY'),
+         openai = env('OPENAI_API_KEY'),
+      },
+      renderer = env('WEZTERM_AI_COMMANDER_RENDERER') or 'cat',
+   })
+
    workspace_switcher.workspace_formatter = function(label)
       return wezterm.format({
          { Foreground = { Color = '#74c7ec' } },
