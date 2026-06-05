@@ -28,12 +28,6 @@ path_prepend "$HOME/.local/bin"
 path_prepend "$HOME/.cargo/bin"
 path_prepend "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov-config/bin"
 
-NPM_PACKAGES="$HOME/.npm"
-path_prepend "$NPM_PACKAGES/bin"
-
-export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
-# pnpm paths are re-added after x-cmd in .zshrc to ensure correct precedence
-
 if [ -x /opt/homebrew/bin/brew ]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 elif [ -x /usr/local/bin/brew ]; then
@@ -44,7 +38,9 @@ fi
 
 NPM_PACKAGES="$HOME/.npm"
 path_prepend "$NPM_PACKAGES/bin"
-path_prepend "$HOME/.bun/bin"
+
+export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+path_prepend "$BUN_INSTALL/bin"
 
 export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 path_prepend "$PNPM_HOME"
