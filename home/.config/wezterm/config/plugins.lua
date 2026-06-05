@@ -16,7 +16,17 @@ elseif platform.is_win then
 	workspace_switcher.zoxide_path = "C:\\Users\\coolk\\AppData\\Local\\UniGetUI\\Chocolatey\\bin\\zoxide.exe"
 end
 local smart_splits = wezterm.plugin.require("https://github.com/mrjones2014/smart-splits.nvim")
-local ai_commander = wezterm.plugin.require("https://github.com/ooodnakov/ai-commander.wezterm")
+local function require_plugin_without_host_module(url, module_name)
+	local host_module = package.loaded[module_name]
+	package.loaded[module_name] = nil
+	local ok, plugin = pcall(wezterm.plugin.require, url)
+	package.loaded[module_name] = host_module
+	if not ok then
+		error(plugin)
+	end
+	return plugin
+end
+local ai_commander = require_plugin_without_host_module("https://github.com/ooodnakov/ai-commander.wezterm", "config")
 
 local M = {}
 
