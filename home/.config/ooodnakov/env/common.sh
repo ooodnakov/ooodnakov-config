@@ -42,8 +42,13 @@ elif [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
-# pnpm manages Node.js versions via 'pnpm env use <version>'
-# See: https://pnpm.io/cli/env
+NPM_PACKAGES="$HOME/.npm"
+path_prepend "$NPM_PACKAGES/bin"
+path_prepend "$HOME/.bun/bin"
+
+export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
+path_prepend "$PNPM_HOME"
+path_prepend "$PNPM_HOME/bin"
 
 if ! command -v o >/dev/null 2>&1 && command -v oooconf >/dev/null 2>&1; then
   o() {
