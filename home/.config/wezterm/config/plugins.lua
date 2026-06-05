@@ -24,13 +24,9 @@ local function env(name)
 
 	return value
 end
-local function command_available(command)
-	local ok, success = pcall(wezterm.run_child_process, { command, "--version" })
-	return ok and success
-end
 
 local function default_ai_commander_renderer()
-	return env("WEZTERM_AI_COMMANDER_RENDERER") or (command_available("streamdown") and "streamdown" or "cat")
+	return env("WEZTERM_AI_COMMANDER_RENDERER") or "rich"
 end
 
 
