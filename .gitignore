@@ -32,7 +32,9 @@ home/.config/zsh/.zsh_history
 home/.config/zsh/.zshenv
 home/.config/zsh/.zcompdump*
 home/.glzr/glazewm/errors.log
-home/.glzr/zebar/errors.log
+home/.glzr/zebar/errors.log|
+
+# pi
 home/.pi/agent/auth.json
 home/.pi/agent/sessions
 home/.pi/cache
@@ -49,6 +51,13 @@ home/.pi-lens/tools
 home/.pi-lens/bin
 home/.pi-lens/sessionstart.log
 home/.pi-lens/probe-cache.json
+home/.pi-lens/sessionstart.log
+
+# omp
+home/.omp/*
+!home/.omp/agent/
+home/.omp/agent/*
+!home/.omp/agent/config.yml
 
 .zcompdump*
 

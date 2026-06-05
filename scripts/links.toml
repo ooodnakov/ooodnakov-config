@@ -32,6 +32,11 @@ source = "home/.pi"
 target = "{HOME}/.pi"
 
 [[links]]
+key = "omp"
+source = "home/.omp"
+target = "{HOME}/.omp"
+
+[[links]]
 key = "pi-lens"
 source = "home/.pi-lens"
 target = "{HOME}/.pi-lens"
