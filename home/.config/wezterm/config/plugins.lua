@@ -16,6 +16,24 @@ elseif platform.is_win then
 	workspace_switcher.zoxide_path = "C:\\Users\\coolk\\AppData\\Local\\UniGetUI\\Chocolatey\\bin\\zoxide.exe"
 end
 local smart_splits = wezterm.plugin.require("https://github.com/mrjones2014/smart-splits.nvim")
+local function env(name)
+	local value = os.getenv(name)
+	if value == "" then
+		return nil
+	end
+
+	return value
+end
+local function command_available(command)
+	local ok, success = pcall(wezterm.run_child_process, { command, "--version" })
+	return ok and success
+end
+
+local function default_ai_commander_renderer()
+	return env("WEZTERM_AI_COMMANDER_RENDERER") or (command_available("streamdown") and "streamdown" or "cat")
+end
+
+
 local function require_plugin_without_host_module(url, module_name)
 	local host_module = package.loaded[module_name]
 	package.loaded[module_name] = nil
@@ -26,8 +44,8 @@ local function require_plugin_without_host_module(url, module_name)
 	end
 	return plugin
 end
-local ai_commander = require_plugin_without_host_module("https://github.com/ooodnakov/ai-commander.wezterm", "config")
-
+local ai_commander_url = env("WEZTERM_AI_COMMANDER_PLUGIN_URL") or "https://github.com/ooodnakov/ai-commander.wezterm"
+local ai_commander = require_plugin_without_host_module(ai_commander_url, "config")
 local M = {}
 
 local mod = {}
@@ -39,24 +57,6 @@ else
 	mod.SUPER_REV = "ALT|CTRL"
 end
 
-local function env(name)
-	local value = os.getenv(name)
-	if value == "" then
-		return nil
-	end
-
-	return value
-end
-
-local function ai_provider()
-	if env("ANTHROPIC_API_KEY") then
-		return "anthropic"
-	elseif env("OPENAI_API_KEY") then
-		return "openai"
-	end
-
-	return "anthropic"
-end
 
 local function basename(path)
 	return (path or ""):gsub("\\", "/"):match("([^/]+)$") or path or ""
@@ -187,12 +187,11 @@ local plugin_keys = {
 
 function M.apply_to_config(config)
 	ai_commander.apply_to_config(config, {
-		provider = ai_provider(),
-		api_key = {
-			anthropic = env("ANTHROPIC_API_KEY"),
-			openai = env("OPENAI_API_KEY"),
+		provider = "openai",
+		auth_type = {
+			openai = "oauth",
 		},
-		renderer = env("WEZTERM_AI_COMMANDER_RENDERER") or "cat",
+		renderer = default_ai_commander_renderer(),
 	})
 
 	workspace_switcher.workspace_formatter = function(label)
