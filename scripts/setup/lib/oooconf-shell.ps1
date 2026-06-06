@@ -205,15 +205,34 @@ function Get-PsfzfGitMode {
 }
 
 function Get-AutoUvEnvMode {
+    if ($env:OOODNAKOV_AUTO_UV_ENV_MODE -in @("disabled", "existing", "enabled", "quiet")) {
+        return $env:OOODNAKOV_AUTO_UV_ENV_MODE
+    }
+
+    $envZshPath = Get-LocalEnvZshPath
+    if (Test-Path -LiteralPath $envZshPath) {
+        foreach ($line in Get-Content -LiteralPath $envZshPath) {
+            if ($line -match "^export $([regex]::Escape($OoodnakovAutoUvEnvModeVar))=""([^""]+)""$") {
+                return $Matches[1]
+            }
+            if ($line -match "^export $([regex]::Escape($AutoUvEnvVar))=""1""$") {
+                return "quiet"
+            }
+        }
+    }
+
     $envPath = Get-LocalEnvPs1Path
     if (Test-Path -LiteralPath $envPath) {
         foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match ('^\$env:' + [regex]::Escape($OoodnakovAutoUvEnvModeVar) + " = '([^']+)'$")) {
+                return $Matches[1]
+            }
             if ($line -match ('^\$env:' + [regex]::Escape($AutoUvEnvVar) + " = 1$")) {
                 return "quiet"
             }
         }
     }
-    return "enabled"
+    return "existing"
 }
 
 function Set-ZshPromptMode {
@@ -261,18 +280,19 @@ function Set-AutoUvEnvMode {
         [string]$Mode
     )
 
-    if ($Mode -notin @("enabled", "quiet")) {
-        throw "Invalid auto-uv-env mode: $Mode`nExpected one of: enabled, quiet"
+    if ($Mode -notin @("disabled", "existing", "enabled", "quiet")) {
+        throw "Invalid auto-uv-env mode: $Mode`nExpected one of: disabled, existing, enabled, quiet"
     }
 
     $envZsh = Get-LocalEnvZshPath
     $envPs1 = Get-LocalEnvPs1Path
 
-    $zshVal = if ($Mode -eq "quiet") { "1" } else { "0" }
-    $ps1Val = if ($Mode -eq "quiet") { "1" } else { "0" }
+    $quietValue = if ($Mode -eq "quiet") { "1" } else { "0" }
 
-    Set-LocalOverrideLine -Path $envZsh -VariableName $AutoUvEnvVar -ReplacementLine "export $AutoUvEnvVar=""$zshVal"""
-    Set-LocalOverrideLine -Path $envPs1 -VariableName $AutoUvEnvVar -ReplacementLine "`$env:$AutoUvEnvVar = $ps1Val"
+    Set-LocalOverrideLine -Path $envZsh -VariableName $OoodnakovAutoUvEnvModeVar -ReplacementLine "export $OoodnakovAutoUvEnvModeVar=""$Mode"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $OoodnakovAutoUvEnvModeVar -ReplacementLine "`$env:$OoodnakovAutoUvEnvModeVar = '$Mode'"
+    Set-LocalOverrideLine -Path $envZsh -VariableName $AutoUvEnvVar -ReplacementLine "export $AutoUvEnvVar=""$quietValue"""
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $AutoUvEnvVar -ReplacementLine "`$env:$AutoUvEnvVar = $quietValue"
 
     Write-UiLine -Role ok -Message "auto-uv-env mode set to $Mode"
     Write-UiLine -Role info -Message "zsh: $envZsh"
@@ -473,12 +493,14 @@ function Invoke-ShellCommand {
             $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
             switch ($mode) {
                 "status" { Write-Output (Get-AutoUvEnvMode) }
+                "disabled" { Set-AutoUvEnvMode -Mode $mode }
+                "existing" { Set-AutoUvEnvMode -Mode $mode }
                 "enabled" { Set-AutoUvEnvMode -Mode $mode }
                 "quiet" { Set-AutoUvEnvMode -Mode $mode }
                 default {
                     $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellAutoUvModes
                     Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
-                    throw "Unknown shell option: $mode`nExpected one of: enabled, quiet, status"
+                    throw "Unknown shell option: $mode`nExpected one of: disabled, existing, enabled, quiet, status"
                 }
             }
             return

@@ -296,10 +296,60 @@ function ipgeo {
 }
 
 # Automatic Python Virtual Environment Activation (Port of auto-uv-env features)
+function Get-OoodnakovAutoUvEnvMode {
+    if ($env:OOODNAKOV_AUTO_UV_ENV_MODE -in @("disabled", "existing", "enabled", "quiet")) {
+        return $env:OOODNAKOV_AUTO_UV_ENV_MODE
+    }
+
+    if ($env:AUTO_UV_ENV_QUIET -eq "1") {
+        return "quiet"
+    }
+
+    return "existing"
+}
+
+function Test-OoodnakovAutoUvEnvQuiet {
+    return (Get-OoodnakovAutoUvEnvMode) -eq "quiet"
+}
+
+function Clear-OoodnakovManagedVenv {
+    param(
+        [bool]$ShowMessage = $true
+    )
+
+    $wasUv = $global:__last_venv_was_uv
+    if ($global:__managed_venv -and $env:VIRTUAL_ENV -eq $global:__managed_venv) {
+        if (Get-Command deactivate -ErrorAction SilentlyContinue) {
+            deactivate
+        } else {
+            Remove-Item Env:VIRTUAL_ENV -ErrorAction SilentlyContinue
+        }
+
+        if ($ShowMessage -and -not (Test-OoodnakovAutoUvEnvQuiet) -and (Test-InteractiveConsoleHost)) {
+            $msg = if ($wasUv) { "⬇️  Deactivated UV environment" } else { "⬇️  Deactivated environment" }
+            Write-Host $msg -ForegroundColor Gray
+        }
+    }
+
+    $global:__managed_venv = $null
+    $global:__last_venv_was_uv = $false
+}
+
 function Update-Venv {
+    $mode = Get-OoodnakovAutoUvEnvMode
+
+    if ($mode -eq "disabled") {
+        Clear-OoodnakovManagedVenv -ShowMessage:$false
+        return
+    }
+
     # 1. Manual Override Protection: If user activated something manually, don't touch it
     if ($env:VIRTUAL_ENV -and $global:__managed_venv -and $env:VIRTUAL_ENV -ne $global:__managed_venv) {
         return
+    }
+
+    if ($global:__managed_venv -and $env:VIRTUAL_ENV -eq $global:__managed_venv -and -not (Test-Path -LiteralPath $global:__managed_venv)) {
+        Clear-OoodnakovManagedVenv
     }
 
     $current = Get-Item .
@@ -321,20 +371,30 @@ function Update-Venv {
 
     if ($projectRoot -and -not $ignoreFound) {
         $venvPath = Join-Path $projectRoot ".venv"
+        $venvFullName = if (Test-Path -LiteralPath $venvPath) { (Get-Item -LiteralPath $venvPath -Force).FullName } else { $null }
 
-        # 3. Auto-Creation: If pyproject.toml exists but .venv doesn't, create it using uv
-        if (-not (Test-Path $venvPath)) {
+        if ($global:__managed_venv -and $env:VIRTUAL_ENV -eq $global:__managed_venv -and (-not $venvFullName -or $global:__managed_venv -ne $venvFullName)) {
+            Clear-OoodnakovManagedVenv
+        }
+
+        # 3. Auto-Creation: enabled and quiet modes create missing .venv directories using uv.
+        # Existing mode is default: activate only when the project already has .venv.
+        if (-not $venvFullName) {
+            if ($mode -eq "existing") {
+                return
+            }
+
             if (Get-Command uv -ErrorAction SilentlyContinue) {
-                if (Test-InteractiveConsoleHost) {
+                if (-not (Test-OoodnakovAutoUvEnvQuiet) -and (Test-InteractiveConsoleHost)) {
                     Write-Host "🔨 No .venv found. Creating one with uv..." -ForegroundColor Gray
                 }
                 & uv venv --quiet
+                $venvFullName = (Get-Item -LiteralPath $venvPath -Force).FullName
             } else {
                 return
             }
         }
 
-        $venvFullName = (Get-Item $venvPath).FullName
         if ($env:VIRTUAL_ENV -ne $venvFullName) {
             # Detect if it's a UV project for the message
             $isUv = $false
@@ -343,7 +403,7 @@ function Update-Venv {
 
             # Robust version detection
             $version = "Unknown"
-            $cfg = Join-Path $venvPath "pyvenv.cfg"
+            $cfg = Join-Path $venvFullName "pyvenv.cfg"
             if (Test-Path $cfg) {
                 $cfgContent = Get-Content $cfg -ErrorAction SilentlyContinue
                 $vLine = $cfgContent | Where-Object { $_ -match "^version(_info)?\s*=" } | Select-Object -First 1
@@ -351,35 +411,36 @@ function Update-Venv {
             }
 
             if ($version -eq "Unknown") {
-                $pyExe = Join-Path $venvPath "Scripts\python.exe"
-                if (Test-Path $pyExe) {
-                    $vInfo = & $pyExe --version 2>&1
-                    if ($vInfo -match "([\d\.]+)") { $version = $matches[1] }
+                foreach ($relativePython in @("Scripts\python.exe", "bin/python")) {
+                    $pyExe = Join-Path $venvFullName $relativePython
+                    if (Test-Path -LiteralPath $pyExe) {
+                        $vInfo = & $pyExe --version 2>&1
+                        if ($vInfo -match "([\d\.]+)") { $version = $matches[1] }
+                        break
+                    }
                 }
             }
 
-            . (Join-Path $venvPath "Scripts\Activate.ps1")
+            $activateScript = Join-Path $venvFullName "Scripts\Activate.ps1"
+            if (-not (Test-Path -LiteralPath $activateScript)) {
+                $activateScript = Join-Path $venvFullName "bin/Activate.ps1"
+            }
+            if (-not (Test-Path -LiteralPath $activateScript)) {
+                return
+            }
+
+            . $activateScript
             $global:__managed_venv = $env:VIRTUAL_ENV
             $global:__last_venv_was_uv = $isUv
 
-            if ($env:AUTO_UV_ENV_QUIET -ne 1 -and (Test-InteractiveConsoleHost)) {
+            if (-not (Test-OoodnakovAutoUvEnvQuiet) -and (Test-InteractiveConsoleHost)) {
                 if ($isUv) { Write-Host "🚀 UV environment activated (Python $version)" -ForegroundColor Cyan }
                 else { Write-Host "🚀 Environment activated (Python $version)" -ForegroundColor Green }
             }
         }
     } elseif ($global:__managed_venv -and $env:VIRTUAL_ENV -eq $global:__managed_venv) {
         # 4. Managed Deactivation: Only deactivate if we were the ones who activated it
-        $wasUv = $global:__last_venv_was_uv
-        if (Get-Command deactivate -ErrorAction SilentlyContinue) {
-            deactivate
-        }
-
-        if ($env:AUTO_UV_ENV_QUIET -ne 1 -and (Test-InteractiveConsoleHost)) {
-            $msg = if ($wasUv) { "⬇️  Deactivated UV environment" } else { "⬇️  Deactivated environment" }
-            Write-Host $msg -ForegroundColor Gray
-        }
-        $global:__managed_venv = $null
-        $global:__last_venv_was_uv = $false
+        Clear-OoodnakovManagedVenv
     }
 }
 

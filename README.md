@@ -170,7 +170,7 @@ Secrets commands:
 - `oooconf shell typo-handling [silent|suggest|help|status]`: control typo suggestions for mistyped commands
 - `oooconf shell psfzf-tab [enabled|disabled|status]`: toggle PSFzf tab completion integration
 - `oooconf shell psfzf-git [enabled|disabled|status]`: toggle PSFzf Git helper integration
-- `oooconf shell auto-uv-env [enabled|quiet|status]`: control Python virtualenv activation message verbosity
+- `oooconf shell auto-uv-env [disabled|existing|enabled|quiet|status]`: control Python virtualenv auto-activation behavior (`existing` is the default and never creates missing `.venv` directories)
 - `oooconf color [status|list|<theme>|dark|light]`: select a unified CLI color theme (`default`, `catppuccin`, `gruvbox`, `nord`, `tokyonight`, `noctalia`) and dark/light mode. When unset, `oooconf` prefers existing tracked tool themes (WezTerm/Neovim) before falling back to `default`; theme changes sync local overrides for Yazi, WezTerm, Komorebi (including bar config), SketchyBar colors, Zebar CSS vars, and a themed Oh My Posh config under `~/.config/ooodnakov/local/ohmyposh/`, and `status` reports detected Neovim/Oh My Posh config state.
 
 Window manager commands:

@@ -482,7 +482,7 @@ Usage: oooconf shell status
        oooconf shell typo-handling [silent|suggest|help|status]
        oooconf shell psfzf-tab [enabled|disabled|status]
        oooconf shell psfzf-git [enabled|disabled|status]
-       oooconf shell auto-uv-env [enabled|quiet|status]
+       oooconf shell auto-uv-env [disabled|existing|enabled|quiet|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
 Forgit alias modes:
@@ -502,8 +502,10 @@ Prompt options:
   prompt-style  switch all managed prompts between verbose and concise layouts
   status        show the currently configured mode
 Auto UV environment options:
-  enabled   show activation/deactivation messages for Python venvs
-  quiet     suppress activation/deactivation messages
+  disabled  disable automatic Python virtualenv activation
+  existing  activate existing .venv directories without creating missing ones (default)
+  enabled   activate Python venvs and create missing .venv directories with uv
+  quiet     enabled mode, but suppress activation/deactivation messages
   status    show the currently configured mode
 Examples:
   oooconf shell status
@@ -520,7 +522,8 @@ Examples:
   oooconf shell psfzf-tab enabled
   oooconf shell psfzf-tab disabled
   oooconf shell psfzf-git status
-  oooconf shell auto-uv-env quiet
+  oooconf shell auto-uv-env existing
+  oooconf shell auto-uv-env disabled
 "@
         }
         "color" {

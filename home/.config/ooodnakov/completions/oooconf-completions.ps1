@@ -477,7 +477,7 @@ function Get-OooconfCompletions {
         'shell:auto-uv-env' = @{
             Options = @()
             OptionsWithArgs = @()
-            Values = @('enabled', 'quiet', 'status')
+            Values = @('disabled', 'existing', 'enabled', 'quiet', 'status')
             Subcommands = @()
             OptionValues = @{
             }

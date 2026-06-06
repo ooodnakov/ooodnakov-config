@@ -214,16 +214,43 @@ get_psfzf_git_mode() {
 }
 
 get_auto_uv_env_mode() {
-  local env_ps1 mode
-  env_ps1="$(shell_local_env_ps1_path)"
+  local env_zsh env_ps1 mode
 
+  case "${OOODNAKOV_AUTO_UV_ENV_MODE:-}" in
+    disabled|existing|enabled|quiet)
+      printf '%s\n' "$OOODNAKOV_AUTO_UV_ENV_MODE"
+      return 0
+      ;;
+  esac
+
+  env_zsh="$(shell_local_env_zsh_path)"
+  if [ -f "$env_zsh" ]; then
+    mode="$(sed -n "s/^export ${OOODNAKOV_AUTO_UV_ENV_MODE_VAR}=\"\([^\"]*\)\"$/\1/p" "$env_zsh" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+
+    if grep -q "^export ${AUTO_UV_ENV_VAR}=\"1\"$" "$env_zsh"; then
+      printf 'quiet\n'
+      return 0
+    fi
+  fi
+
+  env_ps1="$(shell_local_env_ps1_path)"
   if [ -f "$env_ps1" ]; then
+    mode="$(sed -n "s/^\$env:${OOODNAKOV_AUTO_UV_ENV_MODE_VAR} = '\([^']*\)'$/\1/p" "$env_ps1" | head -n 1)"
+    if [ -n "$mode" ]; then
+      printf '%s\n' "$mode"
+      return 0
+    fi
+
     if grep -q "^\$env:${AUTO_UV_ENV_VAR} = 1$" "$env_ps1"; then
       printf 'quiet\n'
       return 0
     fi
   fi
-  printf 'enabled\n'
+  printf 'existing\n'
 }
 
 set_zsh_prompt_mode() {
@@ -274,23 +301,25 @@ set_prompt_style_mode() {
 
 set_auto_uv_env_mode() {
   local mode="$1"
-  local env_zsh env_ps1 val
+  local env_zsh env_ps1 quiet_val
 
   case "$mode" in
-    enabled|quiet) ;;
+    disabled|existing|enabled|quiet) ;;
     *)
       visible_error "Invalid auto-uv-env mode: $mode"
-      visible_error "Expected one of: enabled, quiet"
+      visible_error "Expected one of: disabled, existing, enabled, quiet"
       return 1
       ;;
   esac
 
   env_zsh="$(shell_local_env_zsh_path)"
   env_ps1="$(shell_local_env_ps1_path)"
-  [ "$mode" = "quiet" ] && val=1 || val=0
+  [ "$mode" = "quiet" ] && quiet_val=1 || quiet_val=0
 
-  upsert_override_line "$env_zsh" "$AUTO_UV_ENV_VAR" "export $AUTO_UV_ENV_VAR=\"$val\""
-  upsert_override_line "$env_ps1" "$AUTO_UV_ENV_VAR" "\$env:$AUTO_UV_ENV_VAR = $val"
+  upsert_override_line "$env_zsh" "$OOODNAKOV_AUTO_UV_ENV_MODE_VAR" "export $OOODNAKOV_AUTO_UV_ENV_MODE_VAR=\"$mode\""
+  upsert_override_line "$env_ps1" "$OOODNAKOV_AUTO_UV_ENV_MODE_VAR" "\$env:$OOODNAKOV_AUTO_UV_ENV_MODE_VAR = '$mode'"
+  upsert_override_line "$env_zsh" "$AUTO_UV_ENV_VAR" "export $AUTO_UV_ENV_VAR=\"$quiet_val\""
+  upsert_override_line "$env_ps1" "$AUTO_UV_ENV_VAR" "\$env:$AUTO_UV_ENV_VAR = $quiet_val"
 
   ui_line ok "auto-uv-env mode set to $mode"
   ui_line info "zsh: $env_zsh"
@@ -414,7 +443,7 @@ Usage: oooconf shell status
        oooconf shell typo-handling [silent|suggest|help|status]
        oooconf shell psfzf-tab [enabled|disabled|status]
        oooconf shell psfzf-git [enabled|disabled|status]
-       oooconf shell auto-uv-env [enabled|quiet|status]
+       oooconf shell auto-uv-env [disabled|existing|enabled|quiet|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
 Forgit alias modes:
@@ -434,8 +463,10 @@ Prompt options:
   prompt-style  switch all managed prompts between verbose and concise layouts
   status        show the currently configured mode
 Auto UV environment options:
-  enabled   show activation/deactivation messages for Python venvs
-  quiet     suppress activation/deactivation messages
+  disabled  disable automatic Python virtualenv activation
+  existing  activate existing .venv directories without creating missing ones (default)
+  enabled   activate Python venvs and create missing .venv directories with uv
+  quiet     enabled mode, but suppress activation/deactivation messages
   status    show the currently configured mode
 Examples:
   oooconf shell status
@@ -452,7 +483,8 @@ Examples:
   oooconf shell psfzf-tab enabled
   oooconf shell psfzf-tab disabled
   oooconf shell psfzf-git status
-  oooconf shell auto-uv-env quiet
+  oooconf shell auto-uv-env existing
+  oooconf shell auto-uv-env disabled
 EOF
       ;;
     status)
@@ -554,7 +586,7 @@ EOF
         status)
           get_auto_uv_env_mode
           ;;
-        enabled|quiet)
+        disabled|existing|enabled|quiet)
           set_auto_uv_env_mode "$2"
           ;;
         *)

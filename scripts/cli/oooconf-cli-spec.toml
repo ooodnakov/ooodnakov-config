@@ -246,8 +246,8 @@ description = "toggle PSFzf git integration"
 values = { "enabled" = "enabled", "disabled" = "disabled", "status" = "show status" }
 
 [commands.shell.subcommands.auto-uv-env]
-description = "configure uv auto activation messaging"
-values = { "enabled" = "enabled", "quiet" = "quiet", "status" = "show status" }
+description = "configure uv auto activation behavior"
+values = { "disabled" = "disabled", "existing" = "activate existing .venv only", "enabled" = "activate and create .venv", "quiet" = "enabled without messages", "status" = "show status" }
 
 [commands.color]
 description = "set a unified oooconf CLI color theme and mode"

@@ -299,22 +299,155 @@ if [[ "${OOOCONF_ZSH_PROMPT:-p10k}" != ohmyposh ]]; then
 fi
 unset ooodnakov_omp_config
 
-if [[ -f "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" ]]; then
-  # Guard against duplicate hook registration when the profile is re-sourced.
-  # Multiple auto_uv_env chpwd hooks can cause repeated "Creating UV environment"
-  # / activation status lines for a single directory change.
-  if [[ -z "${OOODNAKOV_AUTO_UV_ENV_LOADED:-}" ]]; then
-    export OOODNAKOV_AUTO_UV_ENV_LOADED=1
-    # auto-uv-env runs an immediate startup check when sourced. Quiet only that
-    # first run so opening a shell in a Python project doesn't spam status text.
-    source "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" >/dev/null 2>&1
-  fi
-
-  if (( $+functions[add-zsh-hook] )) && (( $+functions[auto_uv_env] )); then
-    add-zsh-hook -d chpwd auto_uv_env 2>/dev/null || true
-    add-zsh-hook chpwd auto_uv_env
+ooodnakov_auto_uv_env_mode="${OOODNAKOV_AUTO_UV_ENV_MODE:-}"
+if [[ -z "$ooodnakov_auto_uv_env_mode" ]]; then
+  if [[ "${AUTO_UV_ENV_QUIET:-0}" == "1" ]]; then
+    ooodnakov_auto_uv_env_mode=quiet
+  else
+    ooodnakov_auto_uv_env_mode=existing
   fi
 fi
+case "$ooodnakov_auto_uv_env_mode" in
+  disabled|existing|enabled|quiet) ;;
+  *) ooodnakov_auto_uv_env_mode=existing ;;
+esac
+
+
+case "$ooodnakov_auto_uv_env_mode" in
+  disabled)
+    if (( $+functions[add-zsh-hook] )) && (( $+functions[auto_uv_env] )); then
+      add-zsh-hook -d chpwd auto_uv_env 2>/dev/null || true
+    fi
+    ;;
+  existing)
+    _ooodnakov_auto_uv_env_find_project_dir() {
+      local dir="$PWD"
+      while true; do
+        if [[ -f "$dir/.auto-uv-env-ignore" ]]; then
+          return 2
+        fi
+        if [[ -f "$dir/pyproject.toml" ]]; then
+          print -r -- "$dir"
+          return 0
+        fi
+        [[ "$dir" == "/" ]] && return 1
+        dir="${dir%/*}"
+        [[ -z "$dir" ]] && dir="/"
+      done
+    }
+
+    _ooodnakov_auto_uv_env_is_within_dir() {
+      local path="$1"
+      local base="$2"
+
+      [[ -n "$base" ]] || return 1
+      [[ "$base" != "/" ]] && base="${base%/}"
+      [[ "$path" != "/" ]] && path="${path%/}"
+
+      if [[ "$base" == "/" ]]; then
+        [[ "$path" == /* ]]
+      else
+        [[ "$path" == "$base" || "$path" == "$base/"* ]]
+      fi
+    }
+
+    _ooodnakov_auto_uv_env_deactivate() {
+      if [[ -n "${VIRTUAL_ENV:-}" ]] && [[ -n "${_AUTO_UV_ENV_ACTIVATION_DIR:-}" ]]; then
+        if (( $+functions[deactivate] )); then
+          deactivate
+        else
+          unset VIRTUAL_ENV
+        fi
+        unset _AUTO_UV_ENV_ACTIVATION_DIR
+        unset AUTO_UV_ENV_PYTHON_VERSION
+        [[ "${AUTO_UV_ENV_QUIET:-0}" != "1" ]] && print -P "%F{yellow}⬇️%f  Deactivated UV environment"
+      fi
+    }
+
+    auto_uv_env() {
+      if [[ -n "${VIRTUAL_ENV:-}" ]] && [[ -n "${_AUTO_UV_ENV_ACTIVATION_DIR:-}" ]] && _ooodnakov_auto_uv_env_is_within_dir "$PWD" "$_AUTO_UV_ENV_ACTIVATION_DIR"; then
+        if [[ ! -d "$VIRTUAL_ENV" ]]; then
+          [[ "${AUTO_UV_ENV_QUIET:-0}" != "1" ]] && print -P "%F{yellow}⚠️%f  Virtual environment was deleted, cleaning up..."
+          unset VIRTUAL_ENV
+          unset _AUTO_UV_ENV_ACTIVATION_DIR
+          unset AUTO_UV_ENV_PYTHON_VERSION
+        fi
+      fi
+
+      local project_dir="" project_status=0
+      project_dir="$(_ooodnakov_auto_uv_env_find_project_dir)" || project_status=$?
+
+      if [[ $project_status -eq 2 ]]; then
+        _ooodnakov_auto_uv_env_deactivate
+        return 0
+      fi
+
+      if [[ $project_status -ne 0 || -z "$project_dir" ]]; then
+        if [[ -n "${_AUTO_UV_ENV_ACTIVATION_DIR:-}" ]] && ! _ooodnakov_auto_uv_env_is_within_dir "$PWD" "$_AUTO_UV_ENV_ACTIVATION_DIR"; then
+          _ooodnakov_auto_uv_env_deactivate
+        fi
+        return 0
+      fi
+
+      if [[ -n "${VIRTUAL_ENV:-}" ]] && [[ "${_AUTO_UV_ENV_ACTIVATION_DIR:-}" == "$project_dir" ]] && [[ -d "$VIRTUAL_ENV" ]]; then
+        return 0
+      fi
+
+      if [[ -n "${_AUTO_UV_ENV_ACTIVATION_DIR:-}" ]] && ! _ooodnakov_auto_uv_env_is_within_dir "$PWD" "$_AUTO_UV_ENV_ACTIVATION_DIR"; then
+        _ooodnakov_auto_uv_env_deactivate
+      fi
+
+      [[ -n "${VIRTUAL_ENV:-}" ]] && return 0
+
+      local venv_dir="${AUTO_UV_ENV_VENV_NAME:-.venv}"
+      local activate_path="$project_dir/$venv_dir/bin/activate"
+      [[ -f "$activate_path" ]] || return 0
+
+      source "$activate_path"
+      export _AUTO_UV_ENV_ACTIVATION_DIR="$project_dir"
+
+      local python_version python_full_version
+      if python_full_version="$(python --version 2>&1)"; then
+        python_version="${python_full_version#Python }"
+        export AUTO_UV_ENV_PYTHON_VERSION="$python_version"
+        [[ "${AUTO_UV_ENV_QUIET:-0}" != "1" ]] && print -P "%F{green}🚀%f UV environment activated (Python $python_version)"
+      else
+        export AUTO_UV_ENV_PYTHON_VERSION="unknown"
+        [[ "${AUTO_UV_ENV_QUIET:-0}" != "1" ]] && print -P "%F{green}🚀%f UV environment activated (Python not installed)"
+      fi
+    }
+
+    autoload -U add-zsh-hook
+    add-zsh-hook -d chpwd auto_uv_env 2>/dev/null || true
+    add-zsh-hook chpwd auto_uv_env
+    auto_uv_env
+    ;;
+  enabled|quiet)
+    if [[ "$ooodnakov_auto_uv_env_mode" == quiet ]]; then
+      export AUTO_UV_ENV_QUIET=1
+    else
+      export AUTO_UV_ENV_QUIET=0
+    fi
+
+    if [[ -f "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" ]]; then
+      # Guard against duplicate hook registration when the profile is re-sourced.
+      # Multiple auto_uv_env chpwd hooks can cause repeated "Creating UV environment"
+      # / activation status lines for a single directory change.
+      if [[ -z "${OOODNAKOV_AUTO_UV_ENV_LOADED:-}" ]]; then
+        export OOODNAKOV_AUTO_UV_ENV_LOADED=1
+        # auto-uv-env runs an immediate startup check when sourced. Quiet only that
+        # first run so opening a shell in a Python project doesn't spam status text.
+        source "$OOODNAKOV_SHARE_HOME/auto-uv-env/auto-uv-env.zsh" >/dev/null 2>&1
+      fi
+
+      if (( $+functions[add-zsh-hook] )) && (( $+functions[auto_uv_env] )); then
+        add-zsh-hook -d chpwd auto_uv_env 2>/dev/null || true
+        add-zsh-hook chpwd auto_uv_env
+      fi
+    fi
+    ;;
+esac
+unset ooodnakov_auto_uv_env_mode
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 bindkey '^R' fzf_history_search

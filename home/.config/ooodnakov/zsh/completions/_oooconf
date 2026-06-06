@@ -1206,7 +1206,7 @@ _oooconf_shell() {
     'typo-handling:configure typo handling behavior'
     'psfzf-tab:toggle PSFzf tab completion integration'
     'psfzf-git:toggle PSFzf git integration'
-    'auto-uv-env:configure uv auto activation messaging'
+    'auto-uv-env:configure uv auto activation behavior'
   )
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
@@ -1441,8 +1441,10 @@ _oooconf_shell_auto_uv_env() {
   typeset -A opt_args
   local -a values
   values=(
-    'enabled:enabled'
-    'quiet:quiet'
+    'disabled:disabled'
+    'existing:activate existing .venv only'
+    'enabled:activate and create .venv'
+    'quiet:enabled without messages'
     'status:show status'
   )
   local -a opts_with_args
