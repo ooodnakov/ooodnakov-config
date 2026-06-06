@@ -156,6 +156,30 @@ local plugin_keys = {
 		desc = "Complete current shell command with AI Commander",
 	},
 	{
+		key = "R",
+		mods = "ALT|SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			ai_commander.repeat_last_prompt(window, pane)
+		end),
+		desc = "Repeat last AI Commander command prompt with current context",
+	},
+	{
+		key = "P",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			ai_commander.check_provider(window, pane)
+		end),
+		desc = "Check AI Commander provider and backend",
+	},
+	{
+		key = "B",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			ai_commander.setup_backend(window, pane)
+		end),
+		desc = "Set up AI Commander backend dependencies",
+	},
+	{
 		key = "s",
 		mods = "LEADER",
 		action = workspace_switcher.switch_workspace(),
@@ -196,6 +220,11 @@ function M.apply_to_config(config)
 			openai = "oauth",
 		},
 		renderer = default_ai_commander_renderer(),
+		max_chat_context_chars = 120000,
+		max_chat_history_messages = 12,
+		max_chat_history_chars = 120000,
+		command_context_output_lines = 40,
+		command_context_output_chars = 6000,
 	})
 
 	workspace_switcher.workspace_formatter = function(label)
