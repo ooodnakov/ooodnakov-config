@@ -248,9 +248,6 @@ if (( $+commands[uv] )) && (( $+functions[compdef] )); then
   compdef _uvx uvx
 fi
 
-if (( $+commands[omp] )) && (( $+functions[compdef] )); then
-  eval "$(omp completions zsh)"
-fi
 
 if (( $+commands[pnpm] )); then
   # Already has static file in fpath.

@@ -16,7 +16,6 @@
     "npm:@juicesharp/rpiv-ask-user-question",
     "npm:pi-caveman",
     "npm:pi-lens",
-    "npm:pi-caveman",
     "npm:@upstash/context7-mcp"
   ],
   "defaultProvider": "openai-codex",
