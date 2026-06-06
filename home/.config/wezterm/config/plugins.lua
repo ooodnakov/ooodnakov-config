@@ -148,6 +148,14 @@ local plugin_keys = {
 		desc = "Ask AI Commander in a split pane",
 	},
 	{
+		key = "E",
+		mods = "CTRL|SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			ai_commander.complete_current_command(window, pane)
+		end),
+		desc = "Complete current shell command with AI Commander",
+	},
+	{
 		key = "s",
 		mods = "LEADER",
 		action = workspace_switcher.switch_workspace(),
