@@ -201,8 +201,9 @@ Shell completion:
   - Complete nested agent subcommands: `oooconf agents mcp <Tab>`
   - Complete shell values: `oooconf secrets unlock --shell <Tab>`
 - **Zsh**: completion is provided via fzf-tab integration
-  - Regenerate tracked completions: `oooconf completions`
-  - Command metadata comes from the recursive CLI tree in `scripts/cli/oooconf-cli-spec.toml`; shared value sets such as optional dependency keys are referenced by name and expanded by the generator.
+  - Regenerate completions: `oooconf completions`
+  - Third-party tool completions come from `scripts/generate/tool-completions.toml` and are emitted only for binaries available on `PATH`.
+  - `oooconf` command metadata comes from the recursive CLI tree in `scripts/cli/oooconf-cli-spec.toml`; shared value sets such as optional dependency keys are referenced by name and expanded by the generator.
 
 Help system:
 

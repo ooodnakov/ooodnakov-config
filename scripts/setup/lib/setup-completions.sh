@@ -17,30 +17,18 @@ prepare_completion_output_path() {
 }
 
 generate_autogen_completions() {
-  local target_dir
-  target_dir="$(completion_autogen_target_dir)"
-  local spec binary description output_file completion_cmd
-  if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Generating autogen completions in $target_dir"
-    return 0
-  fi
-
-  prepare_completion_output_path
-
-  if [ ! -f "$AUTOGEN_COMPLETIONS_MANIFEST" ]; then
-    TOOL_SUMMARY+=("autogen completions: manifest missing ($AUTOGEN_COMPLETIONS_MANIFEST)")
+  if [ ! -f "$AUTOGEN_COMPLETIONS_GENERATOR" ]; then
+    TOOL_SUMMARY+=("autogen completions: generator missing ($AUTOGEN_COMPLETIONS_GENERATOR)")
     return 1
   fi
 
-  while IFS= read -r spec; do
-    case "$spec" in
-    "" | \#*) continue ;;
-    esac
-    IFS='|' read -r binary description output_file completion_cmd <<<"$spec"
-    if command -v "$binary" >/dev/null 2>&1; then
-      run_with_spinner "$description" sh -c "cd '$REPO_ROOT' && $completion_cmd > '$target_dir/$output_file'"
-    fi
-  done <"$AUTOGEN_COMPLETIONS_MANIFEST"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    run_python "$AUTOGEN_COMPLETIONS_GENERATOR" --dry-run
+    return $?
+  fi
+
+  run_with_spinner "Generating autogen tool completions" \
+    run_python "$AUTOGEN_COMPLETIONS_GENERATOR"
 }
 
 generate_oooconf_completions() {

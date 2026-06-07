@@ -1,0 +1,168 @@
+version = 1
+
+[zsh]
+output_dir = "home/.config/ooodnakov/zsh/completions/autogen"
+stamp = ".autogen-stamp"
+prune = true
+validate = true
+
+[[tools]]
+key = "rustup"
+binary = "rustup"
+description = "Rust toolchain manager"
+
+[[tools.zsh]]
+output = "_rustup"
+provides = ["rustup"]
+description = "Generating rustup completions"
+argv = ["rustup", "completions", "zsh"]
+
+[[tools.zsh]]
+output = "_cargo"
+provides = ["cargo"]
+description = "Generating cargo completions"
+argv = ["rustup", "completions", "zsh", "cargo"]
+
+[[tools]]
+key = "gum"
+binary = "gum"
+description = "Gum terminal UI helper"
+
+[[tools.zsh]]
+output = "_gum"
+provides = ["gum"]
+argv = ["gum", "completion", "zsh"]
+
+[[tools]]
+key = "bw"
+binary = "bw"
+description = "Bitwarden CLI"
+
+[[tools.zsh]]
+output = "_bw"
+provides = ["bw"]
+argv = ["bw", "completion", "--shell", "zsh"]
+
+[[tools]]
+key = "glow"
+binary = "glow"
+description = "Glow markdown viewer"
+
+[[tools.zsh]]
+output = "_glow"
+provides = ["glow"]
+argv = ["glow", "completion", "zsh"]
+
+[[tools]]
+key = "wezterm"
+binary = "wezterm"
+description = "WezTerm terminal"
+
+[[tools.zsh]]
+output = "_wezterm"
+provides = ["wezterm"]
+argv = ["wezterm", "shell-completion", "--shell", "zsh"]
+
+[[tools]]
+key = "fd"
+binary = "fd"
+description = "fd find alternative"
+
+[[tools.zsh]]
+output = "_fd"
+provides = ["fd"]
+argv = ["fd", "--gen-completions", "zsh"]
+
+[[tools]]
+key = "bat"
+binary = "bat"
+description = "bat pager"
+
+[[tools.zsh]]
+output = "_bat"
+provides = ["bat"]
+argv = ["bat", "--completion", "zsh"]
+
+[[tools]]
+key = "uv"
+binary = "uv"
+description = "uv Python package manager"
+
+[[tools.zsh]]
+output = "_uv"
+provides = ["uv"]
+argv = ["uv", "generate-shell-completion", "zsh"]
+
+[[tools]]
+key = "bun"
+binary = "bun"
+description = "Bun JavaScript runtime"
+
+[[tools.zsh]]
+output = "_bun"
+provides = ["bun"]
+argv = ["bun", "completions"]
+env = { SHELL = "zsh" }
+
+[[tools]]
+key = "hermes"
+binary = "hermes"
+description = "Hermes agent CLI"
+
+[[tools.zsh]]
+output = "_hermes"
+provides = ["hermes"]
+argv = ["hermes", "completion", "zsh"]
+filter = "hermes-v0.12-zsh-fix"
+
+[[tools]]
+key = "dua"
+binary = "dua"
+description = "dua disk usage analyzer"
+
+[[tools.zsh]]
+output = "_dua"
+provides = ["dua"]
+argv = ["dua", "completions", "zsh"]
+
+[[tools]]
+key = "npm"
+binary = "npm"
+description = "npm package manager"
+
+[[tools.zsh]]
+output = "_npm"
+provides = ["npm"]
+argv = ["npm", "completion"]
+filter = "npm-zsh-wrapper"
+
+[[tools]]
+key = "spotatui"
+binary = "spotatui"
+description = "Spotify terminal UI"
+
+[[tools.zsh]]
+output = "_spotatui"
+provides = ["spotatui"]
+argv = ["spotatui", "--completions", "zsh"]
+filter = "strip-before-compdef"
+
+[[tools]]
+key = "omp"
+binary = "omp"
+description = "Oh My Pi CLI"
+
+[[tools.zsh]]
+output = "_omp"
+provides = ["omp"]
+argv = ["omp", "completions", "zsh"]
+
+[[tools]]
+key = "pypr"
+binary = "pypr"
+description = "Pyprland CLI"
+
+[[tools.zsh]]
+output = "_pypr"
+provides = ["pypr"]
+argv = ["pypr", "compgen", "zsh"]

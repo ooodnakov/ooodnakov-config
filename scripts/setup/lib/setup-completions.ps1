@@ -15,50 +15,20 @@ function Initialize-CompletionOutputPath {
 }
 
 function Generate-AutogenCompletions {
-    $targetDir = Get-AutogenCompletionsTargetDir
+    if (-not (Test-Path $AutogenCompletionsGenerator)) {
+        Add-ToolSummary "autogen completions: generator missing ($AutogenCompletionsGenerator)"
+        return
+    }
+
     if ($DryRun) {
-        Write-Output "[dry-run] Generating autogen completions in $targetDir"
+        Run-Python -ScriptPath $AutogenCompletionsGenerator -ScriptArgs @("--dry-run")
         return
     }
 
-    Initialize-CompletionOutputPath
-
-    if (-not (Test-Path $AutogenCompletionsManifest)) {
-        Add-ToolSummary "autogen completions: manifest missing ($AutogenCompletionsManifest)"
-        return
-    }
-
-    $completionSpecs = Get-Content -Path $AutogenCompletionsManifest -ErrorAction SilentlyContinue
-    foreach ($line in $completionSpecs) {
-        if ([string]::IsNullOrWhiteSpace($line) -or $line.Trim().StartsWith("#")) {
-            continue
-        }
-
-        $parts = $line -split "\|", 4
-        if ($parts.Count -lt 4) {
-            continue
-        }
-        $commandName = $parts[0].Trim()
-        $description = $parts[1].Trim()
-        $outputFile = Join-Path $targetDir ($parts[2].Trim())
-        $commandLine = $parts[3].Trim()
-
-        if (-not (Get-Command $commandName -ErrorAction SilentlyContinue)) {
-            continue
-        }
-
-        Invoke-ActionWithSpinner -Description $description -Action {
-            param($lineToRun, $targetFile, $workingDirectory)
-            Push-Location $workingDirectory
-            try {
-                $content = @(Invoke-Expression $lineToRun)
-                $normalized = [string]::Join("`n", $content) + "`n"
-                [System.IO.File]::WriteAllText($targetFile, $normalized, (New-Object System.Text.UTF8Encoding $false))
-            } finally {
-                Pop-Location
-            }
-        } -ArgumentList $commandLine, $outputFile, $RepoRoot
-    }
+    Invoke-ActionWithSpinner -Description "Generating autogen tool completions" -Action {
+        param($scriptPath)
+        $null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()
+    } -ArgumentList $AutogenCompletionsGenerator
 }
 
 function Generate-OooconfCompletions {

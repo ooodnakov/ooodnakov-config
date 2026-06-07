@@ -40,7 +40,7 @@ if (Test-Path $OooconfPs1Path) {
 }
 
 $OptionalDepsScript = Join-Path $RepoRoot "scripts/cli/read_optional_deps.py"
-$AutogenCompletionsManifest = Join-Path $RepoRoot "scripts/generate/autogen-completions.txt"
+$AutogenCompletionsGenerator = Join-Path $RepoRoot "scripts/generate/generate_tool_completions.py"
 $OooconfCompletionsGenerator = Join-Path $RepoRoot "scripts/cli/generate_oooconf_completions.py"
 $HomeDir = $HOME
 $ConfigHome = Join-Path $HomeDir ".config"

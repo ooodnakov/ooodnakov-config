@@ -64,6 +64,13 @@ uv run python scripts/cli/generate_oooconf_completions.py
 uv run pytest tests/test_recursive_completions.py
 ```
 
+After changing third-party autogen completion metadata in `scripts/generate/tool-completions.toml`, run:
+
+```bash
+uv run python scripts/generate/generate_tool_completions.py --dry-run
+uv run pytest tests/test_optional_deps_drift.py -k tool_completion
+```
+
 ## Keeping README, docs/, and AGENTS.md Aligned
 
 Whenever you make updates to the dotfiles setup, ensure that:

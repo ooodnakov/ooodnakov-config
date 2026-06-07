@@ -14,6 +14,7 @@ The public CLI is split across a small set of files:
 | Command implementation modules | `scripts/setup/lib/oooconf-*.sh` and `scripts/setup/lib/oooconf-*.ps1` | Focused command families such as `shell`, `color`, `wm`, `bar`, `help`, and UI helpers. |
 | Setup command modules | `scripts/setup/lib/setup-*.sh` and `scripts/setup/lib/setup-*.ps1` | Installer, links, optional dependency, doctor, completion, and summary helpers called by setup entrypoints. |
 | Generated completions | `home/.config/ooodnakov/zsh/completions/_oooconf` and `home/.config/ooodnakov/completions/oooconf-completions.ps1` | Regenerate these; do not hand-edit generated output. |
+| Autogen tool completions | `scripts/generate/tool-completions.toml` and `scripts/generate/generate_tool_completions.py` | Typed third-party zsh completion manifest; use argv arrays and filters instead of shell strings. |
 
 ## Add or Change a Command
 
@@ -33,8 +34,9 @@ The public CLI is split across a small set of files:
    - Verify `oooconf --help` and `oooconf help <command>` stay useful for the new command and its nested commands.
 
 4. **Regenerate completions.**
-   - Run `uv run python scripts/cli/generate_oooconf_completions.py`.
-   - Commit the regenerated Zsh and PowerShell completion files when they change.
+   - Run `uv run python scripts/cli/generate_oooconf_completions.py` for `oooconf` command metadata.
+   - Run `uv run python scripts/generate/generate_tool_completions.py` after changing third-party tool completion metadata.
+   - Commit regenerated tracked `oooconf` Zsh and PowerShell files when they change; autogen tool outputs under `zsh/completions/autogen/` stay local.
 
 5. **Update documentation when behavior changes.**
    - Update `README.md` for user-facing command changes.
@@ -99,6 +101,7 @@ bash -n scripts/setup/delete.sh
 bash -n scripts/setup/minimal-setup.sh
 bash -n scripts/setup/lib/*.sh
 uv run python scripts/cli/generate_oooconf_completions.py
+uv run python scripts/generate/generate_tool_completions.py --dry-run
 uv run pytest tests/test_recursive_completions.py tests/test_static_smoke.py tests/test_optional_deps.py
 ```
 

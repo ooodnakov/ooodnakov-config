@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.cli.read_optional_deps import load_deps, normalized_deps  # noqa: E402
+from scripts.generate.generate_tool_completions import ZshCompletion, apply_filter  # noqa: E402
 
 
 def _catalog_keys() -> list[str]:
@@ -36,6 +38,11 @@ def _zsh_completion_keys() -> list[str]:
     return re.findall(r"'([^:']+):", match.group("body"))
 
 
+def _tool_completion_manifest() -> dict[str, object]:
+    with (REPO_ROOT / "scripts/generate/tool-completions.toml").open("rb") as fh:
+        return tomllib.load(fh)
+
+
 def test_completion_keys_match_optional_deps_catalog() -> None:
     expected = _catalog_keys()
     assert _powershell_completion_keys() == expected
@@ -54,10 +61,55 @@ def test_completions_generator_uses_canonical_parser() -> None:
     assert "scripts/oooconf-cli-spec.toml" not in content
 
 
-def test_autogen_completion_manifest_descriptions_are_clean() -> None:
-    content = (REPO_ROOT / "scripts/generate/autogen-completions.txt").read_text(encoding="utf-8")
-    assert "comepltions" not in content
-    assert "Generate " not in content
+def test_tool_completion_manifest_is_typed_and_complete() -> None:
+    manifest = _tool_completion_manifest()
+    assert manifest["version"] == 1
+    assert not (REPO_ROOT / "scripts/generate/autogen-completions.txt").exists()
+    assert not (REPO_ROOT / "scripts/generate/generate_hermes_completion.sh").exists()
+
+    tools = manifest["tools"]
+    assert isinstance(tools, list)
+    outputs: dict[str, dict[str, object]] = {}
+    for tool in tools:
+        assert isinstance(tool, dict)
+        assert isinstance(tool.get("key"), str)
+        assert isinstance(tool.get("binary"), str)
+        for entry in tool.get("zsh", []):
+            assert isinstance(entry, dict)
+            assert isinstance(entry.get("output"), str)
+            assert str(entry["output"]).startswith("_")
+            assert isinstance(entry.get("provides"), list)
+            assert isinstance(entry.get("argv"), list)
+            assert all(isinstance(part, str) and part for part in entry["argv"])
+            outputs[str(entry["output"])] = entry
+
+    assert {"_npm", "_spotatui", "_hermes", "_uv", "_bun"} <= outputs.keys()
+    assert outputs["_npm"]["filter"] == "npm-zsh-wrapper"
+    assert outputs["_spotatui"]["filter"] == "strip-before-compdef"
+    assert outputs["_hermes"]["filter"] == "hermes-v0.12-zsh-fix"
+    assert outputs["_bun"]["env"] == {"SHELL": "zsh"}
+
+
+def test_tool_completion_filters_fix_known_bad_outputs() -> None:
+    spec = ZshCompletion(
+        tool_key="tool",
+        binary="tool",
+        output="_tool",
+        provides=("tool",),
+        argv=("tool", "completion", "zsh"),
+        env={},
+        filter_name=None,
+        description="Generating tool completions",
+    )
+
+    assert apply_filter("strip-before-compdef", "Logging to: /tmp/log\n#compdef spotatui\nbody\n", spec).startswith(
+        "#compdef spotatui\n"
+    )
+    npm = apply_filter("npm-zsh-wrapper", "ignored\n", spec)
+    assert npm.startswith("#compdef npm\n")
+    assert "_npm()" in npm
+    hermes = apply_filter("hermes-v0.12-zsh-fix", "'(-h --help){-h,--help}[Show help and exit]'\n", spec)
+    assert "'(-h --help)'{-h,--help}'[Show help and exit]'" in hermes
 
 
 def test_spec_driven_subcommand_options_are_emitted() -> None:
@@ -178,19 +230,35 @@ def test_top_level_command_values_are_emitted() -> None:
 
 def test_oooconf_completions_command_wires_generator() -> None:
     setup_sh = _setup_bash_sources()
+    assert 'AUTOGEN_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/generate/generate_tool_completions.py"' in setup_sh
     assert 'OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/cli/generate_oooconf_completions.py"' in setup_sh
+    assert 'run_python "$AUTOGEN_COMPLETIONS_GENERATOR" --dry-run' in setup_sh
+    assert 'run_python "$AUTOGEN_COMPLETIONS_GENERATOR"' in setup_sh
     assert 'run_python "$OOOCONF_COMPLETIONS_GENERATOR"' in setup_sh
     assert "generate_tracked_completions()" in setup_sh
     assert "prepare_completion_output_path" in setup_sh
     assert "generate_tracked_completions || true" in setup_sh
+    bash_autogen = setup_sh.split("generate_autogen_completions()", 1)[1].split("generate_oooconf_completions()", 1)[0]
+    assert "AUTOGEN_COMPLETIONS_MANIFEST" not in bash_autogen
+    assert "sh -c" not in bash_autogen
 
     setup_ps1 = _setup_pwsh_sources()
     assert (
+        '$AutogenCompletionsGenerator = Join-Path $RepoRoot "scripts/generate/generate_tool_completions.py"'
+        in setup_ps1
+    )
+    assert (
         '$OooconfCompletionsGenerator = Join-Path $RepoRoot "scripts/cli/generate_oooconf_completions.py"' in setup_ps1
     )
+    assert 'Run-Python -ScriptPath $AutogenCompletionsGenerator -ScriptArgs @("--dry-run")' in setup_ps1
     assert "$null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()" in setup_ps1
     assert "function Generate-TrackedCompletions" in setup_ps1
     assert "Generate-TrackedCompletions" in setup_ps1
+    powershell_autogen = setup_ps1.split("function Generate-AutogenCompletions", 1)[1].split(
+        "function Generate-OooconfCompletions", 1
+    )[0]
+    assert "AutogenCompletionsManifest" not in powershell_autogen
+    assert "Invoke-Expression" not in powershell_autogen
     completions_branch = setup_ps1.split('"completions" {', 1)[1].split('"minimal"', 1)[0]
     assert "Generate-AutogenCompletions" in completions_branch
     assert "Generate-OooconfCompletions" in completions_branch
@@ -203,6 +271,14 @@ def test_oooconf_completions_command_wires_generator() -> None:
     ooops1 = _oooconf_pwsh_sources()
     assert '"completions" {' in ooops1
     assert 'Invoke-SetupCommand -SetupCommand "completions" -SupportsDryRun -RemainingArgs $remaining' in ooops1
+
+
+def test_zsh_completion_cache_watches_autogen_stamp() -> None:
+    zshrc = (REPO_ROOT / "home/.config/zsh/.zshrc").read_text(encoding="utf-8")
+    assert "zsh/completions/autogen/.autogen-stamp" in zshrc
+    assert 'eval "$(uv generate-shell-completion zsh)"' not in zshrc
+    assert "autoload -Uz _uv" in zshrc
+    assert 'words=("${uv_words[@]}")' in zshrc
 
 
 def test_setup_dispatch_uses_handler_metadata() -> None:

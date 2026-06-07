@@ -5,7 +5,7 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PYTHON_LIB="$REPO_ROOT/scripts/lib/python.sh"
 OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/cli/read_optional_deps.py"
-AUTOGEN_COMPLETIONS_MANIFEST="$REPO_ROOT/scripts/generate/autogen-completions.txt"
+AUTOGEN_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/generate/generate_tool_completions.py"
 OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/cli/generate_oooconf_completions.py"
 HOME_DIR="${HOME}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
