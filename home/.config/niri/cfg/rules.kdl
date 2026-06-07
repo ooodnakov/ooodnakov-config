@@ -55,3 +55,18 @@
 
         place-within-backdrop true
     }
+    
+    window-rule {
+        background-effect {
+            blur true
+            xray false
+        }
+    }
+
+    /* Noctalia: blur everywhere without xray for a better look */
+    layer-rule {
+        match namespace="^noctalia-(background|launcher-overlay|dock)-.*$"
+        background-effect {
+            xray false
+        }
+    }
