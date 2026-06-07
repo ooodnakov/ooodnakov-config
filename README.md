@@ -33,7 +33,7 @@ Active tracked config lives under `home/` and includes:
 - shared portable environment files plus ignored local override templates
 - WezTerm, Yazi, LazyVim/Neovim, LazyGit, LazyDocker, btop, CAVA, todo.txt, Taskwarrior, and ccstatusline config
 - PowerShell profile, PowerShell completions, Oh My Posh, and shared SSH include config
-- Linux desktop config for Niri and Noctalia
+- Linux desktop config for Niri, Hyprland/Pyprland, and Noctalia
 - Windows window-manager config for Komorebi, GlazeWM, Zebar, and the `.pi` coding agent
 - macOS desktop config for AeroSpace, OmniWM, SketchyBar, and Borders
 - agent policy, MCP, provider, skill, and installer metadata under `home/.config/ooodnakov/agents/`
@@ -281,7 +281,7 @@ Setup symlinks tracked config into standard locations and preserves replaced fil
 - Unix: `~/.local/state/ooodnakov-config/backups/`
 - Windows: `$HOME\.local\state\ooodnakov-config\backups\`
 
-On Unix, that managed tree includes `~/.config/niri` linked from [`home/.config/niri`](home/.config/niri) and `~/.config/noctalia` linked from [`home/.config/noctalia`](home/.config/noctalia) alongside the existing shell, terminal, editor, and `ooodnakov` config links.
+On Unix, that managed tree includes `~/.config/niri` linked from [`home/.config/niri`](home/.config/niri), `~/.config/hypr` linked from [`home/.config/hypr`](home/.config/hypr), `~/.config/pypr` linked from [`home/.config/pypr`](home/.config/pypr), and `~/.config/noctalia` linked from [`home/.config/noctalia`](home/.config/noctalia) alongside the existing shell, terminal, editor, and `ooodnakov` config links.
 
 Each install, update, or doctor run also writes logs under:
 

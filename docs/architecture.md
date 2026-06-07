@@ -28,7 +28,7 @@ The repo uses a symlink-first install model.
 On Unix-like systems:
 
 - `scripts/setup/ooodnakov.sh` is the dispatcher behind `home/.config/ooodnakov/bin/oooconf`
-- `scripts/setup/setup.sh` links tracked files from `home/` into XDG and home-directory targets such as `~/.config/zsh`, `~/.config/wezterm`, `~/.config/yazi`, `~/.config/niri`, `~/.config/nvim`, `~/.config/task`, and `~/.config/ooodnakov`; it also links managed Taskwarrior config to legacy `~/.taskrc`
+- `scripts/setup/setup.sh` links tracked files from `home/` into XDG and home-directory targets such as `~/.config/zsh`, `~/.config/wezterm`, `~/.config/yazi`, `~/.config/niri`, `~/.config/hypr`, `~/.config/pypr`, `~/.config/nvim`, `~/.config/task`, and `~/.config/ooodnakov`; it also links managed Taskwarrior config to legacy `~/.taskrc`
 - `home/.config/ooodnakov/bin/oooconf` is linked into `~/.local/bin/oooconf` and `home/.config/ooodnakov/bin/o` into `~/.local/bin/o`
 - replaced files are moved into timestamped backups under `~/.local/state/ooodnakov-config/backups/`
 - logs are written to `~/.local/state/ooodnakov-config/logs/`

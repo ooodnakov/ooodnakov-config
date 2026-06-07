@@ -44,6 +44,18 @@ target = "{HOME}/.pi-lens"
 # --- linux-only ---
 
 [[links]]
+key = "hypr"
+source = "home/.config/hypr"
+target = "{CONFIG_HOME}/hypr"
+only = "linux"
+
+[[links]]
+key = "pypr"
+source = "home/.config/pypr"
+target = "{CONFIG_HOME}/pypr"
+only = "linux"
+
+[[links]]
 key = "noctalia"
 source = "home/.config/noctalia"
 target = "{CONFIG_HOME}/noctalia"

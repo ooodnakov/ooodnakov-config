@@ -28,7 +28,7 @@ Authoritative managed config lives in:
 - `home/.config/powershell/`
 - `home/.config/ohmyposh/`
 - `home/.config/ooodnakov/`
-- desktop/window-manager trees under `home/.config/{niri,noctalia,komorebi,aerospace,omniwm,sketchybar,borders}/` and `home/.glzr/`
+- desktop/window-manager trees under `home/.config/{niri,hypr,pypr,noctalia,komorebi,aerospace,omniwm,sketchybar,borders}/` and `home/.glzr/`
 
 Bootstrap behavior lives in:
 
