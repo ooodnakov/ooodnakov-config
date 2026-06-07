@@ -2,23 +2,17 @@
 # ~/.config/hypr/config/90-keybinds.conf.
 
 [pyprland]
-plugins = [
-  "scratchpads",
-  "expose",
-]
+plugins = ["scratchpads"]
 
-# Mod+O: overview without including scratch/special workspaces.
-[expose]
-include_special = false
 
 # Mod+apostrophe: lazy WezTerm scratch terminal.
 [scratchpads.term]
-animation = "fromTop"
+animation = ""
 command = "wezterm start --always-new-process --class pypr-scratch-term"
 class = "pypr-scratch-term"
 match_by = "class"
 process_tracking = false
 size = "75% 60%"
 max_size = "1920px 100%"
-margin = 50
+position = "12% 50px"
 lazy = true
