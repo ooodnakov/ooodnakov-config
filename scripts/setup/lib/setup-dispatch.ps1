@@ -139,9 +139,8 @@ function Invoke-Install {
         Add-ToolSummary "ssh include: ensured"
     }
 
-    Step-Progress -Status "Generating completions and platform integrations"
-    Generate-AutogenCompletions
-    Generate-OooconfCompletions
+    Step-Progress -Status "Generating completion files and platform integrations"
+    Generate-TrackedCompletions
 
     Step-Progress -Status "Writing setup summary"
     Write-Summary

@@ -2,6 +2,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from scripts.lib.sync_color_theme import (
@@ -18,6 +20,11 @@ from scripts.lib.sync_color_theme import (
     set_yazi_theme,
     set_zebar_theme,
 )
+
+
+@pytest.fixture(autouse=True)
+def clear_xdg_config_home(monkeypatch) -> None:
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
 
 
 def test_komorebi_theme_sync_writes_schema_safe_main_theme(tmp_path: Path) -> None:

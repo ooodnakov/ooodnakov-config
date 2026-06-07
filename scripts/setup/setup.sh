@@ -231,7 +231,7 @@ initialize_logging
 if [ "$COMMAND" = "completions" ]; then
   progress_init 3 "oooconf completions"
   progress_step "Preparing completion output path"
-  run_cmd mkdir -p "$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
+  prepare_completion_output_path
   progress_step "Generating tracked autogen completions"
   generate_autogen_completions || true
   progress_step "Generating oooconf command completions"
@@ -318,8 +318,8 @@ if link_file "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"; then
   fi
 fi
 
-progress_step "Generating completions and platform integrations"
-
+progress_step "Generating completion files and platform integrations"
+generate_tracked_completions || true
 ensure_ssh_include || true
 install_fonts
 

@@ -184,20 +184,11 @@ try {
         "completions" {
             Start-StepProgress -Total 4 -Activity "oooconf completions"
             Step-Progress -Status "Preparing completion output path"
-            $completionsDir = Join-Path $RepoRoot "home/.config/ooodnakov/zsh/completions/autogen"
-            if ($DryRun) {
-                Write-Output "[dry-run] ensure directory $completionsDir"
-            } else {
-                Ensure-Directory -Path $completionsDir | Out-Null
-            }
+            Initialize-CompletionOutputPath
             Step-Progress -Status "Generating tracked autogen completions"
-            if (-not $DryRun) {
-                Generate-AutogenCompletions
-            }
+            Generate-AutogenCompletions
             Step-Progress -Status "Generating oooconf command completions"
-            if (-not $DryRun) {
-                Generate-OooconfCompletions
-            }
+            Generate-OooconfCompletions
             Write-Output ""
             Write-Output "Completion generation complete."
             Step-Progress -Status "Done"

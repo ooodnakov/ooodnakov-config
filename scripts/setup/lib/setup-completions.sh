@@ -1,16 +1,31 @@
 #!/usr/bin/env bash
 # Sourced by scripts/setup/setup.sh; do not execute directly.
 
-generate_autogen_completions() {
+completion_autogen_target_dir() {
+  printf '%s\n' "$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
+}
+
+prepare_completion_output_path() {
   local target_dir
-  target_dir="$REPO_ROOT/home/.config/ooodnakov/zsh/completions/autogen"
-  local spec binary description output_file completion_cmd
-  [ "$DRY_RUN" -eq 1 ] && {
-    echo "[dry-run] Generating autogen completions in $target_dir"
+  target_dir="$(completion_autogen_target_dir)"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] ensure directory $target_dir"
     return 0
-  }
+  fi
 
   mkdir -p "$target_dir"
+}
+
+generate_autogen_completions() {
+  local target_dir
+  target_dir="$(completion_autogen_target_dir)"
+  local spec binary description output_file completion_cmd
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Generating autogen completions in $target_dir"
+    return 0
+  fi
+
+  prepare_completion_output_path
 
   if [ ! -f "$AUTOGEN_COMPLETIONS_MANIFEST" ]; then
     TOOL_SUMMARY+=("autogen completions: manifest missing ($AUTOGEN_COMPLETIONS_MANIFEST)")
@@ -41,4 +56,10 @@ generate_oooconf_completions() {
 
   run_with_spinner "Generating oooconf command completions" \
     run_python "$OOOCONF_COMPLETIONS_GENERATOR"
+}
+
+generate_tracked_completions() {
+  prepare_completion_output_path
+  generate_autogen_completions
+  generate_oooconf_completions
 }

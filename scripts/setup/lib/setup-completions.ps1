@@ -1,13 +1,27 @@
 # Dot-sourced by scripts/setup/setup.ps1; do not execute directly.
 
+function Get-AutogenCompletionsTargetDir {
+    Join-Path $RepoRoot "home/.config/ooodnakov/zsh/completions/autogen"
+}
+
+function Initialize-CompletionOutputPath {
+    $targetDir = Get-AutogenCompletionsTargetDir
+    if ($DryRun) {
+        Write-Output "[dry-run] ensure directory $targetDir"
+        return
+    }
+
+    Ensure-Directory -Path $targetDir | Out-Null
+}
+
 function Generate-AutogenCompletions {
-    $targetDir = Join-Path $RepoRoot "home/.config/ooodnakov/zsh/completions/autogen"
+    $targetDir = Get-AutogenCompletionsTargetDir
     if ($DryRun) {
         Write-Output "[dry-run] Generating autogen completions in $targetDir"
         return
     }
 
-    Ensure-Directory -Path $targetDir | Out-Null
+    Initialize-CompletionOutputPath
 
     if (-not (Test-Path $AutogenCompletionsManifest)) {
         Add-ToolSummary "autogen completions: manifest missing ($AutogenCompletionsManifest)"
@@ -62,6 +76,12 @@ function Generate-OooconfCompletions {
         param($scriptPath)
         $null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()
     } -ArgumentList $OooconfCompletionsGenerator
+}
+
+function Generate-TrackedCompletions {
+    Initialize-CompletionOutputPath
+    Generate-AutogenCompletions
+    Generate-OooconfCompletions
 }
 
 function Add-NewlyAvailableCommand {

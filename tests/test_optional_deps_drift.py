@@ -50,6 +50,14 @@ def test_completions_generator_uses_canonical_parser() -> None:
     assert 'eval "local -a' not in content
     assert "def walk_commands" in content
     assert "subsubcommand" not in content.lower()
+    assert "scripts/generate_oooconf_completions.py" not in content
+    assert "scripts/oooconf-cli-spec.toml" not in content
+
+
+def test_autogen_completion_manifest_descriptions_are_clean() -> None:
+    content = (REPO_ROOT / "scripts/generate/autogen-completions.txt").read_text(encoding="utf-8")
+    assert "comepltions" not in content
+    assert "Generate " not in content
 
 
 def test_spec_driven_subcommand_options_are_emitted() -> None:
@@ -172,12 +180,21 @@ def test_oooconf_completions_command_wires_generator() -> None:
     setup_sh = _setup_bash_sources()
     assert 'OOOCONF_COMPLETIONS_GENERATOR="$REPO_ROOT/scripts/cli/generate_oooconf_completions.py"' in setup_sh
     assert 'run_python "$OOOCONF_COMPLETIONS_GENERATOR"' in setup_sh
+    assert "generate_tracked_completions()" in setup_sh
+    assert "prepare_completion_output_path" in setup_sh
+    assert "generate_tracked_completions || true" in setup_sh
 
     setup_ps1 = _setup_pwsh_sources()
     assert (
         '$OooconfCompletionsGenerator = Join-Path $RepoRoot "scripts/cli/generate_oooconf_completions.py"' in setup_ps1
     )
     assert "$null = Run-Python -ScriptPath $scriptPath -ScriptArgs @()" in setup_ps1
+    assert "function Generate-TrackedCompletions" in setup_ps1
+    assert "Generate-TrackedCompletions" in setup_ps1
+    completions_branch = setup_ps1.split('"completions" {', 1)[1].split('"minimal"', 1)[0]
+    assert "Generate-AutogenCompletions" in completions_branch
+    assert "Generate-OooconfCompletions" in completions_branch
+    assert "if (-not $DryRun)" not in completions_branch
 
     ooosh = _oooconf_bash_sources()
     assert "completions)" in ooosh
