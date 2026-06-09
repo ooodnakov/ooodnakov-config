@@ -80,7 +80,7 @@ inner.horizontal = 15
 inner.vertical = 15
 outer.left = 10
 outer.bottom = 10
-outer.top = [{ monitor."S34C65xU" = 38 }, { monitor."LS34A650U" = 38}, { monitor."G27P6M" = 38}, { monitor."M27T20" = 38 }, 6] # 14
+outer.top = [{ monitor."S34C65xU" = 10 }, { monitor."LS34A650U" = 10}, { monitor."G27P6M" = 10}, { monitor."M27T20" = 10}, 6] # 14
 outer.right = 10
 
 # 'main' binding mode declaration
