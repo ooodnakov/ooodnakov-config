@@ -8,7 +8,7 @@ Host siteroot
 
 Host vps
     HostName flagle.ru
-    User de 
+    User de
 
 Host vpsroot
     HostName flagle.ru

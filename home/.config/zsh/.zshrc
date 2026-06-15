@@ -217,7 +217,12 @@ if (( $+functions[_ssh_forward_advanced] )); then
 fi
 
 if (( $+commands[zoxide] )); then
-  eval "$(zoxide init zsh --cmd z)"
+  # Lazy-load zoxide init via cache
+  _zoxide_cache="${XDG_CACHE_HOME:-$HOME/.cache}/zoxide.zsh"
+  if [[ ! -f "$_zoxide_cache" ]]; then
+    zoxide init zsh --cmd z > "$_zoxide_cache"
+  fi
+  source "$_zoxide_cache"
 fi
 
 # direnv supress stdout during startup in path with .envrc
@@ -273,7 +278,11 @@ case "${OOOCONF_ZSH_PROMPT:-p10k}" in
   ohmyposh)
     ooodnakov_omp_config="${OOOCONF_OMP_CONFIG:-$HOME/.config/ohmyposh/ooodnakov.omp.json}"
     if (( $+commands[oh-my-posh] )) && [[ -r "$ooodnakov_omp_config" ]]; then
-      eval "$(oh-my-posh init zsh --config "$ooodnakov_omp_config")"
+      _omp_cache="${XDG_CACHE_HOME:-$HOME/.cache}/oh-my-posh.zsh"
+      if [[ ! -f "$_omp_cache" || "$ooodnakov_omp_config" -nt "$_omp_cache" ]]; then
+        oh-my-posh init zsh --config "$ooodnakov_omp_config" --print > "$_omp_cache"
+      fi
+      source "$_omp_cache"
     elif (( $+commands[oh-my-posh] )); then
       print -u2 "oooconf: oh-my-posh config is missing at $ooodnakov_omp_config; falling back to Powerlevel10k."
       OOOCONF_ZSH_PROMPT=p10k
@@ -459,7 +468,12 @@ unset ooodnakov_auto_uv_env_mode
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 bindkey '^R' fzf_history_search
 
-[[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
+# lazy marker load
+_marker_init() {
+  [[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
+}
+# Only if user triggers ctrl+space or something we load it. Marker binds ^Space
+bindkey '^Space' _marker_init
 
 # To customize the Powerlevel10k prompt, edit ~/.config/ooodnakov/p10k.zsh.
 

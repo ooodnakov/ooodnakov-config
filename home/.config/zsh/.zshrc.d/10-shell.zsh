@@ -95,7 +95,7 @@ ssh-forward() {
 # List and kill active tunnels created by ssh-forward
 ssh-forward-ls() {
     local sockets=(/tmp/ssh-fwd-*.sock(N))
-    
+
     if [[ ${#sockets} -eq 0 ]]; then
         echo "No active ssh-forward tunnels found."
         return 0
@@ -110,7 +110,7 @@ ssh-forward-ls() {
         details=${details%.sock}
         local host=${details%-*}
         local port=${details#*-}
-        
+
         echo "Host: $host | Primary Port: $port"
     done
     echo "----------------------------------------"

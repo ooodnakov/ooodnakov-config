@@ -49,6 +49,7 @@ target = "{HOME}/.zshrc"
 `autolink_dirs` lists directories scanned for auto-linking. Each subdirectory in those dirs becomes a symlink target unless it matches a configured `exclude` pattern or has an explicit `[[links]]` entry with a platform restriction. The current manifest does not define active excludes.
 
 **What is auto-linked:**
+
 - Every directory under `home/.config/`, `home/.local/`, and `home/.glzr/` is a candidate for linking, unless:
   - It matches an `exclude` pattern in `scripts/links.toml` (none are active today)
   - An explicit `[[links]]` entry exists for the same `key` and that entry has an `only` or `except` platform tag that excludes the current platform
@@ -57,9 +58,11 @@ target = "{HOME}/.zshrc"
 Examples: `home/.config/wezterm/` → `~/.config/wezterm`, `home/.config/yazi/` → `~/.config/yazi`, `home/.config/nvim/` → `~/.config/nvim`
 
 **What is auto-linked today:**
+
 - The current manifest has no active discovery excludes, so `home/.config/ooodnakov` is also linked into `~/.config/ooodnakov`. Its ignored `local/` children hold machine-specific overrides while tracked examples stay reproducible.
 
 **When to add an explicit `[[links]]` entry:**
+
 - Files (not directories), e.g., `home/.zshrc` → `~/.zshrc` or managed Taskwarrior `home/.config/task/taskrc` → `~/.taskrc`
 - Platform-specific links (`only = "windows" | "linux" | "macos"`)
 - Non-standard targets that don't follow the `{CONFIG_HOME}/<key>` convention

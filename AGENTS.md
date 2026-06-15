@@ -74,6 +74,7 @@ When adding or modifying symlinks, relevant files are:
 The preferred approach is to create the directory under `home/.config/` (or `home/.local/` or `home/.glzr/`). Auto-discovery handles it automatically — no manifest edit needed.
 
 Only add an explicit `[[links]]` entry in `scripts/links.toml` for:
+
 - Files (not directories), e.g., `home/.zshrc`
 - Platform-specific links (`only` or `except` tags)
 - Non-standard targets that do not follow the `{CONFIG_HOME}/<key>` convention

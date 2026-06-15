@@ -55,7 +55,7 @@
 
         place-within-backdrop true
     }
-    
+
     window-rule {
         background-effect {
             blur true

@@ -176,9 +176,8 @@ function Invoke-ForgitOrGit {
 }
 
 $forgitMode = $env:OOODNAKOV_FORGIT_ALIAS_MODE ?? "plain"
-$forgitAvailable = (Test-AnyCommand -Names @("forgit", "forgit_log", "forgit_diff", "forgit_checkout"))
 
-if ($forgitMode -eq "forgit" -and $forgitAvailable) {
+if ($forgitMode -eq "forgit") {
     function gd {
         Invoke-ForgitOrGit -ForgitNames @("forgit_diff") -GitFallback { git diff @args }
     }

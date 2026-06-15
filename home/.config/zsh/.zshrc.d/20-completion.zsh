@@ -41,7 +41,7 @@ zstyle ':fzf-tab:complete:(o|oooconf):*' query-string input
 # Note: Single quotes wrap the entire zstyle definition, double quotes used safely inside.
 zstyle ':fzf-tab:complete:(o|oooconf):*' fzf-preview '
   subcmd="${words[2]}"
-  
+
   case "$subcmd" in
     deps)
       printf "dependency: %s\n\n%s\n" "$word" "$desc"
@@ -121,6 +121,6 @@ zstyle ':fzf-tab:complete:*' fzf-preview '
 # 1. Safe safeguard if you use standard FZF history
 export FZF_CTRL_R_OPTS="--bind 'enter:accept'"
 
-# # 2. Fix for zsh-autocomplete: tells it to throw selected history 
+# # 2. Fix for zsh-autocomplete: tells it to throw selected history
 # # onto the command line for editing instead of running immediately.
 # bindkey '^M' accept-and-hold
