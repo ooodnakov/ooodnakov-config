@@ -470,9 +470,13 @@ bindkey '^R' fzf_history_search
 
 # lazy marker load
 _marker_init() {
-  [[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
+  bindkey '^Space' set-mark-command
+  if [[ -s "$HOME/.local/share/marker/marker.sh" ]]; then
+    source "$HOME/.local/share/marker/marker.sh"
+    zle -U "$KEYS"
+  fi
 }
-# Only if user triggers ctrl+space or something we load it. Marker binds ^Space
+zle -N _marker_init
 bindkey '^Space' _marker_init
 
 # To customize the Powerlevel10k prompt, edit ~/.config/ooodnakov/p10k.zsh.
