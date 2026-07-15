@@ -229,17 +229,17 @@ function Invoke-EzaOrGetChildItem {
 
 function l {
     param([string[]]$Path)
-    Invoke-EzaOrGetChildItem -EzaArguments @("-la", "--git", "--colour-scale", "all", "-g", "--smart-group", "--icons", "always") -Path $Path
+    Invoke-EzaOrGetChildItem -EzaArguments @("-la", "--git", "--color-scale", "all", "-g", "--smart-group", "--icons", "always") -Path $Path
 }
 
 function a {
     param([string[]]$Path)
-    Invoke-EzaOrGetChildItem -EzaArguments @("-la", "--git", "--colour-scale", "all", "-g", "--smart-group", "--icons", "always") -Path $Path
+    Invoke-EzaOrGetChildItem -EzaArguments @("-la", "--git", "--color-scale", "all", "-g", "--smart-group", "--icons", "always") -Path $Path
 }
 
 function aa {
     param([string[]]$Path)
-    Invoke-EzaOrGetChildItem -EzaArguments @("-la", "--git", "--colour-scale", "all", "-g", "--smart-group", "--icons", "always", "-s", "modified", "-r") -Path $Path
+    Invoke-EzaOrGetChildItem -EzaArguments @("-la", "--git", "--color-scale", "all", "-g", "--smart-group", "--icons", "always", "-s", "modified", "-r") -Path $Path
 }
 
 function e {

@@ -10,6 +10,8 @@
             proportion 0.66667
         }
 
+        default-column-width { proportion 0.5; }
+
         struts {}
         focus-ring {
             width 3
