@@ -574,9 +574,20 @@ function Select-OptionalDependenciesWithGum {
     }
 
     try {
-        # Use arguments instead of pipe for better reliability with interactive TUI on Windows.
-        # Splatting @options passes each item as a separate positional argument to gum choose.
-        $selection = & gum choose --no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue." @options
+        # Make the picker searchable: pipe the full list through gum filter (live fuzzy
+        # search), then into gum choose for toggle/checkbox-style multi-select. Each step
+        # runs separately (not via a single shell pipeline) for reliability on Windows.
+        $filtered = $options | & gum filter --no-limit --placeholder "Type to filter dependencies (tab toggles match, enter confirms)..."
+        if ($LASTEXITCODE -ne 0) {
+            return @()
+        }
+
+        if (-not $filtered) {
+            # User cleared the filter or cancelled; nothing to choose from.
+            return @()
+        }
+
+        $selection = $filtered | & gum choose --no-limit --height 20 --header "Select optional dependencies. Use arrows to move, x to toggle, enter to continue." 2>$null
         $exitCode = $LASTEXITCODE
 
         if ($exitCode -ne 0 -or -not $selection) {

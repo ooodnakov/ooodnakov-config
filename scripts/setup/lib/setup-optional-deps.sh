@@ -398,13 +398,32 @@ choose_optional_dependencies_with_gum() {
 
   # Build gum args as positional arguments (not piped stdin) so gum can use /dev/tty for interaction.
   local -a gum_args=()
-  gum_args+=(--no-limit --height 20 --header "Select optional dependencies to install. Use arrows to move, x to toggle, enter to continue.")
+  gum_args+=(--no-limit --height 20 --header "Select optional dependencies. Use arrows to move, x to toggle, enter to continue.")
+
+  # Make the picker searchable: pre-filter the full list with gum filter (live fuzzy
+  # search), then hand the matches to gum choose for toggle/checkbox-style multi-select.
+  local filtered_selection
+  filtered_selection="$(printf '%s\n' "${options[@]}" | gum filter --no-limit --placeholder "Type to filter dependencies (tab toggles match, enter confirms)..." </dev/tty 2>/dev/tty)" || {
+    stty sane </dev/tty 2>/dev/null || true
+    return 3
+  }
+  stty sane </dev/tty 2>/dev/null || true
+
+  if [ -z "$filtered_selection" ]; then
+    return 3
+  fi
+
+  local -a filtered_options=()
+  while IFS= read -r opt; do
+    [ -n "$opt" ] && filtered_options+=("$opt")
+  done <<<"$filtered_selection"
+
   local opt
-  for opt in "${options[@]}"; do
+  for opt in "${filtered_options[@]}"; do
     gum_args+=("$opt")
   done
 
-  selection="$(gum choose "${gum_args[@]}" </dev/tty 2>/dev/tty)" || {
+  selection="$(gum choose "${gum_args[@]}" </dev/tty 2>/dev/null)" || {
     # Reset terminal state after gum exits (prevents hang on subsequent invocations)
     stty sane </dev/tty 2>/dev/null || true
     # gum returned non-zero: 1 = user cancelled (Esc), 130 = interrupted
