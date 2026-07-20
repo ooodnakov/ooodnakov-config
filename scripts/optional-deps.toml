@@ -746,3 +746,12 @@ macos.manager = "pnpm"
 macos.package = "@earendil-works/pi-coding-agent"
 windows.manager = "pnpm"
 windows.package = "@earendil-works/pi-coding-agent"
+
+[[deps]]
+key = "coreutils-win"
+display = "Microsoft Core Utilities"
+description = "Windows Core Utilities (sudo, etc.) for Windows"
+check = "sudo --help"
+[deps.windows]
+manager = "winget"
+package = "Microsoft.Coreutils"
