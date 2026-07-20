@@ -4,6 +4,7 @@ Thumbs.db
 .local/
 tmp/
 .vscode
+.commandcode/
 
 # uv-managed virtual environment
 .venv/

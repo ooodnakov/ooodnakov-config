@@ -3272,4 +3272,13 @@
       }
     ]
   }
+  ,"Unigram": {
+    "tray_and_multi_window": [
+       {
+        "kind": "Title",
+        "id": "Unigram",
+        "matching_strategy": "Equals"
+      }
+    ]
+  }
 }
