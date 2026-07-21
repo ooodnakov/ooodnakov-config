@@ -130,7 +130,7 @@ completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 description = "install one specific agent CLI"
 options = { "--repo-root" = "set repo root path", "--config" = "config path", "--all" = "install all agents", "--missing" = "install missing agents", "--check" = "check only" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
-values = { "codex" = "Codex", "claude" = "Claude", "gemini" = "Gemini", "qwen" = "Qwen", "cursor-agent" = "Cursor Agent", "opencode" = "OpenCode", "aider" = "Aider" }
+values = { "codex" = "Codex", "claude" = "Claude", "gemini" = "Gemini", "qwen" = "Qwen", "cursor-agent" = "Cursor Agent", "opencode" = "OpenCode", "aider" = "Aider", "pi" = "Pi Agent", "omp" = "Oh My Pi", "command-code" = "Command Code" }
 
 [commands.agents.subcommands.install-scripts-build]
 description = "build standalone install scripts for agents"

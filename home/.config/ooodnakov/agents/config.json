@@ -9,7 +9,10 @@
     { "name": "Aider", "command": "aider" },
     { "name": "Qwen Code", "command": "qwen" },
     { "name": "Cursor Agent", "command": "cursor-agent" },
-    { "name": "OpenCode", "command": "opencode" }
+    { "name": "OpenCode", "command": "opencode" },
+    { "name": "Pi Agent", "command": "pi" },
+    { "name": "Oh My Pi", "command": "omp" },
+    { "name": "Command Code", "command": "command-code" }
   ],
   "agent_updates": [
     { "name": "OpenAI Codex CLI", "command": "codex", "preferred": "npm", "package": "@openai/codex" },
@@ -18,7 +21,10 @@
     { "name": "Qwen Code", "command": "qwen", "preferred": "npm", "package": "@qwen-code/qwen-code" },
     { "name": "Cursor Agent", "command": "cursor-agent", "preferred": "npm", "package": "cursor-agent" },
     { "name": "OpenCode", "command": "opencode", "preferred": "npm", "package": "opencode-ai" },
-    { "name": "Aider", "command": "aider", "preferred": "uv", "package": "aider-chat" }
+    { "name": "Aider", "command": "aider", "preferred": "uv", "package": "aider-chat" },
+    { "name": "Pi Agent", "command": "pi", "preferred": "npm", "package": "@earendil-works/pi-coding-agent" },
+    { "name": "Oh My Pi", "command": "omp", "preferred": "npm", "package": "@oh-my-pi/pi-coding-agent" },
+    { "name": "Command Code", "command": "command-code", "preferred": "npm", "package": "@command-code/cli" }
   ],
   "agent_configs": [
     {
@@ -70,6 +76,42 @@
       "name": "OpenCode Global Instructions",
       "format": "markdown",
       "default_paths": ["~/.config/opencode/AGENTS.md"]
+    },
+    {
+      "name": "Pi Agent",
+      "format": "json",
+      "default_paths": ["~/.pi/agent/settings.json"],
+      "mcp_paths": ["~/.pi/mcp.json"],
+      "docs_url": "https://www.npmjs.com/package/@earendil-works/pi-coding-agent"
+    },
+    {
+      "name": "Pi Agent Global Instructions",
+      "format": "markdown",
+      "default_paths": ["~/.pi/agent/AGENTS.md"]
+    },
+    {
+      "name": "Oh My Pi",
+      "format": "yaml",
+      "default_paths": ["~/.omp/agent/config.yml"],
+      "mcp_paths": ["~/.omp/agent/mcp.json"],
+      "docs_url": "https://www.npmjs.com/package/@oh-my-pi/pi-coding-agent"
+    },
+    {
+      "name": "Oh My Pi Global Instructions",
+      "format": "markdown",
+      "default_paths": ["~/.omp/agent/AGENTS.md", "~/.omp/CLAUDE.md", "~/.omp/.claude/CLAUDE.md"]
+    },
+    {
+      "name": "Command Code",
+      "format": "json",
+      "default_paths": ["~/.commandcode/config.json"],
+      "mcp_skip": true,
+      "docs_url": "https://www.npmjs.com/package/@command-code/cli"
+    },
+    {
+      "name": "Command Code Global Instructions",
+      "format": "markdown",
+      "default_paths": ["~/.commandcode/AGENTS.md"]
     }
   ]
 }

@@ -20,6 +20,11 @@ try:
 except ModuleNotFoundError:  # pragma: no cover
     tomllib = None
 
+try:
+    import yaml as _yaml
+except ModuleNotFoundError:  # pragma: no cover
+    _yaml = None
+
 SCRIPTS_CLI_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
@@ -133,7 +138,9 @@ class AgentConfigTarget:
     name: str
     format: str
     default_paths: list[str]
-    docs_url: str
+    docs_url: str = ""
+    mcp_paths: list[str] | None = None
+    mcp_skip: bool = False
 
 
 @dataclass(frozen=True)
@@ -144,6 +151,7 @@ class DoctorConfigResult:
     missing_skills: list[str]
     parse_error: str = ""
     shape_issues: list[str] | None = None
+    mcp_file_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -538,6 +546,8 @@ def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
                 format=entry["format"],
                 default_paths=list(entry.get("default_paths", [])),
                 docs_url=entry.get("docs_url", ""),
+                mcp_paths=entry.get("mcp_paths"),
+                mcp_skip=entry.get("mcp_skip", False),
             )
         )
     return targets
@@ -674,6 +684,10 @@ def extract_search_space(path: Path, fmt: str) -> str:
         obj = tomllib.loads(raw)
         return json.dumps(obj, sort_keys=True)
     if fmt in {"yaml", "yml"}:
+        if _yaml is not None:
+            obj = _yaml.safe_load(raw)
+            if isinstance(obj, dict):
+                return json.dumps(obj, sort_keys=True)
         return raw
     return raw
 
@@ -764,10 +778,39 @@ def inspect_agent_configs(
             continue
 
         missing_mcp, missing_skills = check_common_entries(search_space, common_data, target.format)
+
+        # If mcp_skip is True, MCP is CLI-managed — skip MCP checks
+        mcp_file_path: Path | None = None
+        if target.mcp_skip:
+            missing_mcp = []
+        elif target.mcp_paths and not target.mcp_skip:
+            # Check separate MCP file instead of main config
+            for mp in target.mcp_paths:
+                candidate = Path(mp).expanduser()
+                if candidate.exists():
+                    mcp_file_path = candidate
+                    break
+            if mcp_file_path:
+                mcp_content = mcp_file_path.read_text(encoding="utf-8")
+                mcp_only_missing, _ = check_common_entries(
+                    mcp_content, {"mcp_servers": common_data.get("mcp_servers", {}), "skills": []}, "json"
+                )
+                missing_mcp = mcp_only_missing
+            else:
+                mcp_names = list(common_data.get("mcp_servers", {}).keys())
+                missing_mcp = mcp_names
+
         parsed_obj: dict[str, Any] | None = None
         if target.format == "json":
             try:
                 parsed = json.loads(existing.read_text(encoding="utf-8"))
+                if isinstance(parsed, dict):
+                    parsed_obj = parsed
+            except Exception:
+                parsed_obj = None
+        elif target.format in {"yaml", "yml"} and _yaml is not None:
+            try:
+                parsed = _yaml.safe_load(existing.read_text(encoding="utf-8"))
                 if isinstance(parsed, dict):
                     parsed_obj = parsed
             except Exception:
@@ -785,6 +828,7 @@ def inspect_agent_configs(
                 missing_mcp=missing_mcp,
                 missing_skills=missing_skills,
                 shape_issues=shape_issues,
+                mcp_file_path=mcp_file_path,
             )
         )
 
@@ -814,6 +858,46 @@ def sync_global_configs(
 
         if existing is None:
             continue
+
+        # Handle separate MCP file targets (mcp_paths) and CLI-managed MCP (mcp_skip)
+        if target.mcp_paths and not target.mcp_skip:
+            # Find or determine MCP file path
+            mcp_file: Path | None = None
+            for mp in target.mcp_paths:
+                candidate = Path(mp).expanduser()
+                if candidate.exists() or candidate.parent.exists():
+                    mcp_file = candidate
+                    break
+            if mcp_file:
+                try:
+                    mcp_data = json.loads(mcp_file.read_text(encoding="utf-8")) if mcp_file.exists() else {}
+                    mcp_servers = common_data.get("mcp_servers", {})
+                    mcp_key = "mcpServers"
+                    if mcp_key not in mcp_data:
+                        mcp_data[mcp_key] = {}
+                    needs_update = False
+                    for name, config in mcp_servers.items():
+                        if name not in mcp_data[mcp_key]:
+                            if "command" not in config:
+                                continue
+                            mcp_data[mcp_key][name] = render_mcp_server_entry(
+                                target, name, config, repo_root, materialize_secrets=materialize_secrets
+                            )
+                            needs_update = True
+                    if needs_update:
+                        changed.append(mcp_file)
+                        if not check_only:
+                            mcp_file.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8")
+                except Exception as exc:
+                    print(f"warning: failed to sync mcp file {mcp_file}: {exc}", file=sys.stderr)
+            continue
+
+        if target.mcp_skip:
+            # MCP is CLI-managed — skip MCP injection but still sync markdown instructions
+            if target.format == "markdown":
+                pass  # fall through to markdown handler below
+            else:
+                continue
 
         if target.format == "markdown":
             try:
