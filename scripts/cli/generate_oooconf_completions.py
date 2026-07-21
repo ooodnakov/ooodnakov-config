@@ -472,6 +472,10 @@ def render_powershell(commands: list[str], spec: CliSpec) -> str:
     lines.append("    $previousToken = if ($tokens.Length -gt 0) { $tokens[-1] } else { '' }")
     lines.append("    if ($currentNode.OptionValues.ContainsKey($previousToken)) {")
     lines.append("        $completions = $currentNode.OptionValues[$previousToken]")
+    lines.append(
+        "    } elseif (($previousToken -in $OooconfGlobalOptionsWithArgs) -or ($previousToken -in $currentNode.OptionsWithArgs)) {"
+    )
+    lines.append("        return @()")
     lines.append("    } else {")
     lines.append("        $completions = $currentNode.Options + $currentNode.Subcommands + $currentNode.Values")
     lines.append("    }")
