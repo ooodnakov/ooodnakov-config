@@ -262,6 +262,21 @@ The shared AGENTS policy snippets are configured in:
 `oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all pnpm-preferred agents through `pnpm add -g <package>@latest`.
 `oooconf agents sync --global` now understands MCP `env_vars` shorthands and resolves `{env_var}` placeholders from the current environment when generating Codex, Claude, and Gemini MCP configs. `oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in local environment by default for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is intentionally used on private machine config.
 
+## Developer Automation
+
+[`just`](https://just.systems) is the cross-platform task runner for routine repository work. Install it with `oooconf deps just`, then run:
+
+```bash
+just check        # ruff lint + format check + pytest
+just fix          # apply safe ruff fixes and formatting
+just test         # full pytest suite
+just unix         # Bash syntax and smoke checks (Unix only)
+just completions  # regenerate tracked oooconf completions
+just lock         # regenerate dependency lock artifacts
+```
+
+Run `just --list` for all recipes. The recipes wrap existing commands; CI remains authoritative.
+
 ## Prerequisites
 
 The setup scripts intentionally do not try to provision a full workstation from bare metal. Core tools should already exist before first install:

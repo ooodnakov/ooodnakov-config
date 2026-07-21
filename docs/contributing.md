@@ -22,6 +22,21 @@ When adding, updating, or removing dependencies, you must regenerate the lock ar
 
 2. For interactive dependency updates, you can use `oooconf deps`.
 
+## Project Automation
+
+Use the root `justfile` for common local workflows after installing its optional runner with `oooconf deps just`:
+
+```bash
+just check
+just fix
+just test
+just unix          # Unix only
+just completions
+just lock
+```
+
+`just check` is cross-platform and wraps Ruff plus pytest. `just unix` deliberately remains separate because it requires Bash.
+
 ## Validations After Shell or Bootstrap Changes
 
 After changing bootstrap logic, setup/CLI helper scripts, or Python configuration, run the relevant validations. Setup and `oooconf` implementation lives in `scripts/setup/lib/`; keep public entrypoints stable and put newly extracted helpers in focused Bash/PowerShell module pairs when practical:

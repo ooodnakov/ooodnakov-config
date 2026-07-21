@@ -478,6 +478,20 @@ description = "TUI for managing Bluetooth connections"
 linux.manager = "cargo"
 linux.package = "bluetui"
 
+
+[[deps]]
+key = "just"
+display = "just"
+description = "cross-platform command runner for project automation"
+check = "just --version"
+linux.manager = "cargo"
+linux.package = "just"
+macos.manager = "brew"
+macos.package = "just"
+windows.manager = "winget"
+windows.winget_id = "Casey.Just"
+windows.choco_id = "just"
+windows.package = "just"
 [[deps]]
 key = "uv"
 display = "uv"

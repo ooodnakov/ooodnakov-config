@@ -136,6 +136,22 @@ def test_get_install_info(key):
     assert dep.get("ver") is not None
 
 
+def test_just_dependency_uses_cross_platform_installers():
+    """just is available through supported package managers on every target OS."""
+    data = load_deps()
+    just = next((dep for dep in data["deps"] if dep.get("key") == "just"), None)
+
+    assert just is not None
+    assert just["check"] == "just --version"
+    assert just["linux.manager"] == "cargo"
+    assert just["linux.package"] == "just"
+    assert just["macos.manager"] == "brew"
+    assert just["macos.package"] == "just"
+    assert just["windows.manager"] == "winget"
+    assert just["windows.winget_id"] == "Casey.Just"
+    assert just["windows.choco_id"] == "just"
+
+
 def test_all_managed_tools_present():
     """Test that all expected git-pinned tools are in managed-tools."""
     data = load_deps()

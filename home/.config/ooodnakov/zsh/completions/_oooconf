@@ -85,6 +85,7 @@ _oooconf_values_deps_keys=(
   'docker:Docker CLI and daemon; enables Docker and containerd systemd units on Linux'
   'impala:TUI for managing Wi-Fi networks (tab sections, space select, enter connect)'
   'bluetui:TUI for managing Bluetooth connections'
+  'just:cross-platform command runner for project automation'
   'uv:Python package manager via official installer'
   'bw:Bitwarden CLI via official native archive'
   'node:Node.js runtime with bundled npm, installed through nvm when needed'
