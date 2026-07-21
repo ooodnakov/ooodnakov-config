@@ -359,6 +359,40 @@ description = "leaf command"
     assert "child" not in result.stdout.splitlines()
 
 
+def test_powershell_completion_defers_freeform_option_values(tmp_path: Path) -> None:
+    if not shutil.which("pwsh"):
+        pytest.skip("pwsh is not available")
+    spec_path = write_spec(
+        tmp_path,
+        """
+[commands.root]
+description = "root command"
+options = { "--config" = "config path" }
+completers = { "--config" = "_files" }
+""",
+    )
+    spec = load_cli_spec(spec_path)
+    completion_path = tmp_path / "completion.ps1"
+    completion_path.write_text(render_powershell(["root"], spec), encoding="utf-8")
+    command = (
+        f". {completion_path}; "
+        "$input = 'oooconf root --config '; "
+        "$ast = [scriptblock]::Create($input).Ast.EndBlock.Statements[0].PipelineElements[0]; "
+        "Get-OooconfCompletions -wordToComplete '' -commandAst $ast -cursorPosition $input.Length | ForEach-Object CompletionText"
+    )
+
+    result = subprocess.run(
+        ["pwsh", "-NoProfile", "-Command", command],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == ""
+
+
 def test_powershell_command_regex_accepts_windows_backslash_paths() -> None:
     spec = load_cli_spec(
         REPO_ROOT / "scripts/cli/oooconf-cli-spec.toml", extra_definitions=load_dependency_definitions()

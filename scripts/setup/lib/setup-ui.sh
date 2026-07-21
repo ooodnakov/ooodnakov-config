@@ -185,6 +185,11 @@ prompt_yes_no() {
   if ! is_interactive; then
     return 1
   fi
+  if command -v gum >/dev/null 2>&1; then
+    gum confirm --default=false "$prompt" </dev/tty >/dev/tty 2>/dev/tty
+    return $?
+  fi
+
 
   printf "%s [y/N] " "$prompt" >/dev/tty
   read -r reply </dev/tty
