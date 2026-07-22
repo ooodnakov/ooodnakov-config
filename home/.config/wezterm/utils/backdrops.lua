@@ -31,6 +31,7 @@ function BackDrops:init()
       focus_color = colors.background,
       enabled = true,
       focus_on = false,
+      base_window_opacity = (wezterm.target_triple:find('macos') and 0.01) or 0,
    }
    local backdrops = setmetatable(inital, self)
    return backdrops
@@ -103,7 +104,7 @@ function BackDrops:_create_focus_opts()
          width = '120%',
          vertical_offset = '-10%',
          horizontal_offset = '-10%',
-         opacity = 0.73,
+         opacity = 1.0,
       },
    }
 end
@@ -142,9 +143,11 @@ end
 ---@param window any WezTerm Window see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 ---@param background_opts table|nil background option
 function BackDrops:_set_opt(window, background_opts)
+   local opacity = self.focus_on and 1.0 or self.base_window_opacity
    window:set_config_overrides({
       background = background_opts,
       enable_tab_bar = window:effective_config().enable_tab_bar,
+      window_background_opacity = opacity,
    })
 end
 
@@ -160,10 +163,11 @@ function BackDrops:_set_focus_opt(window)
             width = '120%',
             vertical_offset = '-10%',
             horizontal_offset = '-10%',
-            opacity = 0.96,
+            opacity = 1.0,
          },
       },
       enable_tab_bar = window:effective_config().enable_tab_bar,
+      window_background_opacity = 1.0,
    }
    window:set_config_overrides(opts)
 end
@@ -234,6 +238,10 @@ end
 ---Toggle the focus mode
 ---@param window any WezTerm `Window` see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 function BackDrops:toggle_focus(window)
+   if self.always_focus then
+      return
+   end
+
    self.enabled = true
    local background_opts
 

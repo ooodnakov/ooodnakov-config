@@ -13,7 +13,7 @@ if platform.is_linux then
 end
 return {
 	max_fps = 120,
-	front_end = frpnt_end_, ---@type 'WebGpu' | 'OpenGL' | 'Software'
+	front_end = front_end_, ---@type 'WebGpu' | 'OpenGL' | 'Software'
 	webgpu_power_preference = "HighPerformance",
 	webgpu_preferred_adapter = gpu_adapters:pick_best(),
 	-- webgpu_preferred_adapter = gpu_adapters:pick_manual('Dx12', 'IntegratedGpu'),

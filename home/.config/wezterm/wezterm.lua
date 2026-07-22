@@ -29,7 +29,12 @@ if handle then
    handle:close()
    local ok, local_override = pcall(dofile, local_override_path)
    if ok and type(local_override) == 'table' then
+      local backdrops_always_focus = local_override.backdrops_always_focus
+      local_override.backdrops_always_focus = nil
       config:override(local_override)
+      if backdrops_always_focus then
+         require('utils.backdrops').always_focus = true
+      end
    end
 end
 
