@@ -46,6 +46,9 @@ export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 path_prepend "$PNPM_HOME"
 path_prepend "$PNPM_HOME/bin"
 
+export GOPATH="${GOPATH:-$HOME/go}"
+path_prepend "$GOPATH/bin"
+
 if ! command -v o >/dev/null 2>&1 && command -v oooconf >/dev/null 2>&1; then
   o() {
     oooconf "$@"
