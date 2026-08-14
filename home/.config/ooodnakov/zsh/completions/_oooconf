@@ -110,6 +110,7 @@ _oooconf_values_deps_keys=(
   'pi-coding-agent:Earendil Works coding agent for AI-assisted development'
   'coreutils-win:Windows Core Utilities (sudo, etc.) for Windows'
   'croc:easily and securely send files between computers'
+  's5cmd:parallel S3 and local filesystem operations'
 )
 
 typeset -ga _oooconf_values_regions
@@ -770,6 +771,9 @@ _oooconf_agents_install() {
     'cursor-agent:Cursor Agent'
     'opencode:OpenCode'
     'aider:Aider'
+    'pi:Pi Agent'
+    'omp:Oh My Pi'
+    'command-code:Command Code'
   )
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} --repo-root --config)
