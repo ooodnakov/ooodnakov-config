@@ -152,6 +152,22 @@ def test_just_dependency_uses_cross_platform_installers():
     assert just["windows.choco_id"] == "just"
 
 
+def test_s5cmd_dependency_uses_cross_platform_installers():
+    """s5cmd is pinned on Linux and uses native package managers elsewhere."""
+    data = load_deps()
+    s5cmd = next((dep for dep in data["deps"] if dep.get("key") == "s5cmd"), None)
+
+    assert s5cmd is not None
+    assert s5cmd["check"] == "s5cmd version"
+    assert s5cmd["linux.manager"] == "github-release"
+    assert s5cmd["linux.package"] == "peak/s5cmd"
+    assert s5cmd["linux.asset"] == "s5cmd_2.3.0_Linux-64bit.tar.gz"
+    assert s5cmd["macos.manager"] == "brew"
+    assert s5cmd["macos.package"] == "peak/tap/s5cmd"
+    assert s5cmd["windows.manager"] == "winget"
+    assert s5cmd["windows.winget_id"] == "Peak.S5cmd"
+
+
 def test_all_managed_tools_present():
     """Test that all expected git-pinned tools are in managed-tools."""
     data = load_deps()

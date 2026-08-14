@@ -166,3 +166,13 @@ description = "Pyprland CLI"
 output = "_pypr"
 provides = ["pypr"]
 argv = ["pypr", "compgen", "zsh"]
+
+[[tools]]
+key = "s5cmd"
+binary = "s5cmd"
+description = "parallel S3 and local filesystem operations"
+
+[[tools.zsh]]
+output = "_s5cmd"
+provides = ["s5cmd"]
+argv = ["s5cmd", "--completion", "zsh"]

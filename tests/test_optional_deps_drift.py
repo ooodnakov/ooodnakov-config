@@ -83,11 +83,12 @@ def test_tool_completion_manifest_is_typed_and_complete() -> None:
             assert all(isinstance(part, str) and part for part in entry["argv"])
             outputs[str(entry["output"])] = entry
 
-    assert {"_npm", "_spotatui", "_hermes", "_uv", "_bun"} <= outputs.keys()
+    assert {"_npm", "_spotatui", "_hermes", "_uv", "_bun", "_s5cmd"} <= outputs.keys()
     assert outputs["_npm"]["filter"] == "npm-zsh-wrapper"
     assert outputs["_spotatui"]["filter"] == "strip-before-compdef"
     assert outputs["_hermes"]["filter"] == "hermes-v0.12-zsh-fix"
     assert outputs["_bun"]["env"] == {"SHELL": "zsh"}
+    assert outputs["_s5cmd"]["argv"] == ["s5cmd", "--completion", "zsh"]
 
 
 def test_tool_completion_filters_fix_known_bad_outputs() -> None:
