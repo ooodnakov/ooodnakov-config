@@ -66,7 +66,7 @@ Reference-only material lives under `third_party/` and `docs/imports/`. It is st
 ### Preferred install path on Linux or macOS
 
 ```bash
-git clone git@github.com:ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
+git clone https://github.com/ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
 cd ~/src/ooodnakov-config
 ./home/.config/ooodnakov/bin/oooconf install
 ```
@@ -101,8 +101,9 @@ curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/boo
 ### Windows PowerShell
 
 ```powershell
-git clone git@github.com:ooodnakov/ooodnakov-config.git $HOME\src\ooodnakov-config
+git clone https://github.com/ooodnakov/ooodnakov-config.git $HOME\src\ooodnakov-config
 Set-Location $HOME\src\ooodnakov-config
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\home\.config\ooodnakov\bin\oooconf.ps1 install
 ```
 
