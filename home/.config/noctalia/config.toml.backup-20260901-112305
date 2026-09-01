@@ -1,0 +1,179 @@
+# Noctalia v5 declarative configuration migrated from settings.json.
+# Legacy JSON remains untouched for rollback/reference.
+
+[theme]
+mode = "dark"
+
+[audio]
+enable_overdrive = false
+enable_sounds = false
+
+[bar]
+order = ["default"]
+
+[bar.default]
+# v4 was restricted to DP-1; keep other outputs free of an extra bar.
+enabled = false
+position = "top"
+auto_hide = false
+show_on_workspace_switch = true
+reserve_space = true
+background_opacity = 0.93
+capsule = true
+capsule_opacity = 0.66
+radius = 12
+margin_ends = 4
+margin_edge = 4
+widget_spacing = 6
+font_scale = 1.0
+start = ["launcher", "clock", "sysmon-cpu", "sysmon-temp", "sysmon-ram", "active-window", "media"]
+center = ["workspaces", "taskbar"]
+end = ["audio-visualizer", "notifications", "network", "bluetooth", "volume", "brightness", "control-center", "session"]
+
+[bar.default.monitor."DP-1"]
+match = "DP-1"
+enabled = true
+
+[widget.clock]
+type = "clock"
+format = "{:%H:%M %a, %b %d}"
+vertical_format = "{:%H %M - %d %m}"
+
+[widget.sysmon-cpu]
+type = "sysmon"
+stat = "cpu_usage"
+visualization = "none"
+
+[widget.sysmon-temp]
+type = "sysmon"
+stat = "cpu_temp"
+visualization = "none"
+
+[widget.sysmon-ram]
+type = "sysmon"
+stat = "ram_used"
+visualization = "none"
+
+[widget.active-window]
+type = "active_window"
+max_length = 300
+min_length = 0
+
+[widget.media]
+type = "media"
+max_length = 145
+min_length = 0
+art_size = 16
+
+[widget.volume]
+type = "volume"
+device = "output"
+show_label = true
+
+[shell]
+telemetry_enabled = false
+avatar_path = "/home/odnakov/Downloads/wallhaven-jx566m.jpg"
+time_format = "{:%H:%M}"
+
+[shell.launcher]
+pinned = ["zen", "vscodium-wayland", "org.kde.dolphin", "org.telegram.desktop", "net.lutris.Lutris", "vesktop", "steam", "org.prismlauncher.PrismLauncher"]
+sort_by_usage = true
+
+[shell.panel]
+control_center_placement = "attached"
+launcher_position = "center"
+
+[shell.screen_corners]
+enabled = true
+
+[location]
+auto_locate = false
+address = "Moscow"
+
+[weather]
+enabled = true
+effects = true
+unit = "metric"
+
+[wallpaper]
+enabled = true
+directory = "/home/odnakov/Pictures/Wallp"
+fill_mode = "crop"
+transition_duration = 1500
+transition_on_startup = true
+
+[wallpaper.automation]
+enabled = true
+interval_seconds = 900
+order = "random"
+
+[dock]
+enabled = true
+auto_hide = true
+background_opacity = 1.0
+position = "bottom"
+
+[notification]
+enable_daemon = true
+background_opacity = 1.0
+position = "top_right"
+
+[osd]
+enabled = true
+
+[idle]
+behavior_order = ["lock", "screen-off", "lock-and-suspend"]
+pre_action_fade_seconds = 5.0
+
+[idle.behavior.lock]
+action = "lock"
+enabled = true
+timeout = 660.0
+locked_timeout = 0.0
+command = ""
+resume_command = ""
+
+[idle.behavior.screen-off]
+action = "screen_off"
+enabled = true
+timeout = 600.0
+locked_timeout = 0.0
+command = ""
+resume_command = ""
+
+[idle.behavior.lock-and-suspend]
+action = "lock_and_suspend"
+enabled = true
+timeout = 1800.0
+locked_timeout = 0.0
+command = ""
+resume_command = ""
+
+[system.monitor]
+enabled = true
+cpu_usage_critical_threshold = 90.0
+cpu_temp_critical_threshold = 90.0
+ram_pct_critical_threshold = 90.0
+gpu_usage_critical_threshold = 90.0
+
+[plugins]
+auto_update = "none"
+enabled = ["odnakov/eartrumpet"]
+
+[[plugins.source]]
+kind = "git"
+location = "https://github.com/noctalia-dev/official-plugins"
+name = "official"
+enabled = true
+
+[[plugins.source]]
+kind = "git"
+location = "https://github.com/noctalia-dev/community-plugins"
+name = "community"
+enabled = true
+
+[[plugins.source]]
+kind = "path"
+location = "/home/odnakov/Projects/noctalia-ear"
+name = "dev"
+enabled = true
