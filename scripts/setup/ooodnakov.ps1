@@ -17,6 +17,7 @@ $GenerateLockScript = Join-Path $RepoRoot "scripts/generate/generate_dependency_
 $UpdatePinsScript = Join-Path $RepoRoot "scripts/update/update_pins.py"
 $RenderSecretsScript = Join-Path $RepoRoot "scripts/generate/render_secrets.py"
 $AgentsToolScript = Join-Path $RepoRoot "scripts/cli/agents_tool.py"
+$EnvToolScript = Join-Path $RepoRoot "scripts/cli/env_tool.py"
 $SyncColorThemeScript = Join-Path $RepoRoot "scripts/lib/sync_color_theme.py"
 $CommandsFile = Join-Path $RepoRoot "scripts/cli/oooconf-commands.txt"
 
@@ -262,6 +263,10 @@ switch ($command) {
     }
     "secrets" {
         Run-Python -ScriptPath $RenderSecretsScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
+    }
+    "env" {
+        Assert-NoDryRun -CommandName "env"
+        Run-Python -ScriptPath $EnvToolScript -ScriptArgs $remaining
     }
     "shell" {
         Invoke-ShellCommand -ShellArgs $remaining

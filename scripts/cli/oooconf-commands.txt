@@ -12,6 +12,7 @@ completions
 link
 agents
 secrets
+env
 shell
 color
 delta

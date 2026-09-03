@@ -14,6 +14,7 @@ GEN_LOCK="$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
 AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
+ENV_TOOL="$REPO_ROOT/scripts/cli/env_tool.py"
 SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
 COMMANDS_FILE="$REPO_ROOT/scripts/cli/oooconf-commands.txt"
 KNOWN_COMMANDS=()
@@ -83,6 +84,7 @@ while [ "$#" -gt 0 ]; do
       UPDATE_PINS="$REPO_ROOT/scripts/update/update-pins.sh"
       RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
       AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
+      ENV_TOOL="$REPO_ROOT/scripts/cli/env_tool.py"
       SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
       shift 2
       ;;
@@ -247,6 +249,11 @@ case "$command" in
     ;;
   secrets)
     OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"
+    exit $?
+    ;;
+  env)
+    require_no_dry_run env
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$ENV_TOOL" "$@"
     exit $?
     ;;
   shell)

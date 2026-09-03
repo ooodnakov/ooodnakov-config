@@ -59,6 +59,7 @@ Use local override files for anything that changes by host:
 
 - shell environment variables
 - secrets
+- env (machine-local values only; optional Bitwarden upload)
 - internal hostnames or IPs you do not want tracked
 - WezTerm launch commands tied to one machine
 - OS package manager tweaks

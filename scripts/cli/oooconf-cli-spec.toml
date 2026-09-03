@@ -153,6 +153,10 @@ options = { "--agent" = "target agent", "--sync-now" = "sync after adding", "--c
 [commands.secrets]
 description = "sync or validate local secret env files"
 
+[commands.env]
+description = "set machine-local environment variables"
+options = { "--secrets" = "also upload value to Bitwarden", "-h" = "show help", "--help" = "show help" }
+
 [commands.secrets.subcommands.login]
 description = "log in to Bitwarden/Vaultwarden"
 options = { "--server" = "server URL", "--method" = "login method", "--client-id" = "API client ID", "--client-secret" = "API client secret" }

@@ -65,6 +65,7 @@ Primary commands:
 - `lock`: regenerate dependency lock artifacts
 - `update-pins`: audit pinned refs against upstream and optionally apply updates
 - `secrets`: sync and manage local environment secrets using Bitwarden
+- `env`: safely upsert machine-local variables in both shell env files, with optional Bitwarden upload
 - `agents`: detect, sync, install, update, and configure shared AI coding agent policy/MCP/provider/skill settings
 - `shell`: inspect and update local shell preference modes
 

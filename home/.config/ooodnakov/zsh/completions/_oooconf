@@ -17,6 +17,7 @@ _oooconf_commands=(
   'link:create or update symlinks from manifest'
   'agents:detect/sync/doctor/provider/update AGENTS.md workflows'
   'secrets:sync or validate local secret env files'
+  'env:set machine-local environment variables'
   'shell:manage local shell preferences'
   'color:set a unified oooconf CLI color theme and mode'
   'delta:inject or manage git-delta gitconfig'
@@ -1201,6 +1202,21 @@ _oooconf_secrets_del() {
   esac
 }
 
+_oooconf_env() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    '--secrets[also upload value to Bitwarden]' \
+    '-h[show help]' \
+    '--help[show help]' \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
 _oooconf_shell() {
   local context state line
   typeset -A opt_args
@@ -1973,6 +1989,11 @@ _oooconf_main() {
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_secrets
+          ;;
+        env)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_env
           ;;
         shell)
           words=("${(@)words[i,-1]}")
