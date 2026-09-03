@@ -265,6 +265,7 @@ switch ($command) {
         Run-Python -ScriptPath $RenderSecretsScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
     }
     "env" {
+        Assert-NoDryRun -CommandName "env"
         Run-Python -ScriptPath $EnvToolScript -ScriptArgs $remaining
     }
     "shell" {

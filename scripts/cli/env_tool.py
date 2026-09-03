@@ -17,6 +17,7 @@ from pathlib import Path
 START = "# --- LOCAL OVERRIDES START ---"
 END = "# --- LOCAL OVERRIDES END ---"
 KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+BW_TIMEOUT_SECONDS = 30
 
 
 def parser() -> argparse.ArgumentParser:
@@ -34,7 +35,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument(
         "--config-home",
         help=argparse.SUPPRESS,
-        default=os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")),
+        default=os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config"),
     )
     return result
 
@@ -58,7 +59,9 @@ def write_override(path: Path, key: str, line: str) -> None:
     rendered = replace_override(content, key, line)
     fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     try:
-        os.fchmod(fd, 0o600)
+        # Windows has no os.fchmod; the local profile inherits its directory ACL.
+        if os.name != "nt":
+            os.fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
             stream.write(rendered)
         os.replace(temp_name, path)
@@ -67,27 +70,45 @@ def write_override(path: Path, key: str, line: str) -> None:
             os.unlink(temp_name)
 
 
+def bitwarden_env() -> dict[str, str]:
+    env = os.environ.copy()
+    if not env.get("BW_SESSION"):
+        session_path = Path.home() / ".config/ooodnakov/local/bw-session"
+        if session_path.exists():
+            session = session_path.read_text(encoding="utf-8").strip()
+            if session:
+                env["BW_SESSION"] = session
+    return env
+
+
+def run_bw(args: list[str], *, env: dict[str, str], input_value: str | None = None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["bw", *args],
+        input=input_value,
+        text=True,
+        capture_output=True,
+        check=True,
+        env=env,
+        timeout=BW_TIMEOUT_SECONDS,
+    )
+
+
 def upload_to_bitwarden(key: str, value: str) -> str:
+    env = bitwarden_env()
+    name = f"oooconf env: {key}"
     item = {
         "type": 2,
-        "name": f"oooconf env: {key}",
+        "name": name,
         "secureNote": {"type": 0},
         "notes": value,
     }
-    encoded = subprocess.run(
-        ["bw", "encode"],
-        input=json.dumps(item),
-        text=True,
-        capture_output=True,
-        check=True,
-    ).stdout.strip()
-    created = subprocess.run(
-        ["bw", "create", "item", encoded],
-        text=True,
-        capture_output=True,
-        check=True,
-    )
-    return str(json.loads(created.stdout)["id"])
+    listed = run_bw(["list", "items", "--search", name], env=env)
+    matches = [candidate for candidate in json.loads(listed.stdout) if candidate.get("name") == name]
+    item_id = str(matches[0]["id"]) if matches else None
+    encoded = run_bw(["encode"], env=env, input_value=json.dumps(item)).stdout.strip()
+    command = ["edit", "item", item_id] if item_id else ["create", "item"]
+    saved = run_bw(command, env=env, input_value=encoded)
+    return str(json.loads(saved.stdout)["id"])
 
 
 def prompt_missing(args: argparse.Namespace) -> tuple[str, str, bool]:
@@ -113,6 +134,8 @@ def main() -> int:
         )
         if not KEY_RE.fullmatch(key):
             raise ValueError(f"invalid environment variable name: {key}")
+        if "\n" in value or "\r" in value:
+            raise ValueError("multiline environment variable values are not supported")
 
         local = Path(args.config_home).expanduser() / "ooodnakov" / "local"
         write_override(local / "env.zsh", key, f"export {key}={shlex.quote(value)}")
@@ -123,7 +146,13 @@ def main() -> int:
             item_id = upload_to_bitwarden(key, value)
             print(f"Uploaded {key} to Bitwarden item {item_id}")
         return 0
-    except (ValueError, FileNotFoundError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
+    except (
+        ValueError,
+        FileNotFoundError,
+        subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
+        json.JSONDecodeError,
+    ) as exc:
         detail = exc.stderr.strip() if isinstance(exc, subprocess.CalledProcessError) and exc.stderr else str(exc)
         print(f"oooconf env: {detail}", file=sys.stderr)
         return 1

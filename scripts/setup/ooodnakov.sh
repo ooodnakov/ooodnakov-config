@@ -252,6 +252,7 @@ case "$command" in
     exit $?
     ;;
   env)
+    require_no_dry_run env
     OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$ENV_TOOL" "$@"
     exit $?
     ;;
