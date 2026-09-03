@@ -219,6 +219,7 @@ EOF
   ui_command_row "color" "set a unified oooconf CLI color theme"
   ui_command_row "delta" "inject or manage git-delta gitconfig"
   ui_command_row "secrets" "sync or validate local secret env files"
+  ui_command_row "env" "set machine-local environment variables"
   ui_command_row "agents" "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
 
   ui_spacer
@@ -480,6 +481,20 @@ Examples:
 Environment overrides:
   OOODNAKOV_SECRETS_BACKEND
   OOODNAKOV_BW_SERVER
+EOF
+      ;;
+    env)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf env [KEY VALUE] [--secrets]
+
+Add or update KEY in the preserved LOCAL OVERRIDES blocks of env.zsh and env.ps1.
+With no arguments, prompt for the name and hidden value, then optionally upload it
+to Bitwarden (the default is no).
+Examples:
+  oooconf env SUPER_TOKEN dsadadasasdasddas
+  oooconf env SUPER_TOKEN dsadadasasdasddas --secrets
+  oooconf env                            # interactive flow
+  oooconf env help
 EOF
       ;;
     minimal)

@@ -20,6 +20,7 @@ function Get-OooconfCompletions {
         'link',
         'agents',
         'secrets',
+        'env',
         'shell',
         'color',
         'delta',
@@ -286,6 +287,14 @@ function Get-OooconfCompletions {
         }
         'dry-run' = @{
             Options = @()
+            OptionsWithArgs = @()
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+            }
+        }
+        'env' = @{
+            Options = @('--secrets', '-h', '--help')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()

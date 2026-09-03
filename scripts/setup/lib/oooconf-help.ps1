@@ -229,6 +229,7 @@ function Show-Usage {
     Write-UiCommandRow -CommandName "color" -Description "set a unified oooconf CLI color theme"
     Write-UiCommandRow -CommandName "delta" -Description "inject or manage git-delta gitconfig"
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
+    Write-UiCommandRow -CommandName "env" -Description "set machine-local environment variables"
     Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
     Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
 
@@ -462,6 +463,20 @@ Examples:
 Environment overrides:
   OOODNAKOV_SECRETS_BACKEND
   OOODNAKOV_BW_SERVER
+"@
+        }
+        "env" {
+            Write-UiHelpBlock @"
+Usage: oooconf env [KEY VALUE] [--secrets]
+
+Add or update KEY in the preserved LOCAL OVERRIDES blocks of env.zsh and env.ps1.
+With no arguments, prompt for the name and hidden value, then optionally upload it
+to Bitwarden (the default is no).
+Examples:
+  oooconf env SUPER_TOKEN dsadadasasdasddas
+  oooconf env SUPER_TOKEN dsadadasasdasddas --secrets
+  oooconf env                            # interactive flow
+  oooconf env help
 "@
         }
         "version" {
