@@ -4,7 +4,7 @@ The repo uses a manifest-driven auto-discovery symlink system to link `home/` co
 
 ## Architecture
 
-```
+```text
 scripts/links.toml
       │
       ▼
@@ -18,6 +18,9 @@ scripts/link_manager.py
 get_all_links()  →  [(source, target, key), ...]
       │
       ▼
+scripts/cli/operation_plan.py  →  validate and emit planned link operations
+      │
+      ▼
 scripts/setup/setup.sh link_file() / scripts/setup/setup.ps1 New-Symlink
       │
       ▼
@@ -28,7 +31,8 @@ scripts/setup/setup.sh link_file() / scripts/setup/setup.ps1 New-Symlink
 
 - `scripts/links.toml` — canonical manifest of all managed symlinks
 - `scripts/link_manager.py` — engine: manifest parsing, auto-discovery, platform filtering, local override merging
-- `scripts/setup/setup.sh` / `scripts/setup/setup.ps1` — consumers that call `link_manager.py` to get the link list, then create symlinks
+- `scripts/cli/operation_plan.py` — safety and planning layer consumed by both setup implementations
+- `scripts/setup/setup.sh` / `scripts/setup/setup.ps1` — consumers that apply the planner's validated link stream
 - `home/.config/ooodnakov/local/links.local.toml` — machine-local override file (not in git)
 
 ## Manifest Format
@@ -49,6 +53,7 @@ target = "{HOME}/.zshrc"
 `autolink_dirs` lists directories scanned for auto-linking. Each subdirectory in those dirs becomes a symlink target unless it matches a configured `exclude` pattern or has an explicit `[[links]]` entry with a platform restriction. The current manifest does not define active excludes.
 
 **What is auto-linked:**
+
 - Every directory under `home/.config/`, `home/.local/`, and `home/.glzr/` is a candidate for linking, unless:
   - It matches an `exclude` pattern in `scripts/links.toml` (none are active today)
   - An explicit `[[links]]` entry exists for the same `key` and that entry has an `only` or `except` platform tag that excludes the current platform
@@ -57,9 +62,11 @@ target = "{HOME}/.zshrc"
 Examples: `home/.config/wezterm/` → `~/.config/wezterm`, `home/.config/yazi/` → `~/.config/yazi`, `home/.config/nvim/` → `~/.config/nvim`
 
 **What is auto-linked today:**
+
 - The current manifest has no active discovery excludes, so `home/.config/ooodnakov` is also linked into `~/.config/ooodnakov`. Its ignored `local/` children hold machine-specific overrides while tracked examples stay reproducible.
 
 **When to add an explicit `[[links]]` entry:**
+
 - Files (not directories), e.g., `home/.zshrc` → `~/.zshrc` or managed Taskwarrior `home/.config/task/taskrc` → `~/.taskrc`
 - Platform-specific links (`only = "windows" | "linux" | "macos"`)
 - Non-standard targets that don't follow the `{CONFIG_HOME}/<key>` convention
@@ -74,7 +81,7 @@ key = "noctalia"
 source = "home/.config/noctalia"
 target = "{CONFIG_HOME}/noctalia"
 only = "linux"
-```
+```text
 
 Valid values for `only`: `windows`, `linux`, `macos`.
 
@@ -107,7 +114,7 @@ The `{CONFIG_HOME}` expansion honors `XDG_CONFIG_HOME` on Unix if set.
 
 Machine-specific symlink targets are managed in:
 
-```
+```text
 home/.config/ooodnakov/local/links.local.toml
 ```
 
@@ -169,13 +176,27 @@ Entries in `links.local.toml` take precedence over `links.toml` for matching key
 - `oooconf doctor` — reads the manifest to validate that expected links exist
 - `oooconf delete` / `oooconf remove` — reads the manifest to know which links to remove
 
+Unix and PowerShell setup both consume the validated link operations from
+`scripts/cli/operation_plan.py` through `scripts/cli/transaction_apply.py`. The
+planner uses `link_manager.py` for manifest discovery, then verifies source
+existence, unique targets, and target containment before the transaction executor
+creates backups or links.
+
+```bash
+oooconf plan --scope links
+oooconf plan --scope links --format json
+oooconf apply
+oooconf rollback --last
+```
+
 ### Dry-run
 
 ```bash
 oooconf link --dry-run    # preview links without creating them
 ```
 
-The underlying tool is `scripts/link_manager.py`, which can be run directly:
+The underlying manifest reader is `scripts/link_manager.py`, which can still be run
+directly for low-level inspection:
 
 ```bash
 python scripts/link_manager.py --repo-root . --format text
@@ -186,9 +207,12 @@ python scripts/link_manager.py --repo-root . --format text
 
 | Command         | Role                                                            |
 |-----------------|-----------------------------------------------------------------|
-| `oooconf install` | Calls `oooconf link` after repo bootstrap and dependency setup |
+| `oooconf install` | Applies the shared validated link plan as a transaction          |
 | `oooconf doctor`  | Reads manifest via `link_manager.py` to check for missing links |
 | `oooconf delete`  | Reads manifest to identify and remove all managed links          |
 | `oooconf remove`  | Like delete, but skips backup restore                           |
 | `oooconf link`    | Directly invokes the link creation logic (idempotent)          |
-| `oooconf dry-run` | Shows what `oooconf install` would do without making changes    |
+| `oooconf plan`    | Emits a side-effect-free text or versioned JSON operation plan |
+| `oooconf apply`   | Journals and transactionally applies the managed link plan     |
+| `oooconf rollback` | Safely reverses the latest eligible managed-link transaction |
+| `oooconf dry-run` | Compatibility alias for `oooconf plan`                         |

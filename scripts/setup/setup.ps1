@@ -204,7 +204,7 @@ try {
             if ($DryRun) {
                 Write-Output "[dry-run] would link:"
             }
-            $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs @("--repo-root", "$RepoRoot", "--format", "text") 2>$null
+            $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/operation_plan.py") -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-links") 2>$null
             if ($DryRun) {
                 $linkOutput -split "`n" | ForEach-Object {
                     if ([string]::IsNullOrWhiteSpace($_)) { return }
@@ -215,40 +215,9 @@ try {
                 }
                 return
             }
-            $created = 0
-            $existing = 0
-            $failed = 0
-            if (-not $DryRun) {
-                Write-UiLine -Role info -Message "Linking managed configs..."
-            }
-            $linkOutput -split "`n" | ForEach-Object {
-                if ([string]::IsNullOrWhiteSpace($_)) { return }
-                $parts = $_ -split '\|'
-                if ($parts.Count -ge 3) {
-                    $key = $parts[0]
-                    $source = $parts[1]
-                    $target = $parts[2]
-                    if (Test-LinkMatches -Source $source -Target $target) {
-                        Write-UiLine -Role hint -Message "[skip] $key -> $target"
-                        $existing++
-                    } else {
-                        if (New-Symlink -Source $source -Target $target) {
-                            Write-UiLine -Role ok -Message "[link] $key -> $target"
-                            $created++
-                        } else {
-                            Write-UiLine -Role fail -Message "[fail] $key -> $target"
-                            $failed++
-                        }
-                    }
-                }
-            }
-            Write-Output ""
-            if ($failed -gt 0) {
-                Write-UiLine -Role fail -Message "Failed: $failed | Linked: $created | Skipped: $existing"
-            } elseif ($created -gt 0) {
-                Write-UiLine -Role ok -Message "Linked: $created | Skipped: $existing"
-            } else {
-                Write-UiLine -Role hint -Message "All $existing links already exist"
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/transaction_apply.py") -ScriptArgs @("--repo-root", "$RepoRoot", "apply")
+            if ($LASTEXITCODE -ne 0) {
+                throw "Managed link transaction failed"
             }
         }
     }

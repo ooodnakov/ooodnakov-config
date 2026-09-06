@@ -18,6 +18,7 @@ $UpdatePinsScript = Join-Path $RepoRoot "scripts/update/update_pins.py"
 $RenderSecretsScript = Join-Path $RepoRoot "scripts/generate/render_secrets.py"
 $AgentsToolScript = Join-Path $RepoRoot "scripts/cli/agents_tool.py"
 $EnvToolScript = Join-Path $RepoRoot "scripts/cli/env_tool.py"
+$LifecycleToolScript = Join-Path $RepoRoot "scripts/cli/lifecycle_tool.py"
 $SyncColorThemeScript = Join-Path $RepoRoot "scripts/lib/sync_color_theme.py"
 $CommandsFile = Join-Path $RepoRoot "scripts/cli/oooconf-commands.txt"
 
@@ -96,6 +97,7 @@ $dryRunRequested = $false
 $yesOptionalRequested = $false
 $skipDepsRequested = $false
 $allDepsRequested = $false
+$profileRequested = $null
 $command = $null
 $remaining = [System.Collections.Generic.List[string]]::new()
 
@@ -161,6 +163,13 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         "--all" {
             $allDepsRequested = $true
         }
+        "--profile" {
+            if ($i + 1 -ge $Arguments.Count) {
+                throw "Missing value for --profile"
+            }
+            $profileRequested = $Arguments[$i + 1]
+            $i++
+        }
         "help" {
             if ($i + 1 -lt $Arguments.Count) {
                 Show-CommandUsage (Resolve-CommandAlias -CommandName $Arguments[$i + 1])
@@ -200,13 +209,21 @@ if (-not $command) {
 
 if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
     $normalizedRemaining = @()
-    foreach ($arg in $remaining) {
+    for ($i = 0; $i -lt $remaining.Count; $i++) {
+        $arg = $remaining[$i]
         switch ($arg) {
             "-n" { $dryRunRequested = $true }
             "--dry-run" { $dryRunRequested = $true }
             "--yes-optional" { $yesOptionalRequested = $true }
             "--skip-deps" { $skipDepsRequested = $true }
             "--all" { $allDepsRequested = $true }
+            "--profile" {
+                if ($i + 1 -ge $remaining.Count) {
+                    throw "Missing value for --profile"
+                }
+                $profileRequested = $remaining[$i + 1]
+                $i++
+            }
             default { $normalizedRemaining += $arg }
         }
     }
@@ -216,6 +233,9 @@ if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
 $env:OOODNAKOV_REPO_ROOT = $RepoRoot
 if ($yesOptionalRequested) {
     $env:OOODNAKOV_INSTALL_OPTIONAL = "always"
+}
+if ($profileRequested) {
+    $env:OOODNAKOV_PROFILE = $profileRequested
 }
 
 
@@ -236,13 +256,31 @@ switch ($command) {
         Invoke-DeleteCommand -CommandName "remove" -DeleteMode "remove" -RemainingArgs $remaining
     }
     "doctor" {
-        Invoke-SetupCommand -SetupCommand "doctor" -RemainingArgs $remaining
+        Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "doctor") + $remaining)
+    }
+    "status" {
+        Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "status") + $remaining)
+    }
+    "snapshot" {
+        Assert-NoDryRun -CommandName "snapshot"
+        Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "snapshot") + $remaining)
+    }
+    "plan" {
+        Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/operation_plan.py") -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
+    }
+    "apply" {
+        Assert-NoDryRun -CommandName "apply"
+        Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/transaction_apply.py") -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining + @("apply"))
+    }
+    "rollback" {
+        Assert-NoDryRun -CommandName "rollback"
+        Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/transaction_apply.py") -ScriptArgs (@("--repo-root", $RepoRoot, "rollback") + $remaining)
     }
     "dry-run" {
         if ($dryRunRequested) {
             throw "Use either dry-run or --dry-run, not both"
         }
-        & $SetupScript install -DryRun @remaining
+        Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/operation_plan.py") -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
     }
     "lock" {
         $lockArgs = $remaining

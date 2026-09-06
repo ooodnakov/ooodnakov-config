@@ -11,7 +11,7 @@ require_repo_script() {
 
 should_normalize_global_flags() {
   case "$1" in
-    bootstrap|install|deps|update|doctor|completions|dry-run|delete|remove|lock|update-pins|agents|minimal)
+    bootstrap|install|deps|update|doctor|status|snapshot|plan|apply|rollback|completions|dry-run|delete|remove|lock|update-pins|agents|minimal)
       return 0
       ;;
     *)

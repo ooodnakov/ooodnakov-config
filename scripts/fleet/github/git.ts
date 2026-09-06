@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { exec } from "child_process";
-import { promisify } from "util";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
 
 const execAsync = promisify(exec);
 
@@ -59,7 +59,7 @@ export function parseGitRemoteUrl(remoteUrl: string): GitRepoInfo {
     return {
       owner,
       repo: repo.replace(/\.git$/, ""),
-      fullName: `${owner}/${repo.replace(/\.git$/, "")}`
+      fullName: `${owner}/${repo.replace(/\.git$/, "")}`,
     };
   }
 
@@ -70,7 +70,7 @@ export function parseGitRemoteUrl(remoteUrl: string): GitRepoInfo {
     return {
       owner,
       repo: repo.replace(/\.git$/, ""),
-      fullName: `${owner}/${repo.replace(/\.git$/, "")}`
+      fullName: `${owner}/${repo.replace(/\.git$/, "")}`,
     };
   }
 

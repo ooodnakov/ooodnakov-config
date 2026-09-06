@@ -21,6 +21,10 @@
 
 # ooodnakov-config
 
+The generated [CLI reference](docs/cli-reference.md) lists every public command,
+option, supported platform, and stable handler ID. Practical examples in this README
+remain hand-authored so regeneration cannot replace operational guidance.
+
 Reproducible personal dotfiles for Linux, Windows, and macOS machines.
 
 This repo tracks the opinionated base config and bootstrap logic only. Secrets, tokens, private keys, and host-specific overrides stay outside git in local files.
@@ -92,11 +96,8 @@ less /tmp/ooodnakov-bootstrap.sh
 bash /tmp/ooodnakov-bootstrap.sh
 ```
 
-If you already trust the repo and want the one-liner, this also works:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh | bash
-```
+Release archives include `SHA256SUMS`. Verify an archive before extracting it;
+do not pipe a newly downloaded bootstrap script directly into a shell.
 
 ### Windows PowerShell
 
@@ -130,6 +131,14 @@ Primary commands:
 - `oooconf update`: fast-forward pull the repo, then rerun install
 - `oooconf dry-run`: preview setup actions without changing the system
 - `oooconf doctor`: validate managed links and key tools
+- `oooconf plan`: build a validated, side-effect-free operation plan in text or versioned JSON
+- `oooconf apply`: transactionally apply the validated managed-link plan
+- `oooconf rollback --last`: safely reverse the latest eligible managed-link transaction
+- `oooconf doctor --format text|json`: emit stable, actionable health checks
+- `oooconf status --format text|json`: summarize managed state without mutation
+- `oooconf snapshot export|inspect|apply`: move allowlisted preferences and
+  capabilities without exporting secrets or host paths; see
+  [Snapshots and structured diagnostics](docs/snapshots-and-diagnostics.md)
 - `oooconf delete`: remove managed links and restore latest backups when available
 - `oooconf remove`: remove managed links without restoring backups
 - `oooconf bootstrap`: clone/update repo then run install (Unix only)
@@ -222,6 +231,59 @@ For unattended runs:
 OOODNAKOV_INTERACTIVE=never oooconf update
 oooconf update --yes-optional
 ```
+
+For an automation-safe preview, use the shared planner. `oooconf dry-run` is a
+compatibility alias for the default install plan:
+
+```bash
+oooconf plan
+oooconf plan --scope links
+oooconf plan bat zoxide --format json
+oooconf dry-run --format json
+```
+
+Plan generation validates link sources, duplicate targets, dependency keys, and
+target containment before reporting any operation. It does not create directories,
+resolve secrets, install packages, or otherwise modify the machine. Setup on both
+Unix and Windows consumes the same validated link-plan output.
+
+Managed links are applied as a transaction. Each apply holds an exclusive lock and
+atomically journals completed operations under
+`$XDG_STATE_HOME/ooodnakov-config/transactions/` (falling back to
+`~/.local/state/ooodnakov-config/transactions/`). If a link operation fails, completed
+operations are rolled back automatically. `oooconf rollback --last` can reverse the
+latest completed or interrupted transaction, but refuses to overwrite or remove a
+target changed by the user after apply. Running `oooconf apply` again with an
+identical link state is a no-op and creates neither a journal nor a backup.
+
+Transaction journals and their referenced backups are intentionally retained until
+rollback is no longer needed. Never delete an incomplete or `rollback_failed`
+journal as routine cleanup; follow the
+[recovery and retention procedure](docs/troubleshooting.md#transaction-journal-retention-and-cleanup)
+before removing terminal journals or backups.
+
+`oooconf install` keeps its existing dependency and setup behavior, but delegates its
+managed-link phase to the same transaction engine. Package-manager changes and
+external tool/plugin updates remain explicitly non-reversible.
+
+Portable profiles can limit managed links to a reusable capability bundle:
+
+```bash
+oooconf plan --profile workstation
+oooconf apply --profile terminal
+oooconf install --profile developer
+```
+
+Built-in profiles are `minimal`, `terminal`, `workstation`, and `developer`.
+Precedence is explicit `--profile`, then `OOODNAKOV_PROFILE`, then the ignored local
+`~/.config/ooodnakov/local/profile.toml`; no selection retains the historical
+all-applicable-links behavior. Platform-inapplicable capabilities appear as skipped
+in plan output, and profile dependency lists are recommendations rather than
+automatic installation requests. See `docs/profiles.md` for the schemas and
+extension workflow.
+
+The tested and best-effort operating-system, shell, and architecture combinations
+are listed in the [platform support matrix](docs/reproducibility.md#platform-support-matrix).
 
 Interactive dependency picks:
 
@@ -465,6 +527,12 @@ The tab/status bar remains local to this repo rather than replacing it wholesale
 - Linux and macOS jobs run Python lint/format checks, Bash syntax validation, `shellcheck`, lockfile reproducibility checks, static Neovim/WezTerm smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
 - Windows jobs run Python lint/format checks, PowerShell parser validation, static Neovim/WezTerm smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
 - tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases
+- Fleet automation is reproducibly locked, validated without network-backed tests,
+  and preview-only for merges by default; see
+  [Fleet automation](docs/fleet-automation.md)
+- CI exercises the complete plan/apply/doctor/remove/restore/rollback lifecycle in
+  isolated temporary homes on Linux, macOS, and Windows, with network installs
+  disabled and a ratchetable Python coverage floor.
 
 ## Upstream and Audit References
 
@@ -483,6 +551,7 @@ Reference docs:
 - reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
 - dependency decisions: [`docs/dependency-decisions.md`](docs/dependency-decisions.md)
 - troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)
+- Fleet automation: [`docs/fleet-automation.md`](docs/fleet-automation.md)
 - import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)
 - third-party tree notes: [`third_party/README.md`](third_party/README.md)
 - contributor instructions and coding rules: [`AGENTS.md`](AGENTS.md)

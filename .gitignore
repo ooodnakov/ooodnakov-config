@@ -13,7 +13,13 @@ tmp/
 __pycache__/
 *.pyc
 
-home/.config/ooodnakov/local/ohmypos
+# Project-local dependency installs
+scripts/fleet/node_modules/
+
+# Generated desktop-config backups (the canonical files live beside these)
+home/.config/niri/**/*.backup-[0-9]*
+home/.config/noctalia/**/*.backup-[0-9]*
+
 home/.config/ooodnakov/local/sketchybar
 home/.config/ooodnakov/local/noctalia
 home/.config/ooodnakov/local/ohmyposh
@@ -24,6 +30,7 @@ home/.config/ooodnakov/local/*.ps1
 home/.config/ooodnakov/local/*.lua
 home/.config/ooodnakov/local/*.ssh
 home/.config/ooodnakov/local/links.local.toml
+home/.config/ooodnakov/local/profile.toml
 home/.config/ooodnakov/local/agents/data.json
 home/.config/ooodnakov/cache/*
 home/.config/task/local/taskrc
@@ -52,7 +59,6 @@ home/.pi-lens/tools
 home/.pi-lens/bin
 home/.pi-lens/sessionstart.log
 home/.pi-lens/probe-cache.json
-home/.pi-lens/sessionstart.log
 
 # omp
 home/.omp/*
@@ -84,5 +90,9 @@ home/.config/yazi/theme.toml
 
 home/.glzr/zebar/ooodnakov/theme-overrides.css
 home/.glzr/zebar/ooodnakov-komorebi/theme-overrides.css
-deps.lock.json
 home/.pi/agent/run-history.jsonl
+
+# Python coverage artifacts
+.coverage
+.coverage.*
+htmlcov/

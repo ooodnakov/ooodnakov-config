@@ -25,7 +25,6 @@ Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 | `croc` | schollz/croc | Secure peer-to-peer file transfer (github-release on Linux, brew on macOS, winget/choco on Windows) |
 | `just` | casey/just | Cross-platform task runner for repeatable lint, format, test, completion, and lock commands |
 
-
 All decisions, categories, versions, install methods, pins, and reasons are **defined exclusively** in `scripts/optional-deps.toml` (see `[managed-tools]` section and per-entry comments).
 
 The current optional dependency catalog includes:
@@ -47,7 +46,11 @@ Run `oooconf lock` after editing the TOML.
 ## Adding a New Optional Dependency
 
 1. Append a `[[deps]]` block to `scripts/optional-deps.toml` with the key, display name, description, and per-platform install info (`linux.manager`, `macos.manager`, `windows.manager`, plus `package`, `command`, `winget_id`, `choco_id`, `url`, or `asset` as needed).
-   - For GitHub release archives, use `manager = "github-release"`, `package = "owner/repo"`, `ver`, `bin`, and platform `asset` templates with `${ver}`, `${system}`, and `${arch}` placeholders.
+   - For GitHub release archives, use `manager = "github-release"`, `package = "owner/repo"`, `ver`, `bin`, platform `asset` templates, and an `integrity` map from expanded asset names to lowercase SHA-256 digests. `${ver}`, `${system}`, and `${arch}` placeholders are supported.
+   - A directly downloaded archive without a pinned digest is rejected before
+     extraction. If an upstream publishes only a mutable installer script, add a
+     narrowly explained `checksum_exception`; the generated lock makes every such
+     exception visible for review.
    - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`). The `node` and `pnpm` handlers are intentionally paired so a fresh machine with only `nvm` can bootstrap Node.js, npm, and pnpm in one optional dependency run.
 2. Add/adjust presence checks:
    - `optional_dependency_present()` in `scripts/setup/setup.sh`

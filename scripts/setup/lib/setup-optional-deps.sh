@@ -403,7 +403,7 @@ choose_optional_dependencies_with_gum() {
   # Make the picker searchable: pre-filter the full list with gum filter (live fuzzy
   # search), then hand the matches to gum choose for toggle/checkbox-style multi-select.
   local filtered_selection
-  filtered_selection="$(printf '%s\n' "${options[@]}" | gum filter --no-limit --placeholder "Type to filter dependencies (tab toggles match, enter confirms)..." </dev/tty 2>/dev/tty)" || {
+  filtered_selection="$(printf '%s\n' "${options[@]}" | gum filter --no-limit --placeholder "Type to filter dependencies (tab toggles match, enter confirms)..." 2>/dev/tty)" || {
     stty sane </dev/tty 2>/dev/null || true
     return 3
   }

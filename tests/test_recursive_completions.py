@@ -32,6 +32,10 @@ def test_recursive_spec_parses_deep_tree_and_shared_definitions(tmp_path: Path) 
     spec_path = write_spec(
         tmp_path,
         """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [global]
 options = { "--repo-root" = "set repo root path" }
 completers = { "--repo-root" = "_files -/" }
@@ -44,21 +48,31 @@ git = "version control"
 china = "China region"
 
 [commands.install]
+handler_id = "test.install"
+platforms = ["linux", "macos", "windows"]
 description = "install things"
 value_set = "deps_keys"
 
 [commands.agents]
+handler_id = "test.agents"
+platforms = ["linux", "macos", "windows"]
 description = "agent workflows"
 
 [commands.agents.subcommands.mcp]
+handler_id = "test.agents.mcp"
+platforms = ["linux", "macos", "windows"]
 description = "manage MCP servers"
 
 [commands.agents.subcommands.mcp.subcommands.sync]
+handler_id = "test.agents.mcp.sync"
+platforms = ["linux", "macos", "windows"]
 description = "sync servers"
 options = { "--region" = "provider region" }
 option_value_sets = { "--region" = "regions" }
 
 [commands.agents.subcommands.mcp.subcommands.sync.subcommands.audit]
+handler_id = "test.agents.mcp.sync.audit"
+platforms = ["linux", "macos", "windows"]
 description = "audit sync"
 options = { "--repo-root" = "set repo root path" }
 completers = { "--repo-root" = "_files -/" }
@@ -86,21 +100,39 @@ completers = { "--repo-root" = "_files -/" }
     [
         (
             """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [commands.check]
+handler_id = "test.check"
+platforms = ["linux", "macos", "windows"]
 alias_for = "doctor"
 """,
             "aliases unknown command",
         ),
         (
             """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [commands.install]
+handler_id = "test.install"
+platforms = ["linux", "macos", "windows"]
 value_set = "missing"
 """,
             "unknown value_set",
         ),
         (
             """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [commands.test]
+handler_id = "test.test"
+platforms = ["linux", "macos", "windows"]
 options = { "--known" = "known option" }
 completers = { "--missing" = "_files" }
 """,
@@ -108,9 +140,17 @@ completers = { "--missing" = "_files" }
         ),
         (
             """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [commands.foo-bar]
+handler_id = "test.foo-bar"
+platforms = ["linux", "macos", "windows"]
 
 [commands.foo_bar]
+handler_id = "test.foo-bar"
+platforms = ["linux", "macos", "windows"]
 """,
             "collides",
         ),
@@ -122,27 +162,59 @@ def test_recursive_spec_validation_errors(tmp_path: Path, body: str, message: st
         load_cli_spec(spec_path)
 
 
+def test_recursive_spec_rejects_an_incompatible_reader_version(tmp_path: Path) -> None:
+    spec_path = write_spec(
+        tmp_path,
+        """
+[meta]
+schema_version = 2
+minimum_reader_version = 2
+
+[commands.test]
+handler_id = "test.test"
+platforms = ["linux"]
+""",
+    )
+
+    with pytest.raises(ValueError, match="requires reader version 2"):
+        load_cli_spec(spec_path)
+
+
 def test_generated_completions_are_depth_agnostic(tmp_path: Path) -> None:
     spec_path = write_spec(
         tmp_path,
         """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [definitions.deps_keys]
 git = "version control"
 
 [commands.install]
+handler_id = "test.install"
+platforms = ["linux", "macos", "windows"]
 description = "install things"
 value_set = "deps_keys"
 
 [commands.alpha]
+handler_id = "test.alpha"
+platforms = ["linux", "macos", "windows"]
 description = "alpha root"
 
 [commands.alpha.subcommands.beta]
+handler_id = "test.alpha.beta"
+platforms = ["linux", "macos", "windows"]
 description = "beta child"
 
 [commands.alpha.subcommands.beta.subcommands.gamma]
+handler_id = "test.alpha.beta.gamma"
+platforms = ["linux", "macos", "windows"]
 description = "gamma child"
 
 [commands.alpha.subcommands.beta.subcommands.gamma.subcommands.delta]
+handler_id = "test.alpha.beta.gamma.delta"
+platforms = ["linux", "macos", "windows"]
 description = "delta child"
 options = { "--flag" = "deep flag" }
 """,
@@ -266,17 +338,27 @@ def test_zsh_dispatch_scans_actual_subcommand_position_after_global_options(tmp_
     spec_path = write_spec(
         tmp_path,
         """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [global]
 options = { "-C" = "set repo root path", "--repo-root" = "set repo root path" }
 completers = { "-C" = "_files -/", "--repo-root" = "_files -/" }
 
 [commands.agents]
+handler_id = "test.agents"
+platforms = ["linux", "macos", "windows"]
 description = "agent workflows"
 
 [commands.agents.subcommands.mcp]
+handler_id = "test.agents.mcp"
+platforms = ["linux", "macos", "windows"]
 description = "manage MCP servers"
 
 [commands.agents.subcommands.mcp.subcommands.sync]
+handler_id = "test.agents.mcp.sync"
+platforms = ["linux", "macos", "windows"]
 description = "sync servers"
 """,
     )
@@ -297,14 +379,22 @@ def test_zsh_shared_value_sets_are_emitted_once(tmp_path: Path) -> None:
     spec_path = write_spec(
         tmp_path,
         """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [definitions.deps_keys]
 git = "version control"
 
 [commands.install]
+handler_id = "test.install"
+platforms = ["linux", "macos", "windows"]
 description = "install things"
 value_set = "deps_keys"
 
 [commands.deps]
+handler_id = "test.deps"
+platforms = ["linux", "macos", "windows"]
 description = "install deps"
 value_set = "deps_keys"
 """,
@@ -325,15 +415,25 @@ def test_powershell_parser_keeps_boolean_flag_following_subcommand(tmp_path: Pat
     spec_path = write_spec(
         tmp_path,
         """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [commands.root]
+handler_id = "test.root"
+platforms = ["linux", "macos", "windows"]
 description = "root command"
 options = { "--flag" = "boolean flag", "--config" = "config path" }
 completers = { "--config" = "_files" }
 
 [commands.root.subcommands.child]
+handler_id = "test.root.child"
+platforms = ["linux", "macos", "windows"]
 description = "child command"
 
 [commands.root.subcommands.child.subcommands.leaf]
+handler_id = "test.root.child.leaf"
+platforms = ["linux", "macos", "windows"]
 description = "leaf command"
 """,
     )
@@ -365,7 +465,13 @@ def test_powershell_completion_defers_freeform_option_values(tmp_path: Path) -> 
     spec_path = write_spec(
         tmp_path,
         """
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [commands.root]
+handler_id = "test.root"
+platforms = ["linux", "macos", "windows"]
 description = "root command"
 options = { "--config" = "config path" }
 completers = { "--config" = "_files" }

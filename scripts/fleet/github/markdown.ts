@@ -11,15 +11,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { getIssues } from "./issues.js";
+
 import { getGitRepoInfo } from "./git.js";
+import { getIssues } from "./issues.js";
 
 type Issue = Awaited<ReturnType<typeof getIssues>>[number];
 
 function toIssueMarkdown(issue: Issue): string {
-  const labels = issue.labels
-    .map((l) => (typeof l === "string" ? l : l.name))
-    .filter(Boolean);
+  const labels = issue.labels.map((l) => (typeof l === "string" ? l : l.name)).filter(Boolean);
   const assignees = (issue.assignees ?? []).map((a) => a.login);
   const reactions = issue.reactions;
 

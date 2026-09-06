@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ooodnakov.dev/schemas/diagnostics-v1.schema.json",
+  "title": "oooconf diagnostics v1",
+  "type": "object",
+  "required": ["schema_version", "command", "platform", "profile", "capabilities", "skipped_capabilities", "managed_links", "dependencies", "incomplete_transactions", "generated_artifact_drift", "summary", "checks"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "command": { "enum": ["doctor", "status"] },
+    "platform": { "enum": ["linux", "macos", "windows"] },
+    "profile": { "type": ["string", "null"] },
+    "capabilities": { "type": "array", "items": { "type": "string" } },
+    "skipped_capabilities": { "type": "array", "items": { "type": "string" } },
+    "managed_links": { "$ref": "#/$defs/counts" },
+    "dependencies": { "$ref": "#/$defs/dependencyCounts" },
+    "incomplete_transactions": { "type": "integer", "minimum": 0 },
+    "generated_artifact_drift": { "type": "boolean" },
+    "summary": {
+      "type": "object",
+      "required": ["pass", "warning", "error"],
+      "properties": { "pass": { "type": "integer" }, "warning": { "type": "integer" }, "error": { "type": "integer" } },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "severity", "message", "remediation"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z]+[a-z0-9.-]+$" },
+          "status": { "enum": ["pass", "warning", "error"] },
+          "severity": { "enum": ["info", "warning", "error"] },
+          "message": { "type": "string" },
+          "remediation": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "counts": { "type": "object", "required": ["total", "healthy"], "properties": { "total": { "type": "integer" }, "healthy": { "type": "integer" } }, "additionalProperties": false },
+    "dependencyCounts": { "type": "object", "required": ["recommended", "available"], "properties": { "recommended": { "type": "integer" }, "available": { "type": "integer" } }, "additionalProperties": false }
+  },
+  "additionalProperties": false
+}

@@ -194,8 +194,8 @@ maybe_install_brew() {
     return 1
   fi
 
-  run_with_spinner "Installing Homebrew" \
-    env NONINTERACTIVE=1 /bin/bash -c '$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'
+  NONINTERACTIVE=1 run_with_spinner "Installing Homebrew" \
+    download_and_run_installer https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
 
   if [ "$DRY_RUN" -eq 1 ]; then
     DEPENDENCY_SUMMARY+=("brew: install preview")
@@ -599,6 +599,21 @@ download_to_file() {
   fi
 }
 
+download_and_run_installer() {
+  local url="$1"
+  shift
+  local installer result
+  installer="$(mktemp "${TMPDIR:-/tmp}/oooconf-installer.XXXXXX")"
+  download_to_file "$url" "$installer" || {
+    rm -f "$installer"
+    return 1
+  }
+  /bin/bash "$installer" "$@"
+  result=$?
+  rm -f "$installer"
+  return "$result"
+}
+
 github_release_system() {
   case "$(uname -s)" in
   Linux) printf '%s\n' linux ;;
@@ -727,15 +742,15 @@ maybe_install_github_release() {
   run_cmd mkdir -p "$install_root" "$bin_dir" || return 1
 
   if [ ! -x "$target_binary" ]; then
-    download_to_file "$release_url" "$archive_path" || {
+    run_python "$REPO_ROOT/scripts/security/secure_artifact.py" download \
+      --archive "$archive_path" --dependency "$key" --asset "$asset_name" --url "$release_url" || {
       DEPENDENCY_SUMMARY+=("$command_name: install attempted")
       return 1
     }
 
-    case "$asset_name" in
-    *.zip) extract_zip_archive "$archive_path" "$install_root" || return 1 ;;
-    *) run_with_spinner "Extracting $asset_name" tar -xf "$archive_path" -C "$install_root" || return 1 ;;
-    esac
+    run_python "$REPO_ROOT/scripts/security/secure_artifact.py" extract \
+      --archive "$archive_path" --dependency "$key" --asset "$asset_name" \
+      --destination "$install_root" || return 1
 
     if [ "$DRY_RUN" -eq 1 ]; then
       DEPENDENCY_SUMMARY+=("$command_name: install preview via GitHub release")
@@ -807,8 +822,10 @@ install_pinned_neovim_unix() {
   run_cmd mkdir -p "$install_root" "$bin_dir" || return 1
 
   if [ ! -x "$install_root/$extracted_dir/bin/nvim" ]; then
-    download_to_file "$release_url" "$archive_path" || return 1
-    run_with_spinner "Extracting pinned Neovim v${version}" tar -xzf "$archive_path" -C "$install_root" || return 1
+    run_python "$REPO_ROOT/scripts/security/secure_artifact.py" download \
+      --archive "$archive_path" --dependency nvim --asset "$asset_name" --url "$release_url" || return 1
+    run_python "$REPO_ROOT/scripts/security/secure_artifact.py" extract \
+      --archive "$archive_path" --dependency nvim --asset "$asset_name" --destination "$install_root" || return 1
   fi
 
   run_cmd ln -sfn "$install_root/$extracted_dir/bin/nvim" "$bin_dir/nvim" || return 1
@@ -894,9 +911,9 @@ maybe_install_rtk() {
     fi
   fi
 
-  local os arch target_url tmp_dir rtk_ver
+  local os arch target_url tmp_dir archive_path rtk_ver
   rtk_ver=$(get_managed_tool rtk ver)
-  [ -z "$rtk_ver" ] && rtk_ver="0.37.0"
+  [ -z "$rtk_ver" ] && rtk_ver="0.37.2"
 
   os="$(uname -s | tr '[:upper:]' '[:lower:]')"
   arch="$(uname -m)"
@@ -920,7 +937,11 @@ maybe_install_rtk() {
   esac
 
   tmp_dir="$(mktemp -d)"
-  run_with_spinner "Downloading and extracting rtk v${rtk_ver}" sh -c "curl -fsSL '$target_url' | tar -xz -C '$tmp_dir'"
+  archive_path="$tmp_dir/${target_url##*/}"
+  run_python "$REPO_ROOT/scripts/security/secure_artifact.py" download \
+    --archive "$archive_path" --dependency rtk --asset "${target_url##*/}" --url "$target_url" || return 1
+  run_python "$REPO_ROOT/scripts/security/secure_artifact.py" extract \
+    --archive "$archive_path" --dependency rtk --asset "${target_url##*/}" --destination "$tmp_dir" || return 1
 
   if [ -f "$tmp_dir/rtk" ]; then
     run_cmd mkdir -p "$HOME_DIR/.local/bin"
@@ -963,7 +984,8 @@ maybe_install_oh_my_posh() {
     fi
   fi
 
-  run_with_spinner "Installing oh-my-posh" sh -c "curl -s https://ohmyposh.dev/install.sh | bash -s -- -d $HOME_DIR/.local/bin"
+  run_with_spinner "Installing oh-my-posh" download_and_run_installer \
+    https://ohmyposh.dev/install.sh -s -- -d "$HOME_DIR/.local/bin"
   if command -v oh-my-posh >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/oh-my-posh" ]; then
     DEPENDENCY_SUMMARY+=("oh-my-posh: installed")
   else
@@ -1273,13 +1295,13 @@ maybe_install_uv() {
   fi
 
   if command -v curl >/dev/null 2>&1; then
-    run_with_spinner "Installing uv via official installer" sh -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+    run_with_spinner "Installing uv via official installer" download_and_run_installer https://astral.sh/uv/install.sh
   elif command -v wget >/dev/null 2>&1; then
-    run_with_spinner "Installing uv via official installer" sh -c 'wget -qO- https://astral.sh/uv/install.sh | sh'
+    run_with_spinner "Installing uv via official installer" download_and_run_installer https://astral.sh/uv/install.sh
   else
     if [ "$PACKAGE_MANAGER" != "none" ] && prompt_yes_no "uv installer needs curl or wget. Install curl and retry?"; then
       install_packages "$PACKAGE_MANAGER" curl
-      run_with_spinner "Installing uv via official installer" sh -c 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+      run_with_spinner "Installing uv via official installer" download_and_run_installer https://astral.sh/uv/install.sh
     else
       DEPENDENCY_SUMMARY+=("uv: missing (requires curl or wget)")
       return 0
@@ -1358,11 +1380,13 @@ maybe_install_bw() {
   }
 
   if [ ! -x "$extracted_binary" ]; then
-    download_to_file "$release_url" "$archive_path" || {
+    run_python "$REPO_ROOT/scripts/security/secure_artifact.py" download \
+      --archive "$archive_path" --dependency bw --asset "bw-linux-${bw_ver}.zip" --url "$release_url" || {
       DEPENDENCY_SUMMARY+=("bw: install attempted")
       return 1
     }
-    extract_zip_archive "$archive_path" "$install_root" || {
+    run_python "$REPO_ROOT/scripts/security/secure_artifact.py" extract \
+      --archive "$archive_path" --dependency bw --asset "bw-linux-${bw_ver}.zip" --destination "$install_root" || {
       DEPENDENCY_SUMMARY+=("bw: install attempted")
       return 1
     }
@@ -1583,9 +1607,9 @@ maybe_install_cargo() {
   fi
 
   if command -v curl >/dev/null 2>&1; then
-    run_with_spinner "Installing Rust via rustup" sh -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+    run_with_spinner "Installing Rust via rustup" download_and_run_installer https://sh.rustup.rs -s -- -y
   elif command -v wget >/dev/null 2>&1; then
-    run_with_spinner "Installing Rust via rustup" sh -c 'wget -qO- https://sh.rustup.rs | sh -s -- -y'
+    run_with_spinner "Installing Rust via rustup" download_and_run_installer https://sh.rustup.rs -s -- -y
   else
     DEPENDENCY_SUMMARY+=("cargo: missing (requires curl or wget)")
     return 0

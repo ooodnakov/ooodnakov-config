@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ooodnakov/ooodnakov-config/schemas/operation-plan-v1.schema.json",
+  "title": "oooconf operation plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "command", "platform", "profile", "operations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "command": { "enum": ["install", "links"] },
+    "platform": { "enum": ["linux", "macos", "windows"] },
+    "profile": { "type": ["string", "null"] },
+    "operations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/operation" }
+    }
+  },
+  "$defs": {
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "platform",
+        "profile",
+        "source",
+        "target",
+        "requires_elevation",
+        "requires_network",
+        "preconditions",
+        "postconditions",
+        "summary",
+        "rollback"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": ["mkdir", "backup", "link", "unlink", "download", "install", "render", "command"]
+        },
+        "platform": { "enum": ["linux", "macos", "windows"] },
+        "profile": { "type": ["string", "null"] },
+        "source": { "type": ["string", "null"] },
+        "target": { "type": ["string", "null"] },
+        "requires_elevation": { "type": "boolean" },
+        "requires_network": { "type": "boolean" },
+        "preconditions": { "type": "array", "items": { "type": "string" } },
+        "postconditions": { "type": "array", "items": { "type": "string" } },
+        "summary": { "type": "string", "minLength": 1 },
+        "rollback": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

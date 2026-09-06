@@ -8,7 +8,7 @@ The public CLI is split across a small set of files:
 
 | Area | File(s) | Notes |
 |------|---------|-------|
-| Command/completion metadata | `scripts/cli/oooconf-cli-spec.toml` | Recursive command tree used by generated completions. |
+| Command/completion metadata | `scripts/cli/oooconf-cli-spec.toml` | Versioned recursive tree used by validation, completions, and generated reference docs. |
 | Top-level Unix dispatch | `scripts/setup/ooodnakov.sh` and `scripts/setup/lib/oooconf-dispatch.sh` | Parses global flags, normalizes command aliases, and calls command handlers. |
 | Top-level PowerShell dispatch | `scripts/setup/ooodnakov.ps1` and `scripts/setup/lib/oooconf-dispatch.ps1` | Mirrors Unix behavior for Windows and PowerShell users. |
 | Command implementation modules | `scripts/setup/lib/oooconf-*.sh` and `scripts/setup/lib/oooconf-*.ps1` | Focused command families such as `shell`, `color`, `wm`, `bar`, `help`, and UI helpers. |
@@ -22,6 +22,7 @@ The public CLI is split across a small set of files:
    - Edit `scripts/cli/oooconf-cli-spec.toml`.
    - Add top-level commands under `[commands.<name>]`.
    - Add nested commands under `[commands.<parent>.subcommands.<child>]`.
+   - Give every node a unique, stable `handler_id` and a non-empty `platforms` list.
    - Add `description`, `options`, `values`, `value_set`, `option_value_sets`, or `completers` on the command node that owns them.
 
 2. **Implement dispatch on both supported shells.**
@@ -37,12 +38,13 @@ The public CLI is split across a small set of files:
    - Run `uv run python scripts/cli/generate_oooconf_completions.py` for `oooconf` command metadata.
    - Run `uv run python scripts/generate/generate_tool_completions.py` after changing third-party tool completion metadata.
    - Commit regenerated tracked `oooconf` Zsh and PowerShell files when they change; autogen tool outputs under `zsh/completions/autogen/` stay local.
+   - Run `uv run python scripts/cli/generate_cli_reference.py` and commit `docs/cli-reference.md`.
 
 5. **Update documentation when behavior changes.**
    - Update `README.md` for user-facing command changes.
    - Update `docs/architecture.md` for layout or responsibility changes.
    - Update `docs/reproducibility.md` when setup, install, lock, or generated-artifact behavior changes.
-   - Update [`docs/contributing.md`](docs/contributing.md) for validation or workflow changes.
+   - Update [`contributing.md`](contributing.md) for validation or workflow changes.
    - Update [`AGENTS.md`](../AGENTS.md) for policy-level behavioral changes.
 
 ## Command Metadata Patterns
@@ -52,6 +54,8 @@ Use these TOML patterns in `scripts/cli/oooconf-cli-spec.toml`:
 ```toml
 [commands.example]
 description = "run an example workflow"
+handler_id = "oooconf.example"
+platforms = ["linux", "macos", "windows"]
 options = { "--dry-run" = "preview actions without changing files" }
 values = { "status" = "show status", "apply" = "apply changes" }
 ```
@@ -61,9 +65,13 @@ For nested commands:
 ```toml
 [commands.example.subcommands.status]
 description = "show example status"
+handler_id = "oooconf.example.status"
+platforms = ["linux", "macos", "windows"]
 
 [commands.example.subcommands.apply]
 description = "apply example changes"
+handler_id = "oooconf.example.apply"
+platforms = ["linux", "macos", "windows"]
 options = { "--force" = "overwrite existing values" }
 ```
 
@@ -76,8 +84,21 @@ safe = "safe mode"
 
 [commands.example.subcommands.mode]
 description = "set example mode"
+handler_id = "oooconf.example.mode"
+platforms = ["linux", "macos", "windows"]
 value_set = "example_modes"
 ```
+
+## Spec Version and Migration Policy
+
+The `[meta]` table contains `schema_version` and `minimum_reader_version`.
+Additive metadata changes keep the current schema version. Increment
+`schema_version` for a changed contract; only increment `minimum_reader_version`
+when older generators cannot safely interpret the file. Update the parser,
+generators, contract tests, this policy, and generated artifacts in the same commit.
+Readers fail clearly when `minimum_reader_version` exceeds their supported version.
+Handler IDs are durable automation identifiers: do not rename or reuse one without
+a documented compatibility migration.
 
 ## Cross-Platform Checklist
 
@@ -101,8 +122,9 @@ bash -n scripts/setup/delete.sh
 bash -n scripts/setup/minimal-setup.sh
 bash -n scripts/setup/lib/*.sh
 uv run python scripts/cli/generate_oooconf_completions.py
+uv run python scripts/cli/generate_cli_reference.py
 uv run python scripts/generate/generate_tool_completions.py --dry-run
-uv run pytest tests/test_recursive_completions.py tests/test_static_smoke.py tests/test_optional_deps.py
+uv run pytest tests/test_cli_contract.py tests/test_recursive_completions.py tests/test_static_smoke.py tests/test_optional_deps.py
 ```
 
 If `pwsh` is available, also run:

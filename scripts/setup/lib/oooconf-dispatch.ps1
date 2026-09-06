@@ -2,7 +2,7 @@
 
 function Test-ShouldNormalizeGlobalFlags {
     param([Parameter(Mandatory = $true)][string]$CommandName)
-    return $CommandName -in @("bootstrap", "install", "deps", "update", "doctor", "completions", "dry-run", "delete", "remove", "lock", "update-pins", "agents", "link")
+    return $CommandName -in @("bootstrap", "install", "deps", "update", "doctor", "status", "snapshot", "plan", "apply", "rollback", "completions", "dry-run", "delete", "remove", "lock", "update-pins", "agents", "link")
 }
 
 function Invoke-SetupCommand {

@@ -3,11 +3,18 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@google/jules-sdk": "^0.1.0",
-    "octokit": "^4.1.0",
-    "find-up": "^7.0.0"
+    "@google/jules-sdk": "0.1.0",
+    "find-up": "7.0.0",
+    "octokit": "4.1.4"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.0"
+    "@biomejs/biome": "2.2.4",
+    "@types/bun": "1.4.1",
+    "typescript": "5.9.2"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   }
 }

@@ -16,6 +16,9 @@ RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
 AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
 ENV_TOOL="$REPO_ROOT/scripts/cli/env_tool.py"
 SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
+OPERATION_PLAN="$REPO_ROOT/scripts/cli/operation_plan.py"
+TRANSACTION_APPLY="$REPO_ROOT/scripts/cli/transaction_apply.py"
+LIFECYCLE_TOOL="$REPO_ROOT/scripts/cli/lifecycle_tool.py"
 COMMANDS_FILE="$REPO_ROOT/scripts/cli/oooconf-commands.txt"
 KNOWN_COMMANDS=()
 KNOWN_SHELL_SUBCOMMANDS=(status prompt prompt-style forgit-aliases typo-handling psfzf-tab psfzf-git auto-uv-env)
@@ -70,6 +73,7 @@ dry_run_requested=0
 yes_optional_requested=0
 skip_deps_requested=0
 all_deps_requested=0
+profile_requested=""
 command=""
 
 while [ "$#" -gt 0 ]; do
@@ -86,6 +90,9 @@ while [ "$#" -gt 0 ]; do
       AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
       ENV_TOOL="$REPO_ROOT/scripts/cli/env_tool.py"
       SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
+      OPERATION_PLAN="$REPO_ROOT/scripts/cli/operation_plan.py"
+      TRANSACTION_APPLY="$REPO_ROOT/scripts/cli/transaction_apply.py"
+      LIFECYCLE_TOOL="$REPO_ROOT/scripts/cli/lifecycle_tool.py"
       shift 2
       ;;
     --print-repo-root)
@@ -121,6 +128,11 @@ while [ "$#" -gt 0 ]; do
       skip_deps_requested=1
       shift
       ;;
+    --profile)
+      [ "$#" -ge 2 ] || { echo "Missing value for --profile" >&2; exit 1; }
+      profile_requested="$2"
+      shift 2
+      ;;
     help)
       command_usage "$(resolve_command_alias "${2:-}")"
       exit 0
@@ -155,20 +167,32 @@ fi
 
 if should_normalize_global_flags "$command"; then
   normalized_args=()
-  for arg in "$@"; do
-    case "$arg" in
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
       -n|--dry-run)
         dry_run_requested=1
+        shift
         ;;
       --yes-optional)
         yes_optional_requested=1
+        shift
         ;;
       --skip-deps)
         skip_deps_requested=1
+        shift
         ;;
-      --all)        all_deps_requested=1        ;;
+      --all)
+        all_deps_requested=1
+        shift
+        ;;
+      --profile)
+        [ "$#" -ge 2 ] || { echo "Missing value for --profile" >&2; exit 1; }
+        profile_requested="$2"
+        shift 2
+        ;;
       *)
-        normalized_args+=("$arg")
+        normalized_args+=("$1")
+        shift
         ;;
     esac
   done
@@ -177,6 +201,10 @@ if should_normalize_global_flags "$command"; then
   else
     set --
   fi
+fi
+
+if [ -n "$profile_requested" ]; then
+  export OOODNAKOV_PROFILE="$profile_requested"
 fi
 
 
@@ -204,7 +232,31 @@ case "$command" in
     exec_setup_command update 1 "$@"
     ;;
   doctor)
-    exec_setup_command doctor 0 "$@"
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$LIFECYCLE_TOOL" --repo-root "$REPO_ROOT" doctor "$@"
+    exit $?
+    ;;
+  status)
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$LIFECYCLE_TOOL" --repo-root "$REPO_ROOT" status "$@"
+    exit $?
+    ;;
+  snapshot)
+    require_no_dry_run snapshot
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$LIFECYCLE_TOOL" --repo-root "$REPO_ROOT" snapshot "$@"
+    exit $?
+    ;;
+  plan)
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$OPERATION_PLAN" --repo-root "$REPO_ROOT" "$@"
+    exit $?
+    ;;
+  apply)
+    require_no_dry_run apply
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$TRANSACTION_APPLY" --repo-root "$REPO_ROOT" "$@" apply
+    exit $?
+    ;;
+  rollback)
+    require_no_dry_run rollback
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$TRANSACTION_APPLY" --repo-root "$REPO_ROOT" rollback "$@"
+    exit $?
     ;;
   completions)
     exec_setup_command completions 1 "$@"
@@ -218,8 +270,8 @@ case "$command" in
       echo "Use either dry-run or --dry-run, not both" >&2
       exit 1
     fi
-    require_repo_script "$SETUP"
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$SETUP" install --dry-run "$@"
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$OPERATION_PLAN" --repo-root "$REPO_ROOT" "$@"
+    exit $?
     ;;
   delete)
     exec_delete_command delete restore "$@"

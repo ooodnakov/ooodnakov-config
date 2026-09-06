@@ -44,6 +44,65 @@ To switch only zsh between Powerlevel10k and Oh My Posh, run `oooconf shell prom
 
 Managed config is linked into `~/.config`. If something is misbehaving:
 
+Managed-link applies are journaled. To apply only the validated link transaction or
+undo the latest eligible transaction:
+
+```bash
+oooconf apply
+oooconf rollback --last
+```
+
+If apply is interrupted, `oooconf doctor` reports an incomplete transaction. Run
+`oooconf rollback --last` to resume safe reverse-order cleanup. Rollback never
+deletes a target that no longer matches the link recorded in the journal and never
+overwrites an existing target while restoring a backup. If it reports manual
+recovery, inspect the referenced journal under
+`~/.local/state/ooodnakov-config/transactions/`, preserve the user-created target,
+and restore the recorded `backup_path` manually if appropriate.
+
+For automation, run `oooconf doctor --format json`. An interrupted transaction is
+reported with stable check ID `transactions.incomplete`, error severity, and a
+rollback remediation. `oooconf status --format json` reports the same state while
+remaining suitable for inventory workflows that should not fail merely because a
+health check is unhealthy.
+
+## Transaction journal retention and cleanup
+
+Transaction journals live under
+`${XDG_STATE_HOME:-$HOME/.local/state}/ooodnakov-config/transactions/`. Backup paths
+are recorded per operation and normally live under
+`~/.local/state/ooodnakov-config/backups/` (or `OOODNAKOV_BACKUP_ROOT` when set).
+There is intentionally no automatic retention window: journals are small, and
+deleting one can make its backups impossible to associate with rollback.
+
+Use this sequence for safe manual cleanup:
+
+1. Run `oooconf doctor` and resolve every incomplete or `rollback_failed`
+   transaction. Never routinely prune a journal in `applying`, `failed`, or
+   `rollback_failed` state.
+2. Open the journal and confirm its `status` is `complete` or `rolled_back`. For a
+   completed transaction, explicitly decide that rollback is no longer required.
+3. Review every non-null `backup_path`. Preserve anything that is still the only
+   copy of user data. Delete only reviewed backup paths belonging to that journal.
+4. Remove the journal only after its backups have been restored, archived, or
+   deliberately removed. Never delete the whole backups or transactions directory
+   based only on age.
+5. Run `oooconf doctor` again. A subsequent idempotent `oooconf apply` should report
+   no changes when managed links are healthy.
+
+The active `apply.lock` directory is removed automatically. Do not manually remove
+it merely because an apply is slow. After a confirmed process crash, preserve the
+transaction directory and run `oooconf doctor`; a later apply can reclaim a stale
+lock whose recorded process no longer exists.
+
+## Snapshot import is rejected
+
+Run `oooconf snapshot inspect FILE` before applying it. Imports are rejected when
+the schema version is unsupported, fields or preferences are unknown, preference
+values are outside the safe allowlist, or recorded capabilities no longer match the
+named profile. Re-export the snapshot with the current checkout rather than editing
+capability lists by hand.
+
 ```bash
 # Check all managed links and key commands
 oooconf doctor

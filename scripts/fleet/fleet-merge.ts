@@ -13,16 +13,15 @@
 // limitations under the License.
 
 import { Octokit } from "octokit";
-import { getGitRepoInfo } from "./github/git.js";
+import { evaluateMergeEligibility, isTrustedFleetPullRequest, mutationEnabled } from "./policy.js";
 
 const OWNER = process.env.GITHUB_REPOSITORY?.split("/")[0] ?? "";
 const REPO = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "";
 const BASE_BRANCH = process.env.FLEET_BASE_BRANCH ?? "main";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const JULES_API_KEY = process.env.JULES_API_KEY;
 const MAX_RETRIES = parseInt(process.env.FLEET_MAX_RETRIES ?? "2", 10);
 const PR_POLL_INTERVAL_MS = 30_000;
-const PR_POLL_TIMEOUT_MS = 15 * 60 * 1000;
+const APPLY = mutationEnabled();
 
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
@@ -47,12 +46,9 @@ async function findFleetPRs(): Promise<Map<string, { number: number; headRefName
 
   const prMap = new Map<string, { number: number; headRefName: string; sessionId?: string }>();
   for (const pr of prs) {
-    // Match by author (google-labs-jules or any bot)
-    const isBot = pr.user?.login === "google-labs-jules" || pr.user?.login.endsWith("[bot]");
-    if (isBot || pr.head.ref.includes("fleet-")) {
+    if (isTrustedFleetPullRequest(pr.user?.login ?? null, pr.head.ref)) {
       // Try to extract session ID from branch or body
-      const sessionMatch = pr.head.ref.match(/session[_-]?(\w+)/) ||
-                           pr.body?.match(/session[_-]?(\w+)/);
+      const sessionMatch = pr.head.ref.match(/session[_-]?(\w+)/) || pr.body?.match(/session[_-]?(\w+)/);
       prMap.set(pr.head.ref, {
         number: pr.number,
         headRefName: pr.head.ref,
@@ -72,13 +68,16 @@ async function waitForCI(prNumber: number, maxWaitMs: number): Promise<boolean> 
       ref: `pulls/${prNumber}/head`,
     });
 
-    if (data.check_runs.length === 0) return true; // No checks = pass
+    if (data.check_runs.length === 0) return false;
 
-    const allPassed = data.check_runs.every(
-      (run) => run.conclusion === "success" || run.conclusion === "skipped"
-    );
+    const allPassed = data.check_runs.every((run) => ["success", "skipped", "neutral"].includes(run.conclusion ?? ""));
     if (allPassed) return true;
-    if (data.check_runs.some((run) => run.conclusion === "failure")) return false;
+    if (
+      data.check_runs.some((run) =>
+        ["failure", "cancelled", "timed_out", "action_required"].includes(run.conclusion ?? ""),
+      )
+    )
+      return false;
 
     await new Promise((r) => setTimeout(r, PR_POLL_INTERVAL_MS));
   }
@@ -93,14 +92,27 @@ async function updateBranch(prNumber: number): Promise<boolean> {
       pull_number: prNumber,
     });
     return true;
-  } catch (e: any) {
-    if (e.status === 422) return false; // Conflict
-    throw e;
+  } catch (error: unknown) {
+    if (typeof error === "object" && error !== null && "status" in error && error.status === 422) return false;
+    throw error;
   }
 }
 
 async function mergePR(prNumber: number): Promise<boolean> {
   try {
+    const [{ data: pullRequest }, { data: checks }] = await Promise.all([
+      octokit.rest.pulls.get({ owner: OWNER, repo: REPO, pull_number: prNumber }),
+      octokit.rest.checks.listForRef({ owner: OWNER, repo: REPO, ref: `pulls/${prNumber}/head` }),
+    ]);
+    const eligibility = evaluateMergeEligibility(
+      { draft: pullRequest.draft ?? false, mergeable: pullRequest.mergeable, baseRef: pullRequest.base.ref },
+      checks.check_runs.map((check) => ({ status: check.status, conclusion: check.conclusion })),
+      BASE_BRANCH,
+    );
+    if (!eligibility.eligible) {
+      console.error(`PR #${prNumber} is ineligible: ${eligibility.reasons.join("; ")}`);
+      return false;
+    }
     await octokit.rest.pulls.merge({
       owner: OWNER,
       repo: REPO,
@@ -108,8 +120,8 @@ async function mergePR(prNumber: number): Promise<boolean> {
       merge_method: "squash",
     });
     return true;
-  } catch (e: any) {
-    console.error(`Merge failed for PR #${prNumber}:`, e.message);
+  } catch (error: unknown) {
+    console.error(`Merge failed for PR #${prNumber}:`, error instanceof Error ? error.message : String(error));
     return false;
   }
 }
@@ -131,9 +143,11 @@ async function closePR(prNumber: number, message: string): Promise<void> {
 
 async function getCurrentTasks(): Promise<IssueAnalysis | null> {
   // Find latest .fleet directory
-  const { execSync } = await import("child_process");
+  const { execSync } = await import("node:child_process");
   try {
-    const out = execSync('find .fleet -name "issue_tasks.json" 2>/dev/null | sort | tail -1', { encoding: "utf8" }).trim();
+    const out = execSync('find .fleet -name "issue_tasks.json" 2>/dev/null | sort | tail -1', {
+      encoding: "utf8",
+    }).trim();
     if (!out) return null;
     const content = await Bun.file(out).text();
     return JSON.parse(content);
@@ -162,8 +176,14 @@ async function main() {
       continue;
     }
 
-    const pr = prMap.get(prKey)!;
+    const pr = prMap.get(prKey);
+    if (!pr) continue;
     console.log(`\nProcessing: ${task.title} (PR #${pr.number})`);
+
+    if (!APPLY) {
+      console.log(`PREVIEW: would validate and squash-merge PR #${pr.number}; set FLEET_MERGE_APPLY=true to mutate.`);
+      continue;
+    }
 
     // Update branch from base
     if (i > 0) {
@@ -199,4 +219,9 @@ async function main() {
   console.log("\n✅ Fleet merge complete");
 }
 
-main().catch(console.error);
+if (import.meta.main) {
+  main().catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

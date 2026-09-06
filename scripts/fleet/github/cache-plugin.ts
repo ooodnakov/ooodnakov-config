@@ -18,15 +18,16 @@ import type { Octokit } from "@octokit/core";
  * 304 Not Modified responses don't count against your rate limit.
  */
 export function cachePlugin(octokit: Octokit) {
-  const cache = new Map<string, { etag: string; data: any }>();
+  const cache = createResponseCache();
 
   octokit.hook.wrap("request", async (request, options) => {
     const key = `${options.method} ${options.url}`;
     const cached = cache.get(key);
 
     if (cached) {
-      (options as any).headers = {
-        ...(options as any).headers,
+      const mutableOptions = options as unknown as { headers?: Record<string, string> };
+      mutableOptions.headers = {
+        ...mutableOptions.headers,
         "if-none-match": cached.etag,
       };
     }
@@ -35,14 +36,24 @@ export function cachePlugin(octokit: Octokit) {
       const response = await request(options);
       const etag = response.headers.etag;
       if (etag) {
-        cache.set(key, { etag, data: response.data });
+        cache.set(key, etag, response.data);
       }
       return response;
-    } catch (error: any) {
-      if (error.status === 304 && cached) {
-        return { ...error.response, data: cached.data, status: 200 };
+    } catch (error: unknown) {
+      const apiError = error as { status?: number; response?: object };
+      if (apiError.status === 304 && cached) {
+        return { ...apiError.response, data: cached.data, status: 200 } as never;
       }
       throw error;
     }
   });
+}
+
+export function createResponseCache() {
+  const values = new Map<string, { etag: string; data: unknown }>();
+  return {
+    get: (key: string) => values.get(key),
+    set: (key: string, etag: string, data: unknown) => values.set(key, { etag, data }),
+    size: () => values.size,
+  };
 }

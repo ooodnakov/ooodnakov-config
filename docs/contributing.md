@@ -31,11 +31,42 @@ just check
 just fix
 just test
 just unix          # Unix only
+just integration
+just coverage
+just formats
 just completions
 just lock
 ```
 
 `just check` is cross-platform and wraps Ruff plus pytest. `just unix` deliberately remains separate because it requires Bash.
+
+For Fleet automation changes, use its tracked lockfile and run the complete offline
+validation suite without GitHub or Jules credentials:
+
+```bash
+cd scripts/fleet
+bun install --frozen-lockfile
+bun run lint
+bun run typecheck
+bun run test
+```
+
+CI runs the complete Python suite on Python 3.12 and 3.13 with a 50% coverage floor.
+The isolated lifecycle test can be run directly without touching the real home or
+performing network installation:
+
+```bash
+uv run pytest tests/test_cross_platform_lifecycle.py
+uv run pytest --cov=scripts --cov-report=term --cov-fail-under=50
+uv run python scripts/validation/validate_tracked_formats.py
+```
+
+The platform matrix is intentionally asymmetric: Ubuntu and macOS exercise Bash,
+Windows exercises PowerShell 7, and the complete Python suite runs on Ubuntu for
+Python 3.12 and 3.13. The isolated lifecycle additionally runs once on each OS. Do
+not describe an architecture or shell as tested unless a required CI job executes
+it; update the [support matrix](reproducibility.md#platform-support-matrix) whenever
+the workflow matrix changes.
 
 ## Validations After Shell or Bootstrap Changes
 
@@ -76,7 +107,8 @@ After changing the CLI spec or completion generator, run:
 
 ```bash
 uv run python scripts/cli/generate_oooconf_completions.py
-uv run pytest tests/test_recursive_completions.py
+uv run python scripts/cli/generate_cli_reference.py
+uv run pytest tests/test_cli_contract.py tests/test_recursive_completions.py
 ```
 
 After changing third-party autogen completion metadata in `scripts/generate/tool-completions.toml`, run:

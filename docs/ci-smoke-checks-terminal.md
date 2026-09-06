@@ -1,5 +1,15 @@
 # Managed Neovim + WezTerm CI Smoke Checks
 
+The CI matrix includes an isolated full lifecycle on Ubuntu, macOS, and Windows. It
+plans and applies the minimal profile, renders local override templates, verifies a
+second apply is idempotent, exercises backup/remove/restore, checks doctor text and
+JSON, and injects a transactional failure to verify automatic rollback. The test
+sets temporary HOME/XDG roots and disables dependency and network installation.
+
+Additional validation now includes all tracked maintained Bash files, all setup and
+wrapper PowerShell files, tracked JSON/TOML/YAML/KDL/Lua configuration, generated
+lock and completion drift, Python 3.12 and 3.13, and a 50% Python coverage floor.
+
 This note documents the low-risk CI checks for managed terminal/editor config under:
 
 - `home/.config/nvim/`

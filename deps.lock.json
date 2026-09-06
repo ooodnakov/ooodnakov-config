@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-06-02T23:29:12+00:00",
+  "generated_at_utc": "2026-09-05T11:55:45+00:00",
   "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
@@ -76,6 +76,156 @@
       "name": "zsh-syntax-highlighting",
       "repo": "https://github.com/zsh-users/zsh-syntax-highlighting.git",
       "ref": "1d85c692615a25fe2293bdd44b34c217d5d2bf04"
+    }
+  ],
+  "artifacts": [
+    {
+      "dependency": "bat",
+      "version": "0.26.1",
+      "asset": "bat-v0.26.1-aarch64-apple-darwin.tar.gz",
+      "sha256": "e30beff26779c9bf60bb541e1d79046250cb74378f2757f8eb250afddb19e114"
+    },
+    {
+      "dependency": "bat",
+      "version": "0.26.1",
+      "asset": "bat-v0.26.1-aarch64-pc-windows-msvc.zip",
+      "sha256": "af07dd1939e99f7f5892d197fc5653cb8cb6c5999552731135ad156eca7e38a5"
+    },
+    {
+      "dependency": "bat",
+      "version": "0.26.1",
+      "asset": "bat-v0.26.1-aarch64-unknown-linux-musl.tar.gz",
+      "sha256": "6369242c584065f195fb20cb36fbd7cb63ae690605bbe89868a7596b596c2c23"
+    },
+    {
+      "dependency": "bat",
+      "version": "0.26.1",
+      "asset": "bat-v0.26.1-i686-pc-windows-msvc.zip",
+      "sha256": "07fcab3b17e146878179553c115beb4878835a30b0e5d046457015a5b8f6e7ed"
+    },
+    {
+      "dependency": "bat",
+      "version": "0.26.1",
+      "asset": "bat-v0.26.1-i686-unknown-linux-musl.tar.gz",
+      "sha256": "81e3386a54a915cabc9019efecec1860b9b030191bdaa928790a182ca865bda1"
+    },
+    {
+      "dependency": "bat",
+      "version": "0.26.1",
+      "asset": "bat-v0.26.1-x86_64-apple-darwin.tar.gz",
+      "sha256": "830d63b0bba1fa040542ec569e3cf77f60d3356b9de75116a344b061e0894245"
+    },
+    {
+      "dependency": "bat",
+      "version": "0.26.1",
+      "asset": "bat-v0.26.1-x86_64-pc-windows-msvc.zip",
+      "sha256": "0f729b4b6f5f28d395c641eacc2e9ff68d0096b85aa0eec344aa62425144b69b"
+    },
+    {
+      "dependency": "bat",
+      "version": "0.26.1",
+      "asset": "bat-v0.26.1-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "0dcd8ac79732c0d5b136f11f4ee00e581440e16a44eab5b3105b611bbf2cf191"
+    },
+    {
+      "dependency": "nvim",
+      "version": "0.12.2",
+      "asset": "nvim-linux-arm64.tar.gz",
+      "sha256": "f697d4e4582b6e4b5c3c26e76e06ce26efa08ba1768e03fd2733fcc422bb0490"
+    },
+    {
+      "dependency": "nvim",
+      "version": "0.12.2",
+      "asset": "nvim-linux-x86_64.tar.gz",
+      "sha256": "31cf85945cb600d96cdf69f88bc68bec814acbff50863c5546adef3a1bcef260"
+    },
+    {
+      "dependency": "nvim",
+      "version": "0.12.2",
+      "asset": "nvim-macos-arm64.tar.gz",
+      "sha256": "eeddee1009734f9071266e6b1b8a70308cb60cbcc45f5e1c1023adc471450fee"
+    },
+    {
+      "dependency": "nvim",
+      "version": "0.12.2",
+      "asset": "nvim-macos-x86_64.tar.gz",
+      "sha256": "728321db960a9b6af6c03881892a6abfd743bf759bc62d233f52fa1be64ace3c"
+    },
+    {
+      "dependency": "nvim",
+      "version": "0.12.2",
+      "asset": "nvim-win-arm64.zip",
+      "sha256": "ed3e2844708878221325b6f0fd07bbca06c01700d4c4f72f4a100b026e84dfd2"
+    },
+    {
+      "dependency": "nvim",
+      "version": "0.12.2",
+      "asset": "nvim-win64.zip",
+      "sha256": "23fe150edbcc976eabe55092e1e9d2e5e237afde69553d170e936f776b405d53"
+    },
+    {
+      "dependency": "bw",
+      "version": "1.22.1",
+      "asset": "bw-linux-1.22.1.zip",
+      "sha256": "0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db911b2279dae5c674b116aa0e"
+    },
+    {
+      "dependency": "bw",
+      "version": "1.22.1",
+      "asset": "bw-windows-1.22.1.zip",
+      "sha256": "0902a867d82c96fb93d087eefaaa78867f6ecc48d2ce249f1de231f5f3efad1d"
+    },
+    {
+      "dependency": "rtk",
+      "version": "0.37.2",
+      "asset": "rtk-aarch64-apple-darwin.tar.gz",
+      "sha256": "99e20a59847dedbb64032a3f7985f2fe959fcb9674d8eaf940fc58a189e27eca"
+    },
+    {
+      "dependency": "rtk",
+      "version": "0.37.2",
+      "asset": "rtk-x86_64-pc-windows-msvc.zip",
+      "sha256": "b89854b7435b4c3e3aea948b36e75395427fa631e03167de522bf7a0cfd3c5c7"
+    },
+    {
+      "dependency": "rtk",
+      "version": "0.37.2",
+      "asset": "rtk-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "3dfb7a05636a68687ba1c5aa696fa8d5fcb494447ded86d9eb8b88b7100a37c6"
+    },
+    {
+      "dependency": "croc",
+      "version": "10.4.14",
+      "asset": "croc_v10.4.14_Linux-64bit.tar.gz",
+      "sha256": "7d25aa3bbf2bf88b10da22aa751a56a5bb75e39586262c7b92ca69e84cbd62bf"
+    },
+    {
+      "dependency": "s5cmd",
+      "version": "2.3.0",
+      "asset": "s5cmd_2.3.0_Linux-64bit.tar.gz",
+      "sha256": "de0fdbfa3aceae55e069ba81a0fc17b2026567637603734a387b2fca06c299b4"
+    }
+  ],
+  "checksum_exceptions": [
+    {
+      "dependency": "oh-my-posh",
+      "reason": "upstream publishes a mutable installer script, not versioned checksums; installer is downloaded before explicit execution"
+    },
+    {
+      "dependency": "choco",
+      "reason": "Chocolatey publishes a mutable bootstrap script without a stable digest; installer is downloaded before explicit execution"
+    },
+    {
+      "dependency": "brew",
+      "reason": "Homebrew publishes a mutable bootstrap script without a stable digest; installer is downloaded before explicit execution"
+    },
+    {
+      "dependency": "cargo",
+      "reason": "rustup publishes a mutable bootstrap script without a stable versioned digest; installer is downloaded before explicit execution"
+    },
+    {
+      "dependency": "uv",
+      "reason": "upstream installer script is mutable; package-manager routes are preferred and the script is downloaded before explicit execution"
     }
   ]
 }

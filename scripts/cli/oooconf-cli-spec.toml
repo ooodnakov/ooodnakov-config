@@ -1,6 +1,11 @@
+[meta]
+schema_version = 1
+minimum_reader_version = 1
+
 [global]
-options = { "-C" = "set repo root path", "--repo-root" = "set repo root path", "--print-repo-root" = "print resolved repo root", "-h" = "show help", "--help" = "show help", "-n" = "preview actions without changing files", "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-V" = "show version", "--version" = "show version" }
+options = { "--all" = "select all dependency keys at once", "--skip-deps" = "skip dependency installation", "-C" = "set repo root path", "--repo-root" = "set repo root path", "--profile" = "select portable capability profile", "--print-repo-root" = "print resolved repo root", "-h" = "show help", "--help" = "show help", "-n" = "preview actions without changing files", "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-V" = "show version", "--version" = "show version" }
 completers = { "-C" = "_files -/", "--repo-root" = "_files -/" }
+option_value_sets = { "--profile" = "profiles" }
 
 [definitions.deps_keys]
 
@@ -23,302 +28,541 @@ apikey = "apikey"
 [definitions.secret_backends]
 bw = "bw"
 
+[definitions.plan_formats]
+text = "human-readable plan"
+json = "versioned JSON plan"
+
+[definitions.diagnostic_formats]
+text = "human-readable checks"
+json = "versioned diagnostic JSON"
+
+[definitions.plan_scopes]
+install = "complete install plan"
+links = "managed links only"
+
+[definitions.platforms]
+linux = "Linux"
+macos = "macOS"
+windows = "Windows"
+
+[definitions.profiles]
+minimal = "portable shell and CLI baseline"
+terminal = "minimal plus terminal productivity tools"
+workstation = "terminal plus platform desktop integrations"
+developer = "terminal plus development and agent tooling"
+
 [commands.bootstrap]
+handler_id = "oooconf.bootstrap"
+platforms = ["linux", "macos"]
 description = "clone or update the repo, then run install"
 
 [commands.install]
+handler_id = "oooconf.install"
+platforms = ["linux", "macos", "windows"]
 description = "apply managed config"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--skip-deps" = "skip dependency installation", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--skip-deps" = "skip dependency installation", "--profile" = "select portable capability profile", "-h" = "show help", "--help" = "show help" }
+option_value_sets = { "--profile" = "profiles" }
 value_set = "deps_keys"
 
 [commands.deps]
+handler_id = "oooconf.deps"
+platforms = ["linux", "macos", "windows"]
 description = "install optional dependencies only"
 options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--all" = "select all dependency keys at once", "-h" = "show help", "--help" = "show help" }
 value_set = "deps_keys"
 
 [commands.update]
+handler_id = "oooconf.update"
+platforms = ["linux", "macos", "windows"]
 description = "update the repo, then re-run install"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--profile" = "select portable capability profile", "-h" = "show help", "--help" = "show help" }
+option_value_sets = { "--profile" = "profiles" }
 
 [commands.delta]
+handler_id = "oooconf.delta"
+platforms = ["linux", "macos", "windows"]
 description = "inject or manage git-delta gitconfig"
 values = { "inject" = "write delta git config to ~/.gitconfig", "status" = "check whether delta is configured in ~/.gitconfig", "remove" = "remove ooodnakov delta config block from ~/.gitconfig" }
 
 [commands.doctor]
-description = "validate managed links and tools"
+handler_id = "oooconf.doctor"
+platforms = ["linux", "macos", "windows"]
+description = "run structured health checks"
+options = { "--format" = "output format", "--platform" = "override target platform", "--profile" = "select portable capability profile" }
+option_value_sets = { "--format" = "diagnostic_formats", "--platform" = "platforms", "--profile" = "profiles" }
+
+[commands.status]
+handler_id = "oooconf.status"
+platforms = ["linux", "macos", "windows"]
+description = "summarize managed configuration state"
+options = { "--format" = "output format", "--platform" = "override target platform", "--profile" = "select portable capability profile" }
+option_value_sets = { "--format" = "diagnostic_formats", "--platform" = "platforms", "--profile" = "profiles" }
+
+[commands.snapshot]
+handler_id = "oooconf.snapshot"
+platforms = ["linux", "macos", "windows"]
+description = "export, inspect, or apply portable settings"
+
+[commands.snapshot.subcommands.export]
+handler_id = "oooconf.snapshot.export"
+platforms = ["linux", "macos", "windows"]
+description = "write a safe portable TOML snapshot"
+options = { "--output" = "output TOML file", "-o" = "output TOML file", "--profile" = "select portable capability profile" }
+completers = { "--output" = "_files", "-o" = "_files" }
+option_value_sets = { "--profile" = "profiles" }
+
+[commands.snapshot.subcommands.inspect]
+handler_id = "oooconf.snapshot.inspect"
+platforms = ["linux", "macos", "windows"]
+description = "validate and preview a snapshot"
+options = { "--format" = "output format" }
+option_value_sets = { "--format" = "diagnostic_formats" }
+completer = "_files"
+
+[commands.snapshot.subcommands.apply]
+handler_id = "oooconf.snapshot.apply"
+platforms = ["linux", "macos", "windows"]
+description = "validate and transactionally apply a snapshot"
+completer = "_files"
+
+[commands.plan]
+handler_id = "oooconf.plan"
+platforms = ["linux", "macos", "windows"]
+description = "build a validated, side-effect-free operation plan"
+options = { "--format" = "output format", "--scope" = "plan install or links only", "--platform" = "override target platform", "--profile" = "select portable capability profile" }
+option_value_sets = { "--format" = "plan_formats", "--scope" = "plan_scopes", "--platform" = "platforms", "--profile" = "profiles" }
+value_set = "deps_keys"
+
+[commands.apply]
+handler_id = "oooconf.apply"
+platforms = ["linux", "macos", "windows"]
+description = "transactionally apply managed links"
+options = { "--platform" = "override target platform", "--profile" = "select portable capability profile" }
+option_value_sets = { "--platform" = "platforms", "--profile" = "profiles" }
+
+[commands.rollback]
+handler_id = "oooconf.rollback"
+platforms = ["linux", "macos", "windows"]
+description = "roll back the latest eligible transaction"
+options = { "--last" = "select the latest eligible transaction" }
 
 [commands.dry-run]
-description = "preview install without changes"
+handler_id = "oooconf.dry-run"
+platforms = ["linux", "macos", "windows"]
+description = "alias for a side-effect-free install plan"
+options = { "--format" = "output format", "--scope" = "plan install or links only", "--platform" = "override target platform", "--profile" = "select portable capability profile" }
+option_value_sets = { "--format" = "plan_formats", "--scope" = "plan_scopes", "--platform" = "platforms", "--profile" = "profiles" }
+value_set = "deps_keys"
 
 [commands.delete]
+handler_id = "oooconf.delete"
+platforms = ["linux", "macos", "windows"]
 description = "remove managed links and restore backups"
 
 [commands.remove]
+handler_id = "oooconf.remove"
+platforms = ["linux", "macos", "windows"]
 description = "remove managed links only"
 
 [commands.lock]
+handler_id = "oooconf.lock"
+platforms = ["linux", "macos", "windows"]
 description = "regenerate dependency lock artifacts"
 
 [commands.update-pins]
+handler_id = "oooconf.update-pins"
+platforms = ["linux", "macos", "windows"]
 description = "check or update pinned refs"
 options = { "--apply" = "apply pin updates", "--offline" = "skip remote HEAD resolution", "--dry-run" = "skip report and lock writes" }
 
 [commands.completions]
+handler_id = "oooconf.completions"
+platforms = ["linux", "macos", "windows"]
 description = "regenerate tracked completion files"
 options = { "--dry-run" = "preview actions without changing files" }
 
 [commands.link]
+handler_id = "oooconf.link"
+platforms = ["linux", "macos", "windows"]
 description = "create or update symlinks from manifest"
 options = { "--dry-run" = "preview actions without changing files" }
 
 [commands.agents]
+handler_id = "oooconf.agents"
+platforms = ["linux", "macos", "windows"]
 description = "detect/sync/doctor/provider/update AGENTS.md workflows"
 
 [commands.agents.subcommands.detect]
+handler_id = "oooconf.agents.detect"
+platforms = ["linux", "macos", "windows"]
 description = "detect configured agent CLIs on PATH"
 options = { "--repo-root" = "set repo root path", "--config" = "config path", "--json" = "emit JSON" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.sync]
+handler_id = "oooconf.agents.sync"
+platforms = ["linux", "macos", "windows"]
 description = "append or update shared AGENTS.md block"
 options = { "--repo-root" = "set repo root path", "--config" = "config path", "--check" = "check only", "--global" = "sync global config", "--materialize-secrets" = "materialize secret-backed values", "--agents" = "filter to specific agents (interactive if omitted)" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.doctor]
+handler_id = "oooconf.agents.doctor"
+platforms = ["linux", "macos", "windows"]
 description = "verify AGENTS.md shared block is current"
 options = { "--repo-root" = "set repo root path", "--config" = "config path", "--strict-config-paths" = "require strict config paths" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.mcp]
+handler_id = "oooconf.agents.mcp"
+platforms = ["linux", "macos", "windows"]
 description = "manage Model Context Protocol (MCP) servers"
 
 [commands.agents.subcommands.mcp.subcommands.sync]
+handler_id = "oooconf.agents.mcp.sync"
+platforms = ["linux", "macos", "windows"]
 description = "synchronize managed MCP servers"
 options = { "--check" = "check only", "--agents" = "filter to specific agents (interactive if omitted)" }
 
 [commands.agents.subcommands.mcp.subcommands.status]
+handler_id = "oooconf.agents.mcp.status"
+platforms = ["linux", "macos", "windows"]
 description = "show managed MCP status"
 
 [commands.agents.subcommands.mcp.subcommands.add]
+handler_id = "oooconf.agents.mcp.add"
+platforms = ["linux", "macos", "windows"]
 description = "add one MCP JSON entry into common-data and optionally sync"
 options = { "--name" = "server name", "--json" = "server JSON", "--multi" = "allow multiple entries", "--preview" = "preview changes", "--sync-now" = "sync after adding", "--check" = "check only" }
 
 [commands.agents.subcommands.status]
+handler_id = "oooconf.agents.status"
+platforms = ["linux", "macos", "windows"]
 description = "show status of managed MCP servers"
 
 [commands.agents.subcommands.rtk]
+handler_id = "oooconf.agents.rtk"
+platforms = ["linux", "macos", "windows"]
 description = "manage RTK integration across agents"
 
 [commands.agents.subcommands.rtk.subcommands.init]
+handler_id = "oooconf.agents.rtk.init"
+platforms = ["linux", "macos", "windows"]
 description = "run 'rtk init --global' for detected agents"
 options = { "--check" = "check only" }
 
 [commands.agents.subcommands.provider]
+handler_id = "oooconf.agents.provider"
+platforms = ["linux", "macos", "windows"]
 description = "configure model/API providers for agent CLIs"
 
 [commands.agents.subcommands.provider.subcommands.sync]
+handler_id = "oooconf.agents.provider.sync"
+platforms = ["linux", "macos", "windows"]
 description = "sync a provider backend into supported agent configs"
 options = { "--check" = "check only", "--materialize-secrets" = "materialize secret-backed values", "--region" = "provider region", "--agents" = "filter to specific agents (interactive if omitted)" }
 option_value_sets = { "--region" = "regions" }
 
 [commands.agents.subcommands.update]
+handler_id = "oooconf.agents.update"
+platforms = ["linux", "macos", "windows"]
 description = "update installed agent CLIs"
 options = { "--repo-root" = "set repo root path", "--config" = "config path", "--check" = "check only" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.install]
+handler_id = "oooconf.agents.install"
+platforms = ["linux", "macos", "windows"]
 description = "install one specific agent CLI"
 options = { "--repo-root" = "set repo root path", "--config" = "config path", "--all" = "install all agents", "--missing" = "install missing agents", "--check" = "check only" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 values = { "codex" = "Codex", "claude" = "Claude", "gemini" = "Gemini", "qwen" = "Qwen", "cursor-agent" = "Cursor Agent", "opencode" = "OpenCode", "aider" = "Aider", "pi" = "Pi Agent", "omp" = "Oh My Pi", "command-code" = "Command Code" }
 
 [commands.agents.subcommands.install-scripts-build]
+handler_id = "oooconf.agents.install-scripts-build"
+platforms = ["linux", "macos", "windows"]
 description = "build standalone install scripts for agents"
 
 [commands.agents.subcommands.skills]
+handler_id = "oooconf.agents.skills"
+platforms = ["linux", "macos", "windows"]
 description = "manage agent skills and extensions"
 
 [commands.agents.subcommands.skills.subcommands.sync]
+handler_id = "oooconf.agents.skills.sync"
+platforms = ["linux", "macos", "windows"]
 description = "synchronize configured skill specs across agents"
 options = { "--check" = "check only", "--agents" = "filter to specific agents (interactive if omitted)" }
 
 [commands.agents.subcommands.skills.subcommands.view]
+handler_id = "oooconf.agents.skills.view"
+platforms = ["linux", "macos", "windows"]
 description = "list global shared skills catalog via pnpm dlx"
 options = { "--check" = "check only", "--json" = "emit JSON" }
 
 [commands.agents.subcommands.skills.subcommands.add]
+handler_id = "oooconf.agents.skills.add"
+platforms = ["linux", "macos", "windows"]
 description = "add one shared skill source and optionally sync"
 options = { "--agent" = "target agent", "--sync-now" = "sync after adding", "--check" = "check only" }
 
 [commands.secrets]
+handler_id = "oooconf.secrets"
+platforms = ["linux", "macos", "windows"]
 description = "sync or validate local secret env files"
 
 [commands.env]
+handler_id = "oooconf.env"
+platforms = ["linux", "macos", "windows"]
 description = "set machine-local environment variables"
 options = { "--secrets" = "also upload value to Bitwarden", "-h" = "show help", "--help" = "show help" }
 
 [commands.secrets.subcommands.login]
+handler_id = "oooconf.secrets.login"
+platforms = ["linux", "macos", "windows"]
 description = "log in to Bitwarden/Vaultwarden"
 options = { "--server" = "server URL", "--method" = "login method", "--client-id" = "API client ID", "--client-secret" = "API client secret" }
 option_value_sets = { "--method" = "secret_methods" }
 
 [commands.secrets.subcommands.unlock]
+handler_id = "oooconf.secrets.unlock"
+platforms = ["linux", "macos", "windows"]
 description = "unlock and print session exports"
 options = { "--shell" = "shell format", "--raw" = "raw output" }
 option_value_sets = { "--shell" = "secret_shells" }
 
 [commands.secrets.subcommands.sync]
+handler_id = "oooconf.secrets.sync"
+platforms = ["linux", "macos", "windows"]
 description = "render local secret files from template"
 options = { "--backend" = "secret backend", "--template" = "template path", "--dry-run" = "preview actions without changing files", "--force" = "force render" }
 completers = { "--template" = "_files" }
 option_value_sets = { "--backend" = "secret_backends" }
 
 [commands.secrets.subcommands.doctor]
+handler_id = "oooconf.secrets.doctor"
+platforms = ["linux", "macos", "windows"]
 description = "check secrets prerequisites and health"
 options = { "--backend" = "secret backend", "--template" = "template path" }
 completers = { "--template" = "_files" }
 option_value_sets = { "--backend" = "secret_backends" }
 
 [commands.secrets.subcommands.list]
+handler_id = "oooconf.secrets.list"
+platforms = ["linux", "macos", "windows"]
 description = "list template-managed secret keys"
 options = { "--template" = "template path", "--resolved" = "show resolved values", "--backend" = "secret backend" }
 completers = { "--template" = "_files" }
 option_value_sets = { "--backend" = "secret_backends" }
 
 [commands.secrets.subcommands.ls]
+handler_id = "oooconf.secrets.ls"
+platforms = ["linux", "macos", "windows"]
 description = "alias for list"
 options = { "--template" = "template path", "--resolved" = "show resolved values", "--backend" = "secret backend" }
 completers = { "--template" = "_files" }
 option_value_sets = { "--backend" = "secret_backends" }
 
 [commands.secrets.subcommands.status]
+handler_id = "oooconf.secrets.status"
+platforms = ["linux", "macos", "windows"]
 description = "show sync and vault status"
 options = { "--template" = "template path" }
 completers = { "--template" = "_files" }
 
 [commands.secrets.subcommands.logout]
+handler_id = "oooconf.secrets.logout"
+platforms = ["linux", "macos", "windows"]
 description = "lock vault and clear session"
 
 [commands.secrets.subcommands.add]
+handler_id = "oooconf.secrets.add"
+platforms = ["linux", "macos", "windows"]
 description = "add a key to the template"
 options = { "--template" = "template path" }
 completers = { "--template" = "_files" }
 
 [commands.secrets.subcommands.remove]
+handler_id = "oooconf.secrets.remove"
+platforms = ["linux", "macos", "windows"]
 description = "remove a key from the template"
 options = { "--template" = "template path" }
 completers = { "--template" = "_files" }
 
 [commands.secrets.subcommands.rm]
+handler_id = "oooconf.secrets.rm"
+platforms = ["linux", "macos", "windows"]
 description = "alias for remove"
 options = { "--template" = "template path" }
 completers = { "--template" = "_files" }
 
 [commands.secrets.subcommands.del]
+handler_id = "oooconf.secrets.del"
+platforms = ["linux", "macos", "windows"]
 description = "alias for remove"
 options = { "--template" = "template path" }
 completers = { "--template" = "_files" }
 
 [commands.shell]
+handler_id = "oooconf.shell"
+platforms = ["linux", "macos", "windows"]
 description = "manage local shell preferences"
 
 [commands.shell.subcommands.status]
+handler_id = "oooconf.shell.status"
+platforms = ["linux", "macos", "windows"]
 description = "print all shell preference modes"
 
 [commands.shell.subcommands.prompt]
+handler_id = "oooconf.shell.prompt"
+platforms = ["linux", "macos", "windows"]
 description = "switch only the zsh prompt engine"
 values = { "p10k" = "Powerlevel10k", "ohmyposh" = "Oh My Posh", "status" = "show status" }
 
 [commands.shell.subcommands.prompt-style]
+handler_id = "oooconf.shell.prompt-style"
+platforms = ["linux", "macos", "windows"]
 description = "switch all managed prompts between verbose and concise layouts"
 values = { "verbose" = "verbose prompt", "concise" = "concise prompt", "status" = "show status" }
 
 [commands.shell.subcommands.forgit-aliases]
+handler_id = "oooconf.shell.forgit-aliases"
+platforms = ["linux", "macos", "windows"]
 description = "toggle plain vs forgit git aliases"
 values = { "plain" = "plain aliases", "forgit" = "forgit aliases", "status" = "show status" }
 
 [commands.shell.subcommands.typo-handling]
+handler_id = "oooconf.shell.typo-handling"
+platforms = ["linux", "macos", "windows"]
 description = "configure typo handling behavior"
 values = { "silent" = "silent", "suggest" = "suggest", "help" = "help", "status" = "show status" }
 
 [commands.shell.subcommands.psfzf-tab]
+handler_id = "oooconf.shell.psfzf-tab"
+platforms = ["linux", "macos", "windows"]
 description = "toggle PSFzf tab completion integration"
 values = { "enabled" = "enabled", "disabled" = "disabled", "status" = "show status" }
 
 [commands.shell.subcommands.psfzf-git]
+handler_id = "oooconf.shell.psfzf-git"
+platforms = ["linux", "macos", "windows"]
 description = "toggle PSFzf git integration"
 values = { "enabled" = "enabled", "disabled" = "disabled", "status" = "show status" }
 
 [commands.shell.subcommands.auto-uv-env]
+handler_id = "oooconf.shell.auto-uv-env"
+platforms = ["linux", "macos", "windows"]
 description = "configure uv auto activation behavior"
 values = { "disabled" = "disabled", "existing" = "activate existing .venv only", "enabled" = "activate and create .venv", "quiet" = "enabled without messages", "status" = "show status" }
 
 [commands.color]
+handler_id = "oooconf.color"
+platforms = ["linux", "macos", "windows"]
 description = "set a unified oooconf CLI color theme and mode"
 values = { "status" = "show status", "list" = "list themes and modes", "dark" = "use dark mode", "light" = "use light mode", "default" = "default theme", "catppuccin" = "Catppuccin", "gruvbox" = "Gruvbox", "nord" = "Nord", "tokyonight" = "Tokyo Night", "noctalia" = "Noctalia" }
 
 [commands.help]
+handler_id = "oooconf.help"
+platforms = ["linux", "macos", "windows"]
 description = "show help"
 
 [commands.version]
+handler_id = "oooconf.version"
+platforms = ["linux", "macos", "windows"]
 description = "show version information"
 
 [commands.check]
+handler_id = "oooconf.check"
+platforms = ["linux", "macos", "windows"]
 description = "alias for doctor"
 alias_for = "doctor"
 
 [commands.preview]
+handler_id = "oooconf.preview"
+platforms = ["linux", "macos", "windows"]
 description = "alias for dry-run"
 alias_for = "dry-run"
 
 [commands.upgrade]
+handler_id = "oooconf.upgrade"
+platforms = ["linux", "macos", "windows"]
 description = "alias for update"
 alias_for = "update"
 
 [commands.minimal]
+handler_id = "oooconf.minimal"
+platforms = ["linux", "macos"]
 description = "run minimal setup"
 
 [commands.komorebi]
+handler_id = "oooconf.komorebi"
+platforms = ["linux", "macos"]
 description = "manage Komorebi window manager"
 
 [commands.wm]
+handler_id = "oooconf.wm"
+platforms = ["linux", "macos", "windows"]
 description = "switch or manage window managers"
 values = { "komorebi" = "Komorebi", "glazewm" = "GlazeWM", "aerospace" = "Aerospace", "omniwm" = "OmniWM" }
 
 [commands.wm.subcommands.status]
+handler_id = "oooconf.wm.status"
+platforms = ["linux", "macos", "windows"]
 description = "show window manager status"
 
 [commands.wm.subcommands.set]
+handler_id = "oooconf.wm.set"
+platforms = ["linux", "macos", "windows"]
 description = "set default window manager"
 values = { "komorebi" = "Komorebi", "glazewm" = "GlazeWM", "aerospace" = "Aerospace", "omniwm" = "OmniWM" }
 
 [commands.wm.subcommands.start]
+handler_id = "oooconf.wm.start"
+platforms = ["linux", "macos", "windows"]
 description = "start default window manager"
 
 [commands.wm.subcommands.stop]
+handler_id = "oooconf.wm.stop"
+platforms = ["linux", "macos", "windows"]
 description = "stop default window manager"
 
 [commands.wm.subcommands.reload]
+handler_id = "oooconf.wm.reload"
+platforms = ["linux", "macos", "windows"]
 description = "reload default window manager"
 
 [commands.wm.subcommands.bar]
+handler_id = "oooconf.wm.bar"
+platforms = ["linux", "macos", "windows"]
 description = "manage status bar"
 
 [commands.wm.subcommands.bar.subcommands.set]
+handler_id = "oooconf.wm.bar.set"
+platforms = ["linux", "macos", "windows"]
 description = "set default bar type"
 values = { "zebar" = "Zebar", "yabs" = "YASB", "sketchybar" = "Sketchybar" }
 
 [commands.wm.subcommands.bar.subcommands.status]
+handler_id = "oooconf.wm.bar.status"
+platforms = ["linux", "macos", "windows"]
 description = "show bar status"
 
 [commands.wm.subcommands.bar.subcommands.start]
+handler_id = "oooconf.wm.bar.start"
+platforms = ["linux", "macos", "windows"]
 description = "start bar"
 
 [commands.wm.subcommands.bar.subcommands.stop]
+handler_id = "oooconf.wm.bar.stop"
+platforms = ["linux", "macos", "windows"]
 description = "stop bar"
 
 [commands.wm.subcommands.bar.subcommands.reload]
+handler_id = "oooconf.wm.bar.reload"
+platforms = ["linux", "macos", "windows"]
 description = "reload bar"
 
 [commands.wm.subcommands.komorebi]
+handler_id = "oooconf.wm.komorebi"
+platforms = ["linux", "macos", "windows"]
 description = "manage Komorebi integration"
