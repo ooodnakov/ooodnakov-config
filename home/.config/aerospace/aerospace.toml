@@ -76,12 +76,12 @@ preset = 'qwerty'
 #                 Monitor pattern is the same as for 'workspace-to-monitor-force-assignment'.
 #                 See: https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
 [gaps]
-inner.horizontal = 15
-inner.vertical = 15
-outer.left = 10
-outer.bottom = 10
-outer.top = [{ monitor."S34C65xU" = 10 }, { monitor."LS34A650U" = 10}, { monitor."G27P6M" = 10}, { monitor."M27T20" = 10}, 6] # 14
-outer.right = 10
+inner.horizontal = 0
+inner.vertical = 0
+outer.left = 0
+outer.bottom = 0
+outer.top = 0#[{ monitor."S34C65xU" = 6 }, { monitor."LS34A650U" = 6}, { monitor."G27P6M" = 6}, { monitor."M27T20" = 6}, 3]
+outer.right = 0
 
 # 'main' binding mode declaration
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -151,7 +151,7 @@ alt-e = 'workspace E'
 # alt-f = 'workspace F'
 alt-g = 'workspace G'
 alt-i = 'workspace I'
-alt-m = 'workspace M'
+# alt-m = 'workspace M'
 alt-n = 'workspace N'
 alt-o = 'workspace O'
 alt-p = 'workspace P'
@@ -184,7 +184,7 @@ alt-shift-e = 'move-node-to-workspace E --focus-follows-window'
 #alt-shift-f = 'move-node-to-workspace F' # disabled as it's a common code format hotkey
 alt-shift-g = 'move-node-to-workspace G --focus-follows-window'
 alt-shift-i = 'move-node-to-workspace I --focus-follows-window'
-alt-shift-m = 'move-node-to-workspace M --focus-follows-window'
+# alt-shift-m = 'move-node-to-workspace M --focus-follows-window'
 alt-shift-n = 'move-node-to-workspace N --focus-follows-window'
 alt-shift-o = 'move-node-to-workspace O --focus-follows-window'
 alt-shift-p = 'move-node-to-workspace P --focus-follows-window'
@@ -222,7 +222,7 @@ alt-ctrl-shift-backslash = 'mode X'
 7 = ['secondary', 'main']
 8 = ['secondary', 'main']
 9 = ['secondary', 'main']
-B = ['secondary', 'main']
+# B = ['main','secondary']
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
 # 'service' binding mode declaration.
@@ -297,4 +297,8 @@ run = 'move-node-to-workspace E'
 
 [[on-window-detected]]
 if.app-id = 'com.microsoft.Excel'
-run = 'move-node-to-workspace M'
+run = 'move-node-to-workspace N'
+
+[[on-window-detected]]
+if.app-id = 'com.microsoft.PowerPoint'
+run = 'move-node-to-workspace N'

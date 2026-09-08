@@ -52,7 +52,7 @@ return {
 			end
 		end, { desc = "NeoCodeium: cycle suggestions" })
 
-		vim.keymap.set("i", "<Tab>", neocodeium.accept, { desc = "NeoCodeium: accept suggestion" })
+		vim.keymap.set("i", "<S-Tab>", neocodeium.accept, { desc = "NeoCodeium: accept suggestion" })
 		vim.keymap.set("i", "<C-g>", neocodeium.accept_word, { desc = "NeoCodeium: accept word" })
 		vim.keymap.set("i", "<C-l>", neocodeium.clear, { desc = "NeoCodeium: clear suggestion" })
 	end,

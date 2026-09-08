@@ -91,6 +91,7 @@ plugins=(
   zsh-autocomplete
   fzf-tab
   zsh-autosuggestions
+  s3cmd
 )
 
 for brew_path in "${commands[brew]}" /opt/homebrew/bin/brew /usr/local/bin/brew "$HOME/.linuxbrew/bin/brew" /home/linuxbrew/.linuxbrew/bin/brew; do
