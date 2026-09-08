@@ -2,7 +2,7 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-09-05T11:55:45+00:00`
+Generated at (UTC): `2026-09-07T14:44:04+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
@@ -43,6 +43,8 @@ Generated at (UTC): `2026-09-05T11:55:45+00:00`
 | `bw` | `1.22.1` | `bw-linux-1.22.1.zip` | `0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db911b2279dae5c674b116aa0e` |
 | `bw` | `1.22.1` | `bw-windows-1.22.1.zip` | `0902a867d82c96fb93d087eefaaa78867f6ecc48d2ce249f1de231f5f3efad1d` |
 | `rtk` | `0.37.2` | `rtk-aarch64-apple-darwin.tar.gz` | `99e20a59847dedbb64032a3f7985f2fe959fcb9674d8eaf940fc58a189e27eca` |
+| `rtk` | `0.37.2` | `rtk-aarch64-unknown-linux-gnu.tar.gz` | `1d8d7fcca6cb05e1867c08bb4e5aa5f107c037c607131e511b726ae33ac35a47` |
+| `rtk` | `0.37.2` | `rtk-x86_64-apple-darwin.tar.gz` | `4052e7740a87e121f671a2de269b3f015dcc58b6171d6bedb300da7599cb4d94` |
 | `rtk` | `0.37.2` | `rtk-x86_64-pc-windows-msvc.zip` | `b89854b7435b4c3e3aea948b36e75395427fa631e03167de522bf7a0cfd3c5c7` |
 | `rtk` | `0.37.2` | `rtk-x86_64-unknown-linux-musl.tar.gz` | `3dfb7a05636a68687ba1c5aa696fa8d5fcb494447ded86d9eb8b88b7100a37c6` |
 | `croc` | `10.4.14` | `croc_v10.4.14_Linux-64bit.tar.gz` | `7d25aa3bbf2bf88b10da22aa751a56a5bb75e39586262c7b92ca69e84cbd62bf` |

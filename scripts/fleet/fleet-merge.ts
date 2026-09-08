@@ -68,7 +68,10 @@ async function waitForCI(prNumber: number, maxWaitMs: number): Promise<boolean> 
       ref: `pulls/${prNumber}/head`,
     });
 
-    if (data.check_runs.length === 0) return false;
+    if (data.check_runs.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, PR_POLL_INTERVAL_MS));
+      continue;
+    }
 
     const allPassed = data.check_runs.every((run) => ["success", "skipped", "neutral"].includes(run.conclusion ?? ""));
     if (allPassed) return true;

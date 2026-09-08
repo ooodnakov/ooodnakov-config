@@ -149,6 +149,26 @@ def test_incomplete_journals_are_reported(monkeypatch: pytest.MonkeyPatch, tmp_p
     assert transaction_apply.incomplete_journals() == [incomplete]
 
 
+def test_journals_are_ordered_by_creation_time_not_randomized_filename(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    home = _configure_home(monkeypatch, tmp_path)
+    journal_root = home / ".local/state/ooodnakov-config/transactions"
+    journal_root.mkdir(parents=True)
+    newer = journal_root / "20260907-120000-00000000.json"
+    older = journal_root / "20260907-120000-ffffffff.json"
+    older.write_text(
+        json.dumps({"journal_version": 1, "status": "complete", "created_at_ns": 1}),
+        encoding="utf-8",
+    )
+    newer.write_text(
+        json.dumps({"journal_version": 1, "status": "complete", "created_at_ns": 2}),
+        encoding="utf-8",
+    )
+
+    assert [path for path, _data in transaction_apply._load_journals()] == [newer, older]
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="Bash CLI integration is Unix-only")
 def test_unix_cli_apply_is_idempotent_and_rollback_restores_user_file(tmp_path: Path) -> None:
     home = tmp_path / "home"

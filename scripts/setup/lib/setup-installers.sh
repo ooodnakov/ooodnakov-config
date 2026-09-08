@@ -739,6 +739,14 @@ maybe_install_github_release() {
   archive_path="${TMPDIR:-/tmp}/${asset_name}"
   target_binary="$bin_dir/$command_name"
 
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Download $release_url"
+    echo "[dry-run] Extract $archive_path -> $install_root"
+    echo "[dry-run] Link $target_binary"
+    DEPENDENCY_SUMMARY+=("$command_name: install preview via GitHub release")
+    return 0
+  fi
+
   run_cmd mkdir -p "$install_root" "$bin_dir" || return 1
 
   if [ ! -x "$target_binary" ]; then
@@ -751,11 +759,6 @@ maybe_install_github_release() {
     run_python "$REPO_ROOT/scripts/security/secure_artifact.py" extract \
       --archive "$archive_path" --dependency "$key" --asset "$asset_name" \
       --destination "$install_root" || return 1
-
-    if [ "$DRY_RUN" -eq 1 ]; then
-      DEPENDENCY_SUMMARY+=("$command_name: install preview via GitHub release")
-      return 0
-    fi
 
     extracted_binary="$(find "$install_root" -type f -name "$command_name" -perm -u=x 2>/dev/null | head -n 1)"
     if [ -z "$extracted_binary" ] && [ -f "$install_root/$(archive_stem "$asset_name")/$command_name" ]; then
@@ -818,6 +821,13 @@ install_pinned_neovim_unix() {
   install_root="$tools_root/v${version}"
   bin_dir="$STATE_HOME/bin"
   archive_path="${TMPDIR:-/tmp}/${asset_name}"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Download $release_url"
+    echo "[dry-run] Extract $archive_path -> $install_root"
+    echo "[dry-run] Link $bin_dir/nvim"
+    return 0
+  fi
 
   run_cmd mkdir -p "$install_root" "$bin_dir" || return 1
 
@@ -927,14 +937,24 @@ maybe_install_rtk() {
     ;;
   esac
 
-  case "$os" in
-  linux) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-${arch}-unknown-linux-musl.tar.gz" ;;
-  darwin) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-${arch}-apple-darwin.tar.gz" ;;
+  case "$os:$arch" in
+  linux:x86_64) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-x86_64-unknown-linux-musl.tar.gz" ;;
+  linux:aarch64) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-aarch64-unknown-linux-gnu.tar.gz" ;;
+  darwin:x86_64) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-x86_64-apple-darwin.tar.gz" ;;
+  darwin:aarch64) target_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_ver}/rtk-aarch64-apple-darwin.tar.gz" ;;
   *)
-    DEPENDENCY_SUMMARY+=("rtk: unsupported OS $os")
+    DEPENDENCY_SUMMARY+=("rtk: unsupported platform $os/$arch")
     return 1
     ;;
   esac
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Download $target_url"
+    echo "[dry-run] Extract ${target_url##*/}"
+    echo "[dry-run] Copy rtk -> $HOME_DIR/.local/bin/rtk"
+    DEPENDENCY_SUMMARY+=("rtk: install preview via official archive")
+    return 0
+  fi
 
   tmp_dir="$(mktemp -d)"
   archive_path="$tmp_dir/${target_url##*/}"
@@ -985,7 +1005,7 @@ maybe_install_oh_my_posh() {
   fi
 
   run_with_spinner "Installing oh-my-posh" download_and_run_installer \
-    https://ohmyposh.dev/install.sh -s -- -d "$HOME_DIR/.local/bin"
+    https://ohmyposh.dev/install.sh -d "$HOME_DIR/.local/bin"
   if command -v oh-my-posh >/dev/null 2>&1 || [ -x "$HOME_DIR/.local/bin/oh-my-posh" ]; then
     DEPENDENCY_SUMMARY+=("oh-my-posh: installed")
   else
@@ -1374,6 +1394,14 @@ maybe_install_bw() {
   extracted_binary="$install_root/bw"
   target_binary="$bin_dir/bw"
 
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Download $release_url"
+    echo "[dry-run] Extract $archive_path -> $install_root"
+    echo "[dry-run] Link $target_binary"
+    DEPENDENCY_SUMMARY+=("bw: install preview via official archive")
+    return 0
+  fi
+
   run_cmd mkdir -p "$install_root" "$bin_dir" || {
     DEPENDENCY_SUMMARY+=("bw: install attempted")
     return 1
@@ -1607,9 +1635,9 @@ maybe_install_cargo() {
   fi
 
   if command -v curl >/dev/null 2>&1; then
-    run_with_spinner "Installing Rust via rustup" download_and_run_installer https://sh.rustup.rs -s -- -y
+    run_with_spinner "Installing Rust via rustup" download_and_run_installer https://sh.rustup.rs -y
   elif command -v wget >/dev/null 2>&1; then
-    run_with_spinner "Installing Rust via rustup" download_and_run_installer https://sh.rustup.rs -s -- -y
+    run_with_spinner "Installing Rust via rustup" download_and_run_installer https://sh.rustup.rs -y
   else
     DEPENDENCY_SUMMARY+=("cargo: missing (requires curl or wget)")
     return 0

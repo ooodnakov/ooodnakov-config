@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 import sys
+import time
 import uuid
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -30,7 +31,7 @@ class TransactionError(RuntimeError):
 
 
 def _utc_now() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="microseconds")
 
 
 def _redact(value: object) -> str:
@@ -117,6 +118,7 @@ def _new_journal(repo_root: Path, platform: str, profile: str | None, operations
         "platform": platform,
         "profile": profile,
         "repo_root": str(repo_root.resolve()),
+        "created_at_ns": time.time_ns(),
         "started_at": _utc_now(),
         "completed_at": None,
         "failed_operation": None,
@@ -274,14 +276,25 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
 
 def _load_journals() -> list[tuple[Path, dict[str, object]]]:
     journals = []
-    for path in sorted(_journal_root().glob("*.json"), reverse=True):
+    for path in _journal_root().glob("*.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
         if isinstance(data, dict) and data.get("journal_version") == JOURNAL_VERSION:
             journals.append((path, data))
-    return journals
+
+    def creation_order(item: tuple[Path, dict[str, object]]) -> tuple[int, str]:
+        path, data = item
+        created_at_ns = data.get("created_at_ns")
+        if isinstance(created_at_ns, int):
+            return created_at_ns, str(data.get("started_at", ""))
+        try:
+            return path.stat().st_mtime_ns, str(data.get("started_at", ""))
+        except OSError:
+            return 0, str(data.get("started_at", ""))
+
+    return sorted(journals, key=creation_order, reverse=True)
 
 
 def rollback_last() -> int:
