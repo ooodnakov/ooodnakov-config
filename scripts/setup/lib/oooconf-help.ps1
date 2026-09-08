@@ -1,7 +1,7 @@
 # Dot-sourced by scripts/setup/ooodnakov.ps1; do not execute directly.
 
 function Get-KnownCommands {
-    $fallback = @("install", "deps", "update", "doctor", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "color", "delta", "version", "check", "preview", "upgrade")
+    $fallback = @("install", "deps", "update", "doctor", "status", "snapshot", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "color", "delta", "version", "check", "preview", "upgrade")
     if (-not (Test-Path $CommandsFile)) {
         return $fallback
     }
@@ -192,6 +192,7 @@ function Show-Usage {
     Write-UiSectionFancy -IconName "version" -Title "Global options"
     Write-Output @"
   -C, --repo-root PATH  run against a specific repo checkout
+      --profile NAME    select minimal, terminal, workstation, or developer
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
@@ -211,6 +212,11 @@ function Show-Usage {
     Write-UiSpacer
     Write-UiSectionFancy -IconName "doctor" -Title "Inspect & Validate"
     Write-UiCommandRow -CommandName "doctor" -Description "validate managed symlinks and required commands"
+    Write-UiCommandRow -CommandName "status" -Description "summarize profile, links, dependencies, transactions, and drift"
+    Write-UiCommandRow -CommandName "snapshot" -Description "export, inspect, or apply portable settings"
+    Write-UiCommandRow -CommandName "plan" -Description "build a validated text or JSON operation plan"
+    Write-UiCommandRow -CommandName "apply" -Description "transactionally apply managed links"
+    Write-UiCommandRow -CommandName "rollback" -Description "roll back the latest eligible link transaction"
     Write-UiCommandRow -CommandName "dry-run" -Description "preview install flow without mutating filesystem"
     Write-UiCommandRow -CommandName "version" -Description "print CLI version and repo root"
 
@@ -267,7 +273,7 @@ function Show-CommandUsage {
     switch ($command) {
         "install" {
             Write-UiHelpBlock @"
-Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps]
+Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps] [--profile NAME]
 
 Apply managed config and optional dependency installation.
 Creates symlinks from tracked config in home/ to their target locations,
@@ -277,6 +283,7 @@ Examples:
   oooconf install                      # interactive dependency prompts
   oooconf install --yes-optional       # auto-accept all optional installs
   oooconf install --skip-deps          # apply config without dependency installs
+  oooconf install --profile terminal   # apply only terminal-profile managed links
   oooconf install --dry-run            # preview without making changes
 "@
         }
@@ -297,7 +304,7 @@ Examples:
         }
         "update" {
             Write-UiHelpBlock @"
-Usage: oooconf update [--dry-run] [--yes-optional]
+Usage: oooconf update [--dry-run] [--yes-optional] [--profile NAME]
 
 Pull the repo with --ff-only, then re-run the install flow.
 Use this to update your config to the latest tracked state. It performs
@@ -310,25 +317,85 @@ Examples:
         }
         "doctor" {
             Write-UiHelpBlock @"
-Usage: oooconf doctor
+Usage: oooconf doctor [--format text|json] [--profile NAME]
 
-Validate managed symlinks and required commands.
-Checks that all managed config links point to valid targets and that
-key tools (git, zsh, wezterm, yazi, nvim, etc.) are available on PATH.
+Emit stable, versioned checks with severity and remediation. Exits non-zero when
+one or more checks have error status.
 Examples:
   oooconf doctor                       # run all checks
+  oooconf doctor --format json         # machine-readable contract
+"@
+        }
+        "status" {
+            Write-UiHelpBlock @"
+Usage: oooconf status [--format text|json] [--profile NAME]
+
+Summarize the selected profile, managed links, dependency availability,
+incomplete transactions, and generated artifact drift without mutation.
+"@
+        }
+        "snapshot" {
+            Write-UiHelpBlock @"
+Usage: oooconf snapshot <export|inspect|apply> [options]
+
+Export only allowlisted portable preferences and capabilities to TOML, validate
+and preview an import, or apply it through the planner and transaction executor.
+Examples:
+  oooconf snapshot export --profile terminal --output terminal.toml
+  oooconf snapshot inspect terminal.toml --format json
+  oooconf snapshot apply terminal.toml
 "@
         }
         "dry-run" {
             Write-UiHelpBlock @"
-Usage: oooconf dry-run
+Usage: oooconf dry-run [--format text|json] [--scope install|links] [--profile NAME] [dependency-key...]
 
-Preview the install flow without mutating the filesystem.
-Shows what links would be created, what files would be backed up, and
-what dependencies would be installed, without making any changes.
+Compatibility alias for oooconf plan. Builds a validated operation plan without
+changing the filesystem.
 Examples:
   oooconf dry-run                      # preview install
-  oooconf --yes-optional dry-run       # preview with dependency installs
+  oooconf dry-run --format json        # emit versioned JSON
+"@
+        }
+        "plan" {
+            Write-UiHelpBlock @"
+Usage: oooconf plan [--format text|json] [--scope install|links] [--profile NAME] [dependency-key...]
+
+Build a deterministic, validated operation plan without changing the filesystem.
+JSON output is versioned for automation. Dependency keys are validated against the
+shared optional dependency catalog.
+
+Examples:
+  oooconf plan
+  oooconf plan --format json
+  oooconf plan --scope links
+  oooconf plan --profile workstation
+  oooconf plan bat zoxide --format json
+"@
+        }
+        "apply" {
+            Write-UiHelpBlock @"
+Usage: oooconf apply [--platform linux|macos|windows] [--profile NAME]
+
+Validate and transactionally apply managed links. The command uses an exclusive
+cross-process lock and writes an atomic journal under the oooconf state directory.
+An identical second apply is a no-op.
+
+Examples:
+  oooconf apply
+  oooconf apply --platform windows
+"@
+        }
+        "rollback" {
+            Write-UiHelpBlock @"
+Usage: oooconf rollback --last
+
+Reverse the latest eligible managed-link transaction. Rollback removes only links
+created by that transaction, restores its backups, and refuses to delete or replace
+user-modified targets.
+
+Examples:
+  oooconf rollback --last
 "@
         }
         "link" {

@@ -1,0 +1,6 @@
+version = 1
+
+[profile]
+name = "terminal"
+extends = "minimal"
+capabilities = ["productivity", "terminal"]

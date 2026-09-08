@@ -13,6 +13,8 @@
 #   manager, package, command, winget_id, choco_id (existing)
 #   asset        - GitHub release asset template for github-release manager
 #                  supports ${system}, ${arch}, ${ver}
+#   integrity    - asset-name to lowercase SHA-256 map for every direct archive
+#   checksum_exception - documented reason a pinned script has no published digest
 #
 # Top-level [managed-tools] holds all git-pinned zsh ecosystem entries.
 # [defaults] holds common paths used by installers.
@@ -89,6 +91,7 @@ handler = "oh-my-posh"
 check = "oh-my-posh --version"
 linux.manager = "curl"
 linux.command = "curl -s https://ohmyposh.dev/install.sh | bash -s"
+checksum_exception = "upstream publishes a mutable installer script, not versioned checksums; installer is downloaded before explicit execution"
 macos.manager = "brew"
 macos.package = "jandedobbeleer/oh-my-posh/oh-my-posh"
 windows.manager = "winget"
@@ -118,6 +121,7 @@ description = "Chocolatey package manager (Windows)"
 handler = "choco"
 windows.manager = "custom"
 windows.command = "installed via setup.ps1 if needed"
+checksum_exception = "Chocolatey publishes a mutable bootstrap script without a stable digest; installer is downloaded before explicit execution"
 
 [[deps]]
 key = "brew"
@@ -129,6 +133,7 @@ linux.manager = "custom"
 linux.command = "official Homebrew installer"
 macos.manager = "custom"
 macos.command = "official Homebrew installer"
+checksum_exception = "Homebrew publishes a mutable bootstrap script without a stable digest; installer is downloaded before explicit execution"
 
 [[deps]]
 key = "gsudo"
@@ -207,6 +212,7 @@ macos.asset = "bat-v${ver}-${arch}-apple-darwin.tar.gz"
 windows.manager = "github-release"
 windows.package = "sharkdp/bat"
 windows.asset = "bat-v${ver}-${arch}-pc-windows-msvc.zip"
+integrity = { "bat-v${ver}-x86_64-unknown-linux-musl.tar.gz" = "0dcd8ac79732c0d5b136f11f4ee00e581440e16a44eab5b3105b611bbf2cf191", "bat-v${ver}-aarch64-unknown-linux-musl.tar.gz" = "6369242c584065f195fb20cb36fbd7cb63ae690605bbe89868a7596b596c2c23", "bat-v${ver}-i686-unknown-linux-musl.tar.gz" = "81e3386a54a915cabc9019efecec1860b9b030191bdaa928790a182ca865bda1", "bat-v${ver}-x86_64-apple-darwin.tar.gz" = "830d63b0bba1fa040542ec569e3cf77f60d3356b9de75116a344b061e0894245", "bat-v${ver}-aarch64-apple-darwin.tar.gz" = "e30beff26779c9bf60bb541e1d79046250cb74378f2757f8eb250afddb19e114", "bat-v${ver}-x86_64-pc-windows-msvc.zip" = "0f729b4b6f5f28d395c641eacc2e9ff68d0096b85aa0eec344aa62425144b69b", "bat-v${ver}-aarch64-pc-windows-msvc.zip" = "af07dd1939e99f7f5892d197fc5653cb8cb6c5999552731135ad156eca7e38a5", "bat-v${ver}-i686-pc-windows-msvc.zip" = "07fcab3b17e146878179553c115beb4878835a30b0e5d046457015a5b8f6e7ed" }
 
 [[deps]]
 key = "delta"
@@ -363,6 +369,7 @@ linux.manager = "custom"
 linux.command = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 macos.manager = "custom"
 macos.command = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
+checksum_exception = "rustup publishes a mutable bootstrap script without a stable versioned digest; installer is downloaded before explicit execution"
 windows.manager = "custom"
 windows.command = "winget install Rustlang.Rustup"
 
@@ -390,6 +397,7 @@ macos.manager = "github-release"
 macos.package = "neovim/neovim"
 windows.manager = "github-release"
 windows.package = "neovim/neovim"
+integrity = { "nvim-linux-x86_64.tar.gz" = "31cf85945cb600d96cdf69f88bc68bec814acbff50863c5546adef3a1bcef260", "nvim-linux-arm64.tar.gz" = "f697d4e4582b6e4b5c3c26e76e06ce26efa08ba1768e03fd2733fcc422bb0490", "nvim-macos-x86_64.tar.gz" = "728321db960a9b6af6c03881892a6abfd743bf759bc62d233f52fa1be64ace3c", "nvim-macos-arm64.tar.gz" = "eeddee1009734f9071266e6b1b8a70308cb60cbcc45f5e1c1023adc471450fee", "nvim-win64.zip" = "23fe150edbcc976eabe55092e1e9d2e5e237afde69553d170e936f776b405d53", "nvim-win-arm64.zip" = "ed3e2844708878221325b6f0fd07bbca06c01700d4c4f72f4a100b026e84dfd2" }
 
 [[deps]]
 key = "tree-sitter"
@@ -504,6 +512,7 @@ macos.manager = "brew"
 macos.package = "uv"
 windows.manager = "choco"
 windows.package = "uv"
+checksum_exception = "upstream installer script is mutable; package-manager routes are preferred and the script is downloaded before explicit execution"
 
 [[deps]]
 key = "bw"
@@ -520,6 +529,7 @@ macos.manager = "brew"
 macos.package = "bitwarden-cli"
 windows.manager = "download"
 windows.url = "https://github.com/bitwarden/cli/releases/download/v${ver}/bw-windows-${ver}.zip"
+integrity = { "bw-linux-${ver}.zip" = "0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db911b2279dae5c674b116aa0e", "bw-windows-${ver}.zip" = "0902a867d82c96fb93d087eefaaa78867f6ecc48d2ce249f1de231f5f3efad1d" }
 
 [[deps]]
 key = "node"
@@ -558,6 +568,7 @@ macos.manager = "custom"
 macos.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-aarch64-apple-darwin.tar.gz"
 windows.manager = "custom"
 windows.url = "https://github.com/rtk-ai/rtk/releases/download/v${ver}/rtk-x86_64-pc-windows-msvc.zip"
+integrity = { "rtk-x86_64-unknown-linux-musl.tar.gz" = "3dfb7a05636a68687ba1c5aa696fa8d5fcb494447ded86d9eb8b88b7100a37c6", "rtk-aarch64-unknown-linux-gnu.tar.gz" = "1d8d7fcca6cb05e1867c08bb4e5aa5f107c037c607131e511b726ae33ac35a47", "rtk-aarch64-apple-darwin.tar.gz" = "99e20a59847dedbb64032a3f7985f2fe959fcb9674d8eaf940fc58a189e27eca", "rtk-x86_64-apple-darwin.tar.gz" = "4052e7740a87e121f671a2de269b3f015dcc58b6171d6bedb300da7599cb4d94", "rtk-x86_64-pc-windows-msvc.zip" = "b89854b7435b4c3e3aea948b36e75395427fa631e03167de522bf7a0cfd3c5c7" }
 
 [[deps]]
 key = "imagemagick"
@@ -601,6 +612,7 @@ windows.package = "luarocks"
 [[deps]]
 key = "tectonic"
 display = "Tectonic"
+ver = "0.16.9"
 description = "Modern LaTeX engine (required by Snacks.image for LaTeX)"
 handler = "tectonic"
 check = "tectonic --version"
@@ -609,7 +621,7 @@ linux.package = "tectonic"
 macos.manager = "brew"
 macos.package = "tectonic"
 windows.manager = "custom"
-windows.command = "installed via specialized GitHub release installer in setup.ps1"
+windows.command = "cargo install tectonic --version ${ver} --locked"
 
 [[deps]]
 key = "mermaid-cli"
@@ -780,6 +792,7 @@ check = "croc --version"
 linux.manager = "github-release"
 linux.package = "schollz/croc"
 linux.asset = "croc_v${ver}_Linux-64bit.tar.gz"
+integrity = { "croc_v${ver}_Linux-64bit.tar.gz" = "7d25aa3bbf2bf88b10da22aa751a56a5bb75e39586262c7b92ca69e84cbd62bf" }
 macos.manager = "brew"
 macos.package = "croc"
 windows.manager = "winget"
@@ -797,6 +810,7 @@ check = "s5cmd version"
 linux.manager = "github-release"
 linux.package = "peak/s5cmd"
 linux.asset = "s5cmd_${ver}_Linux-64bit.tar.gz"
+integrity = { "s5cmd_${ver}_Linux-64bit.tar.gz" = "de0fdbfa3aceae55e069ba81a0fc17b2026567637603734a387b2fca06c299b4" }
 macos.manager = "brew"
 macos.package = "peak/tap/s5cmd"
 windows.manager = "winget"

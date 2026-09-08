@@ -11,9 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import type { AnalyzeIssuesPromptOptions } from "../types.js";
-import { analyzeIssuesPrompt } from "./analyze-issues.js";
+
 import { getGitRepoInfo } from "../github/git.js";
+import { analyzeIssuesPrompt } from "./analyze-issues.js";
 
 /**
  * Static bootstrap prompt for scheduled Jules sessions.

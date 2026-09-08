@@ -251,7 +251,8 @@ def discover_links(
         scan_path = Path(repo_root) / autolink_dir
 
         if not scan_path.exists():
-            print(f"Warning: autolink dir not found: {scan_path}", file=sys.stderr)
+            # Discovery roots are optional; a platform or profile may not have
+            # every conventional tree in a clean checkout.
             continue
 
         # Scan subdirectories
@@ -362,7 +363,7 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None, plat
     return result
 
 
-def get_all_links(repo_root: Path | str) -> list[tuple[str, str, str | None]]:
+def get_all_links(repo_root: Path | str, platform: str | None = None) -> list[tuple[str, str, str | None]]:
     """Get all links, merging manifest and local config.
 
     Args:
@@ -371,7 +372,7 @@ def get_all_links(repo_root: Path | str) -> list[tuple[str, str, str | None]]:
     Returns:
         List of tuples: (source, target, key).
     """
-    platform = get_platform()
+    platform = platform or get_platform()
     repo_root = Path(repo_root)
 
     # Read manifest
@@ -450,7 +451,7 @@ def cli() -> int:
         args.repo_root = script_dir.parent
 
     # Get links
-    links = get_all_links(args.repo_root)
+    links = get_all_links(args.repo_root, args.platform)
 
     # Validate sources exist (for dry-run reporting)
     missing_sources = []

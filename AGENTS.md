@@ -34,6 +34,7 @@ Bootstrap behavior lives in:
 
 - `scripts/setup/setup.sh`
 - `scripts/setup/setup.ps1`
+- `scripts/security/secure_artifact.py` (verified downloads and guarded extraction)
 
 The unified CLI entrypoint lives in:
 
@@ -43,6 +44,10 @@ The unified CLI entrypoint lives in:
 Shell completions live in:
 
 - `home/.config/ooodnakov/completions/oooconf-completions.ps1` (PowerShell, auto-loaded)
+
+Portable capability profiles live in `home/.config/ooodnakov/profiles/`. The
+machine-local default belongs in the ignored
+`home/.config/ooodnakov/local/profile.toml`.
 
 Reference-only material lives in:
 
@@ -67,13 +72,16 @@ When adding or modifying symlinks, relevant files are:
 |------|------|
 | `scripts/link_manager.py` | Engine: manifest parsing, auto-discovery, platform filtering, local override merging |
 | `scripts/links.toml` | Canonical manifest of all managed symlinks |
-| `scripts/setup/setup.sh` / `scripts/setup/setup.ps1` | Consumers: call `link_manager.py` to get link list, then create symlinks |
+| `scripts/cli/operation_plan.py` | Validates and filters manifest links, including portable profiles |
+| `scripts/cli/transaction_apply.py` | Transactionally applies validated links and writes rollback journals |
+| `scripts/setup/setup.sh` / `scripts/setup/setup.ps1` | Consumers: delegate managed-link application to the transaction executor |
 
 **Adding a new config folder:**
 
 The preferred approach is to create the directory under `home/.config/` (or `home/.local/` or `home/.glzr/`). Auto-discovery handles it automatically — no manifest edit needed.
 
 Only add an explicit `[[links]]` entry in `scripts/links.toml` for:
+
 - Files (not directories), e.g., `home/.zshrc`
 - Platform-specific links (`only` or `except` tags)
 - Non-standard targets that do not follow the `{CONFIG_HOME}/<key>` convention
@@ -147,6 +155,9 @@ When structure or setup behavior changes, update the relevant docs:
 - `docs/contributing.md`
 - `docs/cli-extension-guide.md`
 - `docs/ci-smoke-checks-terminal.md`
+- `docs/fleet-automation.md`
+- the platform support and transaction retention policies in `docs/reproducibility.md`
+  and `docs/troubleshooting.md`
 - `third_party/README.md`
 
 ## Validation

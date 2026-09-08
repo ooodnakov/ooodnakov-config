@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 
       - name: Build source archives
         run: |
@@ -22,11 +22,13 @@ jobs:
           VERSION="${GITHUB_REF_NAME:-snapshot}"
           git archive --format=tar.gz --output="dist/ooodnakov-config-${VERSION}.tar.gz" HEAD
           git archive --format=zip --output="dist/ooodnakov-config-${VERSION}.zip" HEAD
+          sha256sum dist/*.tar.gz dist/*.zip > dist/SHA256SUMS
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
           files: |
             dist/*.tar.gz
             dist/*.zip
+            dist/SHA256SUMS
           generate_release_notes: true

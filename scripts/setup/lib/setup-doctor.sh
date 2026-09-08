@@ -81,18 +81,21 @@ doctor_check_managed_repo() {
 
 run_doctor() {
   ui_section "Doctor checks"
-  doctor_check_link "$REPO_ROOT/home/.zshrc" "$HOME_DIR/.zshrc"
-  doctor_check_link "$REPO_ROOT/home/.config/zsh" "$CONFIG_HOME/zsh"
-  doctor_check_link "$REPO_ROOT/home/.config/wezterm" "$CONFIG_HOME/wezterm"
-  doctor_check_link "$REPO_ROOT/home/.config/yazi" "$CONFIG_HOME/yazi"
-  doctor_check_link "$REPO_ROOT/home/.config/niri" "$CONFIG_HOME/niri"
-  doctor_check_link "$REPO_ROOT/home/.config/noctalia" "$CONFIG_HOME/noctalia"
-  doctor_check_link "$REPO_ROOT/home/.config/nvim" "$CONFIG_HOME/nvim"
-  doctor_check_link "$REPO_ROOT/home/.config/ooodnakov" "$CONFIG_HOME/ooodnakov"
-  doctor_check_link "$REPO_ROOT/home/.config/ohmyposh/ooodnakov.omp.json" "$CONFIG_HOME/ohmyposh/ooodnakov.omp.json"
-  doctor_check_link "$REPO_ROOT/home/.config/powershell/Microsoft.PowerShell_profile.ps1" "$CONFIG_HOME/powershell/Microsoft.PowerShell_profile.ps1"
-  doctor_check_link "$REPO_ROOT/home/.config/ooodnakov/bin/oooconf" "$HOME_DIR/.local/bin/oooconf"
-  doctor_check_link "$REPO_ROOT/home/.config/ooodnakov/bin/o" "$HOME_DIR/.local/bin/o"
+  if ! python3 "$REPO_ROOT/scripts/cli/transaction_apply.py" --repo-root "$REPO_ROOT" status --check-incomplete; then
+    ui_line missing "incomplete managed-link transaction"
+    ui_line hint "          repair: oooconf rollback --last"
+    FAILURES+=("doctor incomplete transaction")
+  fi
+  local managed_links
+  if managed_links="$(python3 "$REPO_ROOT/scripts/cli/operation_plan.py" --repo-root "$REPO_ROOT" --scope links --emit-managed-links)"; then
+    while IFS='|' read -r _key source target; do
+      [ -n "$target" ] || continue
+      doctor_check_link "$source" "$target"
+    done <<<"$managed_links"
+  else
+    ui_line missing "unable to resolve managed profile links"
+    FAILURES+=("doctor profile links")
+  fi
   doctor_check_command git
   doctor_check_command zsh
   doctor_check_command wezterm

@@ -1,0 +1,32 @@
+version = 1
+
+[capabilities.shell]
+links = ["zshrc", "zsh", "ooodnakov", "oooconf-bin", "o-bin", "powershell", "ohmyposh"]
+dependencies = ["git", "python3", "zsh", "oh-my-posh"]
+
+[capabilities.productivity]
+links = ["task", "taskrc", "todo"]
+dependencies = []
+
+[capabilities.terminal]
+links = ["wezterm", "nvim", "yazi", "fastfetch", "btop"]
+dependencies = ["wezterm", "nvim", "yazi", "fastfetch", "btop", "fzf", "rg", "fd", "bat", "zoxide"]
+
+[capabilities.developer]
+links = ["lazygit", "lazydocker", "ccstatusline", "pi", "pi-lens"]
+dependencies = ["lazygit", "lazydocker", "docker", "uv", "just", "node", "pnpm", "pi-coding-agent"]
+
+[capabilities.desktop-linux]
+platforms = ["linux"]
+links = ["niri", "hypr", "pypr", "noctalia"]
+dependencies = ["cava"]
+
+[capabilities.desktop-windows]
+platforms = ["windows"]
+links = ["komorebi-config", "komorebi-bar", "komorebi-apps", "whkdrc", "glazewm", "zebar"]
+dependencies = ["glazewm", "zebar"]
+
+[capabilities.desktop-macos]
+platforms = ["macos"]
+links = ["aerospace", "omniwm", "borders", "sketchybar"]
+dependencies = []

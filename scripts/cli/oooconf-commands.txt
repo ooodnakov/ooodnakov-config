@@ -3,6 +3,11 @@ install
 deps
 update
 doctor
+status
+snapshot
+plan
+apply
+rollback
 dry-run
 delete
 remove

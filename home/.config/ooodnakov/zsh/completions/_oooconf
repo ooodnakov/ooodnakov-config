@@ -7,8 +7,13 @@ _oooconf_commands=(
   'install:apply managed config'
   'deps:install optional dependencies only'
   'update:update the repo, then re-run install'
-  'doctor:validate managed links and tools'
-  'dry-run:preview install without changes'
+  'doctor:run structured health checks'
+  'status:summarize managed configuration state'
+  'snapshot:export, inspect, or apply portable settings'
+  'plan:build a validated, side-effect-free operation plan'
+  'apply:transactionally apply managed links'
+  'rollback:roll back the latest eligible transaction'
+  'dry-run:alias for a side-effect-free install plan'
   'delete:remove managed links and restore backups'
   'remove:remove managed links only'
   'lock:regenerate dependency lock artifacts'
@@ -32,8 +37,11 @@ _oooconf_commands=(
 )
 typeset -ga _oooconf_global_opts
 _oooconf_global_opts=(
+  '--all:select all dependency keys at once'
+  '--skip-deps:skip dependency installation'
   '-C:set repo root path'
   '--repo-root:set repo root path'
+  '--profile:select portable capability profile'
   '--print-repo-root:print resolved repo root'
   '-h:show help'
   '--help:show help'
@@ -141,6 +149,39 @@ _oooconf_values_secret_backends=(
   'bw:bw'
 )
 
+typeset -ga _oooconf_values_plan_formats
+_oooconf_values_plan_formats=(
+  'text:human-readable plan'
+  'json:versioned JSON plan'
+)
+
+typeset -ga _oooconf_values_diagnostic_formats
+_oooconf_values_diagnostic_formats=(
+  'text:human-readable checks'
+  'json:versioned diagnostic JSON'
+)
+
+typeset -ga _oooconf_values_plan_scopes
+_oooconf_values_plan_scopes=(
+  'install:complete install plan'
+  'links:managed links only'
+)
+
+typeset -ga _oooconf_values_platforms
+_oooconf_values_platforms=(
+  'linux:Linux'
+  'macos:macOS'
+  'windows:Windows'
+)
+
+typeset -ga _oooconf_values_profiles
+_oooconf_values_profiles=(
+  'minimal:portable shell and CLI baseline'
+  'terminal:minimal plus terminal productivity tools'
+  'workstation:terminal plus platform desktop integrations'
+  'developer:terminal plus development and agent tooling'
+)
+
 _oooconf_option_takes_value() {
   local option known
   option="$1"
@@ -173,11 +214,12 @@ _oooconf_install() {
   local -a values
   values=("${_oooconf_values_deps_keys[@]}")
   local -a opts_with_args
-  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --profile)
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
     '--skip-deps[skip dependency installation]' \
+    '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -217,10 +259,11 @@ _oooconf_update() {
   local context state line
   typeset -A opt_args
   local -a opts_with_args
-  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --profile)
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
     '-h[show help]' \
     '--help[show help]' \
     '*:arg:->args'
@@ -255,8 +298,172 @@ _oooconf_doctor() {
   local context state line
   typeset -A opt_args
   local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --format --platform --profile)
+  _arguments -C \
+    '--format[output format]:value:(text json)' \
+    '--platform[override target platform]:value:(linux macos windows)' \
+    '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_status() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --format --platform --profile)
+  _arguments -C \
+    '--format[output format]:value:(text json)' \
+    '--platform[override target platform]:value:(linux macos windows)' \
+    '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_snapshot() {
+  local context state line
+  typeset -A opt_args
+  local -a subcmds
+  subcmds=(
+    'export:write a safe portable TOML snapshot'
+    'inspect:validate and preview a snapshot'
+    'apply:validate and transactionally apply a snapshot'
+  )
+  local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
+    '1:subcommand:->command' \
+    '*:arg:->args'
+
+  case $state in
+    command)
+      _describe -t subcommands 'oooconf subcommand' subcmds
+      ;;
+    args)
+      local child_name i token
+      for (( i = 2; i < CURRENT; i++ )); do
+        token="$words[i]"
+        if [[ "$token" == -* ]]; then
+          if _oooconf_option_takes_value "$token" "${opts_with_args[@]}"; then
+            (( i++ ))
+          fi
+          continue
+        fi
+        case $token in
+          export)
+            child_name=export
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_snapshot_export
+            return
+            ;;
+          inspect)
+            child_name=inspect
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_snapshot_inspect
+            return
+            ;;
+          apply)
+            child_name=apply
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_snapshot_apply
+            return
+            ;;
+        esac
+      done
+      ;;
+  esac
+}
+
+_oooconf_snapshot_export() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --output -o --profile)
+  _arguments -C \
+    '--output[output TOML file]:value:_files' \
+    '-o[output TOML file]:value:_files' \
+    '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_snapshot_inspect() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --format)
+  _arguments -C \
+    '--format[output format]:value:(text json)' \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_snapshot_apply() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_plan() {
+  local context state line
+  typeset -A opt_args
+  local -a values
+  values=("${_oooconf_values_deps_keys[@]}")
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --format --scope --platform --profile)
+  _arguments -C \
+    '--format[output format]:value:(text json)' \
+    '--scope[plan install or links only]:value:(install links)' \
+    '--platform[override target platform]:value:(linux macos windows)' \
+    '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
+    '1:value:->value' \
+    '*:arg:->args'
+
+  case $state in
+    value)
+      _describe -t values 'oooconf value' values
+      ;;
+  esac
+}
+
+_oooconf_apply() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --platform --profile)
+  _arguments -C \
+    '--platform[override target platform]:value:(linux macos windows)' \
+    '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
+    '*:arg:->args'
+
+  case $state in
+  esac
+}
+
+_oooconf_rollback() {
+  local context state line
+  typeset -A opt_args
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    '--last[select the latest eligible transaction]' \
     '*:arg:->args'
 
   case $state in
@@ -266,12 +473,22 @@ _oooconf_doctor() {
 _oooconf_dry_run() {
   local context state line
   typeset -A opt_args
+  local -a values
+  values=("${_oooconf_values_deps_keys[@]}")
   local -a opts_with_args
-  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --format --scope --platform --profile)
   _arguments -C \
+    '--format[output format]:value:(text json)' \
+    '--scope[plan install or links only]:value:(install links)' \
+    '--platform[override target platform]:value:(linux macos windows)' \
+    '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
+    '1:value:->value' \
     '*:arg:->args'
 
   case $state in
+    value)
+      _describe -t values 'oooconf value' values
+      ;;
   esac
 }
 
@@ -1889,8 +2106,11 @@ _oooconf_main() {
   local context state line
   typeset -A opt_args
   _arguments -C \
+    '--all[select all dependency keys at once]' \
+    '--skip-deps[skip dependency installation]' \
     '-C[set repo root path]:value:_files -/' \
     '--repo-root[set repo root path]:value:_files -/' \
+    '--profile[select portable capability profile]' \
     '--print-repo-root[print resolved repo root]' \
     '-h[show help]' \
     '--help[show help]' \
@@ -1944,6 +2164,31 @@ _oooconf_main() {
           words=("${(@)words[i,-1]}")
           CURRENT=$(( CURRENT - i + 1 ))
           _oooconf_doctor
+          ;;
+        status)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_status
+          ;;
+        snapshot)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_snapshot
+          ;;
+        plan)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_plan
+          ;;
+        apply)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_apply
+          ;;
+        rollback)
+          words=("${(@)words[i,-1]}")
+          CURRENT=$(( CURRENT - i + 1 ))
+          _oooconf_rollback
           ;;
         dry-run)
           words=("${(@)words[i,-1]}")

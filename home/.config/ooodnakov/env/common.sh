@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 if [ -z "$EDITOR" ]; then
   if [ -x "$HOME/.local/share/ooodnakov-config/bin/nvim" ]; then
     export EDITOR="$HOME/.local/share/ooodnakov-config/bin/nvim"

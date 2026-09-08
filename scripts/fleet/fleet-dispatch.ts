@@ -12,25 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 import path from "node:path";
-import { findUpSync } from "find-up";
-import type { IssueAnalysis } from "./types.js";
 import { jules } from "@google/jules-sdk";
-import { getGitRepoInfo, getCurrentBranch } from "./github/git.js";
+import { findUpSync } from "find-up";
+import { getCurrentBranch, getGitRepoInfo } from "./github/git.js";
+import { agentTaskPrompt, safeBranchName } from "./policy.js";
+import type { IssueAnalysis } from "./types.js";
 
 const date = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" })
   .format(new Date())
   .replaceAll("-", "_");
 
-const root = path.dirname(findUpSync(".git")!);
+const gitDirectory = findUpSync(".git");
+if (!gitDirectory) throw new Error("Fleet dispatch must run inside a Git repository");
+const root = path.dirname(gitDirectory);
 const fleetDir = path.join(root, ".fleet", date);
 const tasksPath = path.join(fleetDir, "issue_tasks.json");
 
-const analysis = await Bun.file(tasksPath).json() as IssueAnalysis;
+const analysis = (await Bun.file(tasksPath).json()) as IssueAnalysis;
 const { tasks } = analysis;
 
 // Resolve repo info dynamically from git remote
 const repoInfo = await getGitRepoInfo();
-const baseBranch = process.env.FLEET_BASE_BRANCH ?? await getCurrentBranch();
+const baseBranch = process.env.FLEET_BASE_BRANCH ?? (await getCurrentBranch());
 
 // Pre-dispatch ownership validation
 function validateOwnership(analysis: IssueAnalysis): void {
@@ -41,7 +44,7 @@ function validateOwnership(analysis: IssueAnalysis): void {
       const existing = claimed.get(file);
       if (existing) {
         throw new Error(
-          `Ownership conflict: "${file}" claimed by both "${existing}" and "${task.id}". These tasks must be merged.`
+          `Ownership conflict: "${file}" claimed by both "${existing}" and "${task.id}". These tasks must be merged.`,
         );
       }
       claimed.set(file, task.id);
@@ -52,19 +55,19 @@ function validateOwnership(analysis: IssueAnalysis): void {
 validateOwnership(analysis);
 console.log(`✅ Ownership validated: ${analysis.tasks.length} tasks, no conflicts.`);
 
-const sessions = await jules.all(tasks, task => ({
-  prompt: task.prompt,
+const sessions = await jules.all(tasks, (task) => ({
+  prompt: agentTaskPrompt(task.prompt),
   source: {
     github: repoInfo.fullName,
     baseBranch,
-  }
+  },
 }));
 
 const sessionResults: Array<{ taskId: string; sessionId: string }> = [];
 for await (const session of sessions) {
   const taskId = tasks[sessionResults.length]?.id ?? "unknown";
   sessionResults.push({ taskId, sessionId: session.id });
-  console.log(`Task ${taskId} → Session ${session.id}`);
+  console.log(`Task ${taskId} → Session ${session.id} (expected branch: ${safeBranchName(taskId, session.id)})`);
 }
 
 // Write session mapping for fleet-merge.ts

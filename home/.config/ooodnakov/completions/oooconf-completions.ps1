@@ -11,6 +11,11 @@ function Get-OooconfCompletions {
         'deps',
         'update',
         'doctor',
+        'status',
+        'snapshot',
+        'plan',
+        'apply',
+        'rollback',
         'dry-run',
         'delete',
         'remove',
@@ -35,8 +40,11 @@ function Get-OooconfCompletions {
     )
 
     $OooconfGlobalOptions = @(
+        '--all',
+        '--skip-deps',
         '-C',
         '--repo-root',
+        '--profile',
         '--print-repo-root',
         '-h',
         '--help',
@@ -221,6 +229,16 @@ function Get-OooconfCompletions {
             OptionValues = @{
             }
         }
+        'apply' = @{
+            Options = @('--platform', '--profile')
+            OptionsWithArgs = @('--platform', '--profile')
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+                '--platform' = @('linux', 'macos', 'windows')
+                '--profile' = @('minimal', 'terminal', 'workstation', 'developer')
+            }
+        }
         'bootstrap' = @{
             Options = @()
             OptionsWithArgs = @()
@@ -278,19 +296,26 @@ function Get-OooconfCompletions {
             }
         }
         'doctor' = @{
-            Options = @()
-            OptionsWithArgs = @()
+            Options = @('--format', '--platform', '--profile')
+            OptionsWithArgs = @('--format', '--platform', '--profile')
             Values = @()
             Subcommands = @()
             OptionValues = @{
+                '--format' = @('text', 'json')
+                '--platform' = @('linux', 'macos', 'windows')
+                '--profile' = @('minimal', 'terminal', 'workstation', 'developer')
             }
         }
         'dry-run' = @{
-            Options = @()
-            OptionsWithArgs = @()
-            Values = @()
+            Options = @('--format', '--scope', '--platform', '--profile')
+            OptionsWithArgs = @('--format', '--scope', '--platform', '--profile')
+            Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'brew', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'just', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar', 'pandoc', 'pi-coding-agent', 'coreutils-win', 'croc', 's5cmd')
             Subcommands = @()
             OptionValues = @{
+                '--format' = @('text', 'json')
+                '--platform' = @('linux', 'macos', 'windows')
+                '--profile' = @('minimal', 'terminal', 'workstation', 'developer')
+                '--scope' = @('install', 'links')
             }
         }
         'env' = @{
@@ -310,11 +335,12 @@ function Get-OooconfCompletions {
             }
         }
         'install' = @{
-            Options = @('--dry-run', '--yes-optional', '--skip-deps', '-h', '--help')
-            OptionsWithArgs = @()
+            Options = @('--dry-run', '--yes-optional', '--skip-deps', '--profile', '-h', '--help')
+            OptionsWithArgs = @('--profile')
             Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'brew', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'just', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar', 'pandoc', 'pi-coding-agent', 'coreutils-win', 'croc', 's5cmd')
             Subcommands = @()
             OptionValues = @{
+                '--profile' = @('minimal', 'terminal', 'workstation', 'developer')
             }
         }
         'komorebi' = @{
@@ -349,6 +375,18 @@ function Get-OooconfCompletions {
             OptionValues = @{
             }
         }
+        'plan' = @{
+            Options = @('--format', '--scope', '--platform', '--profile')
+            OptionsWithArgs = @('--format', '--scope', '--platform', '--profile')
+            Values = @('wget', 'git', 'wezterm', 'oh-my-posh', 'posh-git', 'psfzf', 'choco', 'brew', 'gsudo', 'rg', 'fd', 'zsh', 'direnv', 'fzf', 'bat', 'delta', 'glow', 'gum', 'zoxide', 'q', 'eza', 'yazi', 'ffmpeg', 'jq', 'p7zip', 'poppler', 'fc-cache', 'cargo', 'dua', 'nvim', 'tree-sitter', 'k', 'python3', 'lazygit', 'lazydocker', 'docker', 'impala', 'bluetui', 'just', 'uv', 'bw', 'node', 'pnpm', 'rtk', 'imagemagick', 'ghostscript', 'luarocks', 'tectonic', 'mermaid-cli', 'zig', 'neovim-node', 'neovim-python', 'fastfetch', 'btop', 'cava', 'blackhole-2ch', 'glazewm', 'zebar', 'overline-zebar', 'pandoc', 'pi-coding-agent', 'coreutils-win', 'croc', 's5cmd')
+            Subcommands = @()
+            OptionValues = @{
+                '--format' = @('text', 'json')
+                '--platform' = @('linux', 'macos', 'windows')
+                '--profile' = @('minimal', 'terminal', 'workstation', 'developer')
+                '--scope' = @('install', 'links')
+            }
+        }
         'preview' = @{
             Options = @()
             OptionsWithArgs = @()
@@ -359,6 +397,14 @@ function Get-OooconfCompletions {
         }
         'remove' = @{
             Options = @()
+            OptionsWithArgs = @()
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+            }
+        }
+        'rollback' = @{
+            Options = @('--last')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
@@ -547,12 +593,58 @@ function Get-OooconfCompletions {
             OptionValues = @{
             }
         }
-        'update' = @{
-            Options = @('--dry-run', '--yes-optional', '-h', '--help')
+        'snapshot' = @{
+            Options = @()
+            OptionsWithArgs = @()
+            Values = @()
+            Subcommands = @('export', 'inspect', 'apply')
+            OptionValues = @{
+            }
+        }
+        'snapshot:apply' = @{
+            Options = @()
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
             OptionValues = @{
+            }
+        }
+        'snapshot:export' = @{
+            Options = @('--output', '-o', '--profile')
+            OptionsWithArgs = @('--output', '-o', '--profile')
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+                '--profile' = @('minimal', 'terminal', 'workstation', 'developer')
+            }
+        }
+        'snapshot:inspect' = @{
+            Options = @('--format')
+            OptionsWithArgs = @('--format')
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+                '--format' = @('text', 'json')
+            }
+        }
+        'status' = @{
+            Options = @('--format', '--platform', '--profile')
+            OptionsWithArgs = @('--format', '--platform', '--profile')
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+                '--format' = @('text', 'json')
+                '--platform' = @('linux', 'macos', 'windows')
+                '--profile' = @('minimal', 'terminal', 'workstation', 'developer')
+            }
+        }
+        'update' = @{
+            Options = @('--dry-run', '--yes-optional', '--profile', '-h', '--help')
+            OptionsWithArgs = @('--profile')
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+                '--profile' = @('minimal', 'terminal', 'workstation', 'developer')
             }
         }
         'update-pins' = @{

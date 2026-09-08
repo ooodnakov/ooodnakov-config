@@ -1,0 +1,6 @@
+version = 1
+
+[profile]
+name = "developer"
+extends = "terminal"
+capabilities = ["developer"]

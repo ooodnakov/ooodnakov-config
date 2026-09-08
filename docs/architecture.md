@@ -21,6 +21,18 @@ The tracked base config is intended to be safe to clone onto a new machine witho
 
 Only `home/` is treated as managed active config. `third_party/` is kept for comparison and targeted imports, not as a live runtime tree.
 
+Fleet automation is isolated from the setup lifecycle. Its exact dependencies and
+tooling are captured by `scripts/fleet/package.json` and `scripts/fleet/bun.lock`.
+Pure policy functions enforce issue selection, prompt-data boundaries, trusted branch
+names, and merge eligibility without requiring GitHub or Jules in tests. The merge
+workflow has separate read-only preview and explicitly selected mutation jobs;
+repository branch protection remains authoritative.
+
+Cross-platform lifecycle validation copies the repository into a temporary test
+root and assigns every HOME, XDG, state, cache, and backup path beneath the test
+directory. Network installs are explicitly disabled. A pytest-only transaction
+failure hook exercises journal recovery without exposing a production CLI option.
+
 ## Install Model
 
 The repo uses a symlink-first install model.
@@ -46,6 +58,13 @@ The public setup and CLI scripts (`setup.sh`, `setup.ps1`, `ooodnakov.sh`, and `
 
 ## CLI Surface
 
+The versioned recursive contract in `scripts/cli/oooconf-cli-spec.toml` gives every
+command node a stable handler ID and explicit platform support. Native Bash and
+PowerShell entrypoints remain the runtime UX; contract tests compare their public
+commands and global options with the spec and verify every declared leaf is
+reachable. Completion files and `docs/cli-reference.md` are generated from the same
+contract, while operational examples remain hand-authored.
+
 There are two phase-1 entrypoints before install:
 
 - Unix: `./home/.config/ooodnakov/bin/oooconf`
@@ -61,6 +80,9 @@ Primary commands:
 - `completions`: regenerate tracked autogen zsh completions from the shared manifest and regenerate `oooconf` command completions
 - `dry-run`: preview planned changes without mutating the system
 - `doctor`: validate managed links and key tools
+- `plan`: produce a deterministic, validated text or versioned JSON description of intended operations
+- `apply`: transactionally apply managed links with locking and an atomic journal
+- `rollback --last`: reverse the latest eligible managed-link transaction without overwriting user changes
 - `delete` and `remove`: remove managed links, optionally restoring backups
 - `lock`: regenerate dependency lock artifacts
 - `update-pins`: audit pinned refs against upstream and optionally apply updates
@@ -85,6 +107,53 @@ This gives two properties:
 - installs stay reproducible because setup pins upstream refs and regenerates `deps.lock.json`
 
 Python scripts under `scripts/generate/`, `scripts/update/`, and `scripts/cli/` own generated docs, lockfile generation, completion generation, secrets rendering, and pin-update workflows so Unix and PowerShell entrypoints share the same implementation.
+
+`scripts/cli/operation_plan.py` is the shared, side-effect-free planning boundary for
+setup. It validates dependency keys and link preconditions, rejects duplicate or
+out-of-root targets, and emits deterministic schema-versioned JSON. Each operation
+declares its platform, source/target where applicable, privilege and network needs,
+preconditions, postconditions, a redacted summary, and rollback capability. The Bash
+and PowerShell setup implementations consume its internal validated link stream,
+while `oooconf plan` exposes text and JSON formats to users and automation.
+Public JSON contracts are retained under `scripts/cli/schemas/`; profile metadata is
+introduced by `operation-plan-v2.schema.json`, while the version 1 schema remains
+available to existing consumers. Incompatible changes require another schema version
+rather than silently changing a published contract.
+
+`scripts/cli/transaction_apply.py` executes the reversible link subset of the plan.
+It validates the complete link plan before mutation, obtains a cross-process lock,
+and atomically records each completed `mkdir`, `backup`, and `link` operation under
+the XDG state directory. Failures trigger reverse-order rollback. Explicit rollback
+removes only links still pointing to their recorded sources and restores a backup
+only when its original target is absent; user-modified targets therefore stop
+rollback and require manual recovery. Stale process locks are reclaimed only when
+their recorded owner no longer exists.
+
+Journals and transaction backups form one recovery record and have no automatic
+age-based pruning. An incomplete journal may be the only reliable description of a
+partial apply, while a completed journal identifies the backups needed by rollback.
+Cleanup is therefore an explicit operator action after health checks: review and
+remove that journal's backup paths before removing its terminal journal record.
+
+The existing `install` command remains the full setup orchestrator and delegates its
+managed-link phase to this transaction executor. Package installations, remote
+checkout updates, completion generation, and plugin-manager changes retain their
+declared unavailable or subsystem-specific rollback semantics.
+
+Structured operational inspection lives in `scripts/cli/lifecycle_tool.py`. It is
+the shared Bash/PowerShell implementation of `doctor`, `status`, and snapshot
+export/import. Diagnostics use the versioned
+`scripts/cli/schemas/diagnostics-v1.schema.json` contract. Snapshot fields and
+preference values are explicit allowlists; applying a snapshot first validates and
+builds a link plan, then delegates mutations to the transaction executor.
+
+Portable capability profiles live under
+`home/.config/ooodnakov/profiles/`. `capabilities.toml` maps portable capability
+names to manifest link keys, dependency recommendations, and platform applicability;
+the other TOML files define inheritance and capability composition. Profile
+resolution is shared by planning and transactional apply. Explicit CLI selection
+overrides `OOODNAKOV_PROFILE`, which overrides the ignored local `profile.toml`.
+With no selection, the unfiltered historical install behavior is preserved.
 
 ## Local Override Precedence
 

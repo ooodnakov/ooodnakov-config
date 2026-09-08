@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+SUPPORTED_SCHEMA_VERSION = 1
+
 
 @dataclass(frozen=True)
 class Command:
@@ -16,6 +18,8 @@ class Command:
 
     name: str
     description: str = "command"
+    handler_id: str = ""
+    platforms: tuple[str, ...] = ()
     alias_for: str | None = None
     options: dict[str, str] = field(default_factory=dict)
     completers: dict[str, str] = field(default_factory=dict)
@@ -38,6 +42,19 @@ class Command:
         if not isinstance(description, str):
             raise ValueError(f"[{location}].description must be a string")
 
+        handler_id = data.get("handler_id")
+        if not isinstance(handler_id, str) or not handler_id:
+            raise ValueError(f"[{location}].handler_id must be a non-empty string")
+
+        raw_platforms = data.get("platforms")
+        if (
+            not isinstance(raw_platforms, list)
+            or not raw_platforms
+            or not all(isinstance(item, str) for item in raw_platforms)
+        ):
+            raise ValueError(f"[{location}].platforms must be a non-empty string array")
+        platforms = tuple(raw_platforms)
+
         alias_for = data.get("alias_for")
         if alias_for is not None and not isinstance(alias_for, str):
             raise ValueError(f"[{location}].alias_for must be a string")
@@ -55,6 +72,8 @@ class Command:
         return cls(
             name=name,
             description=description,
+            handler_id=handler_id,
+            platforms=platforms,
             alias_for=alias_for,
             options=_as_description_map(data.get("options"), f"[{location}].options"),
             completers=_as_string_map(data.get("completers"), f"[{location}].completers"),
@@ -67,6 +86,8 @@ class Command:
 
 @dataclass(frozen=True)
 class CliSpec:
+    schema_version: int
+    minimum_reader_version: int
     global_options: dict[str, str]
     global_completers: dict[str, str]
     definitions: dict[str, dict[str, str]]
@@ -96,6 +117,21 @@ def shell_safe_name(value: str) -> str:
 def load_cli_spec(path: Path, extra_definitions: dict[str, dict[str, str]] | None = None) -> CliSpec:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
 
+    meta = _ensure_dict(data.get("meta"), "[meta]")
+    schema_version = meta.get("schema_version")
+    minimum_reader_version = meta.get("minimum_reader_version")
+    if not isinstance(schema_version, int) or schema_version < 1:
+        raise ValueError("[meta].schema_version must be a positive integer")
+    if not isinstance(minimum_reader_version, int) or minimum_reader_version < 1:
+        raise ValueError("[meta].minimum_reader_version must be a positive integer")
+    if minimum_reader_version > schema_version:
+        raise ValueError("[meta].minimum_reader_version cannot exceed schema_version")
+    if minimum_reader_version > SUPPORTED_SCHEMA_VERSION:
+        raise ValueError(
+            f"CLI spec requires reader version {minimum_reader_version}; "
+            f"this reader supports version {SUPPORTED_SCHEMA_VERSION}"
+        )
+
     global_table = _ensure_dict(data.get("global", {}), "[global]")
     definitions = _as_definitions(data.get("definitions"), "[definitions]")
     if extra_definitions:
@@ -108,6 +144,8 @@ def load_cli_spec(path: Path, extra_definitions: dict[str, dict[str, str]] | Non
     commands = {name: Command.from_dict(name, payload, ("commands",)) for name, payload in raw_commands.items()}
 
     spec = CliSpec(
+        schema_version=schema_version,
+        minimum_reader_version=minimum_reader_version,
         global_options=_as_description_map(global_table.get("options"), "[global].options"),
         global_completers=_as_string_map(global_table.get("completers"), "[global].completers"),
         definitions=definitions,
@@ -118,6 +156,7 @@ def load_cli_spec(path: Path, extra_definitions: dict[str, dict[str, str]] | Non
 
 
 def validate_cli_spec(spec: CliSpec) -> None:
+    handler_paths: dict[str, str] = {}
     for option in spec.global_completers:
         if option not in spec.global_options:
             raise ValueError(f"[global].completers references unknown option '{option}'")
@@ -127,11 +166,22 @@ def validate_cli_spec(spec: CliSpec) -> None:
         if command.alias_for and command.alias_for not in spec.commands:
             raise ValueError(f"Command '{name}' aliases unknown command '{command.alias_for}'")
         _track_safe_name(safe_top_level, name, (name,))
-        _validate_command(command, spec, (name,))
+        _validate_command(command, spec, (name,), handler_paths)
 
 
-def _validate_command(command: Command, spec: CliSpec, path: tuple[str, ...]) -> None:
+def _validate_command(command: Command, spec: CliSpec, path: tuple[str, ...], handler_paths: dict[str, str]) -> None:
     location = " ".join(path)
+    if not re.fullmatch(r"[a-z][a-z0-9.-]*", command.handler_id):
+        raise ValueError(f"Command '{location}' has invalid handler_id '{command.handler_id}'")
+    if command.handler_id in handler_paths:
+        raise ValueError(f"Command '{location}' duplicates handler_id used by '{handler_paths[command.handler_id]}'")
+    handler_paths[command.handler_id] = location
+    supported_platforms = {"linux", "macos", "windows"}
+    unknown_platforms = set(command.platforms) - supported_platforms
+    if unknown_platforms:
+        raise ValueError(f"Command '{location}' declares unknown platforms: {sorted(unknown_platforms)}")
+    if len(command.platforms) != len(set(command.platforms)):
+        raise ValueError(f"Command '{location}' declares duplicate platforms")
     if command.value_set and command.value_set not in spec.definitions:
         raise ValueError(f"Command '{location}' references unknown value_set '{command.value_set}'")
     for option in command.completers:
@@ -146,7 +196,7 @@ def _validate_command(command: Command, spec: CliSpec, path: tuple[str, ...]) ->
     safe_children: dict[str, str] = {}
     for name, child in command.subcommands.items():
         _track_safe_name(safe_children, name, (*path, name))
-        _validate_command(child, spec, (*path, name))
+        _validate_command(child, spec, (*path, name), handler_paths)
 
 
 def _track_safe_name(seen: dict[str, str], name: str, path: tuple[str, ...]) -> None:

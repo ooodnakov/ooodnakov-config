@@ -1,0 +1,12 @@
+title = "ooodnakov-config secret scanning"
+
+[allowlist]
+description = "Known public placeholders and generated/reference fixtures only"
+paths = [
+  '''^\.gitleaks\.toml$''',
+  '''^tests/fixtures/''',
+]
+regexes = [
+  '''EXAMPLE_(TOKEN|PASSWORD|SECRET)''',
+  '''SUPER_SECRET_SENTINEL_[A-Za-z0-9_]+''',
+]

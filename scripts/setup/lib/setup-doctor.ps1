@@ -96,8 +96,15 @@ function Test-DoctorOptionalCommand {
 function Test-Doctor {
     Write-UiLine -Role info -Message "Running doctor checks..."
 
-    # Read links from manifest via link_manager.py for doctor checks
-    $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/link_manager.py") -ScriptArgs --repo-root "$RepoRoot" --format text 2>$null
+    Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/transaction_apply.py") -ScriptArgs @("--repo-root", "$RepoRoot", "status", "--check-incomplete")
+    if ($LASTEXITCODE -ne 0) {
+        Write-UiLine -Role missing -Message "incomplete managed-link transaction"
+        Write-UiLine -Role hint -Message "repair: oooconf rollback --last"
+        $script:Failures.Add("doctor incomplete transaction") | Out-Null
+    }
+
+    # Resolve the same profile-filtered link set used by transactional apply.
+    $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/operation_plan.py") -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-managed-links") 2>$null
     if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($linkOutput)) {
         $linkOutput -split "`n" | ForEach-Object {
             if ([string]::IsNullOrWhiteSpace($_)) { return }
@@ -109,28 +116,8 @@ function Test-Doctor {
             Test-DoctorLink -Source $source -Target $target
         }
     } else {
-        # Fallback to hardcoded links for older versions
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/wezterm") -Target (Join-Path $ConfigHome "wezterm")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/yazi") -Target (Join-Path $ConfigHome "yazi")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/lazygit") -Target (Join-Path $ConfigHome "lazygit")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/noctalia") -Target (Join-Path $ConfigHome "noctalia")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/nvim") -Target (Join-Path $ConfigHome "nvim")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov") -Target (Join-Path $ConfigHome "ooodnakov")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ohmyposh/ooodnakov.omp.json") -Target (Join-Path $OhMyPoshDir "ooodnakov.omp.json")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $PowerShellProfileTarget
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/powershell/Microsoft.PowerShell_profile.ps1") -Target $ActivePowerShellProfile
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.ps1") -Target (Join-Path $LocalBinDir "oooconf.ps1")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/oooconf.cmd") -Target (Join-Path $LocalBinDir "oooconf.cmd")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.ps1") -Target (Join-Path $LocalBinDir "o.ps1")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/ooodnakov/bin/o.cmd") -Target (Join-Path $LocalBinDir "o.cmd")
-
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.json") -Target (Join-Path $HomeDir "komorebi.json")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/komorebi.bar.json") -Target (Join-Path $HomeDir "komorebi.bar.json")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/applications.json") -Target (Join-Path $HomeDir "applications.json")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.config/komorebi/whkdrc") -Target (Join-Path $ConfigHome "whkdrc")
-
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/glazewm") -Target (Join-Path $HomeDir ".glzr/glazewm")
-        Test-DoctorLink -Source (Join-Path $RepoRoot "home/.glzr/zebar") -Target (Join-Path $HomeDir ".glzr/zebar")
+        Write-UiLine -Role missing -Message "unable to resolve managed profile links"
+        $script:Failures.Add("doctor profile links") | Out-Null
     }
 
     Test-DoctorCommand -Name "oooconf"

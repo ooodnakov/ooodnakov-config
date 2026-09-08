@@ -160,11 +160,14 @@ function Install-Chocolatey {
         return $false
     }
 
+    $installerPath = $null
     try {
         Write-UiLine -Role info -Message "Installing Chocolatey..."
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        Invoke-RestMethod -Uri "https://community.chocolatey.org/install.ps1" | Invoke-Expression
+        $installerPath = Join-Path ([System.IO.Path]::GetTempPath()) "oooconf-chocolatey-install.ps1"
+        Invoke-WebRequest -Uri "https://community.chocolatey.org/install.ps1" -OutFile $installerPath
+        & $installerPath
         if (Get-Command choco -ErrorAction SilentlyContinue) {
             Add-DependencySummary "choco: installed"
             Add-NewlyAvailableCommand -CommandNames @("choco")
@@ -173,6 +176,10 @@ function Install-Chocolatey {
     } catch {
         Write-Output $_
         Add-Failure "Installing Chocolatey"
+    } finally {
+        if ($installerPath -and (Test-Path $installerPath)) {
+            Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue
+        }
     }
 
     Add-DependencySummary "choco: install attempted"
@@ -520,12 +527,14 @@ function Install-GitHubReleaseDependencyIfMissing {
             return $false
         }
 
-        Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
-        if ($assetName.EndsWith(".zip")) {
-            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
-        } else {
-            tar -xf $archivePath -C $installRoot
-        }
+        Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+            "download", "--archive", $archivePath, "--dependency", $Spec.Key,
+            "--asset", $assetName, "--url", $releaseUrl
+        )
+        Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+            "extract", "--archive", $archivePath, "--dependency", $Spec.Key,
+            "--asset", $assetName, "--destination", $installRoot
+        )
 
         $sourceBinary = Get-ChildItem -Path $installRoot -Recurse -File -Filter $binaryFile | Select-Object -First 1
         if (-not $sourceBinary) {
@@ -807,8 +816,9 @@ function Install-RtkIfMissing {
     $rtkInfo = Get-DepInfo "rtk"
     $rtkVer = if ($rtkInfo.ver) { $rtkInfo.ver } else { "0.37.2" }
     $installRoot = Join-Path $ShareHome "tools/rtk/v$rtkVer"
-    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "rtk-windows-$rtkVer.zip"
-    $releaseUrl = "https://github.com/rtk-ai/rtk/releases/download/v$rtkVer/rtk-x86_64-pc-windows-msvc.zip"
+    $assetName = "rtk-x86_64-pc-windows-msvc.zip"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) $assetName
+    $releaseUrl = "https://github.com/rtk-ai/rtk/releases/download/v$rtkVer/$assetName"
     $sourceBinary = Join-Path $installRoot "rtk.exe"
     $targetBinary = Join-Path $LocalBinDir "rtk.exe"
 
@@ -827,8 +837,14 @@ function Install-RtkIfMissing {
         }
 
         if (-not (Test-Path $sourceBinary)) {
-            Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
-            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+                "download", "--archive", $archivePath, "--dependency", "rtk",
+                "--asset", $assetName, "--url", $releaseUrl
+            )
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+                "extract", "--archive", $archivePath, "--dependency", "rtk",
+                "--asset", $assetName, "--destination", $installRoot
+            )
         }
 
         Copy-Item -Path $sourceBinary -Destination $targetBinary -Force
@@ -903,8 +919,14 @@ function Install-NeovimIfMissing {
         }
 
         if (-not (Test-Path $sourceBinary)) {
-            Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
-            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+                "download", "--archive", $archivePath, "--dependency", "nvim",
+                "--asset", $assetName, "--url", $releaseUrl
+            )
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+                "extract", "--archive", $archivePath, "--dependency", "nvim",
+                "--asset", $assetName, "--destination", $installRoot
+            )
         }
 
         Copy-Item -Path $sourceBinary -Destination $targetBinary -Force
@@ -926,93 +948,36 @@ function Install-NeovimIfMissing {
 
 function Install-TectonicIfMissing {
     if (Test-DependencyStatus -CommandName "tectonic" -SummaryName "tectonic") { return $true }
-
-    if (-not (Confirm-Install "Install Tectonic (modern LaTeX engine) from the official GitHub releases?")) {
+    if (-not (Confirm-Install "Install the pinned Tectonic release through Cargo?")) {
         Add-DependencySummary "tectonic: skipped"
         return $false
     }
 
-    $repo = "tectonic-typesetting/tectonic"
-    $latest = $null
-    try {
-        if ($null -ne (Get-Command gh -ErrorAction SilentlyContinue)) {
-             $latestJson = gh api repos/$repo/releases/latest | ConvertFrom-Json
-             $latest = [pscustomobject]@{ tag_name = $latestJson.tag_name; assets = $latestJson.assets }
-        } else {
-             $latest = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest"
-        }
-    } catch {
-        Write-Warning "Failed to fetch latest Tectonic release info from GitHub API: $($_.Exception.Message)"
+    $spec = Get-DepInfo "tectonic"
+    $version = [string]$spec.ver
+    $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
+    if (-not $cargoCommand -or [string]::IsNullOrWhiteSpace($version)) {
+        Add-DependencySummary "tectonic: missing (requires cargo and a pinned version)"
+        return $false
     }
-
-    if (-not $latest) {
-        # Fallback to hardcoded version if API fails
-        $version = "0.16.9"
-        $tag = "tectonic@0.16.9"
-    } else {
-        $tag = $latest.tag_name
-        $version = $tag -replace '^tectonic@', ''
-    }
-
-    $asset = $null
-    if ($latest) {
-        $asset = $latest.assets | Where-Object { $_.name -match "x86_64-pc-windows-msvc\.zip$" } | Select-Object -First 1
-    }
-
-    $downloadUrl = if ($asset) { $asset.browser_download_url } else {
-        $encodedTag = [uri]::EscapeDataString($tag)
-        "https://github.com/$repo/releases/download/$encodedTag/tectonic-$version-x86_64-pc-windows-msvc.zip"
-    }
-
-    $installRoot = Join-Path $ShareHome "tools/tectonic/v$version"
-    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "tectonic-windows-$version.zip"
-    $sourceBinary = Join-Path $installRoot "tectonic.exe"
-    $targetBinary = Join-Path $LocalBinDir "tectonic.exe"
-
     if ($DryRun) {
-        Write-Output "[dry-run] Download $downloadUrl"
-        Write-Output "[dry-run] Expand-Archive $archivePath -> $installRoot"
-        Write-Output "[dry-run] Copy $sourceBinary -> $targetBinary"
-        Add-DependencySummary "tectonic: install preview via official GitHub release"
+        Write-Output "[dry-run] cargo install tectonic --version $version --locked"
+        Add-DependencySummary "tectonic: install preview via cargo"
         return $false
     }
 
-    $downloadSuccess = Invoke-ActionWithSpinner -Description "Installing Tectonic v$version via GitHub releases" -Action {
-        param($url, $zip, $root, $src, $dst)
-        if (-not (Ensure-Directory -Path $root)) { throw "Failed to create directory $root" }
-        if (-not (Test-Path $src)) {
-            Invoke-WebRequest -Uri $url -OutFile $zip
-            Expand-Archive -Path $zip -DestinationPath $root -Force
-        }
-        Copy-Item -Path $src -Destination $dst -Force
+    if (Invoke-ActionWithSpinner -Description "Installing pinned Tectonic v$version" -Action {
+        param($cmd, $ver)
+        & $cmd install tectonic --version $ver --locked | Out-Null
+    } -ArgumentList $cargoCommand, $version) {
         Update-SessionEnvironment
-    } -ArgumentList $downloadUrl, $archivePath, $installRoot, $sourceBinary, $targetBinary
-
-    if ($downloadSuccess -and (Test-AnyCommand -Names @("tectonic"))) {
-        Add-DependencySummary "tectonic: installed official v$version"
-        Add-NewlyAvailableCommand -CommandNames @("tectonic")
-        if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
-        return $true
-    }
-
-    # Fallback to cargo if download failed
-    $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
-    if ($cargoCommand) {
-        if (Invoke-ActionWithSpinner -Description "Installing tectonic via cargo (fallback)" -Action {
-            param($cmd)
-            & $cmd install tectonic | Out-Null
-        } -ArgumentList $cargoCommand) {
-            if (Get-Command tectonic -ErrorAction SilentlyContinue) {
-                Add-DependencySummary "tectonic: installed (via cargo fallback)"
-                Add-NewlyAvailableCommand -CommandNames @("tectonic")
-                if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
-                return $true
-            }
+        if (Test-AnyCommand -Names @("tectonic")) {
+            Add-DependencySummary "tectonic: installed v$version via cargo"
+            Add-NewlyAvailableCommand -CommandNames @("tectonic")
+            return $true
         }
     }
-
     Add-DependencySummary "tectonic: install attempted"
-    if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
     return $false
 }
 
@@ -1027,8 +992,9 @@ function Install-BitwardenCliIfMissing {
     $bwInfo = Get-DepInfo "bw"
     $bwVer = if ($bwInfo.ver) { $bwInfo.ver } else { "1.22.1" }
     $installRoot = Join-Path $ShareHome "tools/bitwarden-cli/v$bwVer"
-    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) "bw-windows-$bwVer.zip"
-    $releaseUrl = "https://github.com/bitwarden/cli/releases/download/v$bwVer/bw-windows-$bwVer.zip"
+    $assetName = "bw-windows-$bwVer.zip"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) $assetName
+    $releaseUrl = "https://github.com/bitwarden/cli/releases/download/v$bwVer/$assetName"
     $sourceBinary = Join-Path $installRoot "bw.exe"
     $targetBinary = Join-Path $LocalBinDir "bw.exe"
 
@@ -1047,8 +1013,14 @@ function Install-BitwardenCliIfMissing {
         }
 
         if (-not (Test-Path $sourceBinary)) {
-            Invoke-WebRequest -Uri $releaseUrl -OutFile $archivePath
-            Expand-Archive -Path $archivePath -DestinationPath $installRoot -Force
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+                "download", "--archive", $archivePath, "--dependency", "bw",
+                "--asset", $assetName, "--url", $releaseUrl
+            )
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+                "extract", "--archive", $archivePath, "--dependency", "bw",
+                "--asset", $assetName, "--destination", $installRoot
+            )
         }
 
         Copy-Item -Path $sourceBinary -Destination $targetBinary -Force

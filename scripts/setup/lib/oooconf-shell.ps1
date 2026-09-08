@@ -8,6 +8,9 @@ function Run-Python {
     } else {
         & python3 $ScriptPath @ScriptArgs
     }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python helper failed with exit code $LASTEXITCODE`: $ScriptPath"
+    }
 }
 
 function Get-ShellConfigHome {

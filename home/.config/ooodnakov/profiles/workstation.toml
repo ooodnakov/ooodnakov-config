@@ -1,0 +1,6 @@
+version = 1
+
+[profile]
+name = "workstation"
+extends = "terminal"
+capabilities = ["desktop-linux", "desktop-windows", "desktop-macos"]

@@ -1,0 +1,3 @@
+# Machine-local default capability profile.
+# Copy to profile.toml; the destination is ignored by git.
+profile = "terminal"

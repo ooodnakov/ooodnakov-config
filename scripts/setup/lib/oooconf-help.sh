@@ -182,6 +182,7 @@ usage() {
   ui_section_fancy "version" "Global options"
   cat <<EOF
   -C, --repo-root PATH  run against a specific repo checkout
+      --profile NAME    select minimal, terminal, workstation, or developer
   -h, --help            show this help
   -n, --dry-run         add --dry-run to install or update
       --yes-optional    auto-accept optional dependency installs
@@ -201,6 +202,11 @@ EOF
   ui_spacer
   ui_section_fancy "doctor" "Inspect & Validate"
   ui_command_row "doctor" "validate managed symlinks, shell runtimes, and required commands"
+  ui_command_row "status" "summarize profile, links, dependencies, transactions, and drift"
+  ui_command_row "snapshot" "export, inspect, or apply portable settings"
+  ui_command_row "plan" "build a validated text or JSON operation plan"
+  ui_command_row "apply" "transactionally apply managed links"
+  ui_command_row "rollback" "roll back the latest eligible link transaction"
   ui_command_row "dry-run" "preview install flow without mutating filesystem"
   ui_command_row "version" "print CLI version and repo root"
 
@@ -280,7 +286,7 @@ EOF
       ;;
     install)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps]
+Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps] [--profile NAME]
 
 Apply managed config and optional dependency installation.
 Creates symlinks from tracked config in home/ to their target locations,
@@ -290,6 +296,7 @@ Examples:
   oooconf install                      # interactive dependency prompts
   oooconf install --yes-optional       # auto-accept all optional installs
   oooconf install --skip-deps          # apply config without dependency installs
+  oooconf install --profile terminal   # apply only terminal-profile managed links
   oooconf install --dry-run            # preview without making changes
 EOF
       ;;
@@ -310,7 +317,7 @@ EOF
       ;;
     update)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf update [--dry-run] [--yes-optional]
+Usage: oooconf update [--dry-run] [--yes-optional] [--profile NAME]
 
 Pull the repo with --ff-only, then re-run the install flow.
 Use this to update your config to the latest tracked state. It performs
@@ -323,25 +330,85 @@ EOF
       ;;
     doctor)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf doctor
+Usage: oooconf doctor [--format text|json] [--profile NAME]
 
-Validate managed symlinks, shell runtimes, and required commands.
-Checks that managed config links point to valid targets, key tools are
-available on PATH, and pinned zsh runtime checkouts are complete.
+Emit stable, versioned checks with severity and remediation. Exits non-zero when
+one or more checks have error status.
 Examples:
   oooconf doctor                       # run all checks
+  oooconf doctor --format json         # machine-readable contract
+EOF
+      ;;
+    status)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf status [--format text|json] [--profile NAME]
+
+Summarize the selected profile, managed links, dependency availability,
+incomplete transactions, and generated artifact drift without mutation.
+EOF
+      ;;
+    snapshot)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf snapshot <export|inspect|apply> [options]
+
+Export only allowlisted portable preferences and capabilities to TOML, validate
+and preview an import, or apply it through the planner and transaction executor.
+Examples:
+  oooconf snapshot export --profile terminal --output terminal.toml
+  oooconf snapshot inspect terminal.toml --format json
+  oooconf snapshot apply terminal.toml
 EOF
       ;;
     dry-run)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf dry-run
+Usage: oooconf dry-run [--format text|json] [--scope install|links] [--profile NAME] [dependency-key...]
 
-Preview the install flow without mutating the filesystem.
-Shows what links would be created, what files would be backed up, and
-what dependencies would be installed, without making any changes.
+Compatibility alias for `oooconf plan`. Builds a validated operation plan without
+changing the filesystem.
 Examples:
   oooconf dry-run                      # preview install
-  oooconf --yes-optional dry-run       # preview with dependency installs
+  oooconf dry-run --format json        # emit versioned JSON
+EOF
+      ;;
+    plan)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf plan [--format text|json] [--scope install|links] [--profile NAME] [dependency-key...]
+
+Build a deterministic, validated operation plan without changing the filesystem.
+JSON output is versioned for automation. Dependency keys are validated against the
+shared optional dependency catalog.
+
+Examples:
+  oooconf plan
+  oooconf plan --format json
+  oooconf plan --scope links
+  oooconf plan --profile workstation
+  oooconf plan bat zoxide --format json
+EOF
+      ;;
+    apply)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf apply [--platform linux|macos|windows] [--profile NAME]
+
+Validate and transactionally apply managed links. The command uses an exclusive
+cross-process lock and writes an atomic journal under the oooconf state directory.
+An identical second apply is a no-op.
+
+Examples:
+  oooconf apply
+  oooconf apply --platform linux
+EOF
+      ;;
+    rollback)
+      cat <<'EOF' | ui_render_help_block
+Usage: oooconf rollback --last
+
+Reverse the latest eligible managed-link transaction. Rollback removes only links
+created by that transaction, restores its backups, and refuses to delete or replace
+user-modified targets.
+
+Examples:
+  oooconf rollback --last
 EOF
       ;;
     delete)
