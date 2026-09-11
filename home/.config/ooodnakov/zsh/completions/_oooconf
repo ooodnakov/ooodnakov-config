@@ -123,6 +123,8 @@ _oooconf_values_deps_keys=(
   'coreutils-win:Windows Core Utilities (sudo, etc.) for Windows'
   'croc:easily and securely send files between computers'
   's5cmd:parallel S3 and local filesystem operations'
+  'taskwarrior:command-line todo list manager (optional productivity tool)'
+  'taskwarrior-tui:interactive terminal UI for taskwarrior (optional productivity tool)'
 )
 
 typeset -ga _oooconf_values_regions

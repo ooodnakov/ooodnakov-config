@@ -32,11 +32,15 @@ $localBin = Join-Path $HOME ".local/bin"
 $cargoBin = Join-Path $HOME ".cargo/bin"
 $shareBin = Join-Path $env:OOODNAKOV_SHARE_HOME "bin"
 $npmBin = Join-Path $HOME ".npm/bin"
+$bunBin = Join-Path $HOME ".bun/bin"
+$buncacheBin = Join-Path $HOME ".cache/.bun/bin"
 
 Add-PathEntry -PathEntry $localBin
 Add-PathEntry -PathEntry $cargoBin
 Add-PathEntry -PathEntry $shareBin
 Add-PathEntry -PathEntry $npmBin
+Add-PathEntry -PathEntry $bunBin
+Add-PathEntry -PathEntry $buncacheBin
 
 foreach ($brewBin in @("/opt/homebrew/bin", "/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin")) {
     if (Test-Path (Join-Path $brewBin "brew")) {
