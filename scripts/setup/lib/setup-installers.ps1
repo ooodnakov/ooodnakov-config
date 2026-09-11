@@ -512,13 +512,13 @@ function Install-GitHubReleaseDependencyIfMissing {
     # tracked binaries when --latest is requested.
     if ($Spec.Key -ne "bin" -and (Get-Command bin -ErrorAction SilentlyContinue)) {
         if ($DryRun) {
-            Write-Output "[dry-run] bin install github.com/$repo/releases/tag/v$version"
+            Write-Output "[dry-run] bin install --name $assetName github.com/$repo/releases/tag/v$version"
             return $true
         }
         $res = Invoke-ActionWithSpinner -Description "Installing $Description with bin" -Action {
-            param($source)
-            & bin install $source | Out-Null
-        } -ArgumentList "github.com/$repo/releases/tag/v$version"
+            param($source, $asset)
+            & bin install --name $asset $source | Out-Null
+        } -ArgumentList @("github.com/$repo/releases/tag/v$version", $assetName)
         if ($res) {
             Add-DependencySummary "${SummaryName}: managed by bin at v$version"
             Update-SessionEnvironment

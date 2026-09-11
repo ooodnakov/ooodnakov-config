@@ -710,7 +710,10 @@ maybe_install_github_release() {
   # bootstrap. An explicit tag keeps ordinary installs reproducible; `bin
   # update` (invoked by Topgrade) moves tracked binaries to current releases.
   if [ "$key" != "bin" ] && command -v bin >/dev/null 2>&1; then
-    run_with_spinner "Installing $description with bin" bin install "github.com/${repo}/releases/tag/v${version}"
+    if ! run_with_spinner "Installing $description with bin" bin install --name "$asset_name" "github.com/${repo}/releases/tag/v${version}"; then
+      DEPENDENCY_SUMMARY+=("$command_name: bin installation failed")
+      return 1
+    fi
     DEPENDENCY_SUMMARY+=("$command_name: managed by bin at v${version}")
     return 0
   fi

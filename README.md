@@ -387,6 +387,7 @@ Use `oooconf deps` to install optional tools interactively or specifically:
 - `oooconf deps --dry-run` — Preview without installing.
 
 All metadata is in `scripts/optional-deps.toml` (sole source of truth). Run `oooconf lock` after editing.
+GitHub release installs select the catalog's platform asset explicitly, avoiding interactive asset-selection prompts from `bin`.
 
 See [`docs/dependency-decisions.md`](docs/dependency-decisions.md) for the full decision matrix.
 
