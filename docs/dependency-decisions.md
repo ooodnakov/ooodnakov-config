@@ -41,6 +41,8 @@ Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `Bla
 
 The `taskwarrior` and `taskwarrior-tui` entries back the optional productivity capability (the `task` symlinks under `~/.config/task/` and the `tt` alias in `10-shell.zsh`, the p10k taskwarrior segment, and the `taskwarrior.nvim` Lazy plugin). They are part of the optional catalog and are not auto-installed, so users opt in via `oooconf deps taskwarrior taskwarrior-tui` when they want the configured behavior.
 
+Taskwarrior uses the [Homebrew `task` formula](https://formulae.brew.sh/formula/task) on Linux and macOS, avoiding outdated apt packages. Install Homebrew first with `oooconf deps brew` if needed. The TUI continues to use Cargo.
+
 `brew` is optional on both macOS and Linux. It uses Homebrew's official installer with the non-interactive environment flag after the normal `oooconf deps` confirmation path.
 
 - Automated: handled via `[managed-tools]` + `install_managed_tools()`.

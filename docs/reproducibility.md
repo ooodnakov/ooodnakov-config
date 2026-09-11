@@ -52,6 +52,8 @@ Ignored files:
 See [`dependency-decisions.md`](dependency-decisions.md) for the full list of automated, optional, and manual dependencies and how they are installed per platform.
 See `deps.lock.json` for the exact pinned git revisions used by the setup scripts.
 
+Taskwarrior uses Homebrew's `task` formula on Linux and macOS to avoid outdated Linux apt packages. Homebrew must be installed first (`oooconf deps brew`); its formula version follows Homebrew rather than a repository pin.
+
 This keeps the repo small while still making bootstrap deterministic. The refactored setup entrypoints keep dependency metadata centralized in `scripts/optional-deps.toml`; the extracted helper modules only organize implementation details and do not introduce new dependency lists or machine-local state.
 
 Shell runtime state is kept outside the tracked config tree:

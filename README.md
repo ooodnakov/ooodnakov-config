@@ -383,6 +383,7 @@ Use `oooconf deps` to install optional tools interactively or specifically:
 - `oooconf deps --latest <key...>` — Install missing selections, then run Topgrade with bounded retries; its native `bin` step updates tracked GitHub releases. `GITHUB_AUTH_TOKEN` (or `GITHUB_TOKEN`) is forwarded to GitHub release updates.
 - `oooconf deps bin topgrade` — Explicitly install the two primary dependency-management tools; they are also part of the minimal/install bootstrap flow.
 - `oooconf deps brew` — Install Homebrew on macOS or Linux with Homebrew's official installer.
+- `oooconf deps taskwarrior` — Install Taskwarrior through Homebrew (`task`) on Linux and macOS; Linux apt packages are intentionally avoided. Install Homebrew first if needed.
 - `oooconf deps docker` — On systemd Linux, enable and start existing Docker/containerd units at boot.
 - `oooconf deps --dry-run` — Preview without installing.
 
