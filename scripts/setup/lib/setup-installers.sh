@@ -661,6 +661,25 @@ archive_stem() {
   printf '%s\n' "$name"
 }
 
+# Adopt an already-installed GitHub release binary into bin tracking without
+# re-downloading. The caller has already installed/verified the binary; bin
+# records its path, version, URL, and hash so Topgrade's `bin update` upgrades
+# it. Only binaries under $HOME are adopted (never system package-manager files).
+track_bin_managed() {
+  local bin_name repo version asset package_path resolved
+  bin_name="$1"; repo="$2"; version="$3"; asset="$4"; package_path="$5"; resolved="$6"
+  [ -n "$bin_name" ] && [ -n "$repo" ] && [ -n "$version" ] && [ -n "$asset" ] || return 0
+  [ -n "$resolved" ] || return 0
+  case "$resolved" in
+  "$HOME"/*) ;;
+  *) return 0 ;;
+  esac
+  command -v bin >/dev/null 2>&1 || return 0
+  run_python scripts/security/bin_track.py track \
+    --path "$resolved" --name "$bin_name" --repo "$repo" \
+    --version "$version" --asset "$asset" --package-path "$package_path" 2>/dev/null || true
+}
+
 maybe_install_github_release() {
   local key="$1"
   local description="$2"
@@ -670,11 +689,24 @@ maybe_install_github_release() {
   local asset_template="$6"
   local version system arch asset_name release_url archive_path install_root bin_dir extracted_binary target_binary
 
+  version="$(get_dep_field "$key" ver)"
+
   if check_dependency_status "$command_name" "$command_name"; then
+    # Adopt pre-bin installs of GitHub release tools (e.g. croc) so `bin update`
+    # via Topgrade upgrades them. Fresh installs already register via `bin install`.
+    if [ "$key" != "bin" ] && [ -n "$version" ] && [ -n "$repo" ]; then
+      local _sys _arch _asset
+      _sys="$(github_release_system 2>/dev/null || true)"
+      _arch="$(github_release_arch 2>/dev/null || true)"
+      if [ -n "$_sys" ] && [ -n "$_arch" ]; then
+        _asset="$(expand_github_release_template "${asset_template:-${url_template##*/}}" "$version" "$_sys" "$_arch")"
+        track_bin_managed "$command_name" "$repo" "$version" "$_asset" "$command_name" \
+          "$(command -v "$command_name" 2>/dev/null || true)"
+      fi
+    fi
     return 0
   fi
 
-  version="$(get_dep_field "$key" ver)"
   if [ -z "$version" ] || [ -z "$repo" ]; then
     DEPENDENCY_SUMMARY+=("$command_name: missing (github-release metadata incomplete)")
     return 1
@@ -1008,6 +1040,7 @@ maybe_install_rtk() {
     run_cmd mkdir -p "$HOME_DIR/.local/bin"
     run_cmd cp "$tmp_dir/rtk" "$HOME_DIR/.local/bin/rtk"
     run_cmd chmod +x "$HOME_DIR/.local/bin/rtk"
+    track_bin_managed "rtk" "rtk-ai/rtk" "$rtk_ver" "${target_url##*/}" "rtk" "$HOME_DIR/.local/bin/rtk"
     DEPENDENCY_SUMMARY+=("rtk: installed v${rtk_ver}")
   else
     # Fallback to cargo if direct download failed
@@ -1393,9 +1426,14 @@ extract_zip_archive() {
 }
 
 maybe_install_bw() {
-  local archive_path release_url install_root bin_dir extracted_binary target_binary
+  local archive_path release_url install_root bin_dir extracted_binary target_binary bw_ver
+
+  bw_ver="$(get_dep_field bw ver 2>/dev/null || true)"
+  [ -z "$bw_ver" ] && bw_ver="1.22.1"
 
   if command -v bw >/dev/null 2>&1 || [ -x "$STATE_HOME/bin/bw" ]; then
+    track_bin_managed "bw" "bitwarden/cli" "$bw_ver" "bw-linux-${bw_ver}.zip" "bw" \
+      "$(command -v bw 2>/dev/null || printf '%s' "$STATE_HOME/bin/bw")"
     DEPENDENCY_SUMMARY+=("bw: present")
     return 0
   fi
@@ -1424,10 +1462,6 @@ maybe_install_bw() {
     fi
   fi
 
-  local bw_ver
-
-  bw_ver=$(get_managed_tool bw ver)
-  [ -z "$bw_ver" ] && bw_ver="1.22.1"
   release_url="https://github.com/bitwarden/cli/releases/download/v${bw_ver}/bw-linux-${bw_ver}.zip"
   archive_path="${TMPDIR:-/tmp}/bw-linux-${bw_ver}.zip"
   install_root="$STATE_HOME/tools/bitwarden-cli/v${bw_ver}"
@@ -1466,6 +1500,8 @@ maybe_install_bw() {
     DEPENDENCY_SUMMARY+=("bw: install attempted")
     return 1
   }
+
+  track_bin_managed "bw" "bitwarden/cli" "$bw_ver" "bw-linux-${bw_ver}.zip" "bw" "$extracted_binary"
 
   if command -v bw >/dev/null 2>&1 || [ -x "$target_binary" ]; then
     DEPENDENCY_SUMMARY+=("bw: installed official v${bw_ver}")

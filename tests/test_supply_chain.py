@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import io
+import json
 import re
 import sys
 import tarfile
@@ -13,7 +15,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.security import secure_artifact  # noqa: E402
+from scripts.security import bin_track, secure_artifact  # noqa: E402
 
 
 def _catalog() -> dict[str, object]:
@@ -101,3 +103,36 @@ def test_archive_symlinks_are_rejected(tmp_path: Path) -> None:
         bundle.addfile(member)
     with pytest.raises(secure_artifact.IntegrityError, match="unsafe archive member type"):
         secure_artifact.extract_tar(archive, tmp_path / "destination")
+
+
+def test_bin_track_records_binary_without_redownload(tmp_path: Path, monkeypatch) -> None:
+    binary = tmp_path / "bw"
+    binary.write_bytes(b"verified binary bytes")
+    config = tmp_path / "bin-config.json"
+    monkeypatch.setenv("BIN_CONFIG", str(config))
+
+    args = bin_track.argparse.Namespace(
+        path=str(binary),
+        name="bw",
+        repo="bitwarden/cli",
+        version="1.22.1",
+        asset="bw-linux-1.22.1.zip",
+        package_path="bw",
+    )
+
+    assert bin_track.track(args) == 0
+    data = json.loads(config.read_text(encoding="utf-8"))
+    entry = data["bins"][str(binary.resolve())]
+    assert entry["remote_name"] == "bw"
+    assert entry["version"] == "v1.22.1"
+    assert entry["url"] == "https://github.com/bitwarden/cli/releases/tag/v1.22.1"
+    assert entry["provider"] == "github"
+    assert entry["package_path"] == "bw"
+    assert entry["selected_asset"] == "bw-linux-1.22.1.zip"
+    assert entry["hash"] == hashlib.sha256(b"verified binary bytes").hexdigest()
+    # The on-disk binary is never re-downloaded or rewritten.
+    assert binary.read_bytes() == b"verified binary bytes"
+
+    # Idempotent: tracking again replaces the same key instead of duplicating it.
+    assert bin_track.track(args) == 0
+    assert len(json.loads(config.read_text(encoding="utf-8"))["bins"]) == 1

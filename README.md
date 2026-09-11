@@ -388,6 +388,7 @@ Use `oooconf deps` to install optional tools interactively or specifically:
 
 All metadata is in `scripts/optional-deps.toml` (sole source of truth). Run `oooconf lock` after editing.
 GitHub release installs select the catalog's platform asset explicitly, avoiding interactive asset-selection prompts from `bin`.
+GitHub release binaries already installed under the managed tree are adopted into `bin` tracking without re-downloading, so Topgrade's `bin update` step upgrades them.
 Topgrade runs in the foreground so upgrade progress, sudo prompts, and retry questions remain visible; `--yes` accepts package-manager confirmations, not every interactive prompt.
 
 See [`docs/dependency-decisions.md`](docs/dependency-decisions.md) for the full decision matrix.
