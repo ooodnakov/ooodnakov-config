@@ -35,9 +35,11 @@ All decisions, categories, versions, install methods, pins, and reasons are **de
 
 The current optional dependency catalog includes:
 
-`bin`, `topgrade`, `wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `just`, `uv`, `bw`, `node`, `pnpm`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`, `croc`
+`bin`, `topgrade`, `wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `just`, `uv`, `bw`, `node`, `pnpm`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`, `croc`, `s5cmd`, `taskwarrior`, `taskwarrior-tui`
 
 Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`. The `docker` entry is intentionally a configuration helper: it does not install Docker Engine, but on systemd Linux it enables and starts existing Docker and containerd units. Window-manager and agent-adjacent optional entries now include GlazeWM, Zebar, Overline Zebar widgets, RTK, and the Pi coding agent.
+
+The `taskwarrior` and `taskwarrior-tui` entries back the optional productivity capability (the `task` symlinks under `~/.config/task/` and the `tt` alias in `10-shell.zsh`, the p10k taskwarrior segment, and the `taskwarrior.nvim` Lazy plugin). They are part of the optional catalog and are not auto-installed, so users opt in via `oooconf deps taskwarrior taskwarrior-tui` when they want the configured behavior.
 
 `brew` is optional on both macOS and Linux. It uses Homebrew's official installer with the non-interactive environment flag after the normal `oooconf deps` confirmation path.
 
