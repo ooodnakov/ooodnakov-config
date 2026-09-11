@@ -9,7 +9,7 @@ Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 ## Upgrade and Release-Binary Managers
 
 - `marcosnils/bin` is the preferred installer and state tracker for tools distributed as GitHub releases. `oooconf` bootstraps it from versioned, SHA-256-verified upstream executables, then gives it tagged release sources to preserve reproducible initial installs.
-- `topgrade-rs/topgrade` is the preferred upgrade orchestrator. `oooconf deps --latest` ensures both management tools are selected and runs `topgrade --yes`; Topgrade natively includes a `bin` step that executes `bin update`.
+- `topgrade-rs/topgrade` is the preferred upgrade orchestrator. `oooconf deps --latest` ensures both management tools are selected and runs Topgrade with bounded retries, disabled self-update, and non-fatal per-manager warnings; Topgrade natively includes a `bin` step that executes `bin update`. GitHub API access receives `GITHUB_AUTH_TOKEN`, falling back to `GITHUB_TOKEN`.
 - Both managers belong to the minimal dependency profile, integrating them into the normal `oooconf install` bootstrap as well as explicit `oooconf deps bin topgrade` runs.
 
 | Key | Repository | Reason |

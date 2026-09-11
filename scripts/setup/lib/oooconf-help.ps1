@@ -289,15 +289,21 @@ Examples:
         }
         "deps" {
             Write-UiHelpBlock @"
-Usage: oooconf deps [--dry-run] [--all] [dependency-key...]
+Usage: oooconf deps [--dry-run] [--all] [--latest] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
 picker is shown (using gum if available).
+
+Use --latest to run Topgrade with bounded retries and update bin-managed GitHub
+releases. GitHub auth uses GITHUB_AUTH_TOKEN, falling back to GITHUB_TOKEN.
+Individual manager failures are warnings by default; set
+OOODNAKOV_DEPS_LATEST_STRICT=1 to fail instead.
 
 All dependency metadata (including versions, URLs, and install methods) lives exclusively in scripts/optional-deps.toml.
 Examples:
   oooconf deps                         # interactive picker (when gum available)
   oooconf deps key1 key2               # install specific dependency keys
+  oooconf deps --latest key1            # install and update manager-backed tools
   oooconf deps --dry-run               # preview only
   oooconf deps --all                   # install all dependency keys
 "@

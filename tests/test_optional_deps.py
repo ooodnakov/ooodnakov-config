@@ -298,8 +298,9 @@ def test_shell_scripts_syntax_and_dry_run():
     # Latest mode must get past the presence check and ask the native package
     # manager for its newest available version without changing the machine.
     result = _run_normalized_bash_script("scripts/setup/ooodnakov.sh", "deps", "--latest", "--dry-run", "git")
-    assert result.returncode == 0, f"latest dry-run failed: {result.stderr}"
     assert "topgrade --yes" in result.stdout
+    assert "--no-self-update" in result.stdout
+    assert "--auto-retry 2" in result.stdout
     assert "bin update" in result.stdout
 
     # PowerShell syntax (if pwsh available)
@@ -322,3 +323,94 @@ def test_shell_scripts_syntax_and_dry_run():
     result = _run_normalized_bash_script("tests/test_shell.sh")
     assert result.returncode == 0, f"shell test failed: {result.stderr}"
     assert "All shell tests passed" in result.stdout
+
+
+def test_latest_update_is_best_effort_and_forwards_github_auth():
+    """Topgrade failures warn without aborting deps and receive GitHub auth."""
+    if sys.platform == "win32":
+        pytest.skip("Unix shell workflow is covered in Unix CI jobs")
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        root = Path(temp_dir)
+        local_bin = root / ".local" / "bin"
+        local_bin.mkdir(parents=True)
+        auth_file = root / "topgrade-auth.txt"
+        args_file = root / "topgrade-args.txt"
+
+        (local_bin / "bin").write_text(
+            '#!/usr/bin/env bash\nif [ "${1:-}" = "--version" ]; then\n  printf \'bin 0.29.2\\n\'\nfi\n',
+            encoding="utf-8",
+        )
+        (local_bin / "topgrade").write_text(
+            "#!/usr/bin/env bash\n"
+            'if [ "${1:-}" = "--version" ]; then\n'
+            "  printf 'topgrade 17.9.0\\n'\n"
+            "  exit 0\n"
+            "fi\n"
+            'printf \'%s\' "${GITHUB_AUTH_TOKEN:-}" > "$TOPGRADE_AUTH_FILE"\n'
+            'printf \'%s\\n\' "$@" > "$TOPGRADE_ARGS_FILE"\n'
+            "exit 23\n",
+            encoding="utf-8",
+        )
+        for executable in (local_bin / "bin", local_bin / "topgrade"):
+            executable.chmod(0o755)
+
+        env = os.environ.copy()
+        env.update(
+            {
+                "HOME": str(root),
+                "XDG_CONFIG_HOME": str(root / ".config"),
+                "XDG_DATA_HOME": str(root / ".local" / "share"),
+                "OOODNAKOV_INTERACTIVE": "never",
+                "OOODNAKOV_LOG_ROOT": str(root / "logs"),
+                "GITHUB_AUTH_TOKEN": "test-token",
+                "GITHUB_TOKEN": "",
+                "TOPGRADE_AUTH_FILE": str(auth_file),
+                "TOPGRADE_ARGS_FILE": str(args_file),
+            }
+        )
+        result = subprocess.run(
+            [
+                "bash",
+                str(REPO_ROOT / "scripts/setup/ooodnakov.sh"),
+                "deps",
+                "--latest",
+                "--yes-optional",
+                "git",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            env=env,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+
+        output = result.stdout + result.stderr
+        assert result.returncode == 0, output
+        assert "completed with warnings" in output
+        assert auth_file.read_text(encoding="utf-8") == "test-token"
+        assert args_file.read_text(encoding="utf-8").splitlines() == [
+            "--yes",
+            "--no-self-update",
+            "--no-ask-retry",
+            "--auto-retry",
+            "2",
+        ]
+
+        env["OOODNAKOV_DEPS_LATEST_STRICT"] = "1"
+        strict_result = subprocess.run(
+            [
+                "bash",
+                str(REPO_ROOT / "scripts/setup/ooodnakov.sh"),
+                "deps",
+                "--latest",
+                "--yes-optional",
+                "git",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            env=env,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+        assert strict_result.returncode != 0

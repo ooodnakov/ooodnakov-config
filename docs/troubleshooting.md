@@ -21,6 +21,16 @@
 - **Optional dependency not installed** — run `oooconf deps` to see the interactive picker (requires `gum`). Without `gum`, a text prompt lists available keys (from `optional-deps.toml`). Use `oooconf deps <key>` for specific tools.
 - **A tool is listed as "install attempted" but not present** — the installer respects your consent prompt. Re-run `oooconf deps <key>` to retry, or install the tool manually.
 
+## `oooconf deps --latest` update warnings
+
+`--latest` runs Topgrade after installing selected dependencies. It forwards
+`GITHUB_AUTH_TOKEN` (falling back to `GITHUB_TOKEN`) for GitHub release API
+requests, skips Topgrade's self-update, and retries failed update steps twice.
+Topgrade failures from individual package managers are reported as warnings so
+successful dependency installation can finish. Inspect the foreground output
+or the latest setup log; set `OOODNAKOV_DEPS_LATEST_STRICT=1` when automation
+must fail on any Topgrade step failure.
+
 ## Default zsh prompt after install
 
 If zsh opens with the default prompt, check the managed shell runtime:

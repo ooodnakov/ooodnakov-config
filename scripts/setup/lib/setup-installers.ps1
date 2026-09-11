@@ -1201,16 +1201,37 @@ function Install-OptionalDependencies {
 function Invoke-UpgradeOrchestrator {
     if (-not $DepsLatest) { return }
     if ($DryRun) {
-        Write-Output "[dry-run] topgrade --yes (includes bin update for GitHub releases)"
+        Write-Output "[dry-run] topgrade --yes --no-self-update --no-ask-retry --auto-retry 2 (includes bin update for GitHub releases)"
         return
     }
     $topgrade = Get-Command topgrade -ErrorAction SilentlyContinue
     if (-not $topgrade) {
         throw "topgrade is unavailable after dependency installation"
     }
+
+    # bin uses GITHUB_AUTH_TOKEN for GitHub API requests. Fall back to the
+    # conventional GITHUB_TOKEN when the dedicated variable is absent.
+    $githubAuthToken = $env:GITHUB_AUTH_TOKEN
+    if ([string]::IsNullOrWhiteSpace($githubAuthToken)) {
+        $githubAuthToken = $env:GITHUB_TOKEN
+    }
+    if (-not [string]::IsNullOrWhiteSpace($githubAuthToken)) {
+        $env:GITHUB_AUTH_TOKEN = $githubAuthToken
+    }
+
     Write-Output "Checking package managers and bin-managed GitHub releases with Topgrade"
+    $topgradeArgs = @("--yes", "--no-self-update", "--no-ask-retry", "--auto-retry", "2")
     # Keep progress and prompts visible and preserve foreground console input.
-    & $topgrade.Source --yes
-    if ($LASTEXITCODE -ne 0) { throw "Topgrade upgrade orchestration failed" }
+    & $topgrade.Source @topgradeArgs
+    $status = $LASTEXITCODE
+    if ($status -ne 0) {
+        $warning = "topgrade: completed with warnings (exit code $status; one or more update steps failed)"
+        Add-DependencySummary $warning
+        Write-Warning $warning
+        if ($env:OOODNAKOV_DEPS_LATEST_STRICT -eq "1") {
+            throw "Topgrade upgrade orchestration failed with exit code $status"
+        }
+        return
+    }
     Add-DependencySummary "topgrade: completed upgrade orchestration (including bin update)"
 }

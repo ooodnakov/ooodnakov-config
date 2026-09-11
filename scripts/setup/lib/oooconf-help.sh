@@ -307,7 +307,8 @@ Usage: oooconf deps [--dry-run] [--all] [--latest] [dependency-key...]
 Install optional dependencies only. Without dependency keys, an interactive
 gum-based multi-select picker is used when available.
 GitHub release installs are tracked by marcosnils/bin. Use --latest to run
-Topgrade, which upgrades detected package managers and invokes `bin update`.
+Topgrade with bounded retries; it invokes `bin update` and reports individual
+manager failures as warnings. Set OOODNAKOV_DEPS_LATEST_STRICT=1 to fail instead.
 Dependency keys match those defined in deps.lock.json. Common keys include:
 bat, delta, eza, fd, fzf, gum, glow, rg, yazi, ffmpeg, jq, p7zip, poppler, zoxide, and others.
 Examples:

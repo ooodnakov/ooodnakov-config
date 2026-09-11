@@ -834,25 +834,42 @@ maybe_install_github_release() {
 run_upgrade_orchestrator() {
   [ "${DEPS_LATEST:-0}" -eq 1 ] || return 0
   if [ "$DRY_RUN" -eq 1 ]; then
-    ui_line hint "[dry-run] topgrade --yes (includes bin update for GitHub releases)"
+    ui_line hint "[dry-run] topgrade --yes --no-self-update --no-ask-retry --auto-retry 2 (includes bin update for GitHub releases)"
     return 0
   fi
   if ! command -v topgrade >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("topgrade: unavailable; install it with oooconf deps topgrade")
     return 1
   fi
+
+  # bin uses GITHUB_AUTH_TOKEN for GitHub API requests. Prefer its native name,
+  # then accept the conventional GITHUB_TOKEN as a safe fallback.
+  if [ -z "${GITHUB_AUTH_TOKEN:-}" ] && [ -n "${github_auth_token:-}" ]; then
+    GITHUB_AUTH_TOKEN="$github_auth_token"
+  fi
+  if [ -z "${GITHUB_AUTH_TOKEN:-}" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
+    GITHUB_AUTH_TOKEN="$GITHUB_TOKEN"
+  fi
+  [ -n "${GITHUB_AUTH_TOKEN:-}" ] && export GITHUB_AUTH_TOKEN
+
   ui_line info "Checking all package managers and bin-managed GitHub releases with Topgrade"
   local status=0
+  local -a topgrade_args=(--yes --no-self-update --no-ask-retry --auto-retry 2)
   # Topgrade and its child tools need visible prompts and foreground terminal
   # access. Setup logging redirects stdout, so restore the terminal when present.
   if [ -t 0 ] && [ -w /dev/tty ]; then
-    topgrade --yes </dev/tty >/dev/tty 2>&1 || status=$?
+    topgrade "${topgrade_args[@]}" </dev/tty >/dev/tty 2>&1 || status=$?
   else
-    topgrade --yes || status=$?
+    topgrade "${topgrade_args[@]}" || status=$?
   fi
   if [ "$status" -ne 0 ]; then
-    DEPENDENCY_SUMMARY+=("topgrade: upgrade orchestration failed")
-    return 1
+    local warning="topgrade: completed with warnings (exit code $status; one or more update steps failed)"
+    DEPENDENCY_SUMMARY+=("$warning")
+    ui_line warn "$warning"
+    if [ "${OOODNAKOV_DEPS_LATEST_STRICT:-0}" = "1" ]; then
+      return "$status"
+    fi
+    return 0
   fi
   DEPENDENCY_SUMMARY+=("topgrade: completed upgrade orchestration (including bin update)")
 }
