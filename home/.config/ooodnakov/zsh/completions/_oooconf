@@ -38,6 +38,7 @@ _oooconf_commands=(
 typeset -ga _oooconf_global_opts
 _oooconf_global_opts=(
   '--all:select all dependency keys at once'
+  '--latest:check for and install latest manager-backed dependency versions'
   '--skip-deps:skip dependency installation'
   '-C:set repo root path'
   '--repo-root:set repo root path'
@@ -56,6 +57,8 @@ _oooconf_global_opts_with_args=(-C --repo-root)
 
 typeset -ga _oooconf_values_deps_keys
 _oooconf_values_deps_keys=(
+  'bin:marcosnils/bin release binary manager'
+  'topgrade:cross-platform upgrade orchestrator'
   'wget:downloading auxiliary assets and parity with ezsh tooling'
   'git:Git version control'
   'wezterm:WezTerm terminal'
@@ -243,6 +246,7 @@ _oooconf_deps() {
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
     '--all[select all dependency keys at once]' \
+    '--latest[check for and install latest manager-backed versions]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -2107,6 +2111,7 @@ _oooconf_main() {
   typeset -A opt_args
   _arguments -C \
     '--all[select all dependency keys at once]' \
+    '--latest[check for and install latest manager-backed dependency versions]' \
     '--skip-deps[skip dependency installation]' \
     '-C[set repo root path]:value:_files -/' \
     '--repo-root[set repo root path]:value:_files -/' \

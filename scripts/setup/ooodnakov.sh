@@ -73,6 +73,7 @@ dry_run_requested=0
 yes_optional_requested=0
 skip_deps_requested=0
 all_deps_requested=0
+latest_deps_requested=0
 profile_requested=""
 command=""
 
@@ -124,6 +125,10 @@ while [ "$#" -gt 0 ]; do
       all_deps_requested=1
       shift
       ;;
+    --latest)
+      latest_deps_requested=1
+      shift
+      ;;
     --skip-deps)
       skip_deps_requested=1
       shift
@@ -164,6 +169,11 @@ if [ -z "$command" ]; then
   fi
 fi
 
+if [ "$latest_deps_requested" -eq 1 ] && [ "$command" != "deps" ]; then
+  visible_error "--latest is only supported for oooconf deps"
+  exit 1
+fi
+
 
 if should_normalize_global_flags "$command"; then
   normalized_args=()
@@ -183,6 +193,10 @@ if should_normalize_global_flags "$command"; then
         ;;
       --all)
         all_deps_requested=1
+        shift
+        ;;
+      --latest)
+        latest_deps_requested=1
         shift
         ;;
       --profile)

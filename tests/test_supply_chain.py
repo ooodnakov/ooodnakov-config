@@ -63,6 +63,16 @@ def test_digest_mismatch_is_rejected(tmp_path: Path) -> None:
         secure_artifact.verify(artifact, "0" * 64)
 
 
+def test_verified_standalone_executable_can_be_staged(tmp_path: Path) -> None:
+    executable = tmp_path / "tool"
+    executable.write_bytes(b"verified executable")
+    destination = tmp_path / "destination"
+
+    secure_artifact.extract(executable, destination)
+
+    assert (destination / "tool").read_bytes() == b"verified executable"
+
+
 @pytest.mark.parametrize("kind", ("zip", "tar"))
 def test_archive_path_traversal_is_rejected(tmp_path: Path, kind: str) -> None:
     archive = tmp_path / f"payload.{kind}"

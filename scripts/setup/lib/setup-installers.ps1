@@ -456,7 +456,12 @@ function Expand-GitHubReleaseTemplate {
         [string]$Arch
     )
 
-    return $Template.Replace('${ver}', $Version).Replace('${system}', $System).Replace('${arch}', $Arch)
+    $goarch = switch ($Arch) {
+        "x86_64" { "amd64" }
+        "aarch64" { "arm64" }
+        default { $Arch }
+    }
+    return $Template.Replace('${ver}', $Version).Replace('${system}', $System).Replace('${arch}', $Arch).Replace('${goarch}', $goarch)
 }
 
 function Install-GitHubReleaseDependencyIfMissing {
@@ -502,6 +507,25 @@ function Install-GitHubReleaseDependencyIfMissing {
         Expand-GitHubReleaseTemplate -Template $urlTemplate -Version $version -System $system -Arch $arch
     }
 
+    # Once bootstrapped, bin owns GitHub release installations. The explicit
+    # tag preserves normal installs; Topgrade's native bin step upgrades these
+    # tracked binaries when --latest is requested.
+    if ($Spec.Key -ne "bin" -and (Get-Command bin -ErrorAction SilentlyContinue)) {
+        if ($DryRun) {
+            Write-Output "[dry-run] bin install github.com/$repo/releases/tag/v$version"
+            return $true
+        }
+        $res = Invoke-ActionWithSpinner -Description "Installing $Description with bin" -Action {
+            param($source)
+            & bin install $source | Out-Null
+        } -ArgumentList "github.com/$repo/releases/tag/v$version"
+        if ($res) {
+            Add-DependencySummary "${SummaryName}: managed by bin at v$version"
+            Update-SessionEnvironment
+            return $true
+        }
+    }
+
     if (-not (Confirm-Install "Install $Description from the GitHub release archive?")) {
         Add-DependencySummary "${SummaryName}: skipped"
         return $false
@@ -537,6 +561,9 @@ function Install-GitHubReleaseDependencyIfMissing {
         )
 
         $sourceBinary = Get-ChildItem -Path $installRoot -Recurse -File -Filter $binaryFile | Select-Object -First 1
+        if (-not $sourceBinary) {
+            $sourceBinary = Get-ChildItem -Path $installRoot -Recurse -File | Select-Object -First 1
+        }
         if (-not $sourceBinary) {
             Add-DependencySummary "${SummaryName}: install attempted"
             return $false
@@ -1169,4 +1196,22 @@ function Install-OptionalDependencies {
     foreach ($spec in $specs) {
         $null = Install-OptionalDependencyFromSpec -Spec $spec
     }
+}
+
+function Invoke-UpgradeOrchestrator {
+    if (-not $DepsLatest) { return }
+    if ($DryRun) {
+        Write-Output "[dry-run] topgrade --yes (includes bin update for GitHub releases)"
+        return
+    }
+    $topgrade = Get-Command topgrade -ErrorAction SilentlyContinue
+    if (-not $topgrade) {
+        throw "topgrade is unavailable after dependency installation"
+    }
+    $result = Invoke-ActionWithSpinner -Description "Checking package managers and bin-managed GitHub releases with Topgrade" -Action {
+        param($command)
+        & $command --yes | Out-Null
+    } -ArgumentList $topgrade.Source
+    if (-not $result) { throw "Topgrade upgrade orchestration failed" }
+    Add-DependencySummary "topgrade: completed upgrade orchestration (including bin update)"
 }

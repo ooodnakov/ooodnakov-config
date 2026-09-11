@@ -3,7 +3,7 @@ schema_version = 1
 minimum_reader_version = 1
 
 [global]
-options = { "--all" = "select all dependency keys at once", "--skip-deps" = "skip dependency installation", "-C" = "set repo root path", "--repo-root" = "set repo root path", "--profile" = "select portable capability profile", "--print-repo-root" = "print resolved repo root", "-h" = "show help", "--help" = "show help", "-n" = "preview actions without changing files", "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-V" = "show version", "--version" = "show version" }
+options = { "--all" = "select all dependency keys at once", "--latest" = "check for and install latest manager-backed dependency versions", "--skip-deps" = "skip dependency installation", "-C" = "set repo root path", "--repo-root" = "set repo root path", "--profile" = "select portable capability profile", "--print-repo-root" = "print resolved repo root", "-h" = "show help", "--help" = "show help", "-n" = "preview actions without changing files", "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-V" = "show version", "--version" = "show version" }
 completers = { "-C" = "_files -/", "--repo-root" = "_files -/" }
 option_value_sets = { "--profile" = "profiles" }
 
@@ -68,7 +68,7 @@ value_set = "deps_keys"
 handler_id = "oooconf.deps"
 platforms = ["linux", "macos", "windows"]
 description = "install optional dependencies only"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--all" = "select all dependency keys at once", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--all" = "select all dependency keys at once", "--latest" = "check for and install latest manager-backed versions", "-h" = "show help", "--help" = "show help" }
 value_set = "deps_keys"
 
 [commands.update]

@@ -12,7 +12,7 @@
 #   repo, ref    - for git-pinned tools
 #   manager, package, command, winget_id, choco_id (existing)
 #   asset        - GitHub release asset template for github-release manager
-#                  supports ${system}, ${arch}, ${ver}
+#                  supports ${system}, ${arch}, ${goarch}, ${ver}
 #   integrity    - asset-name to lowercase SHA-256 map for every direct archive
 #   checksum_exception - documented reason a pinned script has no published digest
 #
@@ -44,7 +44,42 @@ tools_dir = "~/.local/share/ooodnakov-config/tools"
 
 [minimal]
 # Core tools for basic dotfiles functionality and productivity
-keys = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
+keys = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat", "bin", "topgrade"]
+
+[[deps]]
+key = "bin"
+display = "bin"
+description = "marcosnils/bin release binary manager"
+ver = "0.29.2"
+bin = "bin"
+check = "bin --version"
+linux.manager = "github-release"
+linux.package = "marcosnils/bin"
+linux.asset = "bin_${ver}_linux_${goarch}"
+macos.manager = "github-release"
+macos.package = "marcosnils/bin"
+macos.asset = "bin_${ver}_darwin_${goarch}"
+windows.manager = "github-release"
+windows.package = "marcosnils/bin"
+windows.asset = "bin_${ver}_windows_${goarch}.exe"
+integrity = { "bin_${ver}_linux_amd64" = "1549afe5905ce4663bede857822b7a10c3e9b6cac00a6fc1501e9d5a02d45b77", "bin_${ver}_linux_arm64" = "b1cc4c43d3870cbe977d91a69b08fe85269b0fa101e0baf7f1078a5591fc6868", "bin_${ver}_darwin_amd64" = "eb8f672f608b8e581b9968417c0fa84104e82d3f0defb50c80cdd40827a663a1", "bin_${ver}_darwin_arm64" = "7517c5cf454a8597d12405c5d95016e7eaffeb0b3a38fb1c2368d752df598cbb", "bin_${ver}_windows_amd64.exe" = "8974f8daab930d0a5b56d792cfec8ea5f2820453b5489bb8b23ff50483b7016f", "bin_${ver}_windows_arm64.exe" = "83ef10ca2a74e2f5cf76fe103c74d651127f8f550e090f1b1677f0074756f2a5" }
+
+[[deps]]
+key = "topgrade"
+display = "Topgrade"
+description = "cross-platform upgrade orchestrator"
+ver = "17.9.0"
+bin = "topgrade"
+check = "topgrade --version"
+linux.manager = "github-release"
+linux.package = "topgrade-rs/topgrade"
+linux.asset = "topgrade-v${ver}-${arch}-unknown-linux-gnu.tar.gz"
+macos.manager = "brew"
+macos.package = "topgrade"
+windows.manager = "winget"
+windows.winget_id = "topgrade-rs.topgrade"
+windows.package = "topgrade"
+integrity = { "topgrade-v${ver}-x86_64-unknown-linux-gnu.tar.gz" = "608bde3b699a7971c54cad52f5ced4d7ceea485150026a4ea84b69eec02d8998", "topgrade-v${ver}-aarch64-unknown-linux-gnu.tar.gz" = "f408e860edada66bdb8b6c6808e0343d9351978b62a8aa7d1466cc79e8e2c7d7" }
 
 [[deps]]
 key = "wget"

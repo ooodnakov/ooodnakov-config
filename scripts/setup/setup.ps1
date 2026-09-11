@@ -18,6 +18,8 @@ foreach ($key in $DependencyKeys) {
         $SkipDeps = $true
     } elseif ($key -eq "--all") {
         $filteredKeys += $key
+    } elseif ($key -eq "--latest") {
+        $env:OOODNAKOV_DEPS_LATEST = "1"
     } else {
         $filteredKeys += $key
     }
@@ -49,6 +51,7 @@ $StateHome = Join-Path $HomeDir ".local/state/ooodnakov-config"
 $CacheHome = Join-Path $HomeDir ".cache/ooodnakov-config"
 $ShareHome = Join-Path $HomeDir ".local/share/ooodnakov-config"
 $LocalBinDir = Join-Path $HomeDir ".local/bin"
+$env:PATH = "$(Join-Path $ShareHome 'bin')$([IO.Path]::PathSeparator)$LocalBinDir$([IO.Path]::PathSeparator)$env:PATH"
 $OhMyPoshDir = Join-Path $ConfigHome "ohmyposh"
 $PowerShellConfigDir = Join-Path $ConfigHome "powershell"
 $PowerShellProfileTarget = Join-Path $PowerShellConfigDir "Microsoft.PowerShell_profile.ps1"
@@ -60,6 +63,7 @@ $VerboseMode = if ($env:OOODNAKOV_VERBOSE) { $env:OOODNAKOV_VERBOSE } else { "0"
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/backups" }
 $LogRoot = if ($env:OOODNAKOV_LOG_ROOT) { $env:OOODNAKOV_LOG_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/logs" }
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$DepsLatest = $env:OOODNAKOV_DEPS_LATEST -eq "1"
 
 # All versions/pins now live in optional-deps.toml ONLY (sole source of truth).
 # These variables are removed. Use Get-DepInfo or Get-ManagedTool instead.
@@ -74,6 +78,9 @@ $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 try {
     $allPresent = $false
     $requestedDependencyKeys = @($DependencyKeys | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($Command -eq "deps" -and $DepsLatest) {
+        $requestedDependencyKeys = @($requestedDependencyKeys + @("bin", "topgrade") | Select-Object -Unique)
+    }
 
     # Handle --minimal flag
     if ($requestedDependencyKeys -contains "--minimal") {
@@ -174,6 +181,7 @@ try {
                 Write-Output "[dry-run] install optional dependencies: $($script:SelectedOptionalKeys -join ', ')"
             } else {
                 Install-OptionalDependencies
+                Invoke-UpgradeOrchestrator
             }
             Step-Progress -Status "Writing dependency summary"
             Write-Summary

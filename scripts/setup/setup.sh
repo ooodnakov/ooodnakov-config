@@ -11,6 +11,7 @@ HOME_DIR="${HOME}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME_DIR/.config}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME_DIR/.local/share}"
 STATE_HOME="$DATA_HOME/ooodnakov-config"
+export PATH="$STATE_HOME/bin:$HOME_DIR/.local/bin:$PATH"
 FONT_TARGET_DIR="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
 COMMAND="${1:-install}"
 DRY_RUN=0
@@ -27,6 +28,7 @@ TOOL_SUMMARY=()
 FAILURES=()
 PACKAGE_MANAGER=""
 APT_UPDATED=0
+DEPS_LATEST=0
 LOG_FILE=""
 LOG_LATEST=""
 KNOWN_SETUP_COMMANDS=(install update doctor deps completions link)
@@ -73,6 +75,7 @@ while [ "$#" -gt 0 ]; do
   --yes-optional) INSTALL_OPTIONAL=always ;;
   --minimal) MINIMAL=1 ;;
   --all) ALL_DEPS=1 ;;
+  --latest) DEPS_LATEST=1 ;;
   -h | --help)
     usage
     exit 0
@@ -102,6 +105,15 @@ if [ "${#cli_selected_optional_keys[@]}" -gt 0 ]; then
     IFS=,
     printf '%s' "${cli_selected_optional_keys[*]}"
   )"
+fi
+
+if [ "$COMMAND" = "deps" ] && [ "$DEPS_LATEST" -eq 1 ]; then
+  for upgrade_key in bin topgrade; do
+    case ",$selected_optional_key_csv," in
+    *,"$upgrade_key",*) ;;
+    *) selected_optional_key_csv="${selected_optional_key_csv:+$selected_optional_key_csv,}$upgrade_key" ;;
+    esac
+  done
 fi
 
 case "$COMMAND" in
@@ -255,6 +267,7 @@ if [ "$COMMAND" = "deps" ]; then
   run_cmd mkdir -p "$DATA_HOME" "$STATE_HOME" "$HOME_DIR/.local/bin"
   progress_step "Installing selected optional dependencies"
   install_optional_dependencies
+  run_upgrade_orchestrator || exit 1
   progress_step "Rendering dependency summary"
   print_summary
   echo

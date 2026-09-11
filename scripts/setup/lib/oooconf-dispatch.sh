@@ -27,6 +27,7 @@ exec_setup_command() {
   local setup_args=()
   # Initialize even if empty so ${setup_args[@]+"${setup_args[@]}"} works with set -u
   [ "$all_deps_requested" -eq 1 ] && [ "$setup_command" = "deps" ] && setup_args+=("--all")
+  [ "$latest_deps_requested" -eq 1 ] && [ "$setup_command" = "deps" ] && setup_args+=("--latest")
   setup_args+=("$@")
 
   require_repo_script "$SETUP"

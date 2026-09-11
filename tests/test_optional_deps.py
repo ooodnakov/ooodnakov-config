@@ -104,6 +104,18 @@ def test_defaults_section():
     assert data["defaults"]["bin_dir"] == "~/.local/bin"
 
 
+def test_primary_dependency_managers_are_bootstrapped_and_portable():
+    data = load_deps()
+    by_key = {dependency["key"]: dependency for dependency in data["deps"]}
+
+    assert {"bin", "topgrade"} <= set(by_key)
+    assert by_key["bin"]["linux.package"] == "marcosnils/bin"
+    assert by_key["topgrade"]["linux.package"] == "topgrade-rs/topgrade"
+    assert {"bin", "topgrade"} <= set(data["minimal"]["keys"])
+    topgrade_config = (REPO_ROOT / "home/.config/topgrade/topgrade.toml").read_text(encoding="utf-8")
+    assert "native support for marcosnils/bin" in topgrade_config
+
+
 def test_catalog_output(capsys):
     """Test that output_catalog produces pipe-delimited lines."""
     output_catalog()
@@ -221,7 +233,7 @@ def test_minimal_keys_command_and_legacy_alias(capsys):
     """Test minimal key output and the legacy alias used by older setup scripts."""
     from scripts.cli.read_optional_deps import main
 
-    expected = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
+    expected = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat", "bin", "topgrade"]
     original_argv = sys.argv[:]
     try:
         sys.argv = ["read_optional_deps.py", "minimal"]
@@ -282,6 +294,13 @@ def test_shell_scripts_syntax_and_dry_run():
     assert result.returncode == 0, f"minimal dry-run failed: {result.stderr}"
     assert "dependency summary" in result.stdout.lower()
     assert "optional dependency install complete" in result.stdout.lower()
+
+    # Latest mode must get past the presence check and ask the native package
+    # manager for its newest available version without changing the machine.
+    result = _run_normalized_bash_script("scripts/setup/ooodnakov.sh", "deps", "--latest", "--dry-run", "git")
+    assert result.returncode == 0, f"latest dry-run failed: {result.stderr}"
+    assert "topgrade --yes" in result.stdout
+    assert "bin update" in result.stdout
 
     # PowerShell syntax (if pwsh available)
     if Path("/usr/bin/pwsh").exists() or Path("/usr/local/bin/pwsh").exists():
