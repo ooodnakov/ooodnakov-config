@@ -679,7 +679,8 @@ track_bin_managed() {
   *) return 0 ;;
   esac
   command -v bin >/dev/null 2>&1 || return 0
-  run_python scripts/security/bin_track.py track \
+  [ "${DRY_RUN:-0}" -eq 1 ] && return 0
+  run_python "$REPO_ROOT/scripts/security/bin_track.py" track \
     --path "$resolved" --name "$bin_name" --repo "$repo" \
     --version "$version" --asset "$asset" --package-path "$package_path" 2>/dev/null || true
 }
@@ -696,18 +697,7 @@ maybe_install_github_release() {
   version="$(get_dep_field "$key" ver)"
 
   if check_dependency_status "$command_name" "$command_name"; then
-    # Adopt pre-bin installs of GitHub release tools (e.g. croc) so `bin update`
-    # via Topgrade upgrades them. Fresh installs already register via `bin install`.
-    if [ "$key" != "bin" ] && [ -n "$version" ] && [ -n "$repo" ]; then
-      local _sys _arch _asset
-      _sys="$(github_release_system 2>/dev/null || true)"
-      _arch="$(github_release_arch 2>/dev/null || true)"
-      if [ -n "$_sys" ] && [ -n "$_arch" ]; then
-        _asset="$(expand_github_release_template "${asset_template:-${url_template##*/}}" "$version" "$_sys" "$_arch")"
-        track_bin_managed "$command_name" "$repo" "$version" "$_asset" "$command_name" \
-          "$(command -v "$command_name" 2>/dev/null || true)"
-      fi
-    fi
+    # The post-install adoption sweep records the actual installed version.
     return 0
   fi
 
@@ -1437,8 +1427,6 @@ maybe_install_bw() {
   [ -z "$bw_ver" ] && bw_ver="1.22.1"
 
   if command -v bw >/dev/null 2>&1 || [ -x "$STATE_HOME/bin/bw" ]; then
-    track_bin_managed "bw" "bitwarden/cli" "$bw_ver" "bw-linux-${bw_ver}.zip" "bw" \
-      "$(command -v bw 2>/dev/null || printf '%s' "$STATE_HOME/bin/bw")"
     DEPENDENCY_SUMMARY+=("bw: present")
     return 0
   fi

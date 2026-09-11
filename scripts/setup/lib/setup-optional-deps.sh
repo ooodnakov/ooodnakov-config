@@ -582,4 +582,9 @@ install_optional_dependencies() {
     [ -n "$key" ] || continue
     install_optional_dependency_if_selected "$key" install_optional_dependency_from_catalog "$key" "$manager" || true
   done < <(optional_dependency_catalog)
+  if command -v bin >/dev/null 2>&1; then
+    local -a adopt_args=(adopt --platform "$(detect_platform)" --install-root "$STATE_HOME")
+    [ "${DRY_RUN:-0}" -eq 1 ] && adopt_args+=(--dry-run)
+    run_python "$REPO_ROOT/scripts/security/bin_track.py" "${adopt_args[@]}" || ui_line warn "Could not adopt existing GitHub binaries into bin"
+  fi
 }

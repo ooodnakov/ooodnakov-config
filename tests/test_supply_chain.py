@@ -147,3 +147,109 @@ def test_bin_track_records_binary_without_redownload(tmp_path: Path, monkeypatch
     reloaded = json.loads(config.read_text(encoding="utf-8"))
     assert len(reloaded["bins"]) == 1
     assert reloaded["bins"][str(binary.resolve())]["version"] == "v1.22.1"
+
+
+@pytest.mark.parametrize("system", ["linux", "macos", "windows"])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_adopt_existing_tools_off_path(tmp_path, monkeypatch, system, dry_run):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.setattr(bin_track.shutil, "which", lambda _: None)
+    monkeypatch.setattr(bin_track.platform, "machine", lambda: "x86_64")
+    config = tmp_path / "tracking.json"
+    monkeypatch.setenv("BIN_CONFIG", str(config))
+    binary = tmp_path / ".local/bin" / ("rtk.exe" if system == "windows" else "rtk")
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b"existing release")
+    calls = []
+
+    def version(command, **kwargs):
+        calls.append(command)
+        return bin_track.subprocess.CompletedProcess(command, 0, "rtk 0.30.0\n", "")
+
+    monkeypatch.setattr(bin_track.subprocess, "run", version)
+    args = bin_track.argparse.Namespace(
+        catalog=str(REPO_ROOT / "scripts/optional-deps.toml"), platform=system, install_root=None, dry_run=dry_run
+    )
+    assert bin_track.adopt(args) == 0
+    assert calls == [[str(binary.resolve()), "--version"]]
+    assert binary.read_bytes() == b"existing release"
+    if dry_run:
+        assert not config.exists()
+    else:
+        entry = json.loads(config.read_text())["bins"][str(binary.resolve())]
+        assert entry["version"] == "v0.30.0"
+        assert entry["url"] == "https://github.com/rtk-ai/rtk/releases/tag/v0.30.0"
+        assert entry["package_path"] == binary.name
+        original = config.read_bytes()
+        assert bin_track.adopt(args) == 0
+        assert config.read_bytes() == original
+        assert len(calls) == 1
+
+
+def test_adopt_excludes_external_paths_and_unknown_versions(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    config = tmp_path / "tracking.json"
+    monkeypatch.setenv("BIN_CONFIG", str(config))
+    external = tmp_path / "package-manager/rtk"
+    external.parent.mkdir()
+    external.write_bytes(b"package managed")
+    monkeypatch.setattr(bin_track.shutil, "which", lambda _: str(external))
+    calls = []
+
+    def version(command, **kwargs):
+        calls.append(command)
+        return bin_track.subprocess.CompletedProcess(command, 0, "unknown", "")
+
+    monkeypatch.setattr(bin_track.subprocess, "run", version)
+    args = bin_track.argparse.Namespace(
+        catalog=str(REPO_ROOT / "scripts/optional-deps.toml"), platform="linux", install_root=None, dry_run=False
+    )
+    assert bin_track.adopt(args) == 0
+    assert not calls
+    managed = tmp_path / ".local/bin/rtk"
+    managed.parent.mkdir(parents=True)
+    managed.write_bytes(b"unknown release")
+    assert bin_track.adopt(args) == 0
+    assert calls == [[str(managed.resolve()), "--version"]]
+    assert not config.exists()
+
+
+def test_bin_tracking_rejects_corrupt_config_without_overwriting(tmp_path, monkeypatch):
+    config = tmp_path / "tracking.json"
+    config.write_text('{"bins": broken')
+    monkeypatch.setenv("BIN_CONFIG", str(config))
+    with pytest.raises(ValueError):
+        bin_track.load(config)
+    assert config.read_text() == '{"bins": broken'
+
+
+def test_adopt_managed_symlink_and_catalog_version_command(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    monkeypatch.setattr(bin_track.shutil, "which", lambda _: None)
+    config = tmp_path / "tracking.json"
+    monkeypatch.setenv("BIN_CONFIG", str(config))
+    root = tmp_path / ".local/share/ooodnakov-config"
+    binary = root / "tools/s5cmd/v2.2.0/s5cmd"
+    binary.parent.mkdir(parents=True)
+    binary.write_bytes(b"previous release")
+    link = root / "bin/s5cmd"
+    link.parent.mkdir()
+    try:
+        link.symlink_to(binary)
+    except OSError:
+        pytest.skip("symlink creation unavailable")
+
+    def version(command, **kwargs):
+        assert command == [str(binary.resolve()), "version"]
+        return bin_track.subprocess.CompletedProcess(command, 0, "v2.2.0\n", "")
+
+    monkeypatch.setattr(bin_track.subprocess, "run", version)
+    args = bin_track.argparse.Namespace(
+        catalog=str(REPO_ROOT / "scripts/optional-deps.toml"), platform="linux", install_root=None, dry_run=False
+    )
+    assert bin_track.adopt(args) == 0
+    entry = json.loads(config.read_text())["bins"][str(binary.resolve())]
+    assert entry["selected_asset"] == "s5cmd_2.2.0_Linux-64bit.tar.gz"

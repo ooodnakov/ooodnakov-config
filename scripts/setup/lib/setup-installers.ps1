@@ -1196,6 +1196,16 @@ function Install-OptionalDependencies {
     foreach ($spec in $specs) {
         $null = Install-OptionalDependencyFromSpec -Spec $spec
     }
+    if (Get-Command bin -ErrorAction SilentlyContinue) {
+        $adoptArgs = @("adopt", "--platform", (Detect-Platform), "--install-root", $ShareHome)
+        if ($DryRun) { $adoptArgs += "--dry-run" }
+        try {
+            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/bin_track.py") -ScriptArgs $adoptArgs
+            if ($LASTEXITCODE -ne 0) { Write-Warning "Could not adopt existing GitHub binaries into bin (exit $LASTEXITCODE)" }
+        } catch {
+            Write-Warning "Could not adopt existing GitHub binaries into bin: $_"
+        }
+    }
 }
 
 function Invoke-UpgradeOrchestrator {
