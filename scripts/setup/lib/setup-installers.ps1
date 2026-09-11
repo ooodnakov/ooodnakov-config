@@ -1208,10 +1208,9 @@ function Invoke-UpgradeOrchestrator {
     if (-not $topgrade) {
         throw "topgrade is unavailable after dependency installation"
     }
-    $result = Invoke-ActionWithSpinner -Description "Checking package managers and bin-managed GitHub releases with Topgrade" -Action {
-        param($command)
-        & $command --yes | Out-Null
-    } -ArgumentList $topgrade.Source
-    if (-not $result) { throw "Topgrade upgrade orchestration failed" }
+    Write-Output "Checking package managers and bin-managed GitHub releases with Topgrade"
+    # Keep progress and prompts visible and preserve foreground console input.
+    & $topgrade.Source --yes
+    if ($LASTEXITCODE -ne 0) { throw "Topgrade upgrade orchestration failed" }
     Add-DependencySummary "topgrade: completed upgrade orchestration (including bin update)"
 }

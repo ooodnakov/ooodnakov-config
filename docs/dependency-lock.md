@@ -2,7 +2,7 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-09-10T19:35:39+00:00`
+Generated at (UTC): `2026-09-11T10:01:58+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
@@ -14,6 +14,7 @@ Generated at (UTC): `2026-09-10T19:35:39+00:00`
 | `nvm` | `https://github.com/nvm-sh/nvm.git` | `f695512c80308b3b98e6b3f4da8cf70ad472ccc8` |
 | `oh-my-zsh` | `https://github.com/ohmyzsh/ohmyzsh.git` | `a07126330b9f56f12f1e00ddd29786d35d6e64d9` |
 | `powerlevel10k` | `https://github.com/romkatv/powerlevel10k.git` | `604f19a9eaa18e76db2e60b8d446d5f879065f90` |
+| `s3cmd` | `https://github.com/FFKL/s3cmd-zsh-plugin.git` | `97945760736bee4fd79eb3d357e48bd55d0ee60c` |
 | `todo-txt` | `https://github.com/todotxt/todo.txt-cli.git` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` |
 | `you-should-use` | `https://github.com/MichaelAquilina/zsh-you-should-use.git` | `ff371d6a11b653e1fa8dda4e61c896c78de26bfa` |
 | `zsh-autocomplete` | `https://github.com/marlonrichert/zsh-autocomplete.git` | `20f6c34f20270084b21211428afb6d2534aae8e9` |

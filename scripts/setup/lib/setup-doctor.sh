@@ -106,13 +106,15 @@ run_doctor() {
   doctor_check_managed_repo "oh-my-zsh" "$STATE_HOME/oh-my-zsh" "oh-my-zsh.sh"
   doctor_check_managed_repo "powerlevel10k" "$STATE_HOME/powerlevel10k" "powerlevel10k.zsh-theme"
   doctor_check_managed_repo "k" "$STATE_HOME/oh-my-zsh/custom/plugins/k" "k.sh"
-  doctor_check_managed_repo "zsh-autosuggestions" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions.zsh"
-  doctor_check_managed_repo "zsh-syntax-highlighting" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting.zsh"
-  doctor_check_managed_repo "zsh-history-substring-search" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" "zsh-history-substring-search.zsh"
+  doctor_check_managed_repo "zsh-autosuggestions" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" "zsh-autosuggestions.plugin.zsh"
+  doctor_check_managed_repo "zsh-syntax-highlighting" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" "zsh-syntax-highlighting.plugin.zsh"
+  doctor_check_managed_repo "zsh-history-substring-search" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" "zsh-history-substring-search.plugin.zsh"
+  doctor_check_managed_repo "zsh-fzf-history-search" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-fzf-history-search" "zsh-fzf-history-search.plugin.zsh"
   doctor_check_managed_repo "zsh-autocomplete" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" "zsh-autocomplete.plugin.zsh"
   doctor_check_managed_repo "fzf-tab" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" "fzf-tab.plugin.zsh"
   doctor_check_managed_repo "forgit" "$STATE_HOME/oh-my-zsh/custom/plugins/forgit" "forgit.plugin.zsh"
   doctor_check_managed_repo "you-should-use" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" "you-should-use.plugin.zsh"
+  doctor_check_managed_repo "s3cmd" "$STATE_HOME/oh-my-zsh/custom/plugins/s3cmd" "s3cmd.plugin.zsh"
   if [ -d "$FONT_TARGET_DIR" ]; then
     ui_line ok "fonts dir: $FONT_TARGET_DIR"
   else

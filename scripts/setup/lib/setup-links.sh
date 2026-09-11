@@ -282,6 +282,10 @@ install_managed_tools() {
   history_repo=$(get_managed_tool zsh-history-substring-search repo)
   local history_ref
   history_ref=$(get_managed_tool zsh-history-substring-search ref)
+  local fzfhistory_repo
+  fzfhistory_repo=$(get_managed_tool zsh-fzf-history-search repo)
+  local fzfhistory_ref
+  fzfhistory_ref=$(get_managed_tool zsh-fzf-history-search ref)
   local autocomplete_repo
   autocomplete_repo=$(get_managed_tool zsh-autocomplete repo)
   local autocomplete_ref
@@ -298,6 +302,10 @@ install_managed_tools() {
   youshoulduse_repo=$(get_managed_tool you-should-use repo)
   local youshoulduse_ref
   youshoulduse_ref=$(get_managed_tool you-should-use ref)
+  local s3cmd_repo
+  s3cmd_repo=$(get_managed_tool s3cmd repo)
+  local s3cmd_ref
+  s3cmd_ref=$(get_managed_tool s3cmd ref)
   local autouv_repo
   autouv_repo=$(get_managed_tool auto-uv-env repo)
   local autouv_ref
@@ -316,10 +324,12 @@ install_managed_tools() {
   sync_repo "$autosuggestions_repo" "$autosuggestions_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autosuggestions" && TOOL_SUMMARY+=("zsh-autosuggestions: synced") || TOOL_SUMMARY+=("zsh-autosuggestions: failed")
   sync_repo "$highlighting_repo" "$highlighting_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-syntax-highlighting" && TOOL_SUMMARY+=("zsh-syntax-highlighting: synced") || TOOL_SUMMARY+=("zsh-syntax-highlighting: failed")
   sync_repo "$history_repo" "$history_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-history-substring-search" && TOOL_SUMMARY+=("zsh-history-substring-search: synced") || TOOL_SUMMARY+=("zsh-history-substring-search: failed")
+  sync_repo "$fzfhistory_repo" "$fzfhistory_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-fzf-history-search" && TOOL_SUMMARY+=("zsh-fzf-history-search: synced") || TOOL_SUMMARY+=("zsh-fzf-history-search: failed")
   sync_repo "$autocomplete_repo" "$autocomplete_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/zsh-autocomplete" && TOOL_SUMMARY+=("zsh-autocomplete: synced") || TOOL_SUMMARY+=("zsh-autocomplete: failed")
   sync_repo "$fzftab_repo" "$fzftab_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/fzf-tab" && TOOL_SUMMARY+=("fzf-tab: synced") || TOOL_SUMMARY+=("fzf-tab: failed")
   sync_repo "$forgit_repo" "$forgit_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/forgit" && TOOL_SUMMARY+=("forgit: synced") || TOOL_SUMMARY+=("forgit: failed")
   sync_repo "$youshoulduse_repo" "$youshoulduse_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" && TOOL_SUMMARY+=("you-should-use: synced") || TOOL_SUMMARY+=("you-should-use: failed")
+  sync_repo "$s3cmd_repo" "$s3cmd_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/s3cmd" && TOOL_SUMMARY+=("s3cmd: synced") || TOOL_SUMMARY+=("s3cmd: failed")
 
   run_cmd mkdir -p "$bin_dir"
   run_cmd ln -sfn "$STATE_HOME/todo/todo.sh" "$bin_dir/todo.sh" && TOOL_SUMMARY+=("todo.sh: linked into $bin_dir") || TOOL_SUMMARY+=("todo.sh: link failed")

@@ -87,8 +87,6 @@ plugins=(
   web-search
   zsh-fzf-history-search
   you-should-use
-  zsh-syntax-highlighting
-  zsh-autocomplete
   fzf-tab
   zsh-autosuggestions
   s3cmd
@@ -108,6 +106,15 @@ unset brew_path brew_prefix
 for file in "$ZDOTDIR"/.zshrc.d/*.zsh(N); do
   source "$file"
 done
+
+# Syntax highlighting must be the last plugin, after other widget wrappers.
+plugins+=(zsh-syntax-highlighting)
+
+# Load autocomplete before Oh My Zsh initializes compinit and plugin compdefs.
+# Loading it as an OMZ plugin leaves its deferred compdef active on warm caches.
+if [[ -r "$ZSH_CUSTOM/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh" ]]; then
+  source "$ZSH_CUSTOM/plugins/zsh-autocomplete/zsh-autocomplete.plugin.zsh"
+fi
 
 if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
   source "$ZSH/oh-my-zsh.sh"

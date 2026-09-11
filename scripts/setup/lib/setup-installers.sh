@@ -805,7 +805,16 @@ run_upgrade_orchestrator() {
     DEPENDENCY_SUMMARY+=("topgrade: unavailable; install it with oooconf deps topgrade")
     return 1
   fi
-  if ! run_with_spinner "Checking all package managers and bin-managed GitHub releases with Topgrade" topgrade --yes; then
+  ui_line info "Checking all package managers and bin-managed GitHub releases with Topgrade"
+  local status=0
+  # Topgrade and its child tools need visible prompts and foreground terminal
+  # access. Setup logging redirects stdout, so restore the terminal when present.
+  if [ -t 0 ] && [ -w /dev/tty ]; then
+    topgrade --yes </dev/tty >/dev/tty 2>&1 || status=$?
+  else
+    topgrade --yes || status=$?
+  fi
+  if [ "$status" -ne 0 ]; then
     DEPENDENCY_SUMMARY+=("topgrade: upgrade orchestration failed")
     return 1
   fi

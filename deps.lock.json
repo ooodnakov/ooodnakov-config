@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-09-10T19:35:39+00:00",
+  "generated_at_utc": "2026-09-11T10:01:58+00:00",
   "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
@@ -41,6 +41,11 @@
       "name": "powerlevel10k",
       "repo": "https://github.com/romkatv/powerlevel10k.git",
       "ref": "604f19a9eaa18e76db2e60b8d446d5f879065f90"
+    },
+    {
+      "name": "s3cmd",
+      "repo": "https://github.com/FFKL/s3cmd-zsh-plugin.git",
+      "ref": "97945760736bee4fd79eb3d357e48bd55d0ee60c"
     },
     {
       "name": "todo-txt",
