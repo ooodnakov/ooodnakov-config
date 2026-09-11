@@ -10,8 +10,8 @@ hash = "ed178d62e083f45b92da8db8ec9d0d13"
 
 [[plugin.deps]]
 use = "yazi-rs/plugins:git"
-rev = "1db18bb"
-hash = "8f31a11b21a4c104658f528f88f1a620"
+rev = "6f26ae04ba2e4763faada6a7997ae8b57c158cdb"
+hash = "ce345e7e8baed03a2561b314fa85e59a"
 
 [[plugin.deps]]
 use = "yazi-rs/plugins:jump-to-char"
