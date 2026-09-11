@@ -863,9 +863,8 @@ linux.manager = "apt"
 linux.package = "taskwarrior"
 macos.manager = "brew"
 macos.package = "taskwarrior"
-windows.manager = "winget"
-windows.winget_id = "RustemMusayev.Taskwarrior"
-windows.package = "taskwarrior"
+windows.manager = "custom"
+windows.command = "not available on Windows"
 
 [[deps]]
 key = "taskwarrior-tui"
