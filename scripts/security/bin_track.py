@@ -68,6 +68,13 @@ def track(args: argparse.Namespace) -> int:
     data.setdefault("default_path", str(Path.home() / ".local" / "bin"))
     data.setdefault("bins", {})
 
+    # Adopt only: never overwrite an entry bin already tracks. bin may have
+    # upgraded the binary past the catalog pin (Topgrade's native `bin update`);
+    # re-recording the pinned version would regress that tracking record.
+    if str(binary) in data["bins"]:
+        print(f"already tracked {args.name} at {binary}")
+        return 0
+
     version = f"v{args.version.lstrip('v')}"
     entry = {
         "path": str(binary),

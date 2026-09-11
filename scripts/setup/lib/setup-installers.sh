@@ -577,7 +577,11 @@ resolve_nvim_command() {
   return 1
 }
 
-have_supported_nvim() {
+# Neovim is pinned to a GitHub release rather than a system package. Consider it
+# installed only when the managed binary under the data tree is present and new
+# enough, so a system package never satisfies the dependency.
+have_managed_nvim() {
+  [ -x "$STATE_HOME/bin/nvim" ] || return 1
   local version
   version="$(get_nvim_version 2>/dev/null)" || return 1
   [ -n "$version" ] && version_gte "$version" "$NEOVIM_MIN_VERSION"
@@ -859,6 +863,16 @@ get_neovim_release_version() {
   printf '%s\n' "${version:-0.12.1}"
 }
 
+neovim_release_asset() {
+  case "$(uname -s):$(uname -m)" in
+  Linux:x86_64 | Linux:amd64) printf 'nvim-linux-x86_64.tar.gz' ;;
+  Linux:aarch64 | Linux:arm64) printf 'nvim-linux-arm64.tar.gz' ;;
+  Darwin:x86_64 | Darwin:amd64) printf 'nvim-macos-x86_64.tar.gz' ;;
+  Darwin:aarch64 | Darwin:arm64) printf 'nvim-macos-arm64.tar.gz' ;;
+  *) return 1 ;;
+  esac
+}
+
 install_pinned_neovim_unix() {
   local version asset_name extracted_dir release_url os
   local tools_root install_root bin_dir archive_path
@@ -866,28 +880,11 @@ install_pinned_neovim_unix() {
   version="$(get_neovim_release_version)"
   os="$(uname -s)"
 
-  case "$os:$(uname -m)" in
-  Linux:x86_64 | Linux:amd64)
-    asset_name="nvim-linux-x86_64.tar.gz"
-    extracted_dir="nvim-linux-x86_64"
-    ;;
-  Linux:aarch64 | Linux:arm64)
-    asset_name="nvim-linux-arm64.tar.gz"
-    extracted_dir="nvim-linux-arm64"
-    ;;
-  Darwin:x86_64 | Darwin:amd64)
-    asset_name="nvim-macos-x86_64.tar.gz"
-    extracted_dir="nvim-macos-x86_64"
-    ;;
-  Darwin:aarch64 | Darwin:arm64)
-    asset_name="nvim-macos-arm64.tar.gz"
-    extracted_dir="nvim-macos-arm64"
-    ;;
-  *)
+  asset_name="$(neovim_release_asset)" || {
     echo "Unsupported platform for pinned Neovim install: $os $(uname -m)" >&2
     return 1
-    ;;
-  esac
+  }
+  extracted_dir="${asset_name%.tar.gz}"
 
   release_url="https://github.com/neovim/neovim/releases/download/v${version}/${asset_name}"
   tools_root="$STATE_HOME/tools/neovim"
@@ -912,48 +909,39 @@ install_pinned_neovim_unix() {
   fi
 
   run_cmd ln -sfn "$install_root/$extracted_dir/bin/nvim" "$bin_dir/nvim" || return 1
+
+  track_bin_managed "nvim" "neovim/neovim" "$version" "$asset_name" "nvim" "$install_root/$extracted_dir/bin/nvim"
 }
 
 maybe_install_neovim() {
   local _manager="$1"
-  local version version_before version_after
+  local version
 
   version="$(get_neovim_release_version)"
 
-  if have_supported_nvim; then
+  if have_managed_nvim; then
     DEPENDENCY_SUMMARY+=("nvim: present ($(get_nvim_version))")
     return 0
-  fi
-
-  version_before="$(get_nvim_version 2>/dev/null || true)"
-  if [ -n "$version_before" ] && is_interactive; then
-    echo "Detected Neovim $version_before, but LazyVim requires >= $NEOVIM_MIN_VERSION." >/dev/tty
   fi
 
   case "$(uname -s)" in
   Linux | Darwin)
     if prompt_yes_no "Install pinned Neovim v${version} from the official GitHub release?"; then
-      if install_pinned_neovim_unix && have_supported_nvim; then
+      if install_pinned_neovim_unix && have_managed_nvim; then
         DEPENDENCY_SUMMARY+=("nvim: installed official v$(get_nvim_version)")
         return 0
       fi
       DEPENDENCY_SUMMARY+=("nvim: official install attempted")
       return 1
     fi
+    DEPENDENCY_SUMMARY+=("nvim: skipped")
+    return 0
     ;;
   *)
     DEPENDENCY_SUMMARY+=("nvim: missing (unsupported platform for release install)")
     return 1
     ;;
   esac
-
-  version_after="$(get_nvim_version 2>/dev/null || true)"
-  if [ -n "$version_after" ]; then
-    DEPENDENCY_SUMMARY+=("nvim: present but too old ($version_after < $NEOVIM_MIN_VERSION)")
-  else
-    DEPENDENCY_SUMMARY+=("nvim: missing")
-  fi
-  return 1
 }
 
 maybe_note_dependency() {

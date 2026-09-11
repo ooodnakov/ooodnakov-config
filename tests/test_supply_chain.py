@@ -133,6 +133,17 @@ def test_bin_track_records_binary_without_redownload(tmp_path: Path, monkeypatch
     # The on-disk binary is never re-downloaded or rewritten.
     assert binary.read_bytes() == b"verified binary bytes"
 
-    # Idempotent: tracking again replaces the same key instead of duplicating it.
-    assert bin_track.track(args) == 0
-    assert len(json.loads(config.read_text(encoding="utf-8"))["bins"]) == 1
+    # Adopt-only: tracking an already-tracked path must not overwrite the record,
+    # even when called with a different (stale) pinned version.
+    stale = bin_track.argparse.Namespace(
+        path=str(binary),
+        name="bw",
+        repo="bitwarden/cli",
+        version="9.9.9",
+        asset="bw-linux-9.9.9.zip",
+        package_path="bw",
+    )
+    assert bin_track.track(stale) == 0
+    reloaded = json.loads(config.read_text(encoding="utf-8"))
+    assert len(reloaded["bins"]) == 1
+    assert reloaded["bins"][str(binary.resolve())]["version"] == "v1.22.1"
