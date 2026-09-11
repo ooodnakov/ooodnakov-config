@@ -636,10 +636,14 @@ expand_github_release_template() {
   local version="$2"
   local system="$3"
   local arch="$4"
+  local goarch="$arch"
+  [ "$goarch" = "x86_64" ] && goarch="amd64"
+  [ "$goarch" = "aarch64" ] && goarch="arm64"
 
   template="${template//\$\{ver\}/$version}"
   template="${template//\$\{system\}/$system}"
   template="${template//\$\{arch\}/$arch}"
+  template="${template//\$\{goarch\}/$goarch}"
   printf '%s\n' "$template"
 }
 
@@ -699,6 +703,15 @@ maybe_install_github_release() {
 
   if ! prompt_yes_no "Install $command_name for $description from the GitHub release archive?"; then
     DEPENDENCY_SUMMARY+=("$command_name: skipped")
+    return 0
+  fi
+
+  # bin owns GitHub release installs after its small, checksum-verified
+  # bootstrap. An explicit tag keeps ordinary installs reproducible; `bin
+  # update` (invoked by Topgrade) moves tracked binaries to current releases.
+  if [ "$key" != "bin" ] && command -v bin >/dev/null 2>&1; then
+    run_with_spinner "Installing $description with bin" bin install "github.com/${repo}/releases/tag/v${version}"
+    DEPENDENCY_SUMMARY+=("$command_name: managed by bin at v${version}")
     return 0
   fi
 
@@ -765,8 +778,7 @@ maybe_install_github_release() {
       extracted_binary="$install_root/$(archive_stem "$asset_name")/$command_name"
     fi
     if [ -z "$extracted_binary" ]; then
-      DEPENDENCY_SUMMARY+=("$command_name: install attempted")
-      return 1
+      extracted_binary="$(find "$install_root" -type f 2>/dev/null | head -n 1)"
     fi
 
     run_cmd chmod u=rwx,go=rx "$extracted_binary" || true
@@ -778,6 +790,23 @@ maybe_install_github_release() {
   else
     DEPENDENCY_SUMMARY+=("$command_name: install attempted")
   fi
+}
+
+run_upgrade_orchestrator() {
+  [ "${DEPS_LATEST:-0}" -eq 1 ] || return 0
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ui_line hint "[dry-run] topgrade --yes (includes bin update for GitHub releases)"
+    return 0
+  fi
+  if ! command -v topgrade >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("topgrade: unavailable; install it with oooconf deps topgrade")
+    return 1
+  fi
+  if ! run_with_spinner "Checking all package managers and bin-managed GitHub releases with Topgrade" topgrade --yes; then
+    DEPENDENCY_SUMMARY+=("topgrade: upgrade orchestration failed")
+    return 1
+  fi
+  DEPENDENCY_SUMMARY+=("topgrade: completed upgrade orchestration (including bin update)")
 }
 
 get_neovim_release_version() {

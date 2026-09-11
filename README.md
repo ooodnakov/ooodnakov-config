@@ -380,6 +380,8 @@ Use `oooconf deps` to install optional tools interactively or specifically:
 - `oooconf deps` — Interactive picker (requires `gum`).
 - `oooconf deps --minimal` — Install core minimal setup (git, zsh, uv, oh-my-posh, gum, rg, fd, bat).
 - `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
+- `oooconf deps --latest <key...>` — Install missing selections, then let Topgrade upgrade detected package managers and its native `bin` step update GitHub releases tracked by `marcosnils/bin`.
+- `oooconf deps bin topgrade` — Explicitly install the two primary dependency-management tools; they are also part of the minimal/install bootstrap flow.
 - `oooconf deps brew` — Install Homebrew on macOS or Linux with Homebrew's official installer.
 - `oooconf deps docker` — On systemd Linux, enable and start existing Docker/containerd units at boot.
 - `oooconf deps --dry-run` — Preview without installing.

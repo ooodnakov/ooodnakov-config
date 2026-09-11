@@ -6,6 +6,12 @@
 
 Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 
+## Upgrade and Release-Binary Managers
+
+- `marcosnils/bin` is the preferred installer and state tracker for tools distributed as GitHub releases. `oooconf` bootstraps it from versioned, SHA-256-verified upstream executables, then gives it tagged release sources to preserve reproducible initial installs.
+- `topgrade-rs/topgrade` is the preferred upgrade orchestrator. `oooconf deps --latest` ensures both management tools are selected and runs `topgrade --yes`; Topgrade natively includes a `bin` step that executes `bin update`.
+- Both managers belong to the minimal dependency profile, integrating them into the normal `oooconf install` bootstrap as well as explicit `oooconf deps bin topgrade` runs.
+
 | Key | Repository | Reason |
 | --- | --- | --- |
 | `oh-my-zsh` | ohmyzsh/ohmyzsh | Zsh framework required by tracked `.zshrc` |
@@ -29,7 +35,7 @@ All decisions, categories, versions, install methods, pins, and reasons are **de
 
 The current optional dependency catalog includes:
 
-`wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `just`, `uv`, `bw`, `node`, `pnpm`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`, `croc`
+`bin`, `topgrade`, `wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `just`, `uv`, `bw`, `node`, `pnpm`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`, `croc`
 
 Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`. The `docker` entry is intentionally a configuration helper: it does not install Docker Engine, but on systemd Linux it enables and starts existing Docker and containerd units. Window-manager and agent-adjacent optional entries now include GlazeWM, Zebar, Overline Zebar widgets, RTK, and the Pi coding agent.
 

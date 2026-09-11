@@ -11,6 +11,7 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | Option | Description |
 |---|---|
 | `--all` | select all dependency keys at once |
+| `--latest` | check for and install latest manager-backed dependency versions |
 | `--skip-deps` | skip dependency installation |
 | `-C` | set repo root path |
 | `--repo-root` | set repo root path |
@@ -30,7 +31,7 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 |---|---|---|---|---|
 | `oooconf bootstrap` | clone or update the repo, then run install | linux, macos | `oooconf.bootstrap` | — |
 | `oooconf install` | apply managed config | linux, macos, windows | `oooconf.install` | `--dry-run`, `--yes-optional`, `--skip-deps`, `--profile`, `-h`, `--help` |
-| `oooconf deps` | install optional dependencies only | linux, macos, windows | `oooconf.deps` | `--dry-run`, `--yes-optional`, `--all`, `-h`, `--help` |
+| `oooconf deps` | install optional dependencies only | linux, macos, windows | `oooconf.deps` | `--dry-run`, `--yes-optional`, `--all`, `--latest`, `-h`, `--help` |
 | `oooconf update` | update the repo, then re-run install | linux, macos, windows | `oooconf.update` | `--dry-run`, `--yes-optional`, `--profile`, `-h`, `--help` |
 | `oooconf delta` | inject or manage git-delta gitconfig | linux, macos, windows | `oooconf.delta` | — |
 | `oooconf doctor` | run structured health checks | linux, macos, windows | `oooconf.doctor` | `--format`, `--platform`, `--profile` |

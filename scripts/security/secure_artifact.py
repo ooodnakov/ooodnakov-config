@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import re
 import shutil
 import stat
 import sys
@@ -43,7 +44,12 @@ def expected_digest(dependency: str, asset: str, catalog: Path = CATALOG) -> str
         if not isinstance(integrity, dict):
             break
         for template, digest in integrity.items():
-            if template.replace("${ver}", version) == asset and isinstance(digest, str):
+            expanded = template.replace("${ver}", version)
+            pattern = re.escape(expanded)
+            pattern = pattern.replace(re.escape("${arch}"), r"(?:x86_64|aarch64|i686)")
+            pattern = pattern.replace(re.escape("${goarch}"), r"(?:amd64|arm64|386)")
+            pattern = pattern.replace(re.escape("${system}"), r"(?:linux|darwin|windows)")
+            if re.fullmatch(pattern, asset) and isinstance(digest, str):
                 normalized = digest.lower().removeprefix("sha256:")
                 if len(normalized) == 64 and all(character in "0123456789abcdef" for character in normalized):
                     return normalized
@@ -110,7 +116,11 @@ def extract(archive: Path, destination: Path) -> None:
     elif archive.name.endswith((".tar.gz", ".tgz", ".tar.xz", ".tar.bz2")):
         extract_tar(archive, destination)
     else:
-        raise IntegrityError(f"unsupported archive format: {archive.name}")
+        # Some release projects publish a verified executable directly rather
+        # than wrapping it in an archive. Preserve its release filename; the
+        # caller chooses the final command name after verification.
+        destination.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(archive, destination / archive.name)
 
 
 def download(url: str, output: Path, expected: str) -> None:

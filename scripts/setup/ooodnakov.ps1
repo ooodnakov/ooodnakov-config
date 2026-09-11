@@ -97,6 +97,7 @@ $dryRunRequested = $false
 $yesOptionalRequested = $false
 $skipDepsRequested = $false
 $allDepsRequested = $false
+$latestDepsRequested = $false
 $profileRequested = $null
 $command = $null
 $remaining = [System.Collections.Generic.List[string]]::new()
@@ -163,6 +164,9 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         "--all" {
             $allDepsRequested = $true
         }
+        "--latest" {
+            $latestDepsRequested = $true
+        }
         "--profile" {
             if ($i + 1 -ge $Arguments.Count) {
                 throw "Missing value for --profile"
@@ -206,6 +210,10 @@ if (-not $command) {
     }
 }
 
+if ($latestDepsRequested -and $command -ne "deps") {
+    throw "--latest is only supported for oooconf deps"
+}
+
 
 if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
     $normalizedRemaining = @()
@@ -236,6 +244,9 @@ if ($yesOptionalRequested) {
 }
 if ($profileRequested) {
     $env:OOODNAKOV_PROFILE = $profileRequested
+}
+if ($latestDepsRequested) {
+    $env:OOODNAKOV_DEPS_LATEST = "1"
 }
 
 

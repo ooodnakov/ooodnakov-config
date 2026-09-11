@@ -2,7 +2,7 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-09-07T14:44:04+00:00`
+Generated at (UTC): `2026-09-10T19:35:39+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
@@ -26,6 +26,14 @@ Generated at (UTC): `2026-09-07T14:44:04+00:00`
 
 | Dependency | Version | Asset | SHA-256 |
 | --- | --- | --- | --- |
+| `bin` | `0.29.2` | `bin_0.29.2_darwin_amd64` | `eb8f672f608b8e581b9968417c0fa84104e82d3f0defb50c80cdd40827a663a1` |
+| `bin` | `0.29.2` | `bin_0.29.2_darwin_arm64` | `7517c5cf454a8597d12405c5d95016e7eaffeb0b3a38fb1c2368d752df598cbb` |
+| `bin` | `0.29.2` | `bin_0.29.2_linux_amd64` | `1549afe5905ce4663bede857822b7a10c3e9b6cac00a6fc1501e9d5a02d45b77` |
+| `bin` | `0.29.2` | `bin_0.29.2_linux_arm64` | `b1cc4c43d3870cbe977d91a69b08fe85269b0fa101e0baf7f1078a5591fc6868` |
+| `bin` | `0.29.2` | `bin_0.29.2_windows_amd64.exe` | `8974f8daab930d0a5b56d792cfec8ea5f2820453b5489bb8b23ff50483b7016f` |
+| `bin` | `0.29.2` | `bin_0.29.2_windows_arm64.exe` | `83ef10ca2a74e2f5cf76fe103c74d651127f8f550e090f1b1677f0074756f2a5` |
+| `topgrade` | `17.9.0` | `topgrade-v17.9.0-aarch64-unknown-linux-gnu.tar.gz` | `f408e860edada66bdb8b6c6808e0343d9351978b62a8aa7d1466cc79e8e2c7d7` |
+| `topgrade` | `17.9.0` | `topgrade-v17.9.0-x86_64-unknown-linux-gnu.tar.gz` | `608bde3b699a7971c54cad52f5ced4d7ceea485150026a4ea84b69eec02d8998` |
 | `bat` | `0.26.1` | `bat-v0.26.1-aarch64-apple-darwin.tar.gz` | `e30beff26779c9bf60bb541e1d79046250cb74378f2757f8eb250afddb19e114` |
 | `bat` | `0.26.1` | `bat-v0.26.1-aarch64-pc-windows-msvc.zip` | `af07dd1939e99f7f5892d197fc5653cb8cb6c5999552731135ad156eca7e38a5` |
 | `bat` | `0.26.1` | `bat-v0.26.1-aarch64-unknown-linux-musl.tar.gz` | `6369242c584065f195fb20cb36fbd7cb63ae690605bbe89868a7596b596c2c23` |

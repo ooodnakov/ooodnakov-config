@@ -367,7 +367,7 @@ def test_minimal_dependency_keys_exist_in_catalog() -> None:
     """Ensure the documented minimal set stays backed by real optional dependency records."""
     data = load_deps()
     minimal_keys = data.get("minimal", {}).get("keys", [])
-    assert minimal_keys == ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat"]
+    assert minimal_keys == ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat", "bin", "topgrade"]
     assert set(minimal_keys) <= set(_catalog_keys())
 
 

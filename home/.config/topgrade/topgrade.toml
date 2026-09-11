@@ -1,0 +1,4 @@
+[misc]
+# Topgrade has native support for marcosnils/bin. Keep the `bin` step enabled so
+# every `topgrade` run executes `bin update` for tracked GitHub release tools.
+show_skipped = true
