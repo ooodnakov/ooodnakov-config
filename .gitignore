@@ -83,6 +83,7 @@ home/.pi-lens/probe-cache.json
 .qwen
 .gemini
 .claude
+.commandcode
 
 home/.config/ooodnakov/local/bw-session
 pwsh_dir/
