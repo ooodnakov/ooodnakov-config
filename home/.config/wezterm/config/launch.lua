@@ -9,13 +9,14 @@ local options = {
 }
 
 if platform.is_win then
-   options.default_prog = {'pwsh', '-NoLogo'}
+   local pwsh_path = 'C:/Program Files/PowerShell/7/pwsh.exe'
+   options.default_prog = { pwsh_path, '-NoLogo' }
    options.launch_menu = {
       {
          label = 'MSYS2 UCRT64 Zsh',
          args = { msys2_shell, '-defterm', '-here', '-no-start', '-ucrt64', '-shell', 'zsh' },
       },
-      { label = 'PowerShell Core', args = { 'pwsh', '-NoLogo' } },
+      { label = 'PowerShell Core', args = { pwsh_path, '-NoLogo' } },
       { label = 'Command Prompt', args = { 'cmd' } },
       { label = 'Nushell', args = { 'nu' } },
    }
