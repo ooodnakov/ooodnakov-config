@@ -34,9 +34,19 @@ binds {
     XF86AudioPlay                       allow-when-locked=true { spawn-sh "noctalia msg media toggle"; }
     XF86AudioPause                      allow-when-locked=true { spawn-sh "noctalia msg media toggle"; }
 
+    // AltGr/Mod5 media layer from keyboard_layouts/ul_combo.xkb.
+    Mod5+F3                             allow-when-locked=true { spawn-sh "noctalia msg volume-mute"; }
+    Mod5+F4                             allow-when-locked=true { spawn-sh "noctalia msg volume-down"; }
+    Mod5+F5                             allow-when-locked=true { spawn-sh "noctalia msg volume-up"; }
+    Mod5+F6                             allow-when-locked=true { spawn-sh "noctalia msg media previous"; }
+    Mod5+F7                             allow-when-locked=true { spawn-sh "noctalia msg media toggle"; }
+    Mod5+F8                             allow-when-locked=true { spawn-sh "noctalia msg media next"; }
+
     // Brightness controls.
     XF86MonBrightnessUp                 allow-when-locked=true { spawn-sh "noctalia msg brightness-up"; }
     XF86MonBrightnessDown               allow-when-locked=true { spawn-sh "noctalia msg brightness-down"; }
+    Mod5+F1                             allow-when-locked=true { spawn-sh "noctalia msg brightness-down"; }
+    Mod5+F2                             allow-when-locked=true { spawn-sh "noctalia msg brightness-up"; }
 
     // Window movement and focus.
     Mod+Q                               { spawn-sh "$HOME/.config/ooodnakov/local/scripts/niri-close-window.sh"; }
