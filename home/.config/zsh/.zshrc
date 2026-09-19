@@ -497,3 +497,18 @@ function y() {
 	rm -f -- "$tmp"
 }
 
+# Keep plain history navigation after plugins initialize. Oh My Zsh enables
+# application cursor mode, so arrows can send ESC O A/B instead of ESC [ A/B.
+for ooodnakov_keymap in emacs viins vicmd; do
+  bindkey -M "$ooodnakov_keymap" '^[[A' up-line-or-history
+  bindkey -M "$ooodnakov_keymap" '^[[B' down-line-or-history
+  bindkey -M "$ooodnakov_keymap" '^[OA' up-line-or-history
+  bindkey -M "$ooodnakov_keymap" '^[OB' down-line-or-history
+  if [[ -n "${terminfo[kcuu1]}" ]]; then
+    bindkey -M "$ooodnakov_keymap" "${terminfo[kcuu1]}" up-line-or-history
+  fi
+  if [[ -n "${terminfo[kcud1]}" ]]; then
+    bindkey -M "$ooodnakov_keymap" "${terminfo[kcud1]}" down-line-or-history
+  fi
+done
+unset ooodnakov_keymap
