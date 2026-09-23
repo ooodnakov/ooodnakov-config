@@ -78,18 +78,25 @@
   "defaultPadding": " ",
   "inheritSeparatorColors": false,
   "globalBold": false,
+  "gitCacheTtlSeconds": 5,
   "minimalistMode": false,
   "powerline": {
     "enabled": true,
     "separators": [
-      ""
+      "",
+      ""
     ],
     "separatorInvertBackground": [
-      false
+      false,
+      true
     ],
-    "startCaps": [],
-    "endCaps": [],
-    "theme": "dracula",
+    "startCaps": [
+      ""
+    ],
+    "endCaps": [
+      ""
+    ],
+    "theme": "gruvbox",
     "autoAlign": true,
     "continueThemeAcrossLines": true
   },
@@ -100,6 +107,6 @@
   },
   "installation": {
     "method": "pinned",
-    "installedVersion": "2.4.4"
+    "installedVersion": "2.4.10"
   }
 }
