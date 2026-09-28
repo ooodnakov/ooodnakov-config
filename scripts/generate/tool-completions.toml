@@ -185,4 +185,4 @@ description = "Fast Node Manager"
 [[tools.zsh]]
 output = "_fnm"
 provides = ["fnm"]
-argv = ["fnm", "completion"]
+argv = ["fnm", "completions"]
