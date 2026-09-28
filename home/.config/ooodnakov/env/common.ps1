@@ -53,6 +53,24 @@ $pnpmHome = if ($env:PNPM_HOME) { $env:PNPM_HOME } else { Join-Path $HOME ".loca
 $env:PNPM_HOME = $pnpmHome
 Add-PathEntry -PathEntry $pnpmHome
 
+# fnm (Fast Node Manager) — match its installer location on Windows.
+if (Get-Command fnm -ErrorAction SilentlyContinue) {
+    $fnmDir = if ($env:FNM_DIR) { $env:FNM_DIR } else { Join-Path $HOME ".local/share/fnm" }
+    $env:FNM_DIR = $fnmDir
+    $fnmMultishell = Join-Path $env:LOCALAPPDATA "fnm_multishells"
+    if (-not (Test-Path $fnmMultishell)) {
+        New-Item -ItemType Directory -Path $fnmMultishell -Force | Out-Null
+    }
+    $env:FNM_MULTISHELL_PATH = $fnmMultishell
+    $env:FNM_NODE_VERSION_BEFORE_INSTALL = ""
+    Add-PathEntry -PathEntry (Join-Path $HOME ".local/share/fnm/node-versions" "installation")
+    try {
+        Invoke-Expression (& fnm env --use-on-cd --shell powershell)
+    } catch {
+        # Keep shell startup usable when fnm env fails (e.g. no installed Node yet).
+    }
+}
+
 if (-not (Get-Command o -ErrorAction SilentlyContinue) -and (Get-Command oooconf -ErrorAction SilentlyContinue)) {
     function global:o {
         oooconf @args

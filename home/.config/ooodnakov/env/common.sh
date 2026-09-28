@@ -50,6 +50,12 @@ path_prepend "$PNPM_HOME/bin"
 export GOPATH="${GOPATH:-$HOME/go}"
 path_prepend "$GOPATH/bin"
 
+# fnm (Fast Node Manager)
+if command -v fnm >/dev/null 2>&1; then
+  export FNM_DIR="${FNM_DIR:-$HOME/.local/share/fnm}"
+  eval "$(fnm env --shell bash --use-on-cd 2>/dev/null || fnm env --shell bash)"
+fi
+
 if ! command -v o >/dev/null 2>&1 && command -v oooconf >/dev/null 2>&1; then
   o() {
     oooconf "$@"
