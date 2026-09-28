@@ -176,3 +176,13 @@ description = "parallel S3 and local filesystem operations"
 output = "_s5cmd"
 provides = ["s5cmd"]
 argv = ["s5cmd", "--completion", "zsh"]
+
+[[tools]]
+key = "fnm"
+binary = "fnm"
+description = "Fast Node Manager"
+
+[[tools.zsh]]
+output = "_fnm"
+provides = ["fnm"]
+argv = ["fnm", "completion"]

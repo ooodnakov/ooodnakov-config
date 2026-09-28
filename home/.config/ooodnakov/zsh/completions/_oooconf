@@ -125,6 +125,7 @@ _oooconf_values_deps_keys=(
   's5cmd:parallel S3 and local filesystem operations'
   'taskwarrior:command-line todo list manager (optional productivity tool)'
   'taskwarrior-tui:interactive terminal UI for taskwarrior (optional productivity tool)'
+  'fnm:Fast Node Manager'
 )
 
 typeset -ga _oooconf_values_regions
