@@ -449,6 +449,12 @@ platforms = ["linux", "macos", "windows"]
 description = "toggle PSFzf git integration"
 values = { "enabled" = "enabled", "disabled" = "disabled", "status" = "show status" }
 
+[commands.shell.subcommands.poshgit]
+handler_id = "oooconf.shell.poshgit"
+platforms = ["linux", "macos", "windows"]
+description = "toggle posh-git module auto-import in PowerShell"
+values = { "enabled" = "enabled", "disabled" = "disabled", "status" = "show status" }
+
 [commands.shell.subcommands.auto-uv-env]
 handler_id = "oooconf.shell.auto-uv-env"
 platforms = ["linux", "macos", "windows"]

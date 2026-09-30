@@ -207,6 +207,18 @@ function Get-PsfzfGitMode {
     return "enabled"
 }
 
+function Get-PoshGitMode {
+    $envPath = Get-LocalEnvPs1Path
+    if (Test-Path -LiteralPath $envPath) {
+        foreach ($line in Get-Content -LiteralPath $envPath) {
+            if ($line -match ('^\$env:' + [regex]::Escape($PoshGitVar) + " = '([^']+)'$")) {
+                return $Matches[1]
+            }
+        }
+    }
+    return "disabled"
+}
+
 function Get-AutoUvEnvMode {
     if ($env:OOODNAKOV_AUTO_UV_ENV_MODE -in @("disabled", "existing", "enabled", "quiet")) {
         return $env:OOODNAKOV_AUTO_UV_ENV_MODE
@@ -383,11 +395,30 @@ function Set-PsfzfGitMode {
     Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
 }
 
+function Set-PoshGitMode {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode
+    )
+
+    if ($Mode -notin @("enabled", "disabled")) {
+        throw "Invalid poshgit mode: $Mode`nExpected one of: enabled, disabled"
+    }
+
+    $envPs1 = Get-LocalEnvPs1Path
+    Set-LocalOverrideLine -Path $envPs1 -VariableName $PoshGitVar -ReplacementLine "`$env:$PoshGitVar = '$Mode'"
+
+    Write-UiLine -Role ok -Message "poshgit mode set to $Mode"
+    Write-UiLine -Role info -Message "pwsh: $envPs1"
+    Write-UiLine -Role hint -Message "Open a new shell session to apply the change."
+}
+
 function Show-ShellStatus {
     Write-UiLine -Role info -Message "forgit-aliases: $(Get-ForgitAliasMode)"
     Write-UiLine -Role info -Message "typo-handling: $(Get-TypoHandlingMode)"
     Write-UiLine -Role info -Message "psfzf-tab: $(Get-PsfzfTabMode)"
     Write-UiLine -Role info -Message "psfzf-git: $(Get-PsfzfGitMode)"
+    Write-UiLine -Role info -Message "poshgit: $(Get-PoshGitMode)"
     Write-UiLine -Role info -Message "prompt: $(Get-ZshPromptMode)"
     Write-UiLine -Role info -Message "prompt-style: $(Get-PromptStyleMode)"
     Write-UiLine -Role info -Message "auto-uv-env: $(Get-AutoUvEnvMode)"
@@ -484,6 +515,20 @@ function Invoke-ShellCommand {
                 "status" { Write-Output (Get-PsfzfGitMode) }
                 "enabled" { Set-PsfzfGitMode -Mode $mode }
                 "disabled" { Set-PsfzfGitMode -Mode $mode }
+                default {
+                    $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellPsfzfModes
+                    Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell
+                    throw "Unknown shell option: $mode`nExpected one of: enabled, disabled, status"
+                }
+            }
+            return
+        }
+        "poshgit" {
+            $mode = if ($ShellArgs.Count -gt 1) { $ShellArgs[1] } else { "status" }
+            switch ($mode) {
+                "status" { Write-Output (Get-PoshGitMode) }
+                "enabled" { Set-PoshGitMode -Mode $mode }
+                "disabled" { Set-PoshGitMode -Mode $mode }
                 default {
                     $suggestion = Get-SuggestionFromList -InputValue $mode -Candidates $KnownShellPsfzfModes
                     Write-UnknownCommandMessage -Message "Unknown shell option: $mode" -Suggestion $suggestion -Scope shell

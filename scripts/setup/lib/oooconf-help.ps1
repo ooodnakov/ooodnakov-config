@@ -570,6 +570,7 @@ Usage: oooconf shell status
        oooconf shell typo-handling [silent|suggest|help|status]
        oooconf shell psfzf-tab [enabled|disabled|status]
        oooconf shell psfzf-git [enabled|disabled|status]
+       oooconf shell poshgit [enabled|disabled|status]
        oooconf shell auto-uv-env [disabled|existing|enabled|quiet|status]
 
 Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
@@ -584,6 +585,7 @@ Typo handling modes:
 PSFzf options:
   psfzf-tab  enable or disable fzf-based tab completion in PowerShell
   psfzf-git  enable or disable fzf-based git keybindings in PowerShell
+  poshgit    enable or disable posh-git auto-import in PowerShell
   status     show the currently configured mode
 Prompt options:
   prompt        switch only the zsh prompt engine between Powerlevel10k and Oh My Posh
@@ -610,6 +612,8 @@ Examples:
   oooconf shell psfzf-tab enabled
   oooconf shell psfzf-tab disabled
   oooconf shell psfzf-git status
+  oooconf shell poshgit enabled
+  oooconf shell poshgit disabled
   oooconf shell auto-uv-env existing
   oooconf shell auto-uv-env disabled
 "@

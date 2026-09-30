@@ -1453,6 +1453,7 @@ _oooconf_shell() {
     'typo-handling:configure typo handling behavior'
     'psfzf-tab:toggle PSFzf tab completion integration'
     'psfzf-git:toggle PSFzf git integration'
+    'poshgit:toggle posh-git module auto-import in PowerShell'
     'auto-uv-env:configure uv auto activation behavior'
   )
   local -a opts_with_args
@@ -1523,6 +1524,13 @@ _oooconf_shell() {
             words=("${(@)words[i,-1]}")
             CURRENT=$(( CURRENT - i + 1 ))
             _oooconf_shell_psfzf_git
+            return
+            ;;
+          poshgit)
+            child_name=poshgit
+            words=("${(@)words[i,-1]}")
+            CURRENT=$(( CURRENT - i + 1 ))
+            _oooconf_shell_poshgit
             return
             ;;
           auto-uv-env)
@@ -1662,6 +1670,28 @@ _oooconf_shell_psfzf_tab() {
 }
 
 _oooconf_shell_psfzf_git() {
+  local context state line
+  typeset -A opt_args
+  local -a values
+  values=(
+    'enabled:enabled'
+    'disabled:disabled'
+    'status:show status'
+  )
+  local -a opts_with_args
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  _arguments -C \
+    '1:value:->value' \
+    '*:arg:->args'
+
+  case $state in
+    value)
+      _describe -t values 'oooconf value' values
+      ;;
+  esac
+}
+
+_oooconf_shell_poshgit() {
   local context state line
   typeset -A opt_args
   local -a values

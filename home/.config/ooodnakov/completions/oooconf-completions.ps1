@@ -526,7 +526,7 @@ function Get-OooconfCompletions {
             Options = @()
             OptionsWithArgs = @()
             Values = @()
-            Subcommands = @('status', 'prompt', 'prompt-style', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'auto-uv-env')
+            Subcommands = @('status', 'prompt', 'prompt-style', 'forgit-aliases', 'typo-handling', 'psfzf-tab', 'psfzf-git', 'poshgit', 'auto-uv-env')
             OptionValues = @{
             }
         }
@@ -542,6 +542,14 @@ function Get-OooconfCompletions {
             Options = @()
             OptionsWithArgs = @()
             Values = @('plain', 'forgit', 'status')
+            Subcommands = @()
+            OptionValues = @{
+            }
+        }
+        'shell:poshgit' = @{
+            Options = @()
+            OptionsWithArgs = @()
+            Values = @('enabled', 'disabled', 'status')
             Subcommands = @()
             OptionValues = @{
             }

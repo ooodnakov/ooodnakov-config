@@ -92,6 +92,7 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | `oooconf shell typo-handling` | configure typo handling behavior | linux, macos, windows | `oooconf.shell.typo-handling` | — |
 | `oooconf shell psfzf-tab` | toggle PSFzf tab completion integration | linux, macos, windows | `oooconf.shell.psfzf-tab` | — |
 | `oooconf shell psfzf-git` | toggle PSFzf git integration | linux, macos, windows | `oooconf.shell.psfzf-git` | — |
+| `oooconf shell poshgit` | toggle posh-git module auto-import in PowerShell | linux, macos, windows | `oooconf.shell.poshgit` | — |
 | `oooconf shell auto-uv-env` | configure uv auto activation behavior | linux, macos, windows | `oooconf.shell.auto-uv-env` | — |
 | `oooconf color` | set a unified oooconf CLI color theme and mode | linux, macos, windows | `oooconf.color` | — |
 | `oooconf help` | show help | linux, macos, windows | `oooconf.help` | — |
