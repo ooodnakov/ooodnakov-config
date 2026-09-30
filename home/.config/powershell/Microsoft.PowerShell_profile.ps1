@@ -103,6 +103,32 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
             TabCompletionPreviewWindow    = 'hidden'
         }
 
+        # PSFzf derives bash.exe from the first git.exe on PATH. When
+        # Git\mingw64\bin shadows Git\cmd, that layout has no bash.exe and
+        # PSFzf's git key bindings fail to initialize. Hoist the git.exe
+        # directory whose sibling layout provides bin\bash.exe to the front
+        # of PATH so PSFzf's heuristic resolves one.
+        $gitCandidates = @(Get-Command git.exe -All -ErrorAction SilentlyContinue)
+        if ($psFzfArgs.GitKeyBindings -and $IsWindows -and $gitCandidates.Count -gt 0) {
+            $firstRoot = Split-Path (Split-Path $gitCandidates[0].Source -Parent) -Parent
+            if (-not (Test-Path (Join-Path $firstRoot 'bin\bash.exe'))) {
+                foreach ($candidate in ($gitCandidates | Select-Object -Skip 1)) {
+                    $cmdDir = Split-Path $candidate.Source -Parent
+                    if (Test-Path (Join-Path (Split-Path $cmdDir -Parent) 'bin\bash.exe')) {
+                        $pathParts = [System.Collections.Generic.List[string]]@()
+                        foreach ($part in ($env:PATH -split [IO.Path]::PathSeparator)) {
+                            if ($part -and ($part -ine $cmdDir)) {
+                                $pathParts.Add($part)
+                            }
+                        }
+                        $pathParts.Insert(0, $cmdDir)
+                        $env:PATH = $pathParts -join [IO.Path]::PathSeparator
+                        break
+                    }
+                }
+            }
+        }
+
         if ($null -ne (Get-Command fd -ErrorAction SilentlyContinue)) {
             $psFzfArgs.EnableFd = $true
         }
