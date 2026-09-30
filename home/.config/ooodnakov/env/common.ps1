@@ -87,45 +87,53 @@ function Get-DirenvConfigRoot {
     return Join-Path $HOME ".config/direnv"
 }
 
-function Invoke-CompletionScript {
+function Invoke-CachedCompletionScript {
     param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [string]$Tool,
         [Parameter(Mandatory = $true)]
         [scriptblock]$Generator
     )
 
-    try {
-        $scriptText = (& $Generator 2>$null) | Out-String
-        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($scriptText)) {
-            Invoke-Expression $scriptText
+    $toolCommand = Get-Command $Tool -ErrorAction SilentlyContinue
+    if (-not $toolCommand) {
+        return
+    }
+
+    $cacheFile = Join-Path $env:OOODNAKOV_CACHE_HOME "completions/$Name.ps1"
+    $cacheStale = -not (Test-Path -LiteralPath $cacheFile)
+    if (-not $cacheStale) {
+        $toolItem = Get-Item -LiteralPath $toolCommand.Source -ErrorAction SilentlyContinue
+        $cacheItem = Get-Item -LiteralPath $cacheFile
+        $cacheStale = $null -ne $toolItem -and $toolItem.LastWriteTime -gt $cacheItem.LastWriteTime
+    }
+
+    if ($cacheStale) {
+        try {
+            $scriptText = (& $Generator 2>$null) | Out-String
+            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($scriptText)) {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $cacheFile) -Force | Out-Null
+                Set-Content -LiteralPath $cacheFile -Value $scriptText -NoNewline
+            }
+        } catch {
+            # Keep shell startup usable when a tool does not support PowerShell completions.
         }
-    } catch {
-        # Keep shell startup usable when a tool does not support PowerShell completions.
+    }
+
+    if (Test-Path -LiteralPath $cacheFile) {
+        . $cacheFile
     }
 }
 
-if (Get-Command uv -ErrorAction SilentlyContinue) {
-    Invoke-CompletionScript { uv generate-shell-completion powershell }
-}
+Invoke-CachedCompletionScript -Name uv -Tool uv -Generator { uv generate-shell-completion powershell }
 
-if (Get-Command rustup -ErrorAction SilentlyContinue) {
-    Invoke-CompletionScript { rustup completions powershell }
-}
+Invoke-CachedCompletionScript -Name rustup -Tool rustup -Generator { rustup completions powershell }
 
-if (Get-Command gum -ErrorAction SilentlyContinue) {
-    Invoke-CompletionScript { gum completion powershell }
-}
+Invoke-CachedCompletionScript -Name glow -Tool glow -Generator { glow completion powershell }
 
-if (Get-Command bw -ErrorAction SilentlyContinue) {
-    Invoke-CompletionScript { bw completion --shell powershell }
-}
-
-if (Get-Command glow -ErrorAction SilentlyContinue) {
-    Invoke-CompletionScript { glow completion powershell }
-}
-
-if (Get-Command fd -ErrorAction SilentlyContinue) {
-    Invoke-CompletionScript { fd --gen-completions powershell }
-}
+Invoke-CachedCompletionScript -Name fd -Tool fd -Generator { fd --gen-completions powershell }
 
 if (Get-Command direnv -ErrorAction SilentlyContinue) {
     $gitBash = "C:\Program Files\Git\bin\bash.exe"
@@ -153,11 +161,7 @@ if (Get-Command direnv -ErrorAction SilentlyContinue) {
     if (-not (Test-Path -LiteralPath $direnvConfigRoot)) {
         New-Item -ItemType Directory -Path $direnvConfigRoot -Force | Out-Null
     }
-    Invoke-CompletionScript { direnv hook pwsh }
-}
-
-if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    Invoke-CompletionScript { zoxide init powershell }
+    Invoke-CachedCompletionScript -Name direnv-hook -Tool direnv -Generator { direnv hook pwsh }
 }
 
 $oooconfCompletions = Join-Path $env:OOODNAKOV_CONFIG_HOME "completions/oooconf-completions.ps1"
