@@ -475,8 +475,6 @@ unalias x 2>/dev/null
 [ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.
 unalias h 2>/dev/null
 
-[ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.
-
 # Re-add pnpm after x-cmd so it takes precedence over brew
 # Only modify PATH if pnpm is not already at position 1
 if [ -n "$PNPM_HOME" ] && [ "$path[1]" != "$PNPM_HOME" ]; then
