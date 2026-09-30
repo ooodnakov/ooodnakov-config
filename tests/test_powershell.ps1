@@ -28,14 +28,16 @@ function Assert-True($Condition, $Message) {
 }
 
 function Get-PythonCommand {
-    $python = Get-Command python3 -ErrorAction SilentlyContinue
-    if ($python) {
-        return $python.Source
-    }
-
-    $python = Get-Command python -ErrorAction SilentlyContinue
-    if ($python) {
-        return $python.Source
+    foreach ($candidate in @("python3", "python")) {
+        $python = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($python) {
+            # Windows Store python3 stubs exit without running Python; probe
+            # candidates so PATH order cannot hand us a non-functional interpreter.
+            & $python --version *>$null
+            if ($LASTEXITCODE -eq 0) {
+                return $python.Source
+            }
+        }
     }
 
     throw "python3 or python is required for tests/test_powershell.ps1"
