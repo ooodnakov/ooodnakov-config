@@ -495,18 +495,27 @@ function y() {
 	rm -f -- "$tmp"
 }
 
-# Keep plain history navigation after plugins initialize. Oh My Zsh enables
-# application cursor mode, so arrows can send ESC O A/B instead of ESC [ A/B.
+# Up arrow opens the fzf recent-history picker, mirroring the PowerShell
+# profile: newest-first, deduplicated history via zsh-fzf-history-search (the
+# same widget behind Ctrl+R). Plain up-history stays as the fallback when the
+# plugin is not loaded. Oh My Zsh enables application cursor mode, so arrows
+# can send ESC O A/B instead of ESC [ A/B.
+if (( ${+widgets[fzf_history_search]} )); then
+  ZSH_FZF_HISTORY_SEARCH_REMOVE_DUPLICATES=1
+  ooodnakov_up_widget=fzf_history_search
+else
+  ooodnakov_up_widget=up-line-or-history
+fi
 for ooodnakov_keymap in emacs viins vicmd; do
-  bindkey -M "$ooodnakov_keymap" '^[[A' up-line-or-history
+  bindkey -M "$ooodnakov_keymap" '^[[A' "$ooodnakov_up_widget"
+  bindkey -M "$ooodnakov_keymap" '^[OA' "$ooodnakov_up_widget"
   bindkey -M "$ooodnakov_keymap" '^[[B' down-line-or-history
-  bindkey -M "$ooodnakov_keymap" '^[OA' up-line-or-history
   bindkey -M "$ooodnakov_keymap" '^[OB' down-line-or-history
   if [[ -n "${terminfo[kcuu1]}" ]]; then
-    bindkey -M "$ooodnakov_keymap" "${terminfo[kcuu1]}" up-line-or-history
+    bindkey -M "$ooodnakov_keymap" "${terminfo[kcuu1]}" "$ooodnakov_up_widget"
   fi
   if [[ -n "${terminfo[kcud1]}" ]]; then
     bindkey -M "$ooodnakov_keymap" "${terminfo[kcud1]}" down-line-or-history
   fi
 done
-unset ooodnakov_keymap
+unset ooodnakov_keymap ooodnakov_up_widget
