@@ -139,10 +139,30 @@ if ((Test-InteractiveConsoleHost) -and $null -ne (Get-Module -ListAvailable -Nam
 
         Set-PsFzfOption @psFzfArgs
 
-        # Explicitly bind both Ctrl+r and UpArrow to the PSFzf handler
+        # Explicitly bind both Ctrl+r and UpArrow to the PSFzf handler.
+        #
+        # fzf's popup region shifts the whole screen when the cursor sits at the
+        # bottom of the terminal, and PSFzf re-renders a full prompt after fzf
+        # closes, leaving the stale full oh-my-posh prompt behind it as a
+        # duplicate (PSFzf #189, #202). Collapsing the current prompt to the
+        # oh-my-posh transient `❯` first leaves a small shadow instead.
+        $invokeFzfHistory = {
+            try {
+                if ($global:_ompTransientPrompt) {
+                    Set-TransientPrompt
+                }
+            }
+            catch {
+                # Transient collapse is cosmetic; fzf history still runs.
+            }
+            finally {
+                Invoke-FzfPsReadlineHandlerHistory
+            }
+        }
+
         if (Get-Command Invoke-FzfPsReadlineHandlerHistory -ErrorAction SilentlyContinue) {
-            Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -ScriptBlock { Invoke-FzfPsReadlineHandlerHistory }
-            Set-PSReadLineKeyHandler -Key UpArrow -ScriptBlock { Invoke-FzfPsReadlineHandlerHistory }
+            Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -ScriptBlock $invokeFzfHistory
+            Set-PSReadLineKeyHandler -Key UpArrow -ScriptBlock $invokeFzfHistory
         } else {
             Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
         }
