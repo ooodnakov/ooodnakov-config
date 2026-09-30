@@ -30,8 +30,8 @@ function Test-InteractiveConsoleHost {
 
 # ---[ PLUGINS & CONFIG ]---
 
-# Optimized Oh My Posh initialization
-if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
+# Optimized Oh My Posh initialization (interactive-only: prompt rendering)
+if ((Test-InteractiveConsoleHost) -and (Get-Command oh-my-posh -ErrorAction SilentlyContinue)) {
     $ompCache = Join-Path $CacheDir "oh-my-posh.ps1"
     if (-not (Test-Path $ompCache) -or (Get-Item $PromptConfig).LastWriteTime -gt (Get-Item $ompCache).LastWriteTime) {
         oh-my-posh init pwsh --config $PromptConfig --print > $ompCache
@@ -65,15 +65,21 @@ if (Test-Path $LocalEnv) {
     . $LocalEnv
 }
 
-if ($null -ne (Get-Module -ListAvailable -Name posh-git)) {
+# posh-git prompt status duplicates the oh-my-posh git segment (~290ms import);
+# opt in with OOODNAKOV_POSH_GIT=enabled for its branch-name tab completions.
+if ($env:OOODNAKOV_POSH_GIT -eq 'enabled' -and $null -ne (Get-Module -ListAvailable -Name posh-git)) {
     Import-Module posh-git -ErrorAction SilentlyContinue
 }
 
-if ($null -ne (Get-Module -ListAvailable -Name PSFzf)) {
+if ((Test-InteractiveConsoleHost) -and $null -ne (Get-Module -ListAvailable -Name PSFzf)) {
     Import-Module PSFzf -ErrorAction SilentlyContinue
 }
 
-if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
+Set-Alias oooconf oooconf.ps1 -ErrorAction SilentlyContinue
+
+# PSReadLine + PSFzf configuration is prompt/tab-completion work — skip it in
+# redirected/non-interactive hosts so scripts and runspaces start fast.
+if ((Test-InteractiveConsoleHost) -and $null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
 
     # Prediction rendering fails in redirected/non-VT hosts (for example RTK-wrapped commands).
@@ -91,8 +97,6 @@ if ($null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
 
     Set-PSReadLineKeyHandler -Chord Alt+b -Function BackwardWord
     Set-PSReadLineKeyHandler -Chord Alt+f -Function ForwardWord
-
-    Set-Alias oooconf oooconf.ps1 -ErrorAction SilentlyContinue
 
     if ($null -ne (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue)) {
         $psFzfArgs = @{
@@ -165,24 +169,6 @@ function gl {
     git pull @args
 }
 
-function Test-AnyCommand {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string[]]$Names
-    )
-
-    foreach ($name in $Names) {
-        if (Get-Command $name -ErrorAction SilentlyContinue) {
-            return $true
-        }
-        if (-not $name.EndsWith(".exe") -and (Get-Command "$name.exe" -ErrorAction SilentlyContinue)) {
-            return $true
-        }
-    }
-
-    return $false
-}
-
 function Invoke-ForgitOrGit {
     param(
         [Parameter(Mandatory = $true)]
@@ -202,7 +188,7 @@ function Invoke-ForgitOrGit {
 }
 
 $forgitMode = $env:OOODNAKOV_FORGIT_ALIAS_MODE ?? "plain"
-$forgitAvailable = (Test-AnyCommand -Names @("forgit", "forgit_log", "forgit_diff", "forgit_checkout"))
+$forgitAvailable = $null -ne (Get-Command "forgit*" -ErrorAction SilentlyContinue)
 
 if ($forgitMode -eq "forgit" -and $forgitAvailable) {
     function gd {
@@ -493,7 +479,7 @@ Update-Venv
 # for `choco` will not function.
 # See https://ch0.co/tab-completion for details.
 $ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-if (Test-Path($ChocolateyProfile)) {
+if (Test-InteractiveConsoleHost -and (Test-Path($ChocolateyProfile))) {
   Import-Module "$ChocolateyProfile"
 }
 
