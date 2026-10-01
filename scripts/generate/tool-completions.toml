@@ -175,7 +175,17 @@ description = "parallel S3 and local filesystem operations"
 [[tools.zsh]]
 output = "_s5cmd"
 provides = ["s5cmd"]
-argv = ["s5cmd", "--completion", "zsh"]
+argv = ["s5cmd", "--install-completion"]
+
+[[tools]]
+key = "dp"
+binary = "DP"
+description = "DP"
+
+[[tools.zsh]]
+output = "_dp"
+provides = ["dp"]
+argv = ["dp", "completion", "zsh"]
 
 [[tools]]
 key = "fnm"
