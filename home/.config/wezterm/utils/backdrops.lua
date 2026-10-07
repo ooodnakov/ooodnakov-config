@@ -29,9 +29,11 @@ function BackDrops:init()
       images = {},
       images_dir = wezterm.config_dir .. '/backdrops/',
       focus_color = colors.background,
+      focus_color_light = '#eff1f5',
+      focus_variant = 'dark',
       enabled = true,
       focus_on = false,
-      base_window_opacity = (wezterm.target_triple:find('macos') and 0.01) or 0,
+      base_window_opacity = (wezterm.target_triple:find('macos') and 0.01) or 1,
    }
    local backdrops = setmetatable(inital, self)
    return backdrops
@@ -95,11 +97,12 @@ end
 
 ---Create the `background` options for focus mode
 ---@private
+---@param color string|nil background color for focus mode
 ---@return table
-function BackDrops:_create_focus_opts()
+function BackDrops:_create_focus_opts(color)
    return {
       {
-         source = { Color = self.focus_color },
+         source = { Color = color or self.focus_color },
          height = '120%',
          width = '120%',
          vertical_offset = '-10%',
@@ -132,7 +135,7 @@ function BackDrops:_current_background_opts()
    end
 
    if self.focus_on then
-      return self:_create_focus_opts()
+      return self:_create_focus_opts(self:_focus_color())
    end
 
    return self:_create_opts()
@@ -235,7 +238,17 @@ function BackDrops:set_img(window, idx)
    self:_set_opt(window, self:_create_opts())
 end
 
----Toggle the focus mode
+---Color used in focus mode based on the current variant
+---@private
+---@return string
+function BackDrops:_focus_color()
+   if self.focus_variant == 'light' then
+      return self.focus_color_light
+   end
+   return self.focus_color
+end
+
+---Toggle the focus mode: cycles normal -> dark -> light -> normal
 ---@param window any WezTerm `Window` see: https://wezfurlong.org/wezterm/config/lua/window/index.html
 function BackDrops:toggle_focus(window)
    if self.always_focus then
@@ -243,14 +256,22 @@ function BackDrops:toggle_focus(window)
    end
 
    self.enabled = true
+
    local background_opts
 
-   if self.focus_on then
-      background_opts = self:_create_opts()
-      self.focus_on = false
-   else
-      background_opts = self:_create_focus_opts()
+   if not self.focus_on then
       self.focus_on = true
+      self.focus_variant = 'dark'
+   elseif self.focus_variant == 'dark' then
+      self.focus_variant = 'light'
+   else
+      self.focus_on = false
+   end
+
+   if self.focus_on then
+      background_opts = self:_create_focus_opts(self:_focus_color())
+   else
+      background_opts = self:_create_opts()
    end
 
    self:_set_opt(window, background_opts)

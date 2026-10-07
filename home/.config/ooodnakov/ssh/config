@@ -25,6 +25,8 @@ Host home
 Host router
     HostName 192.168.1.1
     User root
+    # dropbear < 2026.91 has no post-quantum KEX; silence the OpenSSH PQ warning
+    LogLevel QUIET
 
 Host think
     HostName 192.168.1.158
