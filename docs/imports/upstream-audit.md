@@ -116,22 +116,23 @@ Remote shell files contained secrets. Those were inspected for migration risk bu
 
 ## Automated Pin Checks
 
-Last checked (UTC): `2026-06-02T23:29:12+00:00`
+Last checked (UTC): `2026-10-08T21:21:24+00:00`
 
 | Dependency | Status | Current ref | Latest HEAD |
 | --- | --- | --- | --- |
-| `auto-uv-env` | `update-available` | `76589a0fe4a3eaba9817b7195b9fc05ef4139289` | `1c512a891462536c488dd402b432ea4102727ae6` |
-| `forgit` | `update-available` | `4d54a03fd2970581ba6e908789bbef72e71ea01c` | `6a0130bee875fde78010713fec6f52cb72d43b2b` |
-| `fzf-tab` | `up-to-date` | `e394092c17277c84cb3d234917c4ac1073102ba6` | `e394092c17277c84cb3d234917c4ac1073102ba6` |
+| `auto-uv-env` | `up-to-date` | `7bc8c17b4c7e0e34f170c1c940abfd184a3c15f0` | `7bc8c17b4c7e0e34f170c1c940abfd184a3c15f0` |
+| `forgit` | `up-to-date` | `af6c459f3f2b2a72372ea6c2044b91e45c893573` | `af6c459f3f2b2a72372ea6c2044b91e45c893573` |
+| `fzf-tab` | `up-to-date` | `24105b15714bfec37989ed5c5b6e60f572253019` | `24105b15714bfec37989ed5c5b6e60f572253019` |
 | `k` | `up-to-date` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` |
-| `marker` | `up-to-date` | `c123085891228e51cfa58d555708bad67ed98f02` | `c123085891228e51cfa58d555708bad67ed98f02` |
-| `nvm` | `update-available` | `f695512c80308b3b98e6b3f4da8cf70ad472ccc8` | `53855417eb66b9c35b732ac39358f1aae3ee1977` |
-| `oh-my-zsh` | `update-available` | `a07126330b9f56f12f1e00ddd29786d35d6e64d9` | `70ad5e3df8f7bed68aa6672029496926e632aedd` |
-| `powerlevel10k` | `update-available` | `604f19a9eaa18e76db2e60b8d446d5f879065f90` | `a0c9dbe80be404ff58e3ce5d7cf312582e370635` |
-| `todo-txt` | `up-to-date` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` |
-| `you-should-use` | `update-available` | `ff371d6a11b653e1fa8dda4e61c896c78de26bfa` | `5f3d129864ee4505043d88c3486224f1d75b692e` |
-| `zsh-autocomplete` | `up-to-date` | `20f6c34f20270084b21211428afb6d2534aae8e9` | `20f6c34f20270084b21211428afb6d2534aae8e9` |
+| `marker` | `up-to-date` | `0f1fad95e9c3268c3077bc9d2c94ec6c58ab76a5` | `0f1fad95e9c3268c3077bc9d2c94ec6c58ab76a5` |
+| `nvm` | `up-to-date` | `913b8cb6254aa0de7085d3e13c1b3b386845e570` | `913b8cb6254aa0de7085d3e13c1b3b386845e570` |
+| `oh-my-zsh` | `up-to-date` | `60c9a7a839b790cd905d0fd4419435124fd1bdc0` | `60c9a7a839b790cd905d0fd4419435124fd1bdc0` |
+| `powerlevel10k` | `up-to-date` | `d05a1b00f9a61f9578bf9dc19b8451942dde8734` | `d05a1b00f9a61f9578bf9dc19b8451942dde8734` |
+| `s3cmd` | `up-to-date` | `97945760736bee4fd79eb3d357e48bd55d0ee60c` | `97945760736bee4fd79eb3d357e48bd55d0ee60c` |
+| `todo-txt` | `up-to-date` | `4a140a370c952ff019a829ef677949849292012b` | `4a140a370c952ff019a829ef677949849292012b` |
+| `you-should-use` | `up-to-date` | `5f3d129864ee4505043d88c3486224f1d75b692e` | `5f3d129864ee4505043d88c3486224f1d75b692e` |
+| `zsh-autocomplete` | `up-to-date` | `77706d4cf24866bf62b865d97e9ef7d8bc38bd6e` | `77706d4cf24866bf62b865d97e9ef7d8bc38bd6e` |
 | `zsh-autosuggestions` | `up-to-date` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` |
 | `zsh-fzf-history-search` | `up-to-date` | `35df458f7d9478fa88c74af762dcd296cdfd485d` | `35df458f7d9478fa88c74af762dcd296cdfd485d` |
-| `zsh-history-substring-search` | `up-to-date` | `14c8d2e0ffaee98f2df9850b19944f32546fdea5` | `14c8d2e0ffaee98f2df9850b19944f32546fdea5` |
-| `zsh-syntax-highlighting` | `up-to-date` | `1d85c692615a25fe2293bdd44b34c217d5d2bf04` | `1d85c692615a25fe2293bdd44b34c217d5d2bf04` |
+| `zsh-history-substring-search` | `up-to-date` | `a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a` | `a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a` |
+| `zsh-syntax-highlighting` | `up-to-date` | `0bfcb582e71d3abe604ce67bc0fe5a21f377507e` | `0bfcb582e71d3abe604ce67bc0fe5a21f377507e` |

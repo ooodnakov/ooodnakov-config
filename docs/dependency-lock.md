@@ -2,26 +2,26 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-09-11T10:01:58+00:00`
+Generated at (UTC): `2026-10-08T21:21:24+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
-| `auto-uv-env` | `https://github.com/ashwch/auto-uv-env.git` | `76589a0fe4a3eaba9817b7195b9fc05ef4139289` |
-| `forgit` | `https://github.com/wfxr/forgit.git` | `4d54a03fd2970581ba6e908789bbef72e71ea01c` |
-| `fzf-tab` | `https://github.com/Aloxaf/fzf-tab.git` | `e394092c17277c84cb3d234917c4ac1073102ba6` |
+| `auto-uv-env` | `https://github.com/ashwch/auto-uv-env.git` | `7bc8c17b4c7e0e34f170c1c940abfd184a3c15f0` |
+| `forgit` | `https://github.com/wfxr/forgit.git` | `af6c459f3f2b2a72372ea6c2044b91e45c893573` |
+| `fzf-tab` | `https://github.com/Aloxaf/fzf-tab.git` | `24105b15714bfec37989ed5c5b6e60f572253019` |
 | `k` | `https://github.com/supercrabtree/k.git` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` |
-| `marker` | `https://github.com/jotyGill/marker.git` | `c123085891228e51cfa58d555708bad67ed98f02` |
-| `nvm` | `https://github.com/nvm-sh/nvm.git` | `f695512c80308b3b98e6b3f4da8cf70ad472ccc8` |
-| `oh-my-zsh` | `https://github.com/ohmyzsh/ohmyzsh.git` | `a07126330b9f56f12f1e00ddd29786d35d6e64d9` |
-| `powerlevel10k` | `https://github.com/romkatv/powerlevel10k.git` | `604f19a9eaa18e76db2e60b8d446d5f879065f90` |
+| `marker` | `https://github.com/jotyGill/marker.git` | `0f1fad95e9c3268c3077bc9d2c94ec6c58ab76a5` |
+| `nvm` | `https://github.com/nvm-sh/nvm.git` | `913b8cb6254aa0de7085d3e13c1b3b386845e570` |
+| `oh-my-zsh` | `https://github.com/ohmyzsh/ohmyzsh.git` | `60c9a7a839b790cd905d0fd4419435124fd1bdc0` |
+| `powerlevel10k` | `https://github.com/romkatv/powerlevel10k.git` | `d05a1b00f9a61f9578bf9dc19b8451942dde8734` |
 | `s3cmd` | `https://github.com/FFKL/s3cmd-zsh-plugin.git` | `97945760736bee4fd79eb3d357e48bd55d0ee60c` |
-| `todo-txt` | `https://github.com/todotxt/todo.txt-cli.git` | `b20f9b45e210129ef020d3ba212d86b9ba9cf70d` |
-| `you-should-use` | `https://github.com/MichaelAquilina/zsh-you-should-use.git` | `ff371d6a11b653e1fa8dda4e61c896c78de26bfa` |
-| `zsh-autocomplete` | `https://github.com/marlonrichert/zsh-autocomplete.git` | `20f6c34f20270084b21211428afb6d2534aae8e9` |
+| `todo-txt` | `https://github.com/todotxt/todo.txt-cli.git` | `4a140a370c952ff019a829ef677949849292012b` |
+| `you-should-use` | `https://github.com/MichaelAquilina/zsh-you-should-use.git` | `5f3d129864ee4505043d88c3486224f1d75b692e` |
+| `zsh-autocomplete` | `https://github.com/marlonrichert/zsh-autocomplete.git` | `77706d4cf24866bf62b865d97e9ef7d8bc38bd6e` |
 | `zsh-autosuggestions` | `https://github.com/zsh-users/zsh-autosuggestions.git` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` |
 | `zsh-fzf-history-search` | `https://github.com/joshskidmore/zsh-fzf-history-search` | `35df458f7d9478fa88c74af762dcd296cdfd485d` |
-| `zsh-history-substring-search` | `https://github.com/zsh-users/zsh-history-substring-search.git` | `14c8d2e0ffaee98f2df9850b19944f32546fdea5` |
-| `zsh-syntax-highlighting` | `https://github.com/zsh-users/zsh-syntax-highlighting.git` | `1d85c692615a25fe2293bdd44b34c217d5d2bf04` |
+| `zsh-history-substring-search` | `https://github.com/zsh-users/zsh-history-substring-search.git` | `a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a` |
+| `zsh-syntax-highlighting` | `https://github.com/zsh-users/zsh-syntax-highlighting.git` | `0bfcb582e71d3abe604ce67bc0fe5a21f377507e` |
 
 ## Verified release artifacts
 
@@ -51,11 +51,11 @@ Generated at (UTC): `2026-09-11T10:01:58+00:00`
 | `nvim` | `0.12.2` | `nvim-win64.zip` | `23fe150edbcc976eabe55092e1e9d2e5e237afde69553d170e936f776b405d53` |
 | `bw` | `1.22.1` | `bw-linux-1.22.1.zip` | `0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db911b2279dae5c674b116aa0e` |
 | `bw` | `1.22.1` | `bw-windows-1.22.1.zip` | `0902a867d82c96fb93d087eefaaa78867f6ecc48d2ce249f1de231f5f3efad1d` |
-| `rtk` | `0.37.2` | `rtk-aarch64-apple-darwin.tar.gz` | `99e20a59847dedbb64032a3f7985f2fe959fcb9674d8eaf940fc58a189e27eca` |
-| `rtk` | `0.37.2` | `rtk-aarch64-unknown-linux-gnu.tar.gz` | `1d8d7fcca6cb05e1867c08bb4e5aa5f107c037c607131e511b726ae33ac35a47` |
-| `rtk` | `0.37.2` | `rtk-x86_64-apple-darwin.tar.gz` | `4052e7740a87e121f671a2de269b3f015dcc58b6171d6bedb300da7599cb4d94` |
-| `rtk` | `0.37.2` | `rtk-x86_64-pc-windows-msvc.zip` | `b89854b7435b4c3e3aea948b36e75395427fa631e03167de522bf7a0cfd3c5c7` |
-| `rtk` | `0.37.2` | `rtk-x86_64-unknown-linux-musl.tar.gz` | `3dfb7a05636a68687ba1c5aa696fa8d5fcb494447ded86d9eb8b88b7100a37c6` |
+| `rtk` | `0.48.0` | `rtk-aarch64-apple-darwin.tar.gz` | `99e20a59847dedbb64032a3f7985f2fe959fcb9674d8eaf940fc58a189e27eca` |
+| `rtk` | `0.48.0` | `rtk-aarch64-unknown-linux-gnu.tar.gz` | `1d8d7fcca6cb05e1867c08bb4e5aa5f107c037c607131e511b726ae33ac35a47` |
+| `rtk` | `0.48.0` | `rtk-x86_64-apple-darwin.tar.gz` | `4052e7740a87e121f671a2de269b3f015dcc58b6171d6bedb300da7599cb4d94` |
+| `rtk` | `0.48.0` | `rtk-x86_64-pc-windows-msvc.zip` | `b89854b7435b4c3e3aea948b36e75395427fa631e03167de522bf7a0cfd3c5c7` |
+| `rtk` | `0.48.0` | `rtk-x86_64-unknown-linux-musl.tar.gz` | `3dfb7a05636a68687ba1c5aa696fa8d5fcb494447ded86d9eb8b88b7100a37c6` |
 | `croc` | `10.4.14` | `croc_v10.4.14_Linux-64bit.tar.gz` | `7d25aa3bbf2bf88b10da22aa751a56a5bb75e39586262c7b92ca69e84cbd62bf` |
 | `s5cmd` | `2.3.0` | `s5cmd_2.3.0_Linux-64bit.tar.gz` | `de0fdbfa3aceae55e069ba81a0fc17b2026567637603734a387b2fca06c299b4` |
 
