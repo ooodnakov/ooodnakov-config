@@ -503,8 +503,7 @@ function y() {
 if (( ${+widgets[fzf_history_search]} )); then
   ZSH_FZF_HISTORY_SEARCH_REMOVE_DUPLICATES=1
   # Cap the picker at 5 rows (~ = shrink to input size, at most 5).
-  ZSH_FZF_HISTORY_SEARCH_FZF_EXTRA_ARGS="--height=~7"
-  ZSH_FZF_HISTORY_SEARCH_END_OF_LINE=""
+  ZSH_FZF_HISTORY_SEARCH_FZF_EXTRA_ARGS="--height=~5"
   ooodnakov_up_widget=fzf_history_search
 else
   ooodnakov_up_widget=up-line-or-history
