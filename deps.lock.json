@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-08T21:21:24+00:00",
+  "generated_at_utc": "2026-10-08T21:29:14+00:00",
   "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
@@ -69,8 +69,8 @@
     },
     {
       "name": "zsh-fzf-history-search",
-      "repo": "https://github.com/joshskidmore/zsh-fzf-history-search",
-      "ref": "35df458f7d9478fa88c74af762dcd296cdfd485d"
+      "repo": "https://github.com/ooodnakov/zsh-fzf-history-search",
+      "ref": "4b8826cfa64d1495237c1f6506f274e4cde1e0b3"
     },
     {
       "name": "zsh-history-substring-search",

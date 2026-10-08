@@ -2,7 +2,7 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-10-08T21:21:24+00:00`
+Generated at (UTC): `2026-10-08T21:29:14+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ Generated at (UTC): `2026-10-08T21:21:24+00:00`
 | `you-should-use` | `https://github.com/MichaelAquilina/zsh-you-should-use.git` | `5f3d129864ee4505043d88c3486224f1d75b692e` |
 | `zsh-autocomplete` | `https://github.com/marlonrichert/zsh-autocomplete.git` | `77706d4cf24866bf62b865d97e9ef7d8bc38bd6e` |
 | `zsh-autosuggestions` | `https://github.com/zsh-users/zsh-autosuggestions.git` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` |
-| `zsh-fzf-history-search` | `https://github.com/joshskidmore/zsh-fzf-history-search` | `35df458f7d9478fa88c74af762dcd296cdfd485d` |
+| `zsh-fzf-history-search` | `https://github.com/ooodnakov/zsh-fzf-history-search` | `4b8826cfa64d1495237c1f6506f274e4cde1e0b3` |
 | `zsh-history-substring-search` | `https://github.com/zsh-users/zsh-history-substring-search.git` | `a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a` |
 | `zsh-syntax-highlighting` | `https://github.com/zsh-users/zsh-syntax-highlighting.git` | `0bfcb582e71d3abe604ce67bc0fe5a21f377507e` |
 

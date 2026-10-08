@@ -116,7 +116,7 @@ Remote shell files contained secrets. Those were inspected for migration risk bu
 
 ## Automated Pin Checks
 
-Last checked (UTC): `2026-10-08T21:21:24+00:00`
+Last checked (UTC): `2026-10-08T21:29:13+00:00`
 
 | Dependency | Status | Current ref | Latest HEAD |
 | --- | --- | --- | --- |
@@ -133,6 +133,6 @@ Last checked (UTC): `2026-10-08T21:21:24+00:00`
 | `you-should-use` | `up-to-date` | `5f3d129864ee4505043d88c3486224f1d75b692e` | `5f3d129864ee4505043d88c3486224f1d75b692e` |
 | `zsh-autocomplete` | `up-to-date` | `77706d4cf24866bf62b865d97e9ef7d8bc38bd6e` | `77706d4cf24866bf62b865d97e9ef7d8bc38bd6e` |
 | `zsh-autosuggestions` | `up-to-date` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` |
-| `zsh-fzf-history-search` | `up-to-date` | `35df458f7d9478fa88c74af762dcd296cdfd485d` | `35df458f7d9478fa88c74af762dcd296cdfd485d` |
+| `zsh-fzf-history-search` | `up-to-date` | `4b8826cfa64d1495237c1f6506f274e4cde1e0b3` | `4b8826cfa64d1495237c1f6506f274e4cde1e0b3` |
 | `zsh-history-substring-search` | `up-to-date` | `a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a` | `a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a` |
 | `zsh-syntax-highlighting` | `up-to-date` | `0bfcb582e71d3abe604ce67bc0fe5a21f377507e` | `0bfcb582e71d3abe604ce67bc0fe5a21f377507e` |

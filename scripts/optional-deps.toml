@@ -28,7 +28,7 @@ zsh-history-substring-search = { repo = "https://github.com/zsh-users/zsh-histor
 zsh-autocomplete = { repo = "https://github.com/marlonrichert/zsh-autocomplete.git", ref = "77706d4cf24866bf62b865d97e9ef7d8bc38bd6e" }
 fzf-tab = { repo = "https://github.com/Aloxaf/fzf-tab.git", ref = "24105b15714bfec37989ed5c5b6e60f572253019" }
 forgit = { repo = "https://github.com/wfxr/forgit.git", ref = "af6c459f3f2b2a72372ea6c2044b91e45c893573" }
-zsh-fzf-history-search = { repo = "https://github.com/joshskidmore/zsh-fzf-history-search", ref = "35df458f7d9478fa88c74af762dcd296cdfd485d" }
+zsh-fzf-history-search = { repo = "https://github.com/ooodnakov/zsh-fzf-history-search", ref = "4b8826cfa64d1495237c1f6506f274e4cde1e0b3" }
 you-should-use = { repo = "https://github.com/MichaelAquilina/zsh-you-should-use.git", ref = "5f3d129864ee4505043d88c3486224f1d75b692e" }
 s3cmd = { repo = "https://github.com/FFKL/s3cmd-zsh-plugin.git", ref = "97945760736bee4fd79eb3d357e48bd55d0ee60c" }
 powerlevel10k = { repo = "https://github.com/romkatv/powerlevel10k.git", ref = "d05a1b00f9a61f9578bf9dc19b8451942dde8734" }
@@ -45,7 +45,18 @@ tools_dir = "~/.local/share/ooodnakov-config/tools"
 
 [minimal]
 # Core tools for basic dotfiles functionality and productivity
-keys = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat", "bin", "topgrade"]
+keys = [
+    "git",
+    "zsh",
+    "uv",
+    "oh-my-posh",
+    "gum",
+    "rg",
+    "fd",
+    "bat",
+    "bin",
+    "topgrade",
+]
 
 [[deps]]
 key = "bin"
