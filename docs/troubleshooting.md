@@ -31,6 +31,19 @@ successful dependency installation can finish. Inspect the foreground output
 or the latest setup log; set `OOODNAKOV_DEPS_LATEST_STRICT=1` when automation
 must fail on any Topgrade step failure.
 
+## PowerShell exits immediately in WezTerm on Windows
+
+The managed WezTerm config launches `pwsh.exe` through `PATH`, supporting MSI,
+Microsoft Store, and portable installations. If the exit message still names
+`C:/Program Files/PowerShell/7/pwsh.exe`, check that WezTerm loads the managed
+config and remove stale `default_prog` overrides from
+`~/.config/ooodnakov/local/wezterm.lua`. Restart WezTerm after changing `PATH`.
+
+Run `Get-Command pwsh.exe` in a working PowerShell session to check resolution.
+Compare `pwsh.exe -NoLogo -NoProfile` with `pwsh.exe -NoLogo`: if only the latter
+fails, inspect the profile's startup errors. `CloseOnCleanExit` merely keeps the
+failed pane visible; changing it does not fix the shell startup.
+
 ## Default zsh prompt after install
 
 If zsh opens with the default prompt, check the managed shell runtime:

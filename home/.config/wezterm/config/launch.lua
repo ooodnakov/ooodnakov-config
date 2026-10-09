@@ -9,7 +9,8 @@ local options = {
 }
 
 if platform.is_win then
-   local pwsh_path = 'C:/Program Files/PowerShell/7/pwsh.exe'
+   -- Resolve MSI, Store, and portable PowerShell installations through PATH.
+   local pwsh_path = 'pwsh.exe'
    options.default_prog = { pwsh_path, '-NoLogo' }
    options.launch_menu = {
       {

@@ -52,6 +52,7 @@ foreach ($brewBin in @("/opt/homebrew/bin", "/usr/local/bin", "/home/linuxbrew/.
 $pnpmHome = if ($env:PNPM_HOME) { $env:PNPM_HOME } else { Join-Path $HOME ".local/share/pnpm" }
 $env:PNPM_HOME = $pnpmHome
 Add-PathEntry -PathEntry $pnpmHome
+Add-PathEntry -PathEntry (Join-Path $pnpmHome "bin")
 
 # fnm (Fast Node Manager) — match its installer location on Windows.
 if (Get-Command fnm -ErrorAction SilentlyContinue) {
