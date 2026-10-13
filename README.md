@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/dotfiles-banner.svg" alt="Dotfiles banner" width="100%">
+  <img src="./assets/dotfiles-banner-transparent.svg" alt="Dotfiles banner" width="100%">
 </p>
 
 # ooodnakov-config
