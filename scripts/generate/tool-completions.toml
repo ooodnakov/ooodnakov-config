@@ -196,3 +196,13 @@ description = "Fast Node Manager"
 output = "_fnm"
 provides = ["fnm"]
 argv = ["fnm", "completions"]
+
+[[tools]]
+key = "bin"
+binary = "bin"
+description = "bin github installer"
+
+[[tools.zsh]]
+output = "_bin"
+provides = ["bin"]
+argv = ["bin", "completion", "zsh"]
