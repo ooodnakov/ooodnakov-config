@@ -24,6 +24,8 @@ _HERMES_REPLACEMENTS = {
     "'(-p --profile){-p,--profile}[Profile name]:profile:_hermes_profiles'": "'(-p --profile)'{-p,--profile}'[Profile name]:profile:_hermes_profiles'",
 }
 
+LAZYGIT_FPATH_GUARD = 'if [ "$funcstack[1]" = "_lazygit" ]; then\n    _lazygit "$@"\nfi\n'
+
 
 @dataclass(frozen=True)
 class ZshCompletion:
@@ -162,6 +164,10 @@ def apply_filter(filter_name: str | None, content: str, spec: ZshCompletion) -> 
         return normalize_completion_content(patched)
     if filter_name == "npm-zsh-wrapper":
         return npm_zsh_wrapper()
+    if filter_name == "pnpm-zsh-wrapper":
+        return pnpm_zsh_wrapper()
+    if filter_name == "lazygit-zsh-fpath":
+        return normalize_completion_content(content) + LAZYGIT_FPATH_GUARD
     raise CompletionError(f"{spec.tool_key}: unknown completion filter: {filter_name}")
 
 
@@ -180,6 +186,47 @@ def npm_zsh_wrapper() -> str:
                 "               2>/dev/null)",
                 "  IFS=$si",
                 "}",
+            ]
+        )
+    )
+
+
+def pnpm_zsh_wrapper() -> str:
+    return normalize_completion_content(
+        "\n".join(
+            [
+                "#compdef pnpm",
+                "###-begin-pnpm-completion-###",
+                "if type compdef &>/dev/null; then",
+                "  _pnpm_completion () {",
+                "    local -a pnpm_completions",
+                "    local out",
+                "",
+                '    out=$(COMP_CWORD="$((CURRENT-1))" COMP_LINE="$BUFFER" COMP_POINT="$CURSOR" '
+                'SHELL=zsh pnpm completion-server -- "${words[@]}" 2>/dev/null)',
+                "",
+                '    if [[ -z "$out" ]]; then',
+                "      return 0",
+                "    fi",
+                "",
+                '    if [[ "$out" == "__tabtab_complete_files__" ]]; then',
+                "      _files",
+                "      return 0",
+                "    fi",
+                "",
+                "    pnpm_completions=(\"${(@f)${out//$'\\t'/:}}\")",
+                "",
+                "    if (( ${#pnpm_completions} > 0 )); then",
+                "      _describe 'pnpm commands' pnpm_completions",
+                "    fi",
+                "  }",
+                "  if [[ $zsh_eval_context == *func ]]; then",
+                '    _pnpm_completion "$@"',
+                "  else",
+                "    compdef _pnpm_completion pnpm",
+                "  fi",
+                "fi",
+                "###-end-pnpm-completion-###",
             ]
         )
     )
@@ -244,24 +291,36 @@ def stamp_content(generated: list[GeneratedCompletion], removed: list[str]) -> s
     )
 
 
-def validate_zsh_files(config: ZshConfig, generated: list[GeneratedCompletion]) -> None:
+def validate_zsh_files(
+    config: ZshConfig, generated: list[GeneratedCompletion]
+) -> tuple[list[GeneratedCompletion], list[str]]:
     zsh = shutil.which("zsh")
     if zsh is None or not generated:
-        return
+        return generated, []
 
+    failures: list[str] = []
+    valid: list[GeneratedCompletion] = []
     for item in generated:
         path = config.output_dir / item.spec.output
         proc = subprocess.run([zsh, "-n", str(path)], text=True, capture_output=True, check=False)
         if proc.returncode != 0:
             detail = proc.stderr.strip() or proc.stdout.strip() or f"exit {proc.returncode}"
-            raise CompletionError(f"{item.spec.output}: zsh syntax validation failed: {detail}")
+            failures.append(f"{item.spec.output}: zsh syntax validation failed: {detail}")
+            path.unlink(missing_ok=True)
+            continue
+        valid.append(item)
 
     checks: list[tuple[str, str]] = []
-    for item in generated:
+    for item in valid:
         function_name = item.spec.output
         checks.extend((command, function_name) for command in item.spec.provides)
     if not checks:
-        return
+        return valid, failures
+
+    unsafe = sorted({command for command, _ in checks if not re.fullmatch(r"[A-Za-z0-9_.-]+", command)})
+    if unsafe:
+        failures.append(f"unsafe zsh command name in manifest: {', '.join(unsafe)}")
+        return valid, failures
 
     check_lines = [
         f"fpath=({zsh_quote(str(config.output_dir))} $fpath)",
@@ -270,8 +329,6 @@ def validate_zsh_files(config: ZshConfig, generated: list[GeneratedCompletion]) 
         "ret=0",
     ]
     for command, function_name in checks:
-        if not re.fullmatch(r"[A-Za-z0-9_.-]+", command):
-            raise CompletionError(f"unsafe zsh command name in manifest: {command}")
         check_lines.append(f"actual=${{_comps[{command}]-}}")
         check_lines.append(
             f"if [[ $actual != {zsh_quote(function_name)} ]]; then "
@@ -281,7 +338,8 @@ def validate_zsh_files(config: ZshConfig, generated: list[GeneratedCompletion]) 
     proc = subprocess.run([zsh, "-dfc", "\n".join(check_lines)], text=True, capture_output=True, check=False)
     if proc.returncode != 0:
         detail = proc.stderr.strip() or proc.stdout.strip() or f"exit {proc.returncode}"
-        raise CompletionError(f"zsh compinit map validation failed: {detail}")
+        failures.append(f"zsh compinit map validation failed: {detail}")
+    return valid, failures
 
 
 def zsh_quote(value: str) -> str:
@@ -307,25 +365,30 @@ def dry_run(config: ZshConfig, specs: list[ZshCompletion]) -> None:
             print(f"prune {name}: not generated by current manifest/PATH")
 
 
-def generate(config: ZshConfig, specs: list[ZshCompletion], repo_root: Path, *, validate: bool) -> None:
+def generate(config: ZshConfig, specs: list[ZshCompletion], repo_root: Path, *, validate: bool) -> list[str]:
     config.output_dir.mkdir(parents=True, exist_ok=True)
     generated: list[GeneratedCompletion] = []
     skipped: list[str] = []
+    failures: list[str] = []
     for spec in specs:
         if not command_available(spec):
             skipped.append(spec.output)
             continue
-        generated.append(generate_completion(spec, repo_root))
+        try:
+            generated.append(generate_completion(spec, repo_root))
+        except CompletionError as exc:
+            failures.append(str(exc))
 
     for item in generated:
         write_if_changed(config.output_dir / item.spec.output, item.content)
 
+    if validate and config.validate:
+        generated, validation_failures = validate_zsh_files(config, generated)
+        failures.extend(validation_failures)
+
     expected_outputs = {item.spec.output for item in generated}
     removed = prune_stale_outputs(config.output_dir, expected_outputs) if config.prune else []
     write_if_changed(config.output_dir / config.stamp_name, stamp_content(generated, removed))
-
-    if validate and config.validate:
-        validate_zsh_files(config, generated)
 
     for item in generated:
         print(f"generated {item.spec.output}: {', '.join(item.spec.provides)}")
@@ -333,6 +396,10 @@ def generate(config: ZshConfig, specs: list[ZshCompletion], repo_root: Path, *, 
         print(f"skipped {output}: binary not found")
     for output in sorted(removed):
         print(f"pruned {output}")
+    for failure in failures:
+        print(f"warning: {failure}", file=sys.stderr)
+
+    return failures
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

@@ -206,3 +206,85 @@ description = "bin github installer"
 output = "_bin"
 provides = ["bin"]
 argv = ["bin", "completion", "zsh"]
+
+[[tools]]
+key = "rg"
+binary = "rg"
+description = "ripgrep search tool"
+
+[[tools.zsh]]
+output = "_rg"
+provides = ["rg"]
+argv = ["rg", "--generate", "complete-zsh"]
+
+[[tools]]
+key = "delta"
+binary = "delta"
+description = "Git diff pager with syntax highlighting"
+
+[[tools.zsh]]
+output = "_delta"
+provides = ["delta"]
+argv = ["delta", "--generate-completion", "zsh"]
+
+[[tools]]
+key = "just"
+binary = "just"
+description = "cross-platform command runner"
+
+[[tools.zsh]]
+output = "_just"
+provides = ["just"]
+argv = ["just", "--completions", "zsh"]
+
+[[tools]]
+key = "docker"
+binary = "docker"
+description = "Docker CLI"
+
+[[tools.zsh]]
+output = "_docker"
+provides = ["docker"]
+argv = ["docker", "completion", "zsh"]
+
+[[tools]]
+key = "pandoc"
+binary = "pandoc"
+description = "document converter"
+
+[[tools.zsh]]
+output = "_pandoc"
+provides = ["pandoc"]
+argv = ["pandoc", "--completion", "zsh"]
+
+[[tools]]
+key = "tree-sitter"
+binary = "tree-sitter"
+description = "Tree-sitter CLI"
+
+[[tools.zsh]]
+output = "_tree-sitter"
+provides = ["tree-sitter"]
+argv = ["tree-sitter", "complete", "--shell", "zsh"]
+
+[[tools]]
+key = "lazygit"
+binary = "lazygit"
+description = "terminal UI for git commands"
+
+[[tools.zsh]]
+output = "_lazygit"
+provides = ["lazygit"]
+argv = ["lazygit", "completion", "zsh"]
+filter = "lazygit-zsh-fpath"
+
+[[tools]]
+key = "pnpm"
+binary = "pnpm"
+description = "Node.js package manager"
+
+[[tools.zsh]]
+output = "_pnpm"
+provides = ["pnpm"]
+argv = ["pnpm", "completion", "zsh"]
+filter = "pnpm-zsh-wrapper"

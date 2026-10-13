@@ -84,11 +84,15 @@ def test_tool_completion_manifest_is_typed_and_complete() -> None:
             outputs[str(entry["output"])] = entry
 
     assert {"_npm", "_spotatui", "_hermes", "_uv", "_bun", "_s5cmd"} <= outputs.keys()
+    assert {"_rg", "_delta", "_just", "_docker", "_pandoc", "_tree-sitter", "_lazygit", "_pnpm"} <= outputs.keys()
     assert outputs["_npm"]["filter"] == "npm-zsh-wrapper"
     assert outputs["_spotatui"]["filter"] == "strip-before-compdef"
     assert outputs["_hermes"]["filter"] == "hermes-v0.12-zsh-fix"
     assert outputs["_bun"]["env"] == {"SHELL": "zsh"}
-    assert outputs["_s5cmd"]["argv"] == ["s5cmd", "--completion", "zsh"]
+    assert outputs["_s5cmd"]["argv"] == ["s5cmd", "--install-completion"]
+    assert outputs["_lazygit"]["filter"] == "lazygit-zsh-fpath"
+    assert outputs["_pnpm"]["filter"] == "pnpm-zsh-wrapper"
+    assert outputs["_rg"]["argv"] == ["rg", "--generate", "complete-zsh"]
 
 
 def test_tool_completion_filters_fix_known_bad_outputs() -> None:
@@ -111,6 +115,17 @@ def test_tool_completion_filters_fix_known_bad_outputs() -> None:
     assert "_npm()" in npm
     hermes = apply_filter("hermes-v0.12-zsh-fix", "'(-h --help){-h,--help}[Show help and exit]'\n", spec)
     assert "'(-h --help)'{-h,--help}'[Show help and exit]'" in hermes
+    lazygit = apply_filter(
+        "lazygit-zsh-fpath",
+        "#compdef lazygit\n_lazygit() {}\ncompdef _lazygit lazygit\n",
+        spec,
+    )
+    assert 'if [ "$funcstack[1]" = "_lazygit" ]; then' in lazygit
+    assert lazygit.rstrip().endswith('_lazygit "$@"\nfi')
+    pnpm = apply_filter("pnpm-zsh-wrapper", "ignored\n", spec)
+    assert pnpm.startswith("#compdef pnpm\n")
+    assert "_pnpm_completion" in pnpm
+    assert "compdef _pnpm_completion pnpm" in pnpm
 
 
 def test_spec_driven_subcommand_options_are_emitted() -> None:

@@ -264,11 +264,6 @@ if (( $+commands[uv] )) && (( $+functions[compdef] )); then
 fi
 
 
-if (( $+commands[pnpm] )); then
-  # Already has static file in fpath.
-  :
-fi
-
 alias k='k -h'
 
 zmodload zsh/complist 2>/dev/null
