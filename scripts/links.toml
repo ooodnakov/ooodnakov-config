@@ -36,6 +36,11 @@ key = "pi-lens"
 source = "home/.pi-lens"
 target = "{HOME}/.pi-lens"
 
+[[links]]
+key = "omp"
+source = ".omp"
+target = "{HOME}/.omp"
+
 # --- linux-only ---
 
 [[links]]
