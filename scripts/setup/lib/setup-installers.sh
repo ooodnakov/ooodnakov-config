@@ -1736,8 +1736,27 @@ maybe_install_bun() {
     return 0
   fi
 
+  # The official installer appends auto-load lines to the user's shell rc files.
+  # Those are managed symlinks into this repo, so run it against a throwaway HOME
+  # to keep machine-specific paths out of tracked config. BUN_INSTALL is set
+  # explicitly, so the binary still lands in the right place.
+  local bun_installer_home saved_home saved_zdotdir
+  bun_installer_home="$(mktemp -d)"
+  saved_home="$HOME"
+  saved_zdotdir="${ZDOTDIR:-}"
+  export HOME="$bun_installer_home"
+  export ZDOTDIR="$bun_installer_home"
+
   run_with_spinner "Installing Bun${bun_ver:+ v$bun_ver} via official install script" \
-    download_and_run_installer "${bun_install_args[@]}"
+    download_and_run_installer "${bun_install_args[@]}" || true
+
+  export HOME="$saved_home"
+  if [ -n "$saved_zdotdir" ]; then
+    export ZDOTDIR="$saved_zdotdir"
+  else
+    unset ZDOTDIR
+  fi
+  rm -rf "$bun_installer_home"
 
   export PATH="$BUN_INSTALL/bin:$PATH"
 
