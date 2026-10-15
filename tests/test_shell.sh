@@ -61,6 +61,84 @@ if bash -c 'source scripts/setup/lib/setup-ui.sh; dependency_resolved_on_windows
 fi
 echo "OK: native commands are left untouched by the WSL check."
 
+echo "=== Testing --dry-run does not mutate file permissions ==="
+dryrun_dir="$(mktemp -d)"
+printf '#!/bin/sh\n' >"$dryrun_dir/script.sh"
+chmod 755 "$dryrun_dir/script.sh"
+DRY_RUN=1 bash -c 'ui_line() { :; }; source scripts/setup/lib/setup-ui.sh; source scripts/setup/lib/setup-links.sh; normalize_tree_permissions "$1"' _ "$dryrun_dir" >/dev/null 2>&1
+if [ -x "$dryrun_dir/script.sh" ]; then
+  echo "OK: dry-run left permissions unchanged."
+else
+  echo "FAIL: dry-run stripped executable permissions." >&2
+  rm -rf "$dryrun_dir"
+  exit 1
+fi
+DRY_RUN=0 bash -c 'ui_line() { :; }; source scripts/setup/lib/setup-ui.sh; source scripts/setup/lib/setup-links.sh; normalize_tree_permissions "$1"' _ "$dryrun_dir" >/dev/null 2>&1
+if [ -x "$dryrun_dir/script.sh" ]; then
+  echo "FAIL: real run did not normalize permissions." >&2
+  rm -rf "$dryrun_dir"
+  exit 1
+fi
+echo "OK: real run normalizes permissions."
+rm -rf "$dryrun_dir"
+
+echo "=== Testing pinned checkout tolerates permission drift ==="
+if (
+  set +e
+  t="$(mktemp -d)"
+  trap 'rm -rf "$t"' EXIT
+  DRY_RUN=0
+  VERBOSE=0
+  FAILURES=()
+  TOOL_SUMMARY=()
+  STATE_HOME="$t/state"
+  HOME_DIR="$HOME"
+  INTERACTIVE=never
+  OOODNAKOV_GIT_SYNC_ATTEMPTS=1
+  ui_line() { :; }
+  run_python() { :; }
+  source scripts/setup/lib/setup-ui.sh
+  source scripts/setup/lib/setup-links.sh
+
+  origin="$t/origin.git"
+  work="$t/work"
+  checkout="$t/checkout"
+  git init -q --bare "$origin"
+  git -C "$origin" config uploadpack.allowAnySHA1InWant true
+  git init -q "$work"
+  (
+    cd "$work" || exit 1
+    git config user.email t@t
+    git config user.name t
+    printf '#!/bin/sh\necho v1\n' >tool.sh
+    chmod +x tool.sh
+    git add tool.sh
+    git commit -qm c1
+    git remote add origin "$origin"
+    git push -q origin HEAD:main
+  )
+  first_ref="$(git -C "$work" rev-parse HEAD)"
+  sync_repo "$origin" "$first_ref" "$checkout" >/dev/null 2>&1
+
+  (
+    cd "$work" || exit 1
+    printf '#!/bin/sh\necho v2\n' >tool.sh
+    git commit -qam c2
+    git push -q origin HEAD:main
+  )
+  second_ref="$(git -C "$work" rev-parse HEAD)"
+
+  # Permission-only drift, as an interrupted or dry-run normalize would leave.
+  chmod u=rw,go=r "$checkout/tool.sh"
+  sync_repo "$origin" "$second_ref" "$checkout" >/dev/null 2>&1
+  [ "$(git -C "$checkout" rev-parse HEAD)" = "$second_ref" ]
+); then
+  echo "OK: pinned ref applied despite permission drift."
+else
+  echo "FAIL: permission drift blocked pinning." >&2
+  exit 1
+fi
+
 echo "=== Testing PowerShell syntax (if pwsh available) ==="
 if command -v pwsh >/dev/null 2>&1; then
   echo "pwsh found. Checking setup.ps1 syntax..."

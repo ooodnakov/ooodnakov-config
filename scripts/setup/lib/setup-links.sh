@@ -149,6 +149,11 @@ sync_repo() {
     clone_repo_with_fallbacks "$repo_url" "$target" || return 1
   fi
 
+  # This tool manages file modes itself (see ensure_oh_my_zsh_permissions), so a
+  # permission-only difference must never count as a local change that blocks
+  # checking out the pinned ref.
+  run_cmd git -C "$target" config core.fileMode false
+
   fetch_repo_ref_with_fallbacks "$target" "$ref" || return 1
   run_with_retry "Pinning $(basename "$target")" git -c advice.detachedHead=false -C "$target" checkout "$ref" || return 1
 }
@@ -159,8 +164,8 @@ normalize_tree_permissions() {
 
   [ -e "$target" ] || return 0
 
-  find "$target" -type d -exec chmod u=rwx,go=rx {} + || return 1
-  find "$target" -type f -exec chmod u=rw,go=r {} + || return 1
+  run_cmd find "$target" -type d -exec chmod u=rwx,go=rx {} + || return 1
+  run_cmd find "$target" -type f -exec chmod u=rw,go=r {} + || return 1
 }
 
 restore_git_executable_bits() {
@@ -184,6 +189,12 @@ ensure_oh_my_zsh_permissions() {
   omz_root="$STATE_HOME/oh-my-zsh"
   local git_dir
   local repo_root
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    printf '[dry-run] normalize file permissions under %s\n' "$omz_root"
+    TOOL_SUMMARY+=("oh-my-zsh permissions: preview")
+    return 0
+  fi
 
   if ! normalize_tree_permissions "$omz_root"; then
     TOOL_SUMMARY+=("oh-my-zsh permissions: failed")
