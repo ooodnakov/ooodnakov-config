@@ -62,6 +62,7 @@ home/.pi-lens/sessionstart.log
 home/.pi-lens/probe-cache.json
 
 # omp
+/.omp/
 home/.omp/*
 !home/.omp/agent/
 home/.omp/agent/*
