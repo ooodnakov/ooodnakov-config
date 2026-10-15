@@ -2,7 +2,7 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-10-08T21:29:14+00:00`
+Generated at (UTC): `2026-10-15T13:28:52+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
@@ -35,6 +35,7 @@ Generated at (UTC): `2026-10-08T21:29:14+00:00`
 | `bin` | `0.29.2` | `bin_0.29.2_windows_arm64.exe` | `83ef10ca2a74e2f5cf76fe103c74d651127f8f550e090f1b1677f0074756f2a5` |
 | `topgrade` | `17.9.0` | `topgrade-v17.9.0-aarch64-unknown-linux-gnu.tar.gz` | `f408e860edada66bdb8b6c6808e0343d9351978b62a8aa7d1466cc79e8e2c7d7` |
 | `topgrade` | `17.9.0` | `topgrade-v17.9.0-x86_64-unknown-linux-gnu.tar.gz` | `608bde3b699a7971c54cad52f5ced4d7ceea485150026a4ea84b69eec02d8998` |
+| `zsh` | `5.9.2-1` | `zsh-5.9.2-1-x86_64.pkg.tar.zst` | `9a134200a152d90a0f1820d6aa74c3369d8539c068b523852549d74b16739fa8` |
 | `bat` | `0.26.1` | `bat-v0.26.1-aarch64-apple-darwin.tar.gz` | `e30beff26779c9bf60bb541e1d79046250cb74378f2757f8eb250afddb19e114` |
 | `bat` | `0.26.1` | `bat-v0.26.1-aarch64-pc-windows-msvc.zip` | `af07dd1939e99f7f5892d197fc5653cb8cb6c5999552731135ad156eca7e38a5` |
 | `bat` | `0.26.1` | `bat-v0.26.1-aarch64-unknown-linux-musl.tar.gz` | `6369242c584065f195fb20cb36fbd7cb63ae690605bbe89868a7596b596c2c23` |

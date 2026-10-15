@@ -17,6 +17,7 @@ This repo tracks the opinionated base config and bootstrap logic only. Secrets, 
 Active tracked config lives under `home/` and includes:
 
 - Zsh entrypoints, modular Zsh config, pinned shell helpers, and generated completions
+- Git Bash (Windows) support: a pinned MSYS2 zsh package installed into the Git for Windows tree so Git Bash windows run the same managed zsh stack, plus managed `.bashrc`/`.bash_profile` entrypoints that exec into zsh
 - shared portable environment files plus ignored local override templates
 - WezTerm, Yazi, LazyVim/Neovim, LazyGit, LazyDocker, btop, CAVA, todo.txt, Taskwarrior, and ccstatusline config
 - PowerShell profile, PowerShell completions, Oh My Posh, and shared SSH include config
@@ -336,6 +337,8 @@ The setup scripts intentionally do not try to provision a full workstation from 
 | **Linux**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **macOS**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
+
+On Windows, `oooconf deps zsh` (from PowerShell) installs the pinned MSYS2 zsh package into the Git for Windows directory and Git Bash windows then start the managed zsh automatically. Set `OOODNAKOV_GITBASH_ZSH=0` to keep plain bash for a session.
 
 See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 

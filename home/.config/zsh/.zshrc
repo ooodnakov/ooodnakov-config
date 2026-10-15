@@ -33,10 +33,21 @@ fpath=("$OOODNAKOV_CONFIG_HOME/zsh/completions" "$OOODNAKOV_CONFIG_HOME/zsh/comp
 
 # Create runtime directories with explicit permissions so compaudit accepts
 # the Oh My Zsh completion cache regardless of the caller's umask.
-install -d -m 700 "${HISTFILE:h}"
-install -d -m 755 "$OOODNAKOV_CACHE_HOME" "${ZSH_COMPDUMP:h}" "$ZSH_CACHE_DIR" "$ZSH_CACHE_DIR/completions"
+# MSYS (Git for Windows) cannot chmod NTFS paths, so use mkdir -p there.
+if [[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]]; then
+  mkdir -p "${HISTFILE:h}" "$OOODNAKOV_CACHE_HOME" "${ZSH_COMPDUMP:h}" "$ZSH_CACHE_DIR" "$ZSH_CACHE_DIR/completions"
+else
+  install -d -m 700 "${HISTFILE:h}"
+  install -d -m 755 "$OOODNAKOV_CACHE_HOME" "${ZSH_COMPDUMP:h}" "$ZSH_CACHE_DIR" "$ZSH_CACHE_DIR/completions"
+fi
 
 zstyle ':omz:update' mode disabled
+
+# MSYS (Git for Windows) maps NTFS ACLs in a way compaudit always flags as
+# insecure; skip the audit there instead of prompting on every startup.
+if [[ "$OSTYPE" == msys || "$OSTYPE" == cygwin ]]; then
+  export ZSH_DISABLE_COMPFIX=true
+fi
 
 # Remove stale compdump files that use an older oh-my-zsh header format.
 # Newer compinit expects the first line to start with "#files:" and fails

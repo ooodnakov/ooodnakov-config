@@ -54,6 +54,16 @@ See `deps.lock.json` for the exact pinned git revisions used by the setup script
 
 Taskwarrior uses Homebrew's `task` formula on Linux and macOS to avoid outdated Linux apt packages. Homebrew must be installed first (`oooconf deps brew`); its formula version follows Homebrew rather than a repository pin.
 
+### Git Bash zsh on Windows (pinned MSYS2 package)
+
+Windows does not ship zsh, and Git for Windows intentionally does not bundle it. To give Git Bash the same managed zsh stack as Linux/macOS, the `zsh` dependency uses the `gitbash-zsh` manager on Windows:
+
+- The pinned `zsh-<ver>-x86_64.pkg.tar.zst` package is downloaded over HTTPS from `repo.msys2.org`, verified against the SHA-256 pinned in `scripts/optional-deps.toml`, and guard-extracted into a staging directory under `~/.local/share/ooodnakov-config/tools/zsh-gitbash/`.
+- The staged `usr/` and `etc/` trees are merged into the detected Git for Windows installation root. When that directory is not user-writable (the default `C:\Program Files\Git`), a single elevated copy step is spawned via UAC; the elevated step only copies already-verified plain files — no network and no archive handling runs elevated.
+- The package's internal symlinks are materialized as file copies during extraction, which is what MSYS packages need on NTFS.
+- Git for Windows upgrades replace the MSYS2 runtime but leave the extracted zsh files untouched; re-run `oooconf deps zsh` after a Git for Windows upgrade to re-verify the pairing (the pin is re-checked and files re-merged idempotently).
+- Git Bash start: managed `~/.bashrc` + `~/.bash_profile` (Windows-only links) exec `zsh -l` for interactive sessions when `/usr/bin/zsh` exists. `OOODNAKOV_GITBASH_ZSH=0` opts out (including per invocation: `OOODNAKOV_GITBASH_ZSH=0 bash`).
+
 This keeps the repo small while still making bootstrap deterministic. The refactored setup entrypoints keep dependency metadata centralized in `scripts/optional-deps.toml`; the extracted helper modules only organize implementation details and do not introduce new dependency lists or machine-local state.
 
 Shell runtime state is kept outside the tracked config tree:

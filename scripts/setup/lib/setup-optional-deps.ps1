@@ -393,14 +393,6 @@ function Install-OptionalDependencyFromSpec {
         }
     }
 
-    switch ($key) {
-        "zsh" {
-            Write-Warning "zsh is not natively supported on Windows; use WSL or a custom build."
-            Add-DependencySummary "zsh: skipped"
-            return $false
-        }
-    }
-
     $platformConfig = Get-OptionalDependencyPlatformConfig -Spec $Spec
     if (-not $platformConfig) {
         Add-DependencySummary "${key}: skipped (not applicable on this platform)"
@@ -422,6 +414,9 @@ function Install-OptionalDependencyFromSpec {
     $scoopPackage = if ($manager -eq "scoop") { $packageName } else { "" }
 
     switch ($manager) {
+        "gitbash-zsh" {
+            return (Install-GitBashZshIfMissing -Spec $Spec -PlatformConfig $platformConfig)
+        }
         "custom" {
             Add-DependencySummary "${summaryName}: skipped (manual installer)"
             return $false

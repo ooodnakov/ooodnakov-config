@@ -548,6 +548,11 @@ install_optional_dependency_from_catalog() {
   github-release)
     maybe_install_github_release "$key" "$description" "$package_name" "$command_name" "$platform_url" "$asset_name"
     ;;
+  gitbash-zsh)
+    # Windows-only manager: the pinned MSYS2 zsh package is downloaded and
+    # merged into the Git for Windows tree by the PowerShell setup modules.
+    maybe_note_dependency "$command_name" "$description (install from PowerShell: pwsh ./scripts/setup/setup.ps1 deps zsh)"
+    ;;
   "")
     maybe_note_dependency "$command_name" "$description (no package manager declared)"
     ;;

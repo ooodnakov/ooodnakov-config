@@ -216,10 +216,18 @@ windows.package = "fd"
 key = "zsh"
 display = "zsh"
 description = "default shell support"
+ver = "5.9.2-1"
 linux.manager = "apt"
 linux.package = "zsh"
 macos.manager = "brew"
 macos.package = "zsh"
+# Windows: pinned MSYS2 zsh package extracted into the Git for Windows tree so
+# Git Bash runs the same managed zsh stack as Linux/macOS. Re-run
+# `oooconf deps zsh` after Git for Windows upgrades (its MSYS2 runtime is
+# replaced while the extracted zsh files are left in place).
+windows.manager = "gitbash-zsh"
+windows.url = "https://repo.msys2.org/msys/x86_64/zsh-${ver}-x86_64.pkg.tar.zst"
+integrity = { "zsh-${ver}-x86_64.pkg.tar.zst" = "9a134200a152d90a0f1820d6aa74c3369d8539c068b523852549d74b16739fa8" }
 
 [[deps]]
 key = "direnv"

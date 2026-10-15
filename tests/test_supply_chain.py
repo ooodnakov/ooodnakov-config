@@ -105,6 +105,52 @@ def test_archive_symlinks_are_rejected(tmp_path: Path) -> None:
         secure_artifact.extract_tar(archive, tmp_path / "destination")
 
 
+def _compress_zst(source: Path, target: Path) -> None:
+    zstandard = pytest.importorskip("zstandard")
+    with source.open("rb") as reader, target.open("wb") as writer:
+        zstandard.ZstdCompressor().copy_stream(reader, writer)
+
+
+def test_zst_archive_escaping_link_target_is_rejected(tmp_path: Path) -> None:
+    inner = tmp_path / "payload.tar"
+    with tarfile.open(inner, "w") as bundle:
+        payload = b"payload"
+        member = tarfile.TarInfo("usr/bin/tool")
+        member.size = len(payload)
+        bundle.addfile(member, io.BytesIO(payload))
+        link = tarfile.TarInfo("usr/bin/link")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "../../../outside"
+        bundle.addfile(link)
+    archive = tmp_path / "payload.tar.zst"
+    _compress_zst(inner, archive)
+    with pytest.raises(secure_artifact.IntegrityError, match="unsafe archive link target"):
+        secure_artifact.extract(archive, tmp_path / "destination")
+    assert not (tmp_path / "outside").exists()
+
+
+def test_zst_archive_internal_links_are_materialized_as_copies(tmp_path: Path) -> None:
+    inner = tmp_path / "payload.tar"
+    with tarfile.open(inner, "w") as bundle:
+        payload = b"real binary"
+        member = tarfile.TarInfo("usr/bin/tool-1.0.exe")
+        member.size = len(payload)
+        bundle.addfile(member, io.BytesIO(payload))
+        link = tarfile.TarInfo("usr/bin/tool.exe")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "tool-1.0.exe"
+        bundle.addfile(link)
+    archive = tmp_path / "payload.tar.zst"
+    _compress_zst(inner, archive)
+
+    destination = tmp_path / "destination"
+    secure_artifact.extract(archive, destination)
+
+    materialized = destination / "usr" / "bin" / "tool.exe"
+    assert materialized.is_file()
+    assert materialized.read_bytes() == b"real binary"
+
+
 def test_bin_track_records_binary_without_redownload(tmp_path: Path, monkeypatch) -> None:
     binary = tmp_path / "bw"
     binary.write_bytes(b"verified binary bytes")

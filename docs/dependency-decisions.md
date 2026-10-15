@@ -84,3 +84,13 @@ Run `oooconf lock` after editing the TOML.
 | macOS | `brew` | — |
 
 The bootstrap detects the available package manager at install time and uses it. If no package manager is found, the dependency is skipped with a warning.
+
+### zsh on Windows (Git Bash)
+
+`zsh` is a special case on Windows: there is no winget/choco package that integrates with Git Bash, and Git for Windows intentionally does not bundle a shell other than bash. The decision was to install the **pinned MSYS2 `zsh` package** (`repo.msys2.org`, SHA-256 pinned in the catalog) into the Git for Windows installation tree, because Git for Windows is itself MSYS2-based and already ships the runtime DLLs zsh links against (`msys-2.0.dll`, ncurses, pcre2, iconv). Alternatives rejected:
+
+- **Full MSYS2 with pacman**: cleanest zsh, but a separate environment from Git for Windows (separate runtime, PATH, Git build) — it does not make *Git Bash* a zsh terminal.
+- **WSL zsh**: first-class OMZ/p10k support, but a Linux VM boundary, not the Windows-side Git Bash the setup automates.
+- **Cygwin zsh**: fully disjoint toolchain from Git Bash.
+
+Extraction goes through `scripts/security/secure_artifact.py` (`.tar.zst` support with internal symlinks materialized as copies), and the merge into `C:\Program Files\Git` self-elevates for a single copy-only step when needed. See [`reproducibility.md`](reproducibility.md) for the full flow and the post-Git-upgrade re-run policy.

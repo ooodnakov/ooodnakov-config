@@ -464,6 +464,163 @@ function Expand-GitHubReleaseTemplate {
     return $Template.Replace('${ver}', $Version).Replace('${system}', $System).Replace('${arch}', $Arch).Replace('${goarch}', $goarch)
 }
 
+function Get-GitForWindowsRoot {
+    # git.exe lives under <root>\mingw64\bin, <root>\cmd, or <root>\bin; walk up
+    # a few levels from every git.exe on PATH and keep the first candidate that
+    # looks like a Git for Windows install (it ships usr\bin\bash.exe).
+    $candidates = New-Object System.Collections.Generic.List[string]
+    foreach ($gitCommand in @(Get-Command git.exe -ErrorAction SilentlyContinue)) {
+        $current = Split-Path -Parent $gitCommand.Source
+        for ($level = 0; $level -lt 3; $level++) {
+            if (-not $current) { break }
+            $current = Split-Path -Parent $current
+            if ($current) { $candidates.Add($current) }
+        }
+    }
+    $candidates.Add("C:\Program Files\Git")
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path (Join-Path $candidate "usr\bin\bash.exe")) {
+            return $candidate
+        }
+    }
+    return $null
+}
+
+function Merge-GitBashZshStaging {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$StagingRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$GitRoot
+    )
+
+    foreach ($top in @("usr", "etc")) {
+        $source = Join-Path $StagingRoot $top
+        if (-not (Test-Path $source)) { continue }
+        $target = Join-Path $GitRoot $top
+        New-Item -ItemType Directory -Path $target -Force | Out-Null
+        Copy-Item -Path (Join-Path $source "*") -Destination $target -Recurse -Force
+    }
+}
+
+function Install-GitBashZshIfMissing {
+    param(
+        [Parameter(Mandatory = $true)]
+        [pscustomobject]$Spec,
+        [Parameter(Mandatory = $true)]
+        [object]$PlatformConfig
+    )
+
+    $gitRoot = Get-GitForWindowsRoot
+    if (-not $gitRoot) {
+        Write-Warning "Git for Windows installation not found; cannot install zsh for Git Bash."
+        Add-DependencySummary "zsh: skipped (Git for Windows not found)"
+        return $false
+    }
+
+    $zshBinary = Join-Path $gitRoot "usr\bin\zsh.exe"
+    if (Test-Path $zshBinary) {
+        Add-DependencySummary "zsh: already installed for Git Bash"
+        return $true
+    }
+
+    $version = if ($Spec.Ver) { [string]$Spec.Ver } else { "" }
+    $urlTemplate = Get-OptionalConfigValue -Config $PlatformConfig -Name "url"
+    if ([string]::IsNullOrWhiteSpace($version) -or [string]::IsNullOrWhiteSpace($urlTemplate)) {
+        Add-DependencySummary "zsh: missing (gitbash-zsh metadata incomplete)"
+        return $false
+    }
+
+    $url = Expand-GitHubReleaseTemplate -Template $urlTemplate -Version $version -System "windows" -Arch "x86_64"
+    $assetName = Split-Path -Leaf $url
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Download $url"
+        Write-Output "[dry-run] Extract $assetName -> staging"
+        Write-Output "[dry-run] Merge staged usr/etc -> $gitRoot (may require administrator approval)"
+        Add-DependencySummary "zsh: install preview for Git Bash"
+        return $false
+    }
+
+    if (-not (Confirm-Install "Install zsh $version into Git Bash at $gitRoot? The merge step may prompt for administrator approval.")) {
+        Add-DependencySummary "zsh: skipped"
+        return $false
+    }
+
+    $stagingRoot = Join-Path $ShareHome "tools/zsh-gitbash/v$version"
+    $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) $assetName
+
+    try {
+        if (-not (Ensure-Directory -Path $stagingRoot)) {
+            Add-DependencySummary "zsh: install attempted"
+            return $false
+        }
+
+        Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+            "download", "--archive", $archivePath, "--dependency", $Spec.Key,
+            "--asset", $assetName, "--url", $url
+        )
+        Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/secure_artifact.py") -ScriptArgs @(
+            "extract", "--archive", $archivePath, "--dependency", $Spec.Key,
+            "--asset", $assetName, "--destination", $stagingRoot
+        )
+
+        if (-not (Test-Path (Join-Path $stagingRoot "usr\bin\zsh.exe"))) {
+            Add-DependencySummary "zsh: install attempted (archive did not contain usr/bin/zsh.exe)"
+            return $false
+        }
+
+        $canWrite = $false
+        try {
+            $probe = Join-Path $gitRoot "usr\bin\.oooconf-write-probe"
+            [System.IO.File]::WriteAllText($probe, "")
+            Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue
+            $canWrite = $true
+        } catch {
+            $canWrite = $false
+        }
+
+        if ($canWrite) {
+            Merge-GitBashZshStaging -StagingRoot $stagingRoot -GitRoot $gitRoot
+        } else {
+            # The archive was downloaded, verified, and guard-extracted in the
+            # user context; the elevated step only merges plain files into the
+            # Git for Windows tree (no network, no archives).
+            $usrSource = Join-Path $stagingRoot "usr"
+            $etcSource = Join-Path $stagingRoot "etc"
+            $usrTarget = Join-Path $gitRoot "usr"
+            $etcTarget = Join-Path $gitRoot "etc"
+            $copyUsr = if (Test-Path $usrSource) { "Copy-Item -Path '$usrSource\*' -Destination '$usrTarget' -Recurse -Force; " } else { "" }
+            $copyEtc = if (Test-Path $etcSource) { "Copy-Item -Path '$etcSource\*' -Destination '$etcTarget' -Recurse -Force" } else { "" }
+            $mergeCommand = "New-Item -ItemType Directory -Force -Path '$usrTarget','$etcTarget' | Out-Null; $copyUsr$copyEtc"
+            $shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { (Get-Command pwsh -ErrorAction SilentlyContinue).Source } else { "$PSHOME\powershell.exe" }
+            try {
+                $process = Start-Process -FilePath $shell -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $mergeCommand) -Verb RunAs -Wait -PassThru
+                if ($process.ExitCode -ne 0) {
+                    throw "elevated merge exited with code $($process.ExitCode)"
+                }
+            } catch {
+                Write-Warning "Administrator approval was declined or the merge failed; zsh remains staged at $stagingRoot."
+                throw
+            }
+        }
+
+        if (-not (Test-Path $zshBinary)) {
+            Add-DependencySummary "zsh: install attempted (merge did not produce usr/bin/zsh.exe)"
+            return $false
+        }
+        Add-DependencySummary "zsh: installed $version for Git Bash (restart Git Bash to use it)"
+        return $true
+    } catch {
+        Write-Output $_
+        Add-Failure "Installing zsh for Git Bash"
+        return $false
+    } finally {
+        if (Test-Path $archivePath) { Remove-Item -LiteralPath $archivePath -Force -ErrorAction SilentlyContinue }
+    }
+}
+
 function Install-GitHubReleaseDependencyIfMissing {
     param(
         [Parameter(Mandatory = $true)]

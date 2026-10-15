@@ -109,10 +109,90 @@ def extract_tar(archive: Path, destination: Path) -> None:
         bundle.extractall(destination, members=members, filter="data")
 
 
+def extract_tar_zst(archive: Path, destination: Path) -> None:
+    try:
+        import zstandard  # type: ignore[import-not-found]
+    except ImportError as error:  # pragma: no cover - depends on environment
+        raise IntegrityError(
+            "extracting .tar.zst archives requires the 'zstandard' package; "
+            "run 'uv sync' (or 'uv add zstandard') and retry"
+        ) from error
+
+    handle, intermediate_name = tempfile.mkstemp(prefix=".oooconf-tarzst.", suffix=".tar")
+    os.close(handle)
+    intermediate = Path(intermediate_name)
+    try:
+        with archive.open("rb") as source, intermediate.open("wb") as target:
+            zstandard.ZstdDecompressor().copy_stream(source, target)
+        _extract_tar_materializing_links(intermediate, destination)
+    finally:
+        intermediate.unlink(missing_ok=True)
+
+
+def _tar_link_target(link: tarfile.TarInfo, files: dict[str, tarfile.TarInfo]) -> str | None:
+    """Resolve a tar symlink/hardlink member to an archived file path, or None."""
+    name = PurePosixPath(link.name)
+    if link.islnk():
+        # Hardlink targets are relative to the archive root.
+        resolved = PurePosixPath(link.linkname)
+    else:
+        if PurePosixPath(link.linkname).is_absolute():
+            return None
+        resolved = name.parent / PurePosixPath(link.linkname)
+    parts: list[str] = []
+    for part in resolved.parts:
+        if part == "..":
+            if not parts:
+                return None
+            parts.pop()
+        elif part not in (".", ""):
+            parts.append(part)
+    candidate = str(PurePosixPath(*parts))
+    return candidate if candidate in files else None
+
+
+def _extract_tar_materializing_links(archive: Path, destination: Path) -> None:
+    """Extract a distribution tarball, replacing internal symlinks/hardlinks
+    with copies of their targets.
+
+    MSYS2 packages ship symlinks (for example usr/bin/zsh.exe -> zsh-5.9.2.exe)
+    that must survive extraction on Windows, where symlinks need privileges to
+    recreate. Links pointing outside the archived file set are rejected like
+    any other escape attempt.
+    """
+    with tarfile.open(archive, mode="r:*") as bundle:
+        direct: list[tarfile.TarInfo] = []
+        files: dict[str, tarfile.TarInfo] = {}
+        links: list[tarfile.TarInfo] = []
+        for member in bundle.getmembers():
+            relative = _safe_relative(member.name)
+            if member.isdev():
+                raise IntegrityError(f"unsafe archive member type: {member.name}")
+            if not _within(destination, destination / relative):
+                raise IntegrityError(f"archive member escapes destination: {member.name}")
+            if member.issym() or member.islnk():
+                links.append(member)
+            else:
+                direct.append(member)
+                if member.isfile():
+                    files[relative.as_posix()] = member
+        bundle.extractall(destination, members=direct, filter="data")
+        for link in links:
+            target = _tar_link_target(link, files)
+            if target is None:
+                raise IntegrityError(f"unsafe archive link target: {link.name} -> {link.linkname}")
+            source_file = destination / target
+            if not source_file.is_file():
+                raise IntegrityError(f"archive link target missing: {link.name} -> {link.linkname}")
+            shutil.copyfile(source_file, destination / _safe_relative(link.name))
+
+
 def extract(archive: Path, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     if archive.name.endswith(".zip"):
         extract_zip(archive, destination)
+    elif archive.name.endswith(".tar.zst"):
+        extract_tar_zst(archive, destination)
     elif archive.name.endswith((".tar.gz", ".tgz", ".tar.xz", ".tar.bz2")):
         extract_tar(archive, destination)
     else:

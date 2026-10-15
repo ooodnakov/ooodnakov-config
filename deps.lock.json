@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-08T21:29:14+00:00",
+  "generated_at_utc": "2026-10-15T13:28:52+00:00",
   "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
@@ -131,6 +131,12 @@
       "version": "17.9.0",
       "asset": "topgrade-v17.9.0-x86_64-unknown-linux-gnu.tar.gz",
       "sha256": "608bde3b699a7971c54cad52f5ced4d7ceea485150026a4ea84b69eec02d8998"
+    },
+    {
+      "dependency": "zsh",
+      "version": "5.9.2-1",
+      "asset": "zsh-5.9.2-1-x86_64.pkg.tar.zst",
+      "sha256": "9a134200a152d90a0f1820d6aa74c3369d8539c068b523852549d74b16739fa8"
     },
     {
       "dependency": "bat",

@@ -395,7 +395,19 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     setup_ps1 = _setup_pwsh_sources()
 
     expected_unix = {"", "apt", "brew", "cargo", "curl", "custom", "download", "github-release", "pip", "pnpm"}
-    expected_windows = {"", "cargo", "choco", "custom", "download", "github-release", "pip", "pnpm", "scoop", "winget"}
+    expected_windows = {
+        "",
+        "cargo",
+        "choco",
+        "custom",
+        "download",
+        "gitbash-zsh",
+        "github-release",
+        "pip",
+        "pnpm",
+        "scoop",
+        "winget",
+    }
     assert unix_managers == expected_unix
     assert windows_managers == expected_windows
 
@@ -412,7 +424,18 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     assert 'check_pip_dependency_status "$command_name" "$python_cmd"' in setup_sh
     assert 'check_cmd="$python_cmd ${check_cmd#python }"' in setup_sh
 
-    for manager in ["custom", "curl", "winget", "choco", "cargo", "scoop", "pnpm", "github-release", "pip"]:
+    for manager in [
+        "custom",
+        "curl",
+        "winget",
+        "choco",
+        "cargo",
+        "scoop",
+        "pnpm",
+        "github-release",
+        "pip",
+        "gitbash-zsh",
+    ]:
         assert f'"{manager}" {{' in setup_ps1
     assert '"bw" { return (Install-BitwardenCliIfMissing) }' in setup_ps1  # download manager handler.
     assert "function Get-PythonCommand" in setup_ps1

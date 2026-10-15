@@ -57,6 +57,36 @@ oooconf install
 
 To switch only zsh between Powerlevel10k and Oh My Posh, run `oooconf shell prompt p10k` or `oooconf shell prompt ohmyposh` and open a new zsh session. To reduce prompt verbosity across managed prompt engines, run `oooconf shell prompt-style concise`; restore the full layout with `oooconf shell prompt-style verbose`.
 
+## Git Bash still starts bash (or lost zsh after a Git upgrade)
+
+Git Bash windows start zsh only when `/usr/bin/zsh` exists inside the Git for Windows installation. If it is missing (never installed, or a Git for Windows upgrade wiped it):
+
+```powershell
+pwsh -NoProfile -File scripts/setup/setup.ps1 deps zsh
+```
+
+The install is idempotent and safe to re-run; the pinned MSYS2 package is re-downloaded, re-verified, and re-merged. To keep plain bash for a session, set `OOODNAKOV_GITBASH_ZSH=0` (per invocation: `OOODNAKOV_GITBASH_ZSH=0 bash` gives a raw bash subshell inside zsh). Non-interactive bash (git hooks, scripts) is never replaced.
+
+If the merge step cannot write to the Git directory and administrator approval is declined, the verified files stay staged under `~/.local/share/ooodnakov-config/tools/zsh-gitbash/`; re-run the command and approve the elevation prompt to finish.
+
+## Powerlevel10k git status or prompt issues under Git Bash
+
+p10k's gitstatus daemon has best-effort MSYS2 support. If git status segments misbehave or the prompt feels slow in Git Bash, switch the managed zsh prompt to Oh My Posh (first-class on Windows):
+
+```bash
+oooconf shell prompt ohmyposh
+```
+
+Also make sure the terminal font is a Nerd Font (the repo bundles Meslo under `fonts/meslo/`; mintty: `~/.minttyrc` `Font=...`, Windows Terminal: Settings → Appearance → font face).
+
+## `git-prompt.sh` obsolete warning in Git Bash zsh
+
+Git's bash-oriented prompt helper prints `ERROR: this script is obsolete, please see git-completion.zsh` when zsh starts. Silence it by creating an empty file:
+
+```bash
+mkdir -p ~/.config/git && touch ~/.config/git/git-prompt.sh
+```
+
 ## Completion generation issues
 
 - **Completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview). This regenerates local autogen zsh completions under `home/.config/ooodnakov/zsh/completions/autogen`, prunes stale autogen files, and refreshes tracked `oooconf` command completion scripts.

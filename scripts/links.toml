@@ -85,6 +85,18 @@ only = "macos"
 # --- Windows-only ---
 
 [[links]]
+key = "gitbash-bashrc"
+source = "home/.bashrc"
+target = "{HOME}/.bashrc"
+only = "windows"
+
+[[links]]
+key = "gitbash-bash-profile"
+source = "home/.bash_profile"
+target = "{HOME}/.bash_profile"
+only = "windows"
+
+[[links]]
 key = "komorebi-config"
 source = "home/.config/komorebi/komorebi.json"
 target = "{HOME}/komorebi.json"

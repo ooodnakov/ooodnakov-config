@@ -3,7 +3,10 @@ name = "ooodnakov-config"
 version = "0.1.0"
 description = "Cross-platform dotfiles repository — Python helper scripts for secrets and dependency management"
 requires-python = ">=3.12"
-dependencies = ["windows-curses>=2.4.2; platform_system == 'Windows'"]
+dependencies = [
+    "windows-curses>=2.4.2; platform_system == 'Windows'",
+    "zstandard>=0.23.0 ; sys_platform == 'win32'",
+]
 
 [tool.uv]
 
