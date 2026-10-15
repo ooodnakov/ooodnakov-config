@@ -102,6 +102,7 @@ _oooconf_values_deps_keys=(
   'bw:Bitwarden CLI via official native archive'
   'node:Node.js runtime with bundled npm, installed through nvm when needed'
   'pnpm:Node.js package manager via corepack or npm fallback; bootstraps Node.js through nvm when needed'
+  'bun:JavaScript runtime, bundler, test runner, and package manager via the official install script'
   'rtk:token-optimized command proxy for AI CLI workflows'
   'imagemagick:Image processing library (required by Snacks.image)'
   'ghostscript:PostScript and PDF interpreter (required by Snacks.image for PDFs)'

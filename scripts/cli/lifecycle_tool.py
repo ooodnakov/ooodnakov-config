@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -60,9 +61,43 @@ class Check:
     remediation: str | None = None
 
 
+_WINDOWS_DRIVE_MOUNT = re.compile(r"^/mnt/[A-Za-z]/")
+
+
+def _is_wsl() -> bool:
+    """Detect WSL, where Windows host binaries leak onto PATH."""
+    if os.environ.get("WSL_DISTRO_NAME") or os.environ.get("WSL_INTEROP"):
+        return True
+    try:
+        version = Path("/proc/version").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    version = version.lower()
+    return "microsoft" in version or "wsl" in version
+
+
+def _windows_host_binary(dependency: dict[str, object]) -> str | None:
+    """Return the resolved path when a tool only exists as a Windows host binary.
+
+    Inside WSL, host executables appear on PATH as /mnt/<drive>/... paths. They
+    are not installed in the distro and must not count as available.
+    """
+    if not _is_wsl():
+        return None
+    binary = dependency.get("bin") or dependency.get("key")
+    if not isinstance(binary, str):
+        return None
+    resolved = shutil.which(binary)
+    if resolved and _WINDOWS_DRIVE_MOUNT.match(resolved):
+        return resolved
+    return None
+
+
 def _dependency_available(dependency: dict[str, object]) -> bool:
     binary = dependency.get("bin") or dependency.get("key")
-    return isinstance(binary, str) and shutil.which(binary) is not None
+    if not isinstance(binary, str) or shutil.which(binary) is None:
+        return False
+    return _windows_host_binary(dependency) is None
 
 
 def _generated_drift(repo_root: Path) -> bool:
@@ -110,6 +145,30 @@ def diagnostics(repo_root: Path, platform: str, profile_name: str | None, mode: 
             "info" if available == len(dependencies) else "warning",
             f"{available} of {len(dependencies)} recommended dependencies are available.",
             None if available == len(dependencies) else "Run oooconf deps with the missing dependency keys.",
+        )
+    )
+    host_binaries: list[str] = []
+    for key in dependencies:
+        record = records.get(key)
+        if record is None:
+            continue
+        resolved = _windows_host_binary(record)
+        if resolved:
+            host_binaries.append(f"{key} -> {resolved}")
+    if host_binaries:
+        listed = ", ".join(host_binaries[:5])
+        if len(host_binaries) > 5:
+            listed += f", +{len(host_binaries) - 5} more"
+        host_message = f"Resolved from Windows host binaries instead of WSL installs: {listed}"
+    else:
+        host_message = "No dependency resolves to a Windows host binary."
+    checks.append(
+        Check(
+            "dependencies.native",
+            "warning" if host_binaries else "pass",
+            "warning" if host_binaries else "info",
+            host_message,
+            "Run oooconf deps <key> to install native copies inside WSL." if host_binaries else None,
         )
     )
     incomplete = sum(data.get("status") in INCOMPLETE_STATUSES for _path, data in _load_journals())

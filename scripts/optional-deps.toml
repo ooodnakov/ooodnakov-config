@@ -601,6 +601,17 @@ macos.manager = "custom"
 windows.manager = "custom"
 
 [[deps]]
+key = "bun"
+display = "Bun"
+description = "JavaScript runtime, bundler, test runner, and package manager via the official install script"
+handler = "bun"
+ver = "1.4.2"
+check = "bun --version"
+linux.manager = "custom"
+macos.manager = "custom"
+windows.manager = "custom"
+
+[[deps]]
 key = "rtk"
 display = "rtk"
 description = "token-optimized command proxy for AI CLI workflows"

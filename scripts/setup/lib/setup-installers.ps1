@@ -750,6 +750,53 @@ function Install-PnpmIfMissing {
     return $false
 }
 
+function Install-BunIfMissing {
+    if (Get-Command bun -ErrorAction SilentlyContinue) {
+        Add-DependencySummary "bun: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install Bun JavaScript runtime and package manager via the official install script?")) {
+        Add-DependencySummary "bun: skipped"
+        return $false
+    }
+
+    $bunVer = (Get-DepInfo "bun").ver
+    $bunInstall = if ($env:BUN_INSTALL) { $env:BUN_INSTALL } else { Join-Path $HomeDir ".bun" }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Download https://bun.sh/install.ps1"
+        Write-Output "[dry-run] Install Bun $bunVer into $bunInstall"
+        Write-Output "[dry-run] Add $bunInstall/bin to PATH"
+        Add-DependencySummary "bun: install preview via official install script"
+        return $true
+    }
+
+    $env:BUN_INSTALL = $bunInstall
+
+    Invoke-ActionWithSpinner -Description "Installing Bun $bunVer via official install script" -Action {
+        param($version)
+        $installScript = [ScriptBlock]::Create((Invoke-RestMethod "https://bun.sh/install.ps1"))
+        & $installScript -Version $version | Out-Null
+    } -ArgumentList $bunVer
+    Update-SessionEnvironment
+
+    $bunBin = Join-Path $bunInstall "bin"
+    $pathParts = @($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ })
+    if ((Test-Path $bunBin) -and ($pathParts -notcontains $bunBin)) {
+        $env:PATH = "$bunBin$([IO.Path]::PathSeparator)$env:PATH"
+    }
+
+    if (Get-Command bun -ErrorAction SilentlyContinue) {
+        Add-DependencySummary "bun: installed"
+        Add-NewlyAvailableCommand -CommandNames @("bun")
+        return $true
+    }
+
+    Add-DependencySummary "bun: install attempted"
+    return $false
+}
+
 function Install-PoshGitIfMissing {
     if (Get-Module -ListAvailable -Name posh-git) {
         Add-DependencySummary "posh-git: present"

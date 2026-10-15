@@ -34,6 +34,33 @@ else
   echo "INFO: managed tool lookup skipped (normal in minimal env)."
 fi
 
+echo "=== Testing WSL host-binary detection helpers ==="
+# WSL leaks Windows host binaries onto PATH as /mnt/<drive>/... paths; those must
+# not count as installed inside the distro.
+if bash -c 'source scripts/setup/lib/setup-ui.sh; is_host_windows_command_path "/mnt/c/Users/example/.bun/bin/bun"'; then
+  echo "OK: Windows host path detected."
+else
+  echo "FAIL: Windows host path not detected." >&2
+  exit 1
+fi
+
+if bash -c 'source scripts/setup/lib/setup-ui.sh; is_host_windows_command_path "/usr/local/bin/bun"'; then
+  echo "FAIL: native path misdetected as a Windows host path." >&2
+  exit 1
+fi
+
+if bash -c 'source scripts/setup/lib/setup-ui.sh; is_host_windows_command_path "/mnt/wsl/shared/bin/tool"'; then
+  echo "FAIL: /mnt/wsl misdetected as a Windows drive path." >&2
+  exit 1
+fi
+echo "OK: native and /mnt/wsl paths are not treated as Windows host paths."
+
+if bash -c 'source scripts/setup/lib/setup-ui.sh; dependency_resolved_on_windows_host sh'; then
+  echo "FAIL: a native command was reported as a Windows host binary." >&2
+  exit 1
+fi
+echo "OK: native commands are left untouched by the WSL check."
+
 echo "=== Testing PowerShell syntax (if pwsh available) ==="
 if command -v pwsh >/dev/null 2>&1; then
   echo "pwsh found. Checking setup.ps1 syntax..."
