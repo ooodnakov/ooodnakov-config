@@ -62,7 +62,13 @@ home/.pi-lens/sessionstart.log
 home/.pi-lens/probe-cache.json
 
 # omp
-/.omp/
+/.omp/*
+!/.omp/agent/
+/.omp/agent/*
+!/.omp/agent/config.yml
+!/.omp/extensions/
+/.omp/extensions/*
+!/.omp/extensions/rtk.ts
 home/.omp/*
 !home/.omp/agent/
 home/.omp/agent/*

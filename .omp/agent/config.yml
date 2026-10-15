@@ -1,0 +1,8 @@
+modelRoles:
+  default: zai/glm-5.3
+symbolPreset: nerd
+composer:
+  shape: box
+theme:
+  dark: dark-gruvbox
+setupVersion: 2
