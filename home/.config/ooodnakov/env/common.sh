@@ -42,6 +42,7 @@ path_prepend "$NPM_PACKAGES/bin"
 
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 path_prepend "$BUN_INSTALL/bin"
+path_prepend "$HOME/.cache/.bun/bin"
 
 export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 path_prepend "$PNPM_HOME"
