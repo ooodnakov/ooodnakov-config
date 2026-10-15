@@ -7,6 +7,16 @@ prune = true
 validate = true
 
 [[tools]]
+key = "just"
+binary = "just"
+description = "Just command runner"
+
+[[tools.zsh]]
+output = "_just"
+provides = ["just"]
+argv = ["just", "--completions", "zsh"]
+
+[[tools]]
 key = "rustup"
 binary = "rustup"
 description = "Rust toolchain manager"
