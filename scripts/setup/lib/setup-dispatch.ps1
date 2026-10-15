@@ -11,7 +11,7 @@ function Invoke-Install {
     }
 
     if (-not $ContinueProgress) {
-        Start-StepProgress -Total 6 -Activity "oooconf $Command"
+        Start-StepProgress -Total 7 -Activity "oooconf $Command"
     }
     Step-Progress -Status "Preparing directories"
     foreach ($dir in @($ConfigHome, $DataHome, $CacheHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir, $OhMyPoshDir, $PowerShellConfigDir)) {
@@ -19,6 +19,9 @@ function Invoke-Install {
             Add-ToolSummary "ensured directory: $dir"
         }
     }
+
+    Step-Progress -Status "Installing bundled fonts"
+    Install-MesloFontsIfMissing
 
     Step-Progress -Status "Checking/installing optional dependencies"
     Install-OptionalDependencies

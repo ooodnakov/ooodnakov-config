@@ -338,7 +338,7 @@ The setup scripts intentionally do not try to provision a full workstation from 
 | **macOS**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
 
-On Windows, `oooconf deps zsh` (from PowerShell) installs the pinned MSYS2 zsh package into the Git for Windows directory and Git Bash windows then start the managed zsh automatically. Set `OOODNAKOV_GITBASH_ZSH=0` to keep plain bash for a session.
+On Windows, `oooconf deps zsh` (from PowerShell) installs the pinned MSYS2 zsh package into the Git for Windows directory and Git Bash windows then start the managed zsh automatically. The bundled Meslo Nerd Font is installed per-user by setup and a managed `~/.minttyrc` pins mintty's `Font=`, so Git Bash windows render the same prompt icons as WezTerm. Set `OOODNAKOV_GITBASH_ZSH=0` to keep plain bash for a session.
 
 See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 

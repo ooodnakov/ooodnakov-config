@@ -77,7 +77,7 @@ p10k's gitstatus daemon has best-effort MSYS2 support. If git status segments mi
 oooconf shell prompt ohmyposh
 ```
 
-Also make sure the terminal font is a Nerd Font (the repo bundles Meslo under `fonts/meslo/`; mintty: `~/.minttyrc` `Font=...`, Windows Terminal: Settings → Appearance → font face).
+Also make sure the terminal font is a Nerd Font. Setup installs the bundled Meslo fonts per-user and Git Bash (mintty) gets `Font=MesloLGSDZ Nerd Font Mono` from the managed `~/.minttyrc` — if icons still look wrong after reopening Git Bash, check `ls ~/.minttyrc` resolves to the managed link. Windows Terminal: Settings → Appearance → font face (the same `MesloLGSDZ Nerd Font Mono` family works).
 
 ## `git-prompt.sh` obsolete warning in Git Bash zsh
 

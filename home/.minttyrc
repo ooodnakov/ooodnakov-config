@@ -1,0 +1,9 @@
+# Managed by ooodnakov-config.
+# Git Bash (mintty) settings; mintty reads this after Git's /etc/minttyrc,
+# so window geometry and terminal type stay with Git's defaults.
+# The font family matches the repo-bundled fonts under fonts/meslo/
+# (installed per-user by Windows setup) so zsh prompts and Nerd Font
+# icons render in plain Git Bash windows, not just WezTerm.
+
+Font=MesloLGSDZ Nerd Font Mono
+# FontHeight=12

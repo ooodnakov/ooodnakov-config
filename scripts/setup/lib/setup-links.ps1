@@ -251,3 +251,96 @@ function Ensure-UserPathContains {
 
     return $updated
 }
+
+function Get-FontRegistryName {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.IO.FileInfo]$FontFile
+    )
+
+    # Prefer the font's internal family/face names (matches what the Windows
+    # font UI registers); fall back to the filename when WPF is unavailable.
+    $displayName = $null
+    try {
+        Add-Type -AssemblyName PresentationCore -ErrorAction Stop
+        $typeface = New-Object System.Windows.Media.GlyphTypeface ([Uri]$FontFile.FullName)
+        $familyNames = $typeface.Win32FamilyNames
+        $faceNames = $typeface.Win32FaceNames
+        if ($null -ne $familyNames -and $familyNames.ContainsKey("en-US")) {
+            $displayName = [string]$familyNames["en-US"]
+            if ($null -ne $faceNames -and $faceNames.ContainsKey("en-US") -and [string]$faceNames["en-US"] -ne "") {
+                $displayName = "$displayName $([string]$faceNames['en-US'])"
+            }
+        }
+    } catch {
+        $displayName = $null
+    }
+    if ([string]::IsNullOrWhiteSpace($displayName)) {
+        $displayName = ([System.IO.Path]::GetFileNameWithoutExtension($FontFile.Name) -replace "-", " ")
+    }
+    return "$displayName (TrueType)"
+}
+
+function Send-FontChangeBroadcast {
+    # Let already-running applications pick up newly registered fonts without
+    # waiting for the next logon.
+    if (-not ("OooconfFontBroadcast" -as [type])) {
+        Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class OooconfFontBroadcast {
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint message, UIntPtr wParam, IntPtr lParam, uint flags, uint timeout, out UIntPtr result);
+}
+"@
+    }
+    $result = [UIntPtr]::Zero
+    [void][OooconfFontBroadcast]::SendMessageTimeout([IntPtr]0xFFFF, 0x001D, [UIntPtr]::Zero, [IntPtr]::Zero, 2, 1000, [ref]$result)
+}
+
+function Install-MesloFontsIfMissing {
+    # Install the bundled Meslo Nerd Font files per-user (no elevation):
+    # %LOCALAPPDATA%\Microsoft\Windows\Fonts plus HKCU registry entries.
+    # Git Bash (mintty), Windows Terminal, and WezTerm all resolve fonts
+    # through the Windows font store, not the Unix fontconfig path that
+    # install_fonts() uses on Linux/macOS.
+    $fontSourceDir = Join-Path $RepoRoot "fonts/meslo"
+    if (-not (Test-Path $fontSourceDir)) {
+        Add-ToolSummary "fonts: nothing bundled at $fontSourceDir"
+        return
+    }
+
+    $userFontDir = Join-Path $env:LOCALAPPDATA "Microsoft\Windows\Fonts"
+    if (-not (Ensure-Directory -Path $userFontDir)) {
+        return
+    }
+
+    $fontRegistryPath = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts"
+    if (-not (Test-Path $fontRegistryPath)) {
+        New-Item -Path $fontRegistryPath -Force | Out-Null
+    }
+
+    $installed = 0
+    $present = 0
+    foreach ($fontFile in Get-ChildItem -Path $fontSourceDir -Filter "*.ttf") {
+        $entryName = Get-FontRegistryName -FontFile $fontFile
+        $targetPath = Join-Path $userFontDir $fontFile.Name
+        $registered = Get-ItemProperty -Path $fontRegistryPath -Name $entryName -ErrorAction SilentlyContinue
+        if (-not (Test-Path -LiteralPath $targetPath)) {
+            Copy-Item -LiteralPath $fontFile.FullName -Destination $targetPath -Force
+        }
+        if ($null -eq $registered) {
+            New-ItemProperty -Path $fontRegistryPath -Name $entryName -Value $targetPath -PropertyType String -Force | Out-Null
+            $installed++
+        } else {
+            $present++
+        }
+    }
+
+    if ($installed -gt 0) {
+        Send-FontChangeBroadcast
+        Add-ToolSummary "fonts: installed $installed bundled Meslo font(s) for the current user"
+    } else {
+        Add-ToolSummary "fonts: bundled Meslo fonts already installed ($present)"
+    }
+}

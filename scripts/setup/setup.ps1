@@ -142,7 +142,7 @@ try {
             Invoke-Install
         }
         "update" {
-            Start-StepProgress -Total 7 -Activity "oooconf update"
+            Start-StepProgress -Total 8 -Activity "oooconf update"
             Step-Progress -Status "Pulling latest repository changes"
             if ($DryRun) {
                 Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"

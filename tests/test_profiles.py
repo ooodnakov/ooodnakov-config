@@ -32,15 +32,17 @@ def test_builtin_profile_inheritance_and_platform_skips(monkeypatch: pytest.Monk
     assert profile is not None
     assert profile.capabilities == (
         "shell",
+        "gitbash",
         "productivity",
         "terminal",
         "desktop-linux",
         "desktop-windows",
         "desktop-macos",
     )
-    assert profile.skipped_capabilities == ("desktop-windows", "desktop-macos")
+    assert profile.skipped_capabilities == ("gitbash", "desktop-windows", "desktop-macos")
     assert {"niri", "hypr", "pypr", "noctalia"} <= profile.links
     assert "glazewm" not in profile.links
+    assert "gitbash-bashrc" not in profile.links
 
 
 def test_explicit_then_environment_then_local_precedence(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -86,7 +88,7 @@ def test_plan_filters_links_and_reports_inapplicable_capabilities(
 
     plan = build_plan(REPO_ROOT, "linux", "links", profile_name="workstation")
     assert plan["profile"] == "workstation"
-    assert plan["skipped_capabilities"] == ["desktop-windows", "desktop-macos"]
+    assert plan["skipped_capabilities"] == ["gitbash", "desktop-windows", "desktop-macos"]
     linked_ids = {operation["id"] for operation in plan["operations"] if operation["kind"] == "link"}
     assert "link:niri" in linked_ids
     assert "link:glazewm" not in linked_ids

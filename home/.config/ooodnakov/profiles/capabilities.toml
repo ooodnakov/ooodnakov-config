@@ -4,6 +4,13 @@ version = 1
 links = ["zshrc", "zsh", "ooodnakov", "oooconf-bin", "o-bin", "powershell", "ohmyposh"]
 dependencies = ["git", "python3", "zsh", "oh-my-posh"]
 
+# Git Bash becomes a managed zsh terminal on Windows; the bash entrypoints
+# and mintty font config only exist there.
+[capabilities.gitbash]
+platforms = ["windows"]
+links = ["gitbash-bashrc", "gitbash-bash-profile", "gitbash-minttyrc"]
+dependencies = ["zsh"]
+
 [capabilities.productivity]
 links = ["task", "taskrc", "todo"]
 dependencies = []

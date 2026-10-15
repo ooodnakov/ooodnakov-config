@@ -97,6 +97,12 @@ target = "{HOME}/.bash_profile"
 only = "windows"
 
 [[links]]
+key = "gitbash-minttyrc"
+source = "home/.minttyrc"
+target = "{HOME}/.minttyrc"
+only = "windows"
+
+[[links]]
 key = "komorebi-config"
 source = "home/.config/komorebi/komorebi.json"
 target = "{HOME}/komorebi.json"
