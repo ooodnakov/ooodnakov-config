@@ -4,5 +4,5 @@ symbolPreset: nerd
 composer:
   shape: box
 theme:
-  dark: dark-gruvbox
+  dark: noctalia
 setupVersion: 2
