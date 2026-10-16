@@ -3,7 +3,42 @@ modelRoles:
 symbolPreset: nerd
 composer:
   shape: box
+  tokenRate: true
 theme:
   dark: noctalia
   light: noctalia
 setupVersion: 2
+statusLine:
+  preset: nerd
+  separator: powerline-thin
+  contextLine: embedded
+  transparent: false
+terminal:
+  showProgress: true
+tui:
+  textSizing: true
+  autoGraph: always
+  codexResetFireworks: true
+  titleSpinner: braille
+  mouse: true
+  tight: false
+display:
+  shimmer: kitt
+  subagentLivePreview: true
+  showTokenUsage: true
+  showTurnTime: true
+  cacheMissMarker: true
+task:
+  showResolvedModelBadge: true
+memory:
+  backend: sharpshooter
+autolearn:
+  enabled: true
+edit:
+  mode: hashline
+astGrep:
+  enabled: true
+checkpoint:
+  enabled: true
+github:
+  enabled: true
