@@ -429,6 +429,13 @@ Tracked shared environment currently covers:
 
 Runtime shell artifacts are intentionally not tracked. Zsh history is written under `~/.local/state/ooodnakov-config/zsh/` and the completion dump under `~/.cache/ooodnakov-config/zsh/`.
 
+OMP uses individual links from `home/.omp/`: `agent/config.yml`, `agent/themes/`,
+`agent/skills/`, `agent/vibes/`, and `extensions/rtk.ts`. `~/.omp` itself is a
+normal local directory, so credentials, databases, sessions, caches, and installed
+plugins stay on the machine. OMP's settings file is `config.yml`; legacy
+`settings.json` is not managed. See [OMP link migration](docs/symlink-manifest.md#omp-file-and-content-links)
+if your existing setup links the whole directory.
+
 Additional local-only files you may create per machine:
 
 - `~/.config/ooodnakov/local/env.zsh`

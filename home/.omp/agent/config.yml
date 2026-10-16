@@ -1,5 +1,5 @@
 modelRoles:
-  default: zai/glm-5.3
+  default: zai/glm-5.3-flash:high
 symbolPreset: nerd
 composer:
   shape: box

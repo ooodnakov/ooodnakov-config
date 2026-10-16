@@ -71,6 +71,47 @@ Examples: `home/.config/wezterm/` → `~/.config/wezterm`, `home/.config/yazi/` 
 - Platform-specific links (`only = "windows" | "linux" | "macos"`)
 - Non-standard targets that don't follow the `{CONFIG_HOME}/<key>` convention
 
+## OMP File and Content Links
+
+OMP deliberately uses explicit child links instead of linking `~/.omp` or
+`~/.omp/agent` wholesale:
+
+| Key | Managed source | Target |
+|-----|----------------|--------|
+| `omp-config` | `home/.omp/agent/config.yml` | `~/.omp/agent/config.yml` |
+| `omp-themes` | `home/.omp/agent/themes/` | `~/.omp/agent/themes` |
+| `omp-skills` | `home/.omp/agent/skills/` | `~/.omp/agent/skills` |
+| `omp-vibes` | `home/.omp/agent/vibes/` | `~/.omp/agent/vibes` |
+| `omp-rtk` | `home/.omp/extensions/rtk.ts` | `~/.omp/extensions/rtk.ts` |
+
+The current OMP settings file is `agent/config.yml`; the legacy
+`agent/settings.json` is not linked. Add custom themes, skills, and vibes to the
+corresponding managed directories. Everything else stays local, including
+databases and their WAL files, credentials, model/MCP settings, sessions, blobs,
+caches, installed plugins, logs, and daemon sockets/PIDs. `.gitignore` allows only
+the managed paths under `home/.omp/`.
+
+**Migrating an older whole-directory link:** close OMP and its daemons first.
+Before running `oooconf link`, preserve the old `~/.omp` symlink, then move the
+former repository-root `.omp` directory into its place as a real `~/.omp`
+directory. For example, on Unix, after verifying `~/.omp` points to this repo's
+`.omp` and that the backup name does not exist:
+
+```bash
+mv "$HOME/.omp" "$HOME/.omp.whole-directory-link.backup"
+mv /path/to/ooodnakov-config/.omp "$HOME/.omp"
+oooconf link
+```
+
+The new sources are under `home/.omp/`, so moving the former root `.omp` preserves
+local state without moving the managed sources. The link transaction backs up
+existing config/content at the individual target paths. Keep those backups if
+they contain local customizations. On Windows, perform the same moves with
+PowerShell `Move-Item`. Do not run the child-link plan while the old whole-root
+symlink remains: its parent resolution would keep runtime state inside the repo.
+Update any machine-local overrides or custom profiles that selected the old
+`omp` key to use the individual keys above. Fresh setups need no migration.
+
 ## Platform Tags
 
 An entry can be restricted to a specific platform:

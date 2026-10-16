@@ -61,6 +61,15 @@ Shell runtime state is kept outside the tracked config tree:
 - zsh history: `~/.local/state/ooodnakov-config/zsh/history`
 - zsh completion dump: `~/.cache/ooodnakov-config/zsh/.zcompdump-<host>-<zsh-version>`
 
+OMP follows the same separation: only `home/.omp/agent/config.yml`, the
+`themes/`, `skills/`, and `vibes/` directories beside it, and
+`home/.omp/extensions/rtk.ts` are linked. The parent `~/.omp` and `~/.omp/agent`
+remain real local directories. Authentication databases, history, sessions,
+model/MCP credentials and configuration, caches, plugins, and daemon state stay
+outside the repository. The empty managed content directories contain `.gitkeep`
+placeholders until custom content is added. Older whole-directory links require
+the [one-time migration](symlink-manifest.md#omp-file-and-content-links) before linking.
+
 ## SSH policy
 
 The tracked SSH file is an include fragment, not a full private SSH directory. It is safe to version because it contains host aliases only.
