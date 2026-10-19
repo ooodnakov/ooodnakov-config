@@ -832,6 +832,19 @@ windows.manager = "pnpm"
 windows.package = "@earendil-works/pi-coding-agent"
 
 [[deps]]
+key = "agent-deck"
+display = "agent-deck"
+description = "terminal session manager for AI coding agents"
+bin = "agent-deck"
+check = "agent-deck version"
+linux.manager = "brew"
+linux.package = "asheshgoplani/tap/agent-deck"
+macos.manager = "brew"
+macos.package = "asheshgoplani/tap/agent-deck"
+windows.manager = "custom"
+windows.command = "not available on Windows; install inside WSL"
+
+[[deps]]
 key = "coreutils-win"
 display = "Microsoft Core Utilities"
 description = "Windows Core Utilities (sudo, etc.) for Windows"
