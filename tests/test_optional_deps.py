@@ -81,9 +81,9 @@ def test_url_template_substitution():
     data = load_deps()
     rtk = next((d for d in data["deps"] if d.get("key") == "rtk"), None)
     assert rtk is not None
-    assert rtk["ver"] == "0.37.2"
+    assert rtk["ver"] == "0.48.0"
     # URL replacement is handled in load_deps(); platform fields contain version
-    assert any("0.37.2" in str(v) for v in rtk.values() if isinstance(v, str))
+    assert any("0.48.0" in str(v) for v in rtk.values() if isinstance(v, str))
 
 
 def test_github_release_asset_metadata():
@@ -135,7 +135,7 @@ def test_json_output_includes_new_fields(capsys):
     assert "ver" in rtk
     assert "url" in rtk
     assert "bin" in rtk
-    assert rtk["ver"] == "0.37.2"
+    assert rtk["ver"] == "0.48.0"
 
 
 @pytest.mark.parametrize("key", ["rtk", "bw", "pnpm"])

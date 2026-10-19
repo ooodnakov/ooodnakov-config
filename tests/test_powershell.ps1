@@ -66,7 +66,7 @@ Assert-True ($managedTools."oh-my-zsh".ref.Length -eq 40) "managed-tools returns
 $deps = Invoke-OptionalDeps @("json") | ConvertFrom-Json
 $rtkInfo = $deps | Where-Object { $_.key -eq "rtk" } | Select-Object -First 1
 Assert-True ($null -ne $rtkInfo) "catalog includes rtk"
-Assert-True ($rtkInfo.ver -eq "0.37.2") "catalog returns current rtk version"
+Assert-True ($rtkInfo.ver -eq "0.48.0") "catalog returns current rtk version"
 Assert-True ($rtkInfo.url -like "*rtk-ai/rtk*") "catalog returns URL for rtk"
 
 Write-Host "`n2. Testing catalog command output..."
