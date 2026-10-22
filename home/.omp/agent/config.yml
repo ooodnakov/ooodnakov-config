@@ -1,5 +1,13 @@
 modelRoles:
-  default: zai/glm-5.3-flash:high
+  smol: openai-codex/gpt-6-luna:high
+  judge: zai/glm-5.3:high
+  commit: zai/glm-5.3-flash:high
+  memory: commandcode/deepseek/deepseek-v4.1-flash:high
+  default: openai-codex/gpt-6.1-sol:xhigh
+  plan: openai-codex/gpt-6.1-sol:xhigh
+  vision: zai/glm-5.3-flash:high
+  advisor: openai-codex/gpt-6.1-sol:xhigh
+  task: commandcode/deepseek/deepseek-v4.1-flash:high
 symbolPreset: nerd
 composer:
   shape: box
