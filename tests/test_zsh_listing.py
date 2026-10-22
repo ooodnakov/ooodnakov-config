@@ -31,8 +31,7 @@ def test_a_replaces_existing_alias_and_can_be_reloaded(tmp_path: Path) -> None:
         [
             "zsh",
             "-dfc",
-            'alias a=false; source "$1"; source "$1"; '
-            "(( $+functions[a] && ! $+aliases[a] ))",
+            'alias a=false; source "$1"; source "$1"; (( $+functions[a] && ! $+aliases[a] ))',
             "zsh-test",
             str(SHELL_CONFIG),
         ],
@@ -57,9 +56,7 @@ def test_a_replaces_existing_alias_and_can_be_reloaded(tmp_path: Path) -> None:
         ("aa", [], ["-s", "modified", "-r"]),
     ],
 )
-def test_listing_matches_eza(
-    tmp_path: Path, shortcut: str, arguments: list[str], extra_options: list[str]
-) -> None:
+def test_listing_matches_eza(tmp_path: Path, shortcut: str, arguments: list[str], extra_options: list[str]) -> None:
     if not shutil.which("eza"):
         pytest.skip("eza is not available")
 

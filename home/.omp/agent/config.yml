@@ -1,13 +1,14 @@
 modelRoles:
-  smol: openai-codex/gpt-6-luna:high
+  smol: commandcode/deepseek/deepseek-v4.1-flash:high
   judge: zai/glm-5.3:high
   commit: zai/glm-5.3-flash:high
   memory: commandcode/deepseek/deepseek-v4.1-flash:high
-  default: openai-codex/gpt-6.1-sol:xhigh
-  plan: openai-codex/gpt-6.1-sol:xhigh
+  default: commandcode/deepseek/deepseek-v4.1-flash:high
+  plan: commandcode/MiniMaxAI/MiniMax-M3:high
   vision: zai/glm-5.3-flash:high
   advisor: openai-codex/gpt-6.1-sol:xhigh
   task: commandcode/deepseek/deepseek-v4.1-flash:high
+  slow: openai-codex/gpt-6.1-sol:xhigh
 symbolPreset: nerd
 composer:
   shape: box
@@ -39,7 +40,7 @@ display:
 task:
   showResolvedModelBadge: true
 memory:
-  backend: sharpshooter
+  backend: hindsight
 autolearn:
   enabled: true
 edit:
@@ -52,3 +53,29 @@ github:
   enabled: true
 codexResets:
   autoRedeem: "no"
+modelPresets:
+  main:
+    modelRoles:
+      smol: commandcode/deepseek/deepseek-v4.1-flash:high
+      judge: zai/glm-5.3:high
+      commit: zai/glm-5.3-flash:high
+      memory: commandcode/deepseek/deepseek-v4.1-flash:high
+      default: commandcode/deepseek/deepseek-v4.1-flash:high
+      plan: commandcode/MiniMaxAI/MiniMax-M3:high
+      vision: zai/glm-5.3-flash:high
+      advisor: openai-codex/gpt-6.1-sol:xhigh
+      task: commandcode/deepseek/deepseek-v4.1-flash:high
+      slow: openai-codex/gpt-6.1-sol:xhigh
+    defaultThinkingLevel: high
+mnemopi:
+  noEmbeddings: false
+  enhancedRecall: true
+  proactiveLinking: true
+  polyphonicRecall: true
+  autoRecall: true
+  embeddingVariant: multilingual
+hindsight:
+  apiUrl: https://hs.ooodnakov.ru
+  # apiToken comes from the HINDSIGHT_API_TOKEN environment variable.
+  bankId: Main
+  scoping: per-project-tagged

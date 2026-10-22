@@ -1,5 +1,17 @@
 title = "ooodnakov-config secret scanning"
 
+# Without this, supplying a config replaces gitleaks' built-in rules instead of
+# extending them, leaving the scan with zero detection rules.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "hindsight-api-token"
+description = "Hindsight API token"
+regex = '''(?i)api_?token["']?\s*[:=]\s*["']?([0-9a-f]{48})'''
+secretGroup = 1
+keywords = ["apitoken", "api_token"]
+
 [allowlist]
 description = "Known public placeholders and generated/reference fixtures only"
 paths = [

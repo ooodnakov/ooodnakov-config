@@ -585,4 +585,4 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-The pre-commit hooks mirror the main local checks: Bash syntax, `shellcheck`, Ruff lint/format checks, and dependency lock reproducibility.
+The pre-commit hooks mirror the main local checks: Bash syntax, `shellcheck`, Ruff lint/format checks, dependency lock reproducibility, and a `gitleaks` scan of staged changes (`just secrets` scans the full git history).
