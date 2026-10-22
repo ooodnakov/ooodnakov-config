@@ -50,3 +50,5 @@ checkpoint:
   enabled: true
 github:
   enabled: true
+codexResets:
+  autoRedeem: "no"

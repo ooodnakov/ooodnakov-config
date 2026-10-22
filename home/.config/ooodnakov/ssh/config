@@ -34,4 +34,4 @@ Host think
 
 Host mini
     HostName 192.168.1.129
-    User root
+    User alice
