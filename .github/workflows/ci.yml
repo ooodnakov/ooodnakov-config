@@ -74,13 +74,13 @@ jobs:
           uv run ruff check
           uv run ruff format --check
 
-      - name: Install shellcheck (Ubuntu)
+      - name: Install shellcheck and Lua (Ubuntu)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck lua5.4
 
-      - name: Install shellcheck (macOS)
+      - name: Install shellcheck and Lua (macOS)
         if: runner.os == 'macOS'
-        run: brew install shellcheck
+        run: brew install shellcheck lua
 
       - name: Shell syntax checks
         run: |
@@ -91,6 +91,14 @@ jobs:
         run: |
           git ls-files -z '*.sh' ':!:third_party/**' | xargs -0 shellcheck -x --severity=error
           shellcheck -x --severity=error bootstrap.sh
+
+      - name: WezTerm right-status regressions
+        run: |
+          if command -v lua >/dev/null 2>&1; then
+            lua tests/test_wezterm_right_status.lua
+          else
+            lua5.4 tests/test_wezterm_right_status.lua
+          fi
 
       - name: Validate tracked structured files
         run: uv run python scripts/validation/validate_tracked_formats.py

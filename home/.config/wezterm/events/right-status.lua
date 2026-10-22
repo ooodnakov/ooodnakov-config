@@ -123,21 +123,105 @@ local function shorten_cwd(path)
    return path
 end
 
-local function cwd_and_host(pane)
+local function destination_host(destination)
+   destination = destination:gsub('^ssh://', ''):gsub('/.*$', ''):gsub('^.*@', '')
+   destination = destination:match('^%[([^%]]+)%]')
+      or destination:match('^([^:]+):%d+$')
+      or destination
+   return destination ~= '' and destination or nil
+end
+
+local SSH_VALUE_OPTIONS = 'BbcDEeFIiJLlmOoPpQRSWw'
+
+local function ssh_host(pane)
+   local executable = pane:get_foreground_process_name()
+   if not executable or executable == '' then
+      return nil
+   end
+   executable = executable:gsub('.*[/\\]', ''):lower()
+   if executable ~= 'ssh' and executable ~= 'ssh.exe' then
+      return nil
+   end
+
+   local process = pane:get_foreground_process_info()
+   local argv = process and process.argv
+   if not argv or not argv[1] then
+      return nil
+   end
+
+   local i = 2
+   while i <= #argv do
+      local arg = argv[i]
+      if arg == '--' then
+         return argv[i + 1] and destination_host(argv[i + 1])
+      end
+      if arg:sub(1, 1) ~= '-' then
+         return destination_host(arg)
+      end
+
+      -- OpenSSH accepts both "-p 2222" and grouped/attached options like "-vTp2222".
+      for j = 2, #arg do
+         if SSH_VALUE_OPTIONS:find(arg:sub(j, j), 1, true) then
+            if j == #arg then
+               i = i + 1
+            end
+            break
+         end
+      end
+      i = i + 1
+   end
+end
+
+local function is_local_host(host)
+   host = host:lower()
+   local local_host = wezterm.hostname():lower()
+   return host == 'localhost'
+      or host == local_host
+      or host == local_host:match('^[^.]+')
+      or local_host == host:match('^[^.]+')
+end
+
+local function cwd_and_host(window, pane)
+   local local_host = wezterm.hostname()
    if not pane then
-      return '', wezterm.hostname()
+      return '', local_host
    end
 
    local uri = pane:get_current_working_dir()
-   if not uri then
-      return '', wezterm.hostname()
-   end
-
+   local path, host
    if type(uri) == 'userdata' then
-      return shorten_cwd(uri.file_path or tostring(uri)), uri.host or wezterm.hostname()
+      path, host = uri.file_path, uri.host
+   elseif type(uri) == 'string' then
+      host, path = uri:match('^%w+://([^/]*)(/.*)$')
+      path = (path or uri):gsub('%%(%x%x)', function(hex)
+         return string.char(tonumber(hex, 16))
+      end)
    end
 
-   return shorten_cwd(tostring(uri)), wezterm.hostname()
+   -- Remote OSC 7 metadata identifies nested SSH hosts, so it outranks the
+   -- destination of the local SSH client. A local URI must not override SSH.
+   if host and host ~= '' and not is_local_host(host) then
+      return shorten_cwd(path), host
+   end
+
+   local ssh_destination = ssh_host(pane)
+   if not ssh_destination then
+      local domain_name = pane:get_domain_name()
+      if domain_name ~= 'local' then
+         for _, domain in ipairs(window:effective_config().ssh_domains or {}) do
+            if domain.name == domain_name and type(domain.remote_address) == 'string' then
+               ssh_destination = destination_host(domain.remote_address)
+               break
+            end
+         end
+      end
+   end
+
+   if ssh_destination then
+      -- Without remote OSC 7, the URI still describes the local SSH client.
+      return '', ssh_destination
+   end
+   return shorten_cwd(path), host ~= '' and host or local_host
 end
 
 ---@param opts? Event.RightStatusOptions Default: {date_format = '%a %H:%M:%S'}
@@ -150,8 +234,8 @@ M.setup = function(opts)
 
    wezterm.on('update-status', function(window, pane)
       local battery_text, battery_icon = battery_info()
-      local cwd, host = cwd_and_host(pane)
-      local segments = { 'date_icon', 'date_text' }
+      local cwd, host = cwd_and_host(window, pane)
+      local segments = { 'host_icon', 'host_text', 'separator_host', 'date_icon', 'date_text' }
 
       cells
          :update_segment_text('host_text', host)

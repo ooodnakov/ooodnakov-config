@@ -45,6 +45,25 @@ Compare `pwsh.exe -NoLogo -NoProfile` with `pwsh.exe -NoLogo`: if only the latte
 fails, inspect the profile's startup errors. `CloseOnCleanExit` merely keeps the
 failed pane visible; changing it does not fix the shell startup.
 
+## WezTerm right status shows the local host inside SSH
+
+The right status keeps the host visible even when the pane has no current
+directory. It resolves the host in this order:
+
+1. a remote OSC 7 working-directory host, which also handles nested SSH;
+2. the destination of a foreground `ssh` process, including `-p`, `-J`, `-o`,
+   attached short options, `ssh://` destinations, and `ssh.exe`;
+3. the matching `ssh_domains` entry from the effective WezTerm config;
+4. the local hostname.
+
+When SSH does not report a remote working directory, the status shows the SSH
+destination and omits the local path instead of displaying a misleading local
+cwd. Run the deterministic status-bar regressions after changing this logic:
+
+```bash
+lua tests/test_wezterm_right_status.lua
+```
+
 ## Default zsh prompt after install
 
 If zsh opens with the default prompt, check the managed shell runtime:
