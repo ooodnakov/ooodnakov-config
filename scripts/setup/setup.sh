@@ -299,7 +299,9 @@ install_managed_tools
 ensure_oh_my_zsh_permissions || true
 
 progress_step "Installing managed utility checkouts"
-install_auto_uv_env
+if [ "${OOODNAKOV_MINIMAL:-0}" != 1 ]; then
+  install_auto_uv_env
+fi
 
 progress_step "Linking managed config files"
 if ! command -v python3 >/dev/null 2>&1; then
@@ -311,7 +313,7 @@ if ! python3 "$TRANSACTION_APPLY" --repo-root "$REPO_ROOT" apply; then
   exit 1
 fi
 
-if [ -L "$CONFIG_HOME/nvim" ] && [ "$(readlink "$CONFIG_HOME/nvim")" = "$REPO_ROOT/home/.config/nvim" ]; then
+if [ "${OOODNAKOV_MINIMAL:-0}" != 1 ] && [ -L "$CONFIG_HOME/nvim" ] && [ "$(readlink "$CONFIG_HOME/nvim")" = "$REPO_ROOT/home/.config/nvim" ]; then
   # Sync LazyVim plugins non-interactively
   nvim_cmd=""
   nvim_cmd="$(resolve_nvim_command 2>/dev/null || true)"
@@ -325,9 +327,13 @@ if [ -L "$CONFIG_HOME/nvim" ] && [ "$(readlink "$CONFIG_HOME/nvim")" = "$REPO_RO
 fi
 
 progress_step "Generating completion files and platform integrations"
-generate_tracked_completions || true
+if [ "${OOODNAKOV_MINIMAL:-0}" != 1 ]; then
+  generate_tracked_completions || true
+fi
 ensure_ssh_include || true
-install_fonts
+if [ "${OOODNAKOV_MINIMAL:-0}" != 1 ]; then
+  install_fonts
+fi
 
 progress_step "Finalizing setup and summary"
 if is_interactive && [ -f "$HOME_DIR/.zshrc" ]; then

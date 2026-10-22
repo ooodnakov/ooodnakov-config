@@ -79,6 +79,24 @@ less /tmp/ooodnakov-bootstrap.sh
 bash /tmp/ooodnakov-bootstrap.sh
 ```
 
+For a small terminal-only machine, use a partial checkout and minimal shell
+setup. It omits the reference snapshots, bundled fonts, editor/desktop configs,
+and optional package installs; it links the `minimal` shell profile and syncs
+only Oh My Zsh. Git, Bash, and Zsh are required; Python 3 is used by the link
+planner, with no `uv` environment or repository packages installed.
+
+```bash
+git clone --filter=blob:none --no-checkout https://github.com/ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
+git -C ~/src/ooodnakov-config sparse-checkout init --cone
+git -C ~/src/ooodnakov-config sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh LICENSE
+git -C ~/src/ooodnakov-config checkout main
+cd ~/src/ooodnakov-config
+./scripts/setup/minimal-setup.sh
+```
+
+Or use the bootstrap shortcut with `OOODNAKOV_MINIMAL=1`; it performs the same
+partial checkout automatically.
+
 Release archives include `SHA256SUMS`. Verify an archive before extracting it;
 do not pipe a newly downloaded bootstrap script directly into a shell.
 
