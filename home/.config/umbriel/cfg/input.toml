@@ -1,0 +1,23 @@
+# Input devices.
+#
+# Umbriel builds its keymap from XKB layout names and cannot load a custom
+# keymap file, so the niri "keyboard_layouts/ul_combo.xkb" layout is
+# approximated with the English/Russian group pair.
+#
+# Reference: https://docs.noctalia.dev/umbriel/input/
+
+[input.keyboard]
+layout = "us,ru"
+options = "grp:alt_shift_toggle"
+numlock_toggle = true
+
+[input.touchpad]
+tap = true
+natural_scroll = true
+
+[input.focus]
+follows_mouse = true
+
+[input.cursor]
+theme = "capitaine-cursors"
+size = 24

@@ -1,0 +1,18 @@
+# Colors shared with the Noctalia shell theme.
+#
+# Reference: https://docs.noctalia.dev/umbriel/appearance/
+
+[colors]
+accent_primary = "#fe8019ff"
+insert_hint = "#fe801980"
+shadow = "#0000007f"
+error = "#fb4934ff"
+
+[colors.border]
+focused = "#fe8019ff"
+unfocused = "#000000ff"
+
+[colors.tab_bar]
+active = "#fe8019ff"
+active_unfocused = "#642d00ff"
+urgent = "#fb4934ff"

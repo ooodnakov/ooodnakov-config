@@ -1,0 +1,9 @@
+# Commands started once with the session.
+#
+# Reference: https://docs.noctalia.dev/umbriel/configuration/#general
+
+[general]
+autostart = [
+  "noctalia --daemon",
+  "vicinae server",
+]

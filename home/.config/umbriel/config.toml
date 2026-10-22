@@ -1,0 +1,36 @@
+# Umbriel configuration.
+#
+# Managed by the ooodnakov-config dotfiles repository. Mirrors the niri setup
+# in home/.config/niri, translated to Umbriel's TOML dialect.
+#
+# Reference: https://docs.noctalia.dev/umbriel/
+# Validate:  umbriel config validate
+
+[include]
+files = [
+  "/usr/share/umbriel/effects/animation/workspace_wipe/effect.toml",
+  "monitor.toml",
+  "noctalia.toml",
+  "cfg/animation.toml",
+  "cfg/appearance.toml",
+  "cfg/autostart.toml",
+  "cfg/input.toml",
+  "cfg/keybinds.toml",
+  "cfg/layout.toml",
+  "cfg/rules.toml",
+  "cfg/scratchpad.toml",
+  "cfg/workspaces.toml",
+]
+
+[general]
+mod_key = "Super"
+# niri skips the hotkey overlay at startup.
+show_cheatsheet = false
+# niri honors xdg activation, which Noctalia relies on.
+focus_on_activate = true
+
+[environment]
+ELECTRON_OZONE_PLATFORM_HINT = "auto"
+QT_QPA_PLATFORM = "wayland"
+QT_QPA_PLATFORMTHEME = "gtk3"
+QT_WAYLAND_DISABLE_WINDOWDECORATION = "1"

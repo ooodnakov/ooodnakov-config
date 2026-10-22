@@ -1,0 +1,19 @@
+# Scratchpad.
+#
+# niri emulated a scratchpad with a hidden workspace and nscratch; Umbriel has
+# native named scratchpads, so the dedicated wezterm instance moves here.
+#
+# Reference: https://docs.noctalia.dev/umbriel/scratchpads/
+
+[[scratchpad]]
+name = "terminal"
+spawn_when_empty = "wezterm start --class scratch-wezterm --always-new-process"
+
+[[window_rule]]
+match.app_id = "^scratch-wezterm$"
+default_scratchpad = "terminal"
+default_floating = true
+# 80% of the output width, 60% of its height.
+default_floating_size = { width = 0.8, height = 0.6 }
+# Bottom-centered, 32 logical pixels above the bottom edge.
+default_position = { x = 0, y = 32, anchor = "bottom" }

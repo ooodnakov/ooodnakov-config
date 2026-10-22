@@ -1,0 +1,21 @@
+# Named workspaces.
+#
+# niri declared these by name and ordered them with a startup script; Umbriel
+# creates persistent named workspaces from these rules.
+#
+# Reference: https://docs.noctalia.dev/umbriel/workspaces/
+
+[[workspace]]
+name = "browser"
+
+[[workspace]]
+name = "coding"
+
+[[workspace]]
+name = "chat"
+
+[[workspace]]
+name = "gaming"
+
+[[workspace]]
+name = "media"

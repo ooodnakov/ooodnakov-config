@@ -1,0 +1,150 @@
+# Keybindings.
+#
+# Translated from home/.config/niri/cfg/keybinds.kdl. Umbriel has no separate
+# focus ring or column movement primitives, so a few niri actions map onto the
+# closest scrolling-layout equivalent.
+#
+# Reference: https://docs.noctalia.dev/umbriel/keybinds/
+# Actions:   https://docs.noctalia.dev/umbriel/actions/
+
+[keybinds]
+
+# Applications and session.
+"Mod+Shift+Escape" = { action = "cheatsheet-toggle", repeat = false }
+"Mod+Return" = { action = "spawn:wezterm", repeat = false }
+"Mod+Ctrl+Return" = { action = "spawn:noctalia msg panel-toggle launcher", repeat = false }
+"Mod+B" = { action = "spawn:zen-browser", repeat = false }
+"Mod+Alt+L" = { action = "spawn:noctalia msg session lock", repeat = false }
+"Mod+Shift+Q" = { action = "spawn:noctalia msg panel-toggle session", repeat = false }
+"Mod+Space" = { action = "spawn:vicinae toggle", repeat = false }
+"Mod+S" = { action = "spawn:noctalia msg panel-toggle control-center", repeat = false }
+"Shift+F1" = { action = "spawn:wezterm", repeat = false }
+"Alt+V" = { action = "spawn:vicinae vicinae://launch/clipboard/history", repeat = false }
+"Mod+E" = { action = "spawn:dolphin", repeat = false }
+
+# Media controls, routed through Noctalia so its OSDs show.
+"XF86AudioRaiseVolume" = { action = "spawn:noctalia msg volume-up", allow_when_locked = true }
+"XF86AudioLowerVolume" = { action = "spawn:noctalia msg volume-down", allow_when_locked = true }
+"XF86AudioMute" = { action = "spawn:noctalia msg volume-mute", allow_when_locked = true, repeat = false }
+"XF86AudioMicMute" = { action = "spawn:noctalia msg mic-mute", allow_when_locked = true, repeat = false }
+"XF86AudioNext" = { action = "spawn:noctalia msg media next", allow_when_locked = true }
+"XF86AudioPrev" = { action = "spawn:noctalia msg media previous", allow_when_locked = true }
+"XF86AudioPlay" = { action = "spawn:noctalia msg media toggle", allow_when_locked = true, repeat = false }
+"XF86AudioPause" = { action = "spawn:noctalia msg media toggle", allow_when_locked = true, repeat = false }
+
+# Media layer. niri mapped these to the AltGr layer of ul_combo.xkb; Umbriel
+# has no Mod5 modifier, so they sit on Alt instead.
+"Alt+F1" = { action = "spawn:noctalia msg brightness-down", allow_when_locked = true }
+"Alt+F2" = { action = "spawn:noctalia msg brightness-up", allow_when_locked = true }
+"Alt+F3" = { action = "spawn:noctalia msg volume-mute", allow_when_locked = true, repeat = false }
+"Alt+F4" = { action = "spawn:noctalia msg volume-down", allow_when_locked = true }
+"Alt+F5" = { action = "spawn:noctalia msg volume-up", allow_when_locked = true }
+"Alt+F6" = { action = "spawn:noctalia msg media previous", allow_when_locked = true }
+"Alt+F7" = { action = "spawn:noctalia msg media toggle", allow_when_locked = true, repeat = false }
+"Alt+F8" = { action = "spawn:noctalia msg media next", allow_when_locked = true }
+
+# Focus and movement.
+"Mod+Q" = { action = "window-close", repeat = false }
+
+"Mod+Left" = "window-focus-left"
+"Mod+H" = "window-focus-left"
+"Mod+Right" = "window-focus-right"
+"Mod+L" = "window-focus-right"
+"Mod+Up" = "window-focus-up"
+"Mod+K" = "window-focus-up"
+"Mod+Down" = "window-focus-down"
+"Mod+J" = "window-focus-down"
+
+"Mod+Ctrl+Left" = "column-move-left"
+"Mod+Ctrl+H" = "column-move-left"
+"Mod+Ctrl+Right" = "column-move-right"
+"Mod+Ctrl+L" = "column-move-right"
+"Mod+Ctrl+Up" = "window-move-up"
+"Mod+Ctrl+K" = "window-move-up"
+"Mod+Ctrl+Down" = "window-move-down"
+"Mod+Ctrl+J" = "window-move-down"
+
+"Mod+Home" = "column-focus-first"
+"Mod+End" = "column-focus-last"
+"Mod+Ctrl+Home" = "column-move-to-first"
+"Mod+Ctrl+End" = "column-move-to-last"
+
+# Output focus.
+"Mod+Shift+Left" = "output-focus-left"
+"Mod+Shift+Right" = "output-focus-right"
+"Mod+Shift+Up" = "output-focus-up"
+"Mod+Shift+Down" = "output-focus-down"
+
+"Mod+Shift+Ctrl+Left" = "column-move-to-output-left"
+"Mod+Shift+Ctrl+Right" = "column-move-to-output-right"
+"Mod+Shift+Ctrl+Up" = "column-move-to-output-up"
+"Mod+Shift+Ctrl+Down" = "column-move-to-output-down"
+
+# Workspace switching.
+"Mod+WheelDown" = { action = "workspace-next", cooldown_ms = 150 }
+"Mod+WheelUp" = { action = "workspace-previous", cooldown_ms = 150 }
+"Mod+Ctrl+WheelDown" = { action = "column-move-to-workspace-next", cooldown_ms = 150 }
+"Mod+Ctrl+WheelUp" = { action = "column-move-to-workspace-previous", cooldown_ms = 150 }
+
+# Column and window navigation with the wheel.
+"Mod+WheelRight" = "window-focus-right"
+"Mod+WheelLeft" = "window-focus-left"
+"Mod+Ctrl+WheelRight" = "column-move-right"
+"Mod+Ctrl+WheelLeft" = "column-move-left"
+"Mod+Shift+WheelDown" = "window-focus-right"
+"Mod+Shift+WheelUp" = "window-focus-left"
+"Mod+Ctrl+Shift+WheelDown" = "column-move-right"
+"Mod+Ctrl+Shift+WheelUp" = "column-move-left"
+
+"Mod+1" = "workspace-switch:browser"
+"Mod+2" = "workspace-switch:coding"
+"Mod+3" = "workspace-switch:chat"
+"Mod+4" = "workspace-switch:gaming"
+"Mod+5" = "workspace-switch:media"
+"Mod+6" = "workspace-switch:6"
+"Mod+7" = "workspace-switch:7"
+"Mod+8" = "workspace-switch:8"
+"Mod+9" = "workspace-switch:9"
+
+"Mod+Ctrl+1" = "column-move-to-workspace:browser"
+"Mod+Ctrl+2" = "column-move-to-workspace:coding"
+"Mod+Ctrl+3" = "column-move-to-workspace:chat"
+"Mod+Ctrl+4" = "column-move-to-workspace:gaming"
+"Mod+Ctrl+5" = "column-move-to-workspace:media"
+"Mod+Ctrl+6" = "column-move-to-workspace:6"
+"Mod+Ctrl+7" = "column-move-to-workspace:7"
+"Mod+Ctrl+8" = "column-move-to-workspace:8"
+"Mod+Ctrl+9" = "column-move-to-workspace:9"
+
+"Mod+Tab" = "workspace-focus-last"
+
+# Layout controls.
+"Mod+Ctrl+F" = { action = "window-toggle-maximize", repeat = false }
+"Mod+C" = "column-center"
+"Mod+Minus" = "window-modify-primary-extent:-0.1"
+"Mod+Equal" = "window-modify-primary-extent:0.1"
+"Mod+Shift+Minus" = "window-modify-secondary-extent:-0.1"
+"Mod+Shift+Equal" = "window-modify-secondary-extent:0.1"
+
+# Window modes.
+"Mod+T" = { action = "window-toggle-floating", repeat = false }
+"Mod+F" = { action = "window-toggle-fullscreen", repeat = false }
+"Mod+W" = { action = "column-toggle-tabbed", repeat = false }
+
+# Screenshots. Umbriel has no screenshot action of its own, so Noctalia's
+# capture commands are used; there is no window-only capture.
+"Mod+Shift+S" = { action = "spawn:noctalia msg screenshot-region", repeat = false }
+"Ctrl+Shift+2" = { action = "spawn:noctalia msg screenshot-fullscreen", repeat = false }
+
+# Scratchpad.
+"Mod+Apostrophe" = { action = "scratchpad-toggle:terminal", repeat = false }
+
+# Emergency escape key.
+# Disables any active keyboard shortcut inhibitor, restoring control.
+"Mod+Escape" = { action = "shortcuts-inhibit-toggle", allow_when_inhibited = true, repeat = false }
+
+# Exit and power.
+"Ctrl+Alt+Delete" = "session-quit"
+"Mod+Shift+P" = "dpms-off"
+"Mod+O" = { action = "overview-toggle", repeat = false }
+"Mod+M" = { action = "spawn:$HOME/.config/umbriel/scripts/mirror.sh", repeat = false }

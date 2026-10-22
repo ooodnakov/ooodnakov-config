@@ -1,0 +1,49 @@
+# Window and layer rules.
+#
+# Reference: https://docs.noctalia.dev/umbriel/window-rules/
+# Reference: https://docs.noctalia.dev/umbriel/layer-rules/
+
+# Blur the wallpaper behind every window, like the niri background-effect rule.
+[[window_rule]]
+blur = true
+
+# Steam helper windows float above the tiling layout.
+[[window_rule]]
+match.app_id = "^steam$"
+default_floating = true
+
+# Steam notifications stay in the bottom-right corner without stealing focus.
+[[window_rule]]
+match.title = "^notificationtoasts_.+_desktop$"
+default_position = { x = 0, y = 0, anchor = "bottom_right" }
+default_focused = false
+default_pinned = true
+
+# WezTerm opens at the default scrolling-column width.
+[[window_rule]]
+match.app_id = "^org.wezfurlong.wezterm$"
+default_scrolling_extent = 0.5
+
+# Zen picture-in-picture floats.
+[[window_rule]]
+match.title = "^(Picture-in-Picture|Picture in picture)$"
+default_floating = true
+default_maximize = false
+default_position = { x = 20, y = 20, anchor = "bottom_right" }
+
+# Noctalia surfaces blur the live content behind them.
+[[layer_rule]]
+match.namespace = "^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd|desktop-widget-[^\"]*)$"
+blur = true
+blur_ignore_alpha = 0.5
+blur_popups = true
+
+# Panels, the dock, notifications and OSDs sit over windows, so they blur the
+# content behind them rather than the cached wallpaper.
+[[layer_rule]]
+match.namespace = "^noctalia-(notification|dock|panel|attached-panel|osd)$"
+blur_optimized = false
+
+[[layer_rule]]
+match.namespace = "^vicinae$"
+blur = true
