@@ -34,10 +34,10 @@ curve = "spring:1,1000"
 
 [animation.workspaces]
 enabled = true
-style = "reveal"
+style = "slide"
 effect = "workspace_wipe"
-duration_ms = 300
-curve = "linear"
+duration_ms = 200
+curve = "easeout"
 
 [animation.overview]
 enabled = true
