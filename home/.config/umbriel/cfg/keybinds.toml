@@ -138,6 +138,9 @@
 
 # Scratchpad.
 "Mod+Apostrophe" = { action = "scratchpad-toggle:terminal", repeat = false }
+"Mod+Shift+Apostrophe" = { action = "window-toggle-scratchpad:terminal", repeat = false }
+"Mod+Ctrl+Apostrophe" = { action = "window-restore-from-scratchpad:terminal", repeat = false }
+"Mod+Alt+Apostrophe" = { action = "scratchpad-focus-next:terminal", repeat = false }
 
 # Emergency escape key.
 # Disables any active keyboard shortcut inhibitor, restoring control.

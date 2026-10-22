@@ -13,6 +13,8 @@ spawn_when_empty = "wezterm start --class scratch-wezterm --always-new-process"
 match.app_id = "^scratch-wezterm$"
 default_scratchpad = "terminal"
 default_floating = true
+# Reveal and focus the pad even when the window opens while it is hidden.
+default_focused = true
 # 80% of the output width, 60% of its height.
 default_floating_size = { width = 0.8, height = 0.6 }
 # Bottom-centered, 32 logical pixels above the bottom edge.
