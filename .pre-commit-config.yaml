@@ -54,4 +54,4 @@ repos:
     hooks:
       - id: markdownlint
         args: ["-c", ".markdownlint.json"]
-        exclude: ^third_party/upstream/ezsh/
+        exclude: ^(third_party/upstream/ezsh/|home/\.(pi|omp)/agent/skills/)
