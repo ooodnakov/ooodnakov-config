@@ -11,12 +11,18 @@ position = [0, 0]
 scale = 1.0
 # niri used on-demand variable refresh rate; Umbriel arms it for fullscreen.
 vrr = "fullscreen"
+hdr = "on"
+sdr_white = 600
+cyclic_workspaces = true
 
 [output.DP-1]
 mode = "2560x1440@280"
 position = [2560, 0]
 scale = 1.0
 vrr = "fullscreen"
-
+hdr = "on"
+sdr_white = 600
+cyclic_workspaces = true
+workspaces = ["browser", "coding", "chat", "gaming", "media"]
 [output.HDMI-A-1]
 enabled = false

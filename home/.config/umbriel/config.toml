@@ -26,8 +26,13 @@ files = [
 mod_key = "Super"
 # niri skips the hotkey overlay at startup.
 show_cheatsheet = false
-# niri honors xdg activation, which Noctalia relies on.
-focus_on_activate = true
+# Apps that raise their own window when a notification arrives request
+# activation, which would pull focus away from what you are doing. Noctalia
+# focuses windows over `umbriel msg window-focus:<id>`, so dock and taskbar
+# clicks keep working. Enable this again, or per app with a
+# `[[window_rule]] focus_on_activate = true` rule, to let activation move
+# focus.
+focus_on_activate = false
 
 [environment]
 ELECTRON_OZONE_PLATFORM_HINT = "auto"
