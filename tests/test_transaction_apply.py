@@ -181,6 +181,48 @@ def test_missing_symlink_support_aborts_before_journal(monkeypatch: pytest.Monke
     assert not _journals(home)
 
 
+def test_rollback_repairs_self_referential_link(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    home = _configure_home(monkeypatch, tmp_path)
+    source = tmp_path / "repo/home/.config/example"
+    source.mkdir(parents=True)
+    (source / "config.toml").write_text("managed\n", encoding="utf-8")
+    target = home / ".config/example"
+    target.parent.mkdir(parents=True)
+    backup = home / ".local/state/ooodnakov-config/backups/.config/example.20260101-000000-deadbeef"
+    backup.parent.mkdir(parents=True)
+    backup.write_text("user config\n", encoding="utf-8")
+    # Reproduce the broken state: source moved into the backup, self-link left behind.
+    target.symlink_to(target)
+
+    journal = {
+        "operations": [
+            {
+                "id": "backup:example",
+                "kind": "backup",
+                "source": str(target),
+                "target": None,
+                "status": "rollback_failed",
+                "created": False,
+                "backup_path": str(backup),
+            },
+            {
+                "id": "link:example",
+                "kind": "link",
+                "source": str(source),
+                "target": str(target),
+                "status": "rollback_failed",
+                "created": True,
+                "backup_path": None,
+            },
+        ]
+    }
+
+    assert transaction_apply._rollback_entries(journal) == []
+    assert target.read_text(encoding="utf-8") == "user config\n"
+    assert not target.is_symlink()
+    assert not backup.exists()
+
+
 def test_incomplete_journals_are_reported(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     home = _configure_home(monkeypatch, tmp_path)
     journal_root = home / ".local/state/ooodnakov-config/transactions"

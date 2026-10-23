@@ -57,7 +57,11 @@ function Run-Python {
 function Format-PythonFailure {
     param([string]$Context, [string]$ScriptPath)
 
-    $detail = if ($global:LastPythonError) { "`: $($global:LastPythonError)" } else { "" }
+    $detail = if ($global:LastPythonError) {
+        ": " + ($global:LastPythonError -replace '\s+', ' ')
+    } else {
+        ""
+    }
     return "$Context (exit $LASTEXITCODE, $ScriptPath)$detail"
 }
 

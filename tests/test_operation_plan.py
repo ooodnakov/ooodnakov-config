@@ -147,6 +147,23 @@ def test_matching_link_is_a_noop(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     assert operation_plan.build_link_operations(tmp_path / "repo", "linux") == []
 
 
+def test_target_resolving_into_repository_is_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    repo = home / "src/repo"
+    source = repo / "home/.config/tool"
+    source.mkdir(parents=True)
+    (home / ".config").symlink_to(repo / "home/.config", target_is_directory=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(
+        operation_plan,
+        "get_all_links",
+        lambda _root, _platform: [(str(source), str(home / ".config/tool"), "tool")],
+    )
+
+    with pytest.raises(operation_plan.PlanError, match="resolves inside the repository"):
+        operation_plan.build_link_operations(repo, "linux")
+
+
 def test_unsafe_or_missing_link_paths_are_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     home = tmp_path / "home"
     source = tmp_path / "repo/config"

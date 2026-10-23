@@ -108,7 +108,11 @@ local state without moving the managed sources. The link transaction backs up
 existing config/content at the individual target paths. Keep those backups if
 they contain local customizations. On Windows, perform the same moves with
 PowerShell `Move-Item`. Do not run the child-link plan while the old whole-root
-symlink remains: its parent resolution would keep runtime state inside the repo.
+symlink remains: its parent resolution would keep runtime state inside the repo,
+so `oooconf plan`, `apply`, and `link` reject any target that resolves back into
+the repository instead of mutating tracked files. If an older release already
+turned a tracked source into a self-referential link, `oooconf rollback --last`
+removes the loop and restores the backed-up file.
 Update any machine-local overrides or custom profiles that selected the old
 `omp` key to use the individual keys above. Fresh setups need no migration.
 
