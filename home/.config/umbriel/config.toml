@@ -9,6 +9,12 @@
 [include]
 files = [
   "/usr/share/umbriel/effects/animation/workspace_wipe/effect.toml",
+  "/usr/share/umbriel/effects/animation/squash/effect.toml",
+  "/usr/share/umbriel/effects/border/pulse/effect.toml",
+  "/usr/share/umbriel/effects/cursor/trail/effect.toml",
+  "/usr/share/umbriel/effects/cursor/trail-path/effect.toml",
+  "/usr/share/umbriel/effects/cursor/glow/effect.toml",
+  "/usr/share/umbriel/effects/animation/reveal/effect.toml",
   "monitor.toml",
   "noctalia.toml",
   "cfg/animation.toml",
