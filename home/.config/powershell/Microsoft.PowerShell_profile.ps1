@@ -39,6 +39,53 @@ if ((Test-InteractiveConsoleHost) -and (Get-Command oh-my-posh -ErrorAction Sile
     . $ompCache
 }
 
+# SSH host aliases from ~/.ssh/config, ~/.ssh/config.local, and every
+# Include'd file (mirrors _oooconf_ssh_hosts in the zsh dotfiles). Wildcard
+# patterns are not connectable aliases, so they are dropped.
+function Get-OooconfSshHosts {
+    $pending = [System.Collections.Generic.Queue[string]]::new()
+    $pending.Enqueue((Join-Path $HOME ".ssh/config"))
+    $pending.Enqueue((Join-Path $HOME ".ssh/config.local"))
+    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $hosts = [System.Collections.Generic.List[string]]::new()
+
+    while ($pending.Count -gt 0) {
+        $pattern = $pending.Dequeue()
+        foreach ($resolved in @(Get-Item -Path $pattern -ErrorAction SilentlyContinue)) {
+            if (-not $seen.Add($resolved.FullName)) { continue }
+
+            foreach ($line in [System.IO.File]::ReadAllLines($resolved.FullName)) {
+                $text = ($line -replace '#.*$', '').Trim()
+                if (-not $text) { continue }
+
+                $parts = $text -split '\s+', 2
+                $keyword = $parts[0].ToLowerInvariant()
+                $rest = if ($parts.Length -gt 1) { $parts[1] } else { '' }
+
+                switch ($keyword) {
+                    'host' {
+                        foreach ($alias in ($rest -split '\s+')) {
+                            if ($alias) { $hosts.Add($alias) }
+                        }
+                    }
+                    'include' {
+                        foreach ($includePattern in ($rest -split '\s+')) {
+                            if (-not $includePattern) { continue }
+                            $expanded = $includePattern -replace '^~', $HOME
+                            if (-not [System.IO.Path]::IsPathRooted($expanded)) {
+                                $expanded = Join-Path $HOME ".ssh" $expanded
+                            }
+                            $pending.Enqueue($expanded)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    $hosts | Where-Object { $_ -notmatch '[*?]' } | Select-Object -Unique
+}
+
 # Optimized zoxide initialization
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     $zoxideCache = Join-Path $CacheDir "zoxide.ps1"
@@ -46,6 +93,25 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
         zoxide init powershell > $zoxideCache
     }
     . $zoxideCache
+
+    # `z <ssh-host>` connects over SSH for Host aliases from SSH config; every
+    # other argument keeps zoxide's directory jump. `zi` stays the interactive
+    # directory picker when a host alias shadows a zoxide entry. zoxide installs
+    # z as an alias, and aliases win over functions, so remove it first.
+    if (Test-Path Alias:z) {
+        Remove-Item Alias:z -Force
+    }
+
+    function global:z {
+        if ($args.Count -gt 0 -and $args[0] -notlike '-*') {
+            $sshHosts = @(Get-OooconfSshHosts)
+            if ($sshHosts -contains $args[0]) {
+                ssh @args
+                return
+            }
+        }
+        __zoxide_z @args
+    }
 }
 
 # Ensure Update-Venv runs on every prompt (handles cd, z, zi, etc.)

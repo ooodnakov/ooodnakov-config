@@ -237,6 +237,12 @@ fi
 
 if (( $+commands[zoxide] )); then
   eval "$(zoxide init zsh --cmd z)"
+  # `z <ssh-host>` connects over SSH for Host aliases from SSH config; see
+  # _oooconf_z_wrap_zoxide in .zshrc.d/10-shell.zsh. Must run after zoxide init
+  # so it replaces zoxide's own z function.
+  if (( $+functions[_oooconf_z_wrap_zoxide] )); then
+    _oooconf_z_wrap_zoxide
+  fi
 fi
 
 # direnv supress stdout during startup in path with .envrc

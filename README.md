@@ -431,6 +431,8 @@ Tracked secret references belong in:
 
 - `~/.config/ooodnakov/secrets/env.template`
 
+SSH host aliases come from `~/.ssh/config`, every file it `Include`s (the tracked managed config is `home/.config/ooodnakov/ssh/config`), and `~/.ssh/config.local`. In both zsh and PowerShell, `z <host>` opens an SSH session when `<host>` is one of those aliases; any other argument keeps the zoxide directory jump. In zsh, `z -- <name>` forces the directory jump when an alias shadows a zoxide entry; in PowerShell, `zi` is the interactive directory picker for that case.
+
 Tracked shared environment currently covers:
 
 - editor and pager defaults

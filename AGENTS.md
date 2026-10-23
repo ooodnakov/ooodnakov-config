@@ -101,6 +101,7 @@ The local overrides file is at `home/.config/ooodnakov/local/links.local.toml` (
   - `~/.config/ooodnakov/local/env.ps1`
 - Shell completions belong in:
   - `home/.config/ooodnakov/completions/` (auto-loaded by managed profiles)
+- `z <host>` connects over SSH when `<host>` is a `Host` alias from `~/.ssh/config`, its `Include`d files, or `~/.ssh/config.local`; other arguments keep the zoxide directory jump. The zsh parser is `_oooconf_ssh_hosts` in `home/.config/zsh/.zshrc.d/10-shell.zsh` (also used by `ssh-forward`), and the PowerShell profile mirrors it with `Get-OooconfSshHosts`. Keep both in sync.
 - These local files contain a `# --- LOCAL OVERRIDES START/END ---` section that survives `oooconf secrets sync`. User-added lines inside the markers are preserved across renders; everything outside is overwritten.
 - `oooconf secrets sync` can auto-unlock the vault if `BW_CLIENTID`, `BW_CLIENTSECRET`, and `BW_PASSWORD` are exported, avoiding interactive prompts.
 - If importing behavior from real machines, keep only portable parts in tracked config.
