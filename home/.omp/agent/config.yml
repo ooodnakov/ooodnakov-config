@@ -80,3 +80,5 @@ hindsight:
   apiUrl: https://hs.ooodnakov.ru
   bankId: Main
   scoping: per-project-tagged
+dev:
+  autoqaConsent: denied
