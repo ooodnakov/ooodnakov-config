@@ -87,6 +87,10 @@ To switch only zsh between Powerlevel10k and Oh My Posh, run `oooconf shell prom
 
 Managed config is linked into `~/.config`. If something is misbehaving:
 
+- **`Managed link transaction failed`** — the failing operation and the underlying helper error are reported with the wrapper message. `oooconf apply` validates link creation before mutating anything, so a permission problem leaves the profile untouched.
+- **Windows cannot create symbolic links** — Windows requires `SeCreateSymbolicLinkPrivilege`. Enable Developer Mode (Settings → System → For developers) or run `oooconf link` from an elevated PowerShell; otherwise every new managed link fails with `WinError 1314`.
+- **`Another apply or rollback is active`** — another `oooconf` process holds `~/.local/state/ooodnakov-config/apply.lock`. If no such process is running, the previous run died before recording itself (or its process is gone); the next run reclaims the stale lock automatically. Delete the lock directory only if the message repeats with a live process id.
+
 Managed-link applies are journaled. To apply only the validated link transaction or
 undo the latest eligible transaction:
 

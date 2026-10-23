@@ -53,34 +53,20 @@ $script:StepCurrent = 0
 $script:StepActivity = ""
 $ValidSetupCommands = @("install", "update", "doctor", "deps", "completions", "minimal", "link")
 
-# Run a Python script, preferring `uv run` when available.
-function Run-Python {
-    param([string]$ScriptPath, [string[]]$ScriptArgs)
-    $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
-    if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
-        $prevErrorAction = $ErrorActionPreference
-        $ErrorActionPreference = 'Continue'
-        try {
-            $output = & uv run $ScriptPath @ScriptArgs 2>$null
-            return $output
-        } finally {
-            $ErrorActionPreference = $prevErrorAction
-        }
-    } else {
-        $pyCmd = Get-PythonCommand
-        if ($pyCmd) {
-            & $pyCmd $ScriptPath @ScriptArgs
-        } else {
-            Write-Error "Python not found. Install Python 3.8+ or add it to your PATH."
-            exit 1
-        }
-    }
-}
-
+# Run-Python lives in oooconf-shell.ps1 so setup and oooconf share one
+# implementation with identical stderr and exit-code handling.
 
 function Get-PythonCommand {
     foreach ($candidate in @("python3", "python", "py")) {
-        if (Get-Command $candidate -ErrorAction SilentlyContinue) { return $candidate }
+        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        if (-not $command) { continue }
+        # Windows Store aliases exist on PATH but fail at runtime; probe them so
+        # a non-functional stub cannot mask a working interpreter.
+        $previousExitCode = $LASTEXITCODE
+        & $command.Source --version *>$null
+        $probeExitCode = $LASTEXITCODE
+        $global:LASTEXITCODE = $previousExitCode
+        if ($probeExitCode -eq 0) { return $candidate }
     }
     return $null
 }

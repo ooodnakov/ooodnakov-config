@@ -23,6 +23,13 @@ The runner labels are the durable promise; hosted-runner images and hardware can
 change. CI workflow files are authoritative for the currently exercised images and
 Python versions.
 
+Managed links are symbolic links on every platform, so a Windows profile needs
+`SeCreateSymbolicLinkPrivilege`: enable Developer Mode (Settings → System → For
+developers) or run `oooconf install` / `oooconf link` from an elevated PowerShell.
+Hosted runners are elevated, so CI cannot detect a non-elevated profile; the link
+transaction probes for symlink support before mutating anything and reports the
+privilege requirement instead of a generic failure.
+
 ## Design
 
 Tracked files:

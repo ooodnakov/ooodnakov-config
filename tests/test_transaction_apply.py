@@ -102,6 +102,7 @@ def test_apply_failure_rolls_back_and_redacts_secret(monkeypatch: pytest.MonkeyP
         transaction_apply.apply(repo, "linux")
 
     assert secret not in str(raised.value)
+    assert "link:example" in str(raised.value)
     assert target.read_text(encoding="utf-8") == "original\n"
     journal_path = _journals(home)[0]
     journal_text = journal_path.read_text(encoding="utf-8")
@@ -135,6 +136,49 @@ def test_active_lock_blocks_concurrent_apply(monkeypatch: pytest.MonkeyPatch, tm
     with pytest.raises(transaction_apply.TransactionError, match="Another apply or rollback is active"):
         transaction_apply.apply(repo, "linux")
     assert not (home / ".config/example").exists()
+
+
+@pytest.mark.parametrize(
+    "owner_payload",
+    [None, "not json", json.dumps({"pid": 2**31 - 1})],
+    ids=["missing-owner", "unreadable-owner", "exited-owner"],
+)
+def test_stale_apply_lock_is_reclaimed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, owner_payload: str | None
+) -> None:
+    repo, _source = _repo(tmp_path)
+    home = _configure_home(monkeypatch, tmp_path)
+    lock = home / ".local/state/ooodnakov-config/apply.lock"
+    lock.mkdir(parents=True)
+    if owner_payload is not None:
+        (lock / "owner.json").write_text(owner_payload, encoding="utf-8")
+
+    journal_path, _result = transaction_apply.apply(repo, "linux")
+
+    assert journal_path is not None
+    assert (home / ".config/example").is_symlink()
+    assert not lock.exists()
+
+
+def test_process_alive_detects_runner_and_rejects_exited_pid() -> None:
+    assert transaction_apply._process_alive(os.getpid())
+    assert not transaction_apply._process_alive(2**31 - 1)
+
+
+def test_missing_symlink_support_aborts_before_journal(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo, _source = _repo(tmp_path)
+    home = _configure_home(monkeypatch, tmp_path)
+
+    def deny_symlink(self: Path, target: object, target_is_directory: bool = False) -> None:
+        raise OSError("symlink denied")
+
+    monkeypatch.setattr(Path, "symlink_to", deny_symlink)
+
+    with pytest.raises(transaction_apply.TransactionError, match="Cannot create symbolic links"):
+        transaction_apply.apply(repo, "linux")
+
+    assert not (home / ".config/example").exists()
+    assert not _journals(home)
 
 
 def test_incomplete_journals_are_reported(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
