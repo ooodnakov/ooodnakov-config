@@ -1,7 +1,16 @@
 if (Test-Path "$HOME\.x-cmd.root\local\data\pwsh\_index.ps1") { Set-ExecutionPolicy Bypass -Scope Process; . "$HOME\.x-cmd.root\local\data\pwsh\_index.ps1" };  # boot up x-cmd.
 $ConfigRoot = Join-Path $HOME ".config/ooodnakov"
 $DefaultPromptConfig = Join-Path $HOME ".config/ohmyposh/ooodnakov.omp.json"
-$PromptConfig = if ($env:OOOCONF_OMP_CONFIG -and (Test-Path $env:OOOCONF_OMP_CONFIG)) { $env:OOOCONF_OMP_CONFIG } else { $DefaultPromptConfig }
+$SourcePromptConfig = Join-Path (Split-Path $PSScriptRoot -Parent) "ohmyposh/ooodnakov.omp.json"
+$PromptConfig = if ($env:OOOCONF_OMP_CONFIG -and (Test-Path $env:OOOCONF_OMP_CONFIG)) {
+    $env:OOOCONF_OMP_CONFIG
+} elseif (Test-Path $DefaultPromptConfig) {
+    $DefaultPromptConfig
+} elseif (Test-Path $SourcePromptConfig) {
+    $SourcePromptConfig
+} else {
+    $null
+}
 $SharedEnv = Join-Path $ConfigRoot "env/common.ps1"
 $LocalEnv = Join-Path $ConfigRoot "local/env.ps1"
 $LocalBin = Join-Path $HOME ".local/bin"
@@ -35,7 +44,12 @@ function Test-InteractiveConsoleHost {
 # ---[ PLUGINS & CONFIG ]---
 
 # Optimized Oh My Posh initialization (interactive-only: prompt rendering)
-if ((Test-InteractiveConsoleHost) -and (Get-Command oh-my-posh -ErrorAction SilentlyContinue)) {
+if (
+    (Test-InteractiveConsoleHost) -and
+    $PromptConfig -and
+    (Test-Path $PromptConfig) -and
+    (Get-Command oh-my-posh -ErrorAction SilentlyContinue)
+) {
     $ompCache = Join-Path $CacheDir "oh-my-posh.ps1"
     if (-not (Test-Path $ompCache) -or (Get-Item $PromptConfig).LastWriteTime -gt (Get-Item $ompCache).LastWriteTime) {
         oh-my-posh init pwsh --config $PromptConfig --print > $ompCache
