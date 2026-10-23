@@ -4,10 +4,10 @@ $DefaultPromptConfig = Join-Path $HOME ".config/ohmyposh/ooodnakov.omp.json"
 $SourcePromptConfig = Join-Path (Split-Path $PSScriptRoot -Parent) "ohmyposh/ooodnakov.omp.json"
 $PromptConfig = if ($env:OOOCONF_OMP_CONFIG -and (Test-Path $env:OOOCONF_OMP_CONFIG)) {
     $env:OOOCONF_OMP_CONFIG
-} elseif (Test-Path $DefaultPromptConfig) {
-    $DefaultPromptConfig
 } elseif (Test-Path $SourcePromptConfig) {
     $SourcePromptConfig
+} elseif (Test-Path $DefaultPromptConfig) {
+    $DefaultPromptConfig
 } else {
     $null
 }
