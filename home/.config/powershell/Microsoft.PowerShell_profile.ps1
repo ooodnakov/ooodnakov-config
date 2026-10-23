@@ -17,7 +17,11 @@ if (Test-Path $LocalBin) {
     }
 }
 
-$CacheDir = Join-Path $ConfigRoot "cache"
+$CacheDir = if ($env:LOCALAPPDATA) {
+    Join-Path $env:LOCALAPPDATA "ooodnakov/cache"
+} else {
+    Join-Path $ConfigRoot "cache"
+}
 if (-not (Test-Path $CacheDir)) { New-Item -ItemType Directory -Path $CacheDir -ErrorAction SilentlyContinue }
 
 function Test-InteractiveConsoleHost {
