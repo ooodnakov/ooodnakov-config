@@ -1,0 +1,16 @@
+{
+    "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json",
+    "mcpServers": {
+        "exa": {
+            "type": "http",
+            "url": "https://mcp.exa.ai/mcp"
+        },
+        "context7": {
+            "type": "http",
+            "url": "https://mcp.context7.com/mcp"
+        }
+    },
+    "disabledServers": [
+        "context7:context7"
+    ]
+}

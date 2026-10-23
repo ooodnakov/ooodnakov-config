@@ -67,6 +67,7 @@ home/.pi-lens/probe-cache.json
 !/home/.omp/agent/
 /home/.omp/agent/*
 !/home/.omp/agent/config.yml
+!/home/.omp/agent/mcp.json
 !/home/.omp/agent/themes/
 !/home/.omp/agent/skills/
 !/home/.omp/agent/vibes/

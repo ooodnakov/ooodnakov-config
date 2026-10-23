@@ -52,6 +52,11 @@ source = "home/.omp/agent/skills"
 target = "{HOME}/.omp/agent/skills"
 
 [[links]]
+key = "omp-mcp"
+source = "home/.omp/agent/mcp.json"
+target = "{HOME}/.omp/agent/mcp.json"
+
+[[links]]
 key = "omp-vibes"
 source = "home/.omp/agent/vibes"
 target = "{HOME}/.omp/agent/vibes"
