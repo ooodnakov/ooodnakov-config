@@ -134,6 +134,10 @@ while [ "$#" -gt 0 ]; do
       skip_deps_requested=1
       shift
       ;;
+    --no-deps)
+      skip_deps_requested=1
+      shift
+      ;;
     --profile)
       [ "$#" -ge 2 ] || { echo "Missing value for --profile" >&2; exit 1; }
       profile_requested="$2"
@@ -189,6 +193,10 @@ if should_normalize_global_flags "$command"; then
         shift
         ;;
       --skip-deps)
+        skip_deps_requested=1
+        shift
+        ;;
+      --no-deps)
         skip_deps_requested=1
         shift
         ;;

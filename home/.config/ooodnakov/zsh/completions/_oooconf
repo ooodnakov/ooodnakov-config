@@ -272,6 +272,7 @@ _oooconf_update() {
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--no-deps[skip optional dependency installation]' \
     '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
     '-h[show help]' \
     '--help[show help]' \

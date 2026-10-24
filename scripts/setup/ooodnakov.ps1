@@ -162,6 +162,9 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         "--skip-deps" {
             $skipDepsRequested = $true
         }
+        "--no-deps" {
+            $skipDepsRequested = $true
+        }
         "--all" {
             $allDepsRequested = $true
         }
@@ -225,6 +228,7 @@ if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
             "--dry-run" { $dryRunRequested = $true }
             "--yes-optional" { $yesOptionalRequested = $true }
             "--skip-deps" { $skipDepsRequested = $true }
+            "--no-deps" { $skipDepsRequested = $true }
             "--all" { $allDepsRequested = $true }
             "--profile" {
                 if ($i + 1 -ge $remaining.Count) {

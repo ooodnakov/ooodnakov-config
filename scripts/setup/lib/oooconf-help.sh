@@ -321,7 +321,7 @@ EOF
       ;;
     update)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf update [--dry-run] [--yes-optional] [--profile NAME]
+Usage: oooconf update [--dry-run] [--yes-optional] [--no-deps] [--profile NAME]
 
 Pull the repo with --ff-only, then re-run the install flow.
 Use this to update your config to the latest tracked state. It performs
@@ -329,6 +329,7 @@ a fast-forward pull only, failing if local changes would prevent it.
 Examples:
   oooconf update                       # pull and reinstall
   oooconf update --yes-optional        # also install missing dependencies
+  oooconf update --no-deps             # skip optional dependency installation
   oooconf update --dry-run             # preview pull and install
 EOF
       ;;

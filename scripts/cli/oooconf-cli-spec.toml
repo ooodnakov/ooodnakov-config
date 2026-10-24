@@ -75,7 +75,7 @@ value_set = "deps_keys"
 handler_id = "oooconf.update"
 platforms = ["linux", "macos", "windows"]
 description = "update the repo, then re-run install"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--profile" = "select portable capability profile", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--no-deps" = "skip optional dependency installation", "--profile" = "select portable capability profile", "-h" = "show help", "--help" = "show help" }
 option_value_sets = { "--profile" = "profiles" }
 
 [commands.delta]
