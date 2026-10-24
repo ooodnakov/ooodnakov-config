@@ -273,6 +273,7 @@ switch ($command) {
     }
     "doctor" {
         Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "doctor") + $remaining)
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     "status" {
         Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "status") + $remaining)
