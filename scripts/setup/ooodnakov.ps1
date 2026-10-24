@@ -273,7 +273,9 @@ switch ($command) {
     }
     "doctor" {
         Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "doctor") + $remaining)
-        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        if ($global:LASTEXITCODE -ne 0) {
+            throw "oooconf doctor failed (exit $global:LASTEXITCODE)"
+        }
     }
     "status" {
         Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "status") + $remaining)
