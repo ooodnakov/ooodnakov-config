@@ -98,8 +98,21 @@ def test_complete_lifecycle_in_isolated_home(tmp_path: Path) -> None:
     assert plan["profile"] == "minimal"
     assert plan["operations"]
     home_contents = list(home.rglob("*")) if home.exists() else []
-    message = f"planning must not create the isolated home; contents: {home_contents}"
-    assert not home.exists(), message
+    if sys.platform == "win32":
+        # PowerShell creates this empty startup-profile directory under HOME even
+        # with -NoProfile. Ignore that host artifact when checking our plan.
+        powershell_runtime_dirs = {
+            home / "AppData",
+            home / "AppData/Local",
+            home / "AppData/Local/Microsoft",
+            home / "AppData/Local/Microsoft/PowerShell",
+            home / "AppData/Local/Microsoft/PowerShell/StartupProfileData-NonInteractive",
+        }
+        home_contents = [entry for entry in home_contents if entry not in powershell_runtime_dirs]
+    message = "planning must not create files in the isolated home"
+    if home_contents:
+        message += f"; found: {home_contents}"
+    assert not home_contents, message
 
     exported_snapshot = tmp_path / "exported-snapshot.toml"
     snapshot_export = _run(repo, environment, "snapshot", "export", "--output", str(exported_snapshot))
