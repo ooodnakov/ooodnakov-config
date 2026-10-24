@@ -45,11 +45,29 @@ def test_diagnostics_are_versioned_stable_and_secret_free(isolated_state: Path) 
 
 
 def test_doctor_and_status_exit_rules(isolated_state: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    assert lifecycle_tool.cli(["--repo-root", str(REPO_ROOT), "doctor", "--format", "json"]) == 1
+    doctor_args = [
+        "--repo-root",
+        str(REPO_ROOT),
+        "doctor",
+        "--platform",
+        "linux",
+        "--format",
+        "json",
+    ]
+    assert lifecycle_tool.cli(doctor_args) == 1
     doctor = json.loads(capsys.readouterr().out)
     assert doctor["summary"]["error"] > 0
 
-    assert lifecycle_tool.cli(["--repo-root", str(REPO_ROOT), "status", "--format", "json"]) == 0
+    status_args = [
+        "--repo-root",
+        str(REPO_ROOT),
+        "status",
+        "--platform",
+        "linux",
+        "--format",
+        "json",
+    ]
+    assert lifecycle_tool.cli(status_args) == 0
     status = json.loads(capsys.readouterr().out)
     assert status["managed_links"]["healthy"] == 0
 

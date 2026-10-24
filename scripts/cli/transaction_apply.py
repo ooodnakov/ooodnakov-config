@@ -209,7 +209,7 @@ def _is_self_link(target: Path) -> bool:
         return False
     if not raw.is_absolute():
         raw = target.parent / raw
-    return Path(os.path.abspath(raw)) == Path(os.path.abspath(target))
+    return os.path.normcase(os.path.abspath(raw)) == os.path.normcase(os.path.abspath(target))
 
 
 def _link_failure_hint() -> str:
