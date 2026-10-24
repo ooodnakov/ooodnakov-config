@@ -80,6 +80,13 @@ def test_complete_lifecycle_in_isolated_home(tmp_path: Path) -> None:
             "OOOCONF_TEST_API_TOKEN": "lifecycle-secret-sentinel",
         }
     )
+    if sys.platform == "win32":
+        environment.update(
+            {
+                "APPDATA": str(tmp_path / "appdata"),
+                "LOCALAPPDATA": str(tmp_path / "localappdata"),
+            }
+        )
 
     secret_sentinel = environment["OOOCONF_TEST_API_TOKEN"]
 
