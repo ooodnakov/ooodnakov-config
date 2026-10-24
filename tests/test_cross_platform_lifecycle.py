@@ -85,6 +85,7 @@ def test_complete_lifecycle_in_isolated_home(tmp_path: Path) -> None:
             {
                 "APPDATA": str(tmp_path / "appdata"),
                 "LOCALAPPDATA": str(tmp_path / "localappdata"),
+                "PSModuleAnalysisCachePath": str(tmp_path / "module-analysis.cache"),
             }
         )
 
