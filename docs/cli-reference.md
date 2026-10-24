@@ -13,6 +13,7 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | `--all` | select all dependency keys at once |
 | `--latest` | check for and install latest manager-backed dependency versions |
 | `--skip-deps` | skip dependency installation |
+| `--no-deps` | alias for --skip-deps |
 | `-C` | set repo root path |
 | `--repo-root` | set repo root path |
 | `--profile` | select portable capability profile |

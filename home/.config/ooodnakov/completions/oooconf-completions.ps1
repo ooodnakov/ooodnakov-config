@@ -43,6 +43,7 @@ function Get-OooconfCompletions {
         '--all',
         '--latest',
         '--skip-deps',
+        '--no-deps',
         '-C',
         '--repo-root',
         '--profile',
