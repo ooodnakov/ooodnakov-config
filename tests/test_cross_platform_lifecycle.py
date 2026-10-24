@@ -89,10 +89,9 @@ def test_complete_lifecycle_in_isolated_home(tmp_path: Path) -> None:
     plan = json.loads(plan_result.stdout)
     assert plan["profile"] == "minimal"
     assert plan["operations"]
-    assert not home.exists(), (
-        "planning must not create the isolated home; "
-        f"found: {list(home.iterdir()) if home.exists() else []}"
-    )
+    home_contents = list(home.iterdir()) if home.exists() else []
+    message = f"planning must not create the isolated home; contents: {home_contents}"
+    assert not home.exists(), message
 
     exported_snapshot = tmp_path / "exported-snapshot.toml"
     snapshot_export = _run(repo, environment, "snapshot", "export", "--output", str(exported_snapshot))
