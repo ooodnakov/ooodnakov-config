@@ -28,7 +28,17 @@ def _copy_test_repo(destination: Path) -> Path:
 
 def _command(repo: Path, *arguments: str) -> list[str]:
     if sys.platform == "win32":
-        return ["pwsh", "-NoProfile", "-File", str(repo / "scripts/setup/ooodnakov.ps1"), "-C", str(repo), *arguments]
+        return [
+            "pwsh",
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-File",
+            str(repo / "scripts/setup/ooodnakov.ps1"),
+            "-C",
+            str(repo),
+            *arguments,
+        ]
     return ["bash", str(repo / "scripts/setup/ooodnakov.sh"), "-C", str(repo), *arguments]
 
 
