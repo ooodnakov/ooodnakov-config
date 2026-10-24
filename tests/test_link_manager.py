@@ -8,6 +8,7 @@ from scripts.link_manager import get_all_links, merge_with_local
 
 def test_merge_with_local_expands_templates_for_overrides(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg-data"))
 
@@ -53,6 +54,7 @@ target = "{LOCAL_BIN}/oooconf"
 def test_get_all_links_honors_explicit_platform(monkeypatch) -> None:
     repo_root = Path(__file__).parent.parent
     monkeypatch.setenv("HOME", "/tmp/oooconf-platform-test")
+    monkeypatch.setenv("USERPROFILE", "/tmp/oooconf-platform-test")
 
     linux_keys = {key for _source, _target, key in get_all_links(repo_root, "linux")}
     windows_keys = {key for _source, _target, key in get_all_links(repo_root, "windows")}

@@ -129,7 +129,7 @@ Primary commands:
 - `o`: short alias wrapper for `oooconf` with matching completion behavior
 - `oooconf install`: apply managed config and optional dependency installs
 - `oooconf deps`: install optional dependencies only, with a multi-select picker when `gum` is available
-- `oooconf update`: fast-forward pull the repo, then rerun install
+- `oooconf update`: fast-forward pull the repo, then rerun install; pass `--no-deps` to skip optional dependency installation
 - `oooconf dry-run`: preview setup actions without changing the system
 - `oooconf doctor`: validate managed links and key tools
 - `oooconf plan`: build a validated, side-effect-free operation plan in text or versioned JSON

@@ -162,6 +162,9 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
         "--skip-deps" {
             $skipDepsRequested = $true
         }
+        "--no-deps" {
+            $skipDepsRequested = $true
+        }
         "--all" {
             $allDepsRequested = $true
         }
@@ -225,6 +228,7 @@ if (Test-ShouldNormalizeGlobalFlags -CommandName $command) {
             "--dry-run" { $dryRunRequested = $true }
             "--yes-optional" { $yesOptionalRequested = $true }
             "--skip-deps" { $skipDepsRequested = $true }
+            "--no-deps" { $skipDepsRequested = $true }
             "--all" { $allDepsRequested = $true }
             "--profile" {
                 if ($i + 1 -ge $remaining.Count) {
@@ -269,6 +273,9 @@ switch ($command) {
     }
     "doctor" {
         Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "doctor") + $remaining)
+        if ($global:LASTEXITCODE -ne 0) {
+            throw "oooconf doctor failed (exit $global:LASTEXITCODE)"
+        }
     }
     "status" {
         Run-Python -ScriptPath $LifecycleToolScript -ScriptArgs (@("--repo-root", $RepoRoot, "status") + $remaining)

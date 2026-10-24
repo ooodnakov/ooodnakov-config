@@ -209,7 +209,20 @@ def _is_self_link(target: Path) -> bool:
         return False
     if not raw.is_absolute():
         raw = target.parent / raw
-    return Path(os.path.abspath(raw)) == Path(os.path.abspath(target))
+    raw_text = os.path.abspath(raw)
+    target_text = os.path.abspath(target)
+    if os.name == "nt":
+        if raw_text.startswith("\\\\?\\UNC\\"):
+            raw_text = "\\\\" + raw_text[8:]
+        elif raw_text.startswith("\\\\?\\"):
+            raw_text = raw_text[4:]
+        if target_text.startswith("\\\\?\\UNC\\"):
+            target_text = "\\\\" + target_text[8:]
+        elif target_text.startswith("\\\\?\\"):
+            target_text = target_text[4:]
+    normalized_raw = os.path.normcase(os.path.normpath(raw_text))
+    normalized_target = os.path.normcase(os.path.normpath(target_text))
+    return normalized_raw == normalized_target
 
 
 def _link_failure_hint() -> str:
