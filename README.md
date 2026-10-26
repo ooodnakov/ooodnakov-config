@@ -48,6 +48,29 @@ Reference-only material lives under `third_party/` and `docs/imports/`. It is st
 - `third_party/`: upstream and local reference trees
 - `fonts/meslo/`: bundled Meslo Nerd Font files used by the prompt and terminal defaults
 
+<!-- TOC START -->
+## Contents
+
+- [What This Repo Manages](#what-this-repo-manages)
+- [Repo Layout](#repo-layout)
+- [Quick Start](#quick-start)
+  - [Preferred install path on Linux or macOS](#preferred-install-path-on-linux-or-macos)
+  - [Bootstrap shortcut on Unix-like systems](#bootstrap-shortcut-on-unix-like-systems)
+  - [Windows PowerShell](#windows-powershell)
+- [CLI Entry Points](#cli-entry-points)
+- [Developer Automation](#developer-automation)
+- [Prerequisites](#prerequisites)
+- [Install Behavior](#install-behavior)
+  - [Installing Optional Dependencies](#installing-optional-dependencies)
+- [Pinned Dependencies](#pinned-dependencies)
+- [Fonts](#fonts)
+- [Environment and Local Overrides](#environment-and-local-overrides)
+- [WezTerm Workspace Ergonomics](#wezterm-workspace-ergonomics)
+- [CI/CD](#cicd)
+- [Upstream and Audit References](#upstream-and-audit-references)
+- [Development](#development)
+<!-- TOC END -->
+
 ## Quick Start
 
 ### Preferred install path on Linux or macOS
