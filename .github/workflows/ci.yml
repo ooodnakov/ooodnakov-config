@@ -216,7 +216,9 @@ jobs:
       - name: Oooconf smoke tests (install --dry-run, doctor, lock)
         shell: pwsh
         run: |
+          $pathBeforeInstall = $env:PATH
           ./scripts/setup/ooodnakov.ps1 install --dry-run --yes-optional
+          $env:PATH = $pathBeforeInstall
 
           $tempHome = Join-Path $env:RUNNER_TEMP "oooconf-smoke-home"
           New-Item -ItemType Directory -Path $tempHome -Force | Out-Null

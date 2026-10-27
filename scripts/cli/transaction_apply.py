@@ -18,7 +18,7 @@ from typing import Iterator
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.cli.operation_plan import Operation, build_link_operations  # noqa: E402
+from scripts.cli.operation_plan import Operation, PlanError, build_link_operations  # noqa: E402
 from scripts.cli.profile_manager import ProfileError, resolve_profile  # noqa: E402
 from scripts.link_manager import get_platform  # noqa: E402
 
@@ -190,7 +190,39 @@ def _journal_path(journal: dict[str, object]) -> Path:
 
 
 def _link_matches(source: Path, target: Path) -> bool:
-    return target.is_symlink() and target.resolve(strict=False) == source.resolve(strict=False)
+    if not target.is_symlink():
+        return False
+    try:
+        return target.resolve(strict=False) == source.resolve(strict=False)
+    except (OSError, RuntimeError):
+        # pathlib reports ELOOP as RuntimeError on some versions.
+        return False
+
+
+def _is_self_link(target: Path) -> bool:
+    """Return whether target is a symlink that points back at itself."""
+    if not target.is_symlink():
+        return False
+    try:
+        raw = Path(os.readlink(target))
+    except OSError:
+        return False
+    if not raw.is_absolute():
+        raw = target.parent / raw
+    raw_text = os.path.abspath(raw)
+    target_text = os.path.abspath(target)
+    if os.name == "nt":
+        if raw_text.startswith("\\\\?\\UNC\\"):
+            raw_text = "\\\\" + raw_text[8:]
+        elif raw_text.startswith("\\\\?\\"):
+            raw_text = raw_text[4:]
+        if target_text.startswith("\\\\?\\UNC\\"):
+            target_text = "\\\\" + target_text[8:]
+        elif target_text.startswith("\\\\?\\"):
+            target_text = target_text[4:]
+    normalized_raw = os.path.normcase(os.path.normpath(raw_text))
+    normalized_target = os.path.normcase(os.path.normpath(target_text))
+    return normalized_raw == normalized_target
 
 
 def _link_failure_hint() -> str:
@@ -244,6 +276,12 @@ def _apply_entry(entry: dict[str, object], transaction_id: str) -> None:
         target = Path(str(entry["target"]))
         if target.exists() or target.is_symlink():
             raise TransactionError(f"Refusing to replace an unbacked target: {target}")
+        resolved_target = target.parent.resolve(strict=False) / target.name
+        if resolved_target == source.resolve(strict=False):
+            raise TransactionError(
+                f"Refusing to create a self-referential link: {target} resolves onto its own source. "
+                "Migrate legacy whole-directory links (docs/symlink-manifest.md#omp-file-and-content-links)."
+            )
         try:
             target.symlink_to(source, target_is_directory=source.is_dir())
         except OSError as error:
@@ -266,7 +304,7 @@ def _rollback_entries(journal: dict[str, object]) -> list[str]:
             if kind == "link" and entry.get("created"):
                 target = Path(str(entry["target"]))
                 source = Path(str(entry["source"]))
-                if target.is_symlink() and _link_matches(source, target):
+                if target.is_symlink() and (_link_matches(source, target) or _is_self_link(target)):
                     target.unlink()
                 elif target.exists() or target.is_symlink():
                     raise TransactionError(f"Refusing to remove user-modified target: {target}")
@@ -283,7 +321,7 @@ def _rollback_entries(journal: dict[str, object]) -> list[str]:
                 if directory.exists():
                     directory.rmdir()
             entry["status"] = "rolled_back"
-        except (OSError, TransactionError) as error:
+        except (OSError, RuntimeError, TransactionError) as error:
             entry["status"] = "rollback_failed"
             errors.append(str(error))
     return errors
@@ -431,7 +469,7 @@ def cli(argv: list[str] | None = None) -> int:
         if not incomplete:
             print("No incomplete transactions.")
         return 1 if args.check_incomplete and incomplete else 0
-    except (OSError, RuntimeError, TransactionError, ProfileError) as error:
+    except (OSError, RuntimeError, PlanError, ProfileError, TransactionError) as error:
         print(f"transaction_apply: error: {error}", file=sys.stderr)
         return 1
     return 2

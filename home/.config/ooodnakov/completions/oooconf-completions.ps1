@@ -43,6 +43,7 @@ function Get-OooconfCompletions {
         '--all',
         '--latest',
         '--skip-deps',
+        '--no-deps',
         '-C',
         '--repo-root',
         '--profile',
@@ -648,7 +649,7 @@ function Get-OooconfCompletions {
             }
         }
         'update' = @{
-            Options = @('--dry-run', '--yes-optional', '--profile', '-h', '--help')
+            Options = @('--dry-run', '--yes-optional', '--no-deps', '--profile', '-h', '--help')
             OptionsWithArgs = @('--profile')
             Values = @()
             Subcommands = @()

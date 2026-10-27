@@ -332,7 +332,8 @@ function Test-Command {
 function Invoke-EzaOrGetChildItem {
     param(
         [string[]]$EzaArguments = @(),
-        [string[]]$Path = @()
+        [string[]]$Path = @(),
+        [switch]$SortByModified
     )
 
     if (Test-Command "eza") {
@@ -340,7 +341,12 @@ function Invoke-EzaOrGetChildItem {
         return
     }
 
-    Get-ChildItem -Force
+    $paths = if ($Path.Count -gt 0) { $Path } else { @(".") }
+    $items = Get-ChildItem -Force -Path $paths
+    if ($SortByModified) {
+        $items = $items | Sort-Object LastWriteTime -Descending
+    }
+    $items
 }
 
 function l {
@@ -355,7 +361,7 @@ function a {
 
 function aa {
     param([string[]]$Path)
-    Invoke-EzaOrGetChildItem -EzaArguments @("-la", "--git", "--color-scale", "all", "-g", "--smart-group", "--icons", "always", "-s", "modified", "-r") -Path $Path
+    Invoke-EzaOrGetChildItem -EzaArguments @("-la", "--git", "--color-scale", "all", "-g", "--smart-group", "--icons", "always", "-s", "modified", "-r") -Path $Path -SortByModified
 }
 
 function e {

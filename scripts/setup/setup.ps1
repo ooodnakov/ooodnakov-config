@@ -215,7 +215,11 @@ try {
             if ($DryRun) {
                 Write-Output "[dry-run] would link:"
             }
-            $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/operation_plan.py") -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-links") 2>$null
+            $planScript = Join-Path $RepoRoot "scripts/cli/operation_plan.py"
+            $linkOutput = Run-Python -ScriptPath $planScript -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-links") 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                throw (Format-PythonFailure -Context "Managed link plan validation failed" -ScriptPath $planScript)
+            }
             if ($DryRun) {
                 $linkOutput -split "`n" | ForEach-Object {
                     if ([string]::IsNullOrWhiteSpace($_)) { return }

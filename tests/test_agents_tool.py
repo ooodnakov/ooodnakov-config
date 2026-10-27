@@ -162,6 +162,7 @@ def test_cmd_mcp_add_multi_writes_entries(tmp_path, monkeypatch):
 def test_provider_sync_minimax_writes_supported_configs(tmp_path, monkeypatch):
     home = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     cfg = {
         "agent_configs": [
             {"name": "Claude Code", "format": "json", "default_paths": ["~/.claude/settings.json"]},
@@ -191,6 +192,7 @@ def test_provider_sync_minimax_writes_supported_configs(tmp_path, monkeypatch):
 def test_provider_sync_minimax_handles_empty_json_and_updates_existing_codex(tmp_path, monkeypatch):
     home = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     claude_path = home / ".claude/settings.json"
     opencode_path = home / ".config/opencode/opencode.json"
     codex_path = home / ".config/codex/config.toml"
