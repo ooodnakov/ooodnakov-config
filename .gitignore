@@ -72,6 +72,7 @@ home/.pi-lens/probe-cache.json
 !/home/.omp/agent/mcp.json
 !/home/.omp/agent/themes/
 !/home/.omp/agent/skills/
+/home/.omp/agent/skills/impeccable
 !/home/.omp/agent/vibes/
 !/home/.omp/extensions/
 /home/.omp/extensions/*
