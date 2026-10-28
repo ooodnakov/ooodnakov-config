@@ -23,6 +23,7 @@ home/.config/noctalia/**/*.backup-[0-9]*
 home/.config/ooodnakov/local/sketchybar
 home/.config/ooodnakov/local/noctalia
 home/.config/ooodnakov/local/ohmyposh
+home/.config/ooodnakov/local/certs
 home/.config/ooodnakov/local/scripts
 home/.config/ooodnakov/local/yazi
 home/.config/ooodnakov/local/*.zsh
@@ -46,6 +47,7 @@ home/.glzr/zebar/errors.log
 # pi
 home/.pi/agent/auth.json
 home/.pi/agent/sessions
+home/.pi/agent/glm*
 home/.pi/cache
 home/.pi/context-mode
 home/.pi/agent/npm
