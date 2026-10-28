@@ -105,6 +105,7 @@ The local overrides file is at `home/.config/ooodnakov/local/links.local.toml` (
 - These local files contain a `# --- LOCAL OVERRIDES START/END ---` section that survives `oooconf secrets sync`. User-added lines inside the markers are preserved across renders; everything outside is overwritten.
 - `oooconf secrets sync` can auto-unlock the vault if `BW_CLIENTID`, `BW_CLIENTSECRET`, and `BW_PASSWORD` are exported, avoiding interactive prompts.
 - If importing behavior from real machines, keep only portable parts in tracked config.
+- Node.js toolchain paths are owned by the shared env files, never by ad-hoc shell exports: pnpm globals live in `PNPM_HOME` (`~/.local/share/pnpm`) and npm globals in `NPM_CONFIG_PREFIX` (default `~/.npm-global`). Do not point either at a Node runtime directory (nvm/fnm version dir, pnpm runtime tree) or at a system prefix such as `/usr`; global installs must survive Node upgrades and pnpm store pruning.
 
 ## WezTerm policy
 
