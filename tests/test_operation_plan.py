@@ -21,6 +21,7 @@ def _plan_env(home: Path) -> dict[str, str]:
     env.update(
         {
             "HOME": str(home),
+            "USERPROFILE": str(home),
             "XDG_CONFIG_HOME": str(home / ".config"),
             "XDG_DATA_HOME": str(home / ".local/share"),
         }
@@ -127,6 +128,7 @@ def test_existing_target_is_backed_up_before_link(monkeypatch: pytest.MonkeyPatc
     target.parent.mkdir(parents=True)
     target.write_text("user data", encoding="utf-8")
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setattr(operation_plan, "get_all_links", lambda _root, _platform: [(str(source), str(target), "tool")])
 
     operations = operation_plan.build_link_operations(tmp_path / "repo", "linux")
@@ -142,9 +144,28 @@ def test_matching_link_is_a_noop(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     target.parent.mkdir(parents=True)
     target.symlink_to(source, target_is_directory=True)
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setattr(operation_plan, "get_all_links", lambda _root, _platform: [(str(source), str(target), "tool")])
 
     assert operation_plan.build_link_operations(tmp_path / "repo", "linux") == []
+
+
+def test_target_resolving_into_repository_is_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    repo = home / "src/repo"
+    source = repo / "home/.config/tool"
+    source.mkdir(parents=True)
+    (home / ".config").symlink_to(repo / "home/.config", target_is_directory=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setattr(
+        operation_plan,
+        "get_all_links",
+        lambda _root, _platform: [(str(source), str(home / ".config/tool"), "tool")],
+    )
+
+    with pytest.raises(operation_plan.PlanError, match="resolves inside the repository"):
+        operation_plan.build_link_operations(repo, "linux")
 
 
 def test_unsafe_or_missing_link_paths_are_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -152,6 +173,7 @@ def test_unsafe_or_missing_link_paths_are_rejected(monkeypatch: pytest.MonkeyPat
     source = tmp_path / "repo/config"
     source.mkdir(parents=True)
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setattr(
         operation_plan,
         "get_all_links",
@@ -178,6 +200,7 @@ def test_symlinked_parent_cannot_escape_approved_roots(monkeypatch: pytest.Monke
     outside.mkdir()
     (home / "redirect").symlink_to(outside, target_is_directory=True)
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setattr(
         operation_plan,
         "get_all_links",

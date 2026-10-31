@@ -104,7 +104,8 @@ def _link_matches(source: Path, target: Path) -> bool:
         return False
     try:
         return target.resolve(strict=False) == source
-    except OSError:
+    except (OSError, RuntimeError):
+        # pathlib raises RuntimeError for symlink loops on some versions.
         return False
 
 
@@ -127,12 +128,23 @@ def selected_links(
             raise PlanError(f"Profile {profile} selects links unavailable on {platform}: {', '.join(unknown_keys)}")
         raw_links = [link for link in raw_links if link[2] in allowed_link_keys]
     links = sorted(raw_links, key=lambda item: (item[1].casefold(), (item[2] or "").casefold()))
+    repo_resolved = _resolved(Path(repo_root))
     result: list[tuple[Path, Path, str]] = []
     seen_targets: set[Path] = set()
     seen_ids: set[str] = set()
     for source_text, target_text, key in links:
         source = _validate_source(Path(source_text))
         target = _validate_target(Path(target_text), platform)
+        # A legacy whole-directory link (for example ~/.omp pointing back into
+        # the repo) makes every child target resolve onto its own source. Linking
+        # there would move the tracked source into backups and then create a
+        # self-referential symlink, so refuse before planning any mutation.
+        if _is_within(target, repo_resolved):
+            raise PlanError(
+                f"Link target resolves inside the repository: {target}. "
+                "A parent directory still points into the repo; migrate legacy whole-directory links "
+                "(docs/symlink-manifest.md#omp-file-and-content-links) before linking."
+            )
         if target in seen_targets:
             raise PlanError(f"Multiple managed links target the same path: {target}")
         seen_targets.add(target)
@@ -492,7 +504,10 @@ def cli(argv: list[str] | None = None) -> int:
             _render_managed_links(args.repo_root.resolve(), platform, args.profile) if args.emit_managed_links else None
         )
     except (OSError, RuntimeError, PlanError, ProfileError) as error:
-        parser.error(str(error))
+        # Keep the exit-code contract (2 = invalid plan) without dumping usage
+        # noise on top of the actionable message.
+        print(f"{parser.prog}: error: {error}", file=sys.stderr)
+        return 2
 
     if args.emit_managed_links:
         print(managed_links)

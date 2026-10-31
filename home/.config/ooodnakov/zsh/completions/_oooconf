@@ -40,6 +40,7 @@ _oooconf_global_opts=(
   '--all:select all dependency keys at once'
   '--latest:check for and install latest manager-backed dependency versions'
   '--skip-deps:skip dependency installation'
+  '--no-deps:alias for --skip-deps'
   '-C:set repo root path'
   '--repo-root:set repo root path'
   '--profile:select portable capability profile'
@@ -102,6 +103,7 @@ _oooconf_values_deps_keys=(
   'bw:Bitwarden CLI via official native archive'
   'node:Node.js runtime with bundled npm, installed through nvm when needed'
   'pnpm:Node.js package manager via corepack or npm fallback; bootstraps Node.js through nvm when needed'
+  'bun:JavaScript runtime, bundler, test runner, and package manager via the official install script'
   'rtk:token-optimized command proxy for AI CLI workflows'
   'imagemagick:Image processing library (required by Snacks.image)'
   'ghostscript:PostScript and PDF interpreter (required by Snacks.image for PDFs)'
@@ -120,6 +122,7 @@ _oooconf_values_deps_keys=(
   'overline-zebar:Third-party Zebar widget pack with system tray, widgets, and a config UI'
   'pandoc:document converter and universal markup transformer'
   'pi-coding-agent:Earendil Works coding agent for AI-assisted development'
+  'agent-deck:terminal session manager for AI coding agents'
   'coreutils-win:Windows Core Utilities (sudo, etc.) for Windows'
   'croc:easily and securely send files between computers'
   's5cmd:parallel S3 and local filesystem operations'
@@ -270,6 +273,7 @@ _oooconf_update() {
   _arguments -C \
     '--dry-run[preview actions without changing files]' \
     '--yes-optional[auto-confirm optional dependency installs]' \
+    '--no-deps[skip optional dependency installation]' \
     '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
     '-h[show help]' \
     '--help[show help]' \
@@ -2146,6 +2150,7 @@ _oooconf_main() {
     '--all[select all dependency keys at once]' \
     '--latest[check for and install latest manager-backed dependency versions]' \
     '--skip-deps[skip dependency installation]' \
+    '--no-deps[alias for --skip-deps]' \
     '-C[set repo root path]:value:_files -/' \
     '--repo-root[set repo root path]:value:_files -/' \
     '--profile[select portable capability profile]' \

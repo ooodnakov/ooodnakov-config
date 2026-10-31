@@ -18,7 +18,7 @@ from typing import Iterator
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.cli.operation_plan import Operation, build_link_operations  # noqa: E402
+from scripts.cli.operation_plan import Operation, PlanError, build_link_operations  # noqa: E402
 from scripts.cli.profile_manager import ProfileError, resolve_profile  # noqa: E402
 from scripts.link_manager import get_platform  # noqa: E402
 
@@ -76,25 +76,72 @@ def _atomic_write(path: Path, data: dict[str, object]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _process_alive(pid: int) -> bool:
+    """Return whether pid is running without signalling it.
+
+    Windows os.kill(pid, 0) terminates the target process, so liveness there
+    goes through OpenProcess instead of the POSIX signal probe.
+    """
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        import ctypes
+
+        process_query_limited_information = 0x1000
+        still_active = 259
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+        if not handle:
+            return False
+        try:
+            exit_code = ctypes.c_ulong()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return False
+            return exit_code.value == still_active
+        finally:
+            kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _lock_conflict(lock: Path) -> TransactionError:
+    return TransactionError(
+        f"Another apply or rollback is active (lock: {lock}). "
+        "If no other oooconf process is running, remove that directory and retry."
+    )
+
+
+def _lock_owner_pid(lock: Path) -> int | None:
+    owner_path = lock / "owner.json"
+    try:
+        owner = json.loads(owner_path.read_text(encoding="utf-8"))
+        return int(owner["pid"])
+    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+        return None
+
+
 @contextmanager
 def _apply_lock() -> Iterator[None]:
     lock = _state_root() / "apply.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        lock.mkdir()
-    except FileExistsError as error:
-        owner_path = lock / "owner.json"
+    for _attempt in range(3):
         try:
-            owner = json.loads(owner_path.read_text(encoding="utf-8"))
-            pid = int(owner["pid"])
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            shutil.rmtree(lock)
             lock.mkdir()
-        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
-            raise TransactionError(f"Another apply or rollback is active (lock: {lock})") from error
-        else:
-            raise TransactionError(f"Another apply or rollback is active (lock: {lock})") from error
+            break
+        except FileExistsError:
+            pid = _lock_owner_pid(lock)
+            if pid is not None and _process_alive(pid):
+                raise _lock_conflict(lock) from None
+            # Missing or unreadable owner metadata means the previous holder
+            # died before recording itself; an exited pid is equally stale.
+            shutil.rmtree(lock, ignore_errors=True)
+    else:
+        raise _lock_conflict(lock)
     try:
         _atomic_write(lock / "owner.json", {"pid": os.getpid(), "started_at": _utc_now()})
         yield
@@ -143,7 +190,68 @@ def _journal_path(journal: dict[str, object]) -> Path:
 
 
 def _link_matches(source: Path, target: Path) -> bool:
-    return target.is_symlink() and target.resolve(strict=False) == source.resolve(strict=False)
+    if not target.is_symlink():
+        return False
+    try:
+        return target.resolve(strict=False) == source.resolve(strict=False)
+    except (OSError, RuntimeError):
+        # pathlib reports ELOOP as RuntimeError on some versions.
+        return False
+
+
+def _is_self_link(target: Path) -> bool:
+    """Return whether target is a symlink that points back at itself."""
+    if not target.is_symlink():
+        return False
+    try:
+        raw = Path(os.readlink(target))
+    except OSError:
+        return False
+    if not raw.is_absolute():
+        raw = target.parent / raw
+    raw_text = os.path.abspath(raw)
+    target_text = os.path.abspath(target)
+    if os.name == "nt":
+        if raw_text.startswith("\\\\?\\UNC\\"):
+            raw_text = "\\\\" + raw_text[8:]
+        elif raw_text.startswith("\\\\?\\"):
+            raw_text = raw_text[4:]
+        if target_text.startswith("\\\\?\\UNC\\"):
+            target_text = "\\\\" + target_text[8:]
+        elif target_text.startswith("\\\\?\\"):
+            target_text = target_text[4:]
+    normalized_raw = os.path.normcase(os.path.normpath(raw_text))
+    normalized_target = os.path.normcase(os.path.normpath(target_text))
+    return normalized_raw == normalized_target
+
+
+def _link_failure_hint() -> str:
+    if sys.platform == "win32":
+        return (
+            " Windows denies symbolic links unless the account holds"
+            " SeCreateSymbolicLinkPrivilege: enable Developer Mode (Settings > System > For developers)"
+            " or run oooconf from an elevated shell."
+        )
+    return ""
+
+
+def _assert_link_support() -> None:
+    """Fail before mutating anything when this host cannot create symlinks."""
+    probe_root = _state_root() / "capability"
+    probe_root.mkdir(parents=True, exist_ok=True)
+    probe_id = uuid.uuid4().hex
+    source = probe_root / f"source-{probe_id}"
+    target = probe_root / f"link-{probe_id}"
+    try:
+        source.write_text("probe\n", encoding="utf-8")
+        target.unlink(missing_ok=True)
+        try:
+            target.symlink_to(source)
+        except OSError as error:
+            raise TransactionError(f"Cannot create symbolic links: {error}.{_link_failure_hint()}") from error
+    finally:
+        target.unlink(missing_ok=True)
+        source.unlink(missing_ok=True)
 
 
 def _apply_entry(entry: dict[str, object], transaction_id: str) -> None:
@@ -168,7 +276,16 @@ def _apply_entry(entry: dict[str, object], transaction_id: str) -> None:
         target = Path(str(entry["target"]))
         if target.exists() or target.is_symlink():
             raise TransactionError(f"Refusing to replace an unbacked target: {target}")
-        target.symlink_to(source, target_is_directory=source.is_dir())
+        resolved_target = target.parent.resolve(strict=False) / target.name
+        if resolved_target == source.resolve(strict=False):
+            raise TransactionError(
+                f"Refusing to create a self-referential link: {target} resolves onto its own source. "
+                "Migrate legacy whole-directory links (docs/symlink-manifest.md#omp-file-and-content-links)."
+            )
+        try:
+            target.symlink_to(source, target_is_directory=source.is_dir())
+        except OSError as error:
+            raise TransactionError(f"Cannot link {target} -> {source}: {error}.{_link_failure_hint()}") from error
         if not _link_matches(source, target):
             raise TransactionError(f"Link postcondition failed: {target}")
         return
@@ -187,7 +304,7 @@ def _rollback_entries(journal: dict[str, object]) -> list[str]:
             if kind == "link" and entry.get("created"):
                 target = Path(str(entry["target"]))
                 source = Path(str(entry["source"]))
-                if target.is_symlink() and _link_matches(source, target):
+                if target.is_symlink() and (_link_matches(source, target) or _is_self_link(target)):
                     target.unlink()
                 elif target.exists() or target.is_symlink():
                     raise TransactionError(f"Refusing to remove user-modified target: {target}")
@@ -204,7 +321,7 @@ def _rollback_entries(journal: dict[str, object]) -> list[str]:
                 if directory.exists():
                     directory.rmdir()
             entry["status"] = "rolled_back"
-        except (OSError, TransactionError) as error:
+        except (OSError, RuntimeError, TransactionError) as error:
             entry["status"] = "rollback_failed"
             errors.append(str(error))
     return errors
@@ -223,6 +340,8 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
     if not operations:
         print("No changes required.")
         return None, 0
+    if any(operation.kind == "link" for operation in operations):
+        _assert_link_support()
 
     journal = _new_journal(repo_root, platform, profile.name if profile else None, operations)
     path = _journal_path(journal)
@@ -236,10 +355,12 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
         _atomic_write(path, journal)
         entries = journal["operations"]
         assert isinstance(entries, list)
+        failed_operation = None
         try:
             for operation_index, entry in enumerate(entries, start=1):
                 assert isinstance(entry, dict)
                 journal["failed_operation"] = entry["id"]
+                failed_operation = entry["id"]
                 entry["status"] = "applying"
                 if entry["kind"] in {"mkdir", "link"}:
                     entry["created"] = True
@@ -249,11 +370,14 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
                 _apply_entry(entry, str(journal["transaction_id"]))
                 entry["status"] = "completed"
                 journal["failed_operation"] = None
+                failed_operation = None
                 _atomic_write(path, journal)
                 if test_fail_after and operation_index == test_fail_after:
+                    failed_operation = entry["id"]
                     raise TransactionError(f"injected integration-test failure after operation {operation_index}")
         except BaseException as error:
             journal["status"] = "failed"
+            journal["failed_operation"] = failed_operation
             journal["error"] = _redact(f"{type(error).__name__}: {error}")
             rollback_errors = _rollback_entries(journal)
             journal["status"] = "rollback_failed" if rollback_errors else "rolled_back"
@@ -264,7 +388,7 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
             if isinstance(error, (KeyboardInterrupt, SystemExit)):
                 raise
             raise TransactionError(
-                f"Apply failed at {journal['failed_operation']}; changes were rolled back: {_redact(error)}"
+                f"Apply failed at {failed_operation}; changes were rolled back: {_redact(error)}"
             ) from error
 
         journal["status"] = "complete"
@@ -345,8 +469,9 @@ def cli(argv: list[str] | None = None) -> int:
         if not incomplete:
             print("No incomplete transactions.")
         return 1 if args.check_incomplete and incomplete else 0
-    except (OSError, RuntimeError, TransactionError, ProfileError) as error:
-        parser.error(str(error))
+    except (OSError, RuntimeError, PlanError, ProfileError, TransactionError) as error:
+        print(f"transaction_apply: error: {error}", file=sys.stderr)
+        return 1
     return 2
 
 

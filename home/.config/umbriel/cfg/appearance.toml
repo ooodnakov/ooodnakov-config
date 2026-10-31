@@ -1,0 +1,24 @@
+# Window decoration.
+#
+# Reference: https://docs.noctalia.dev/umbriel/appearance/
+
+[appearance]
+corner_radius = 20
+border_width = 4
+prefer_no_csd = true
+
+[appearance.shadow]
+enabled = true
+offset_x = 0
+offset_y = 5
+softness = 30
+
+[appearance.blur]
+enabled = true
+optimized = true
+passes = 3
+radius = 15
+noise = 0.02
+brightness = 0.9
+contrast = 0.9
+saturation = 1.1

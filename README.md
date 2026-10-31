@@ -21,7 +21,7 @@ Active tracked config lives under `home/` and includes:
 - shared portable environment files plus ignored local override templates
 - WezTerm, Yazi, LazyVim/Neovim, LazyGit, LazyDocker, btop, CAVA, todo.txt, Taskwarrior, and ccstatusline config
 - PowerShell profile, PowerShell completions, Oh My Posh, and shared SSH include config
-- Linux desktop config for Niri, Hyprland/Pyprland, and Noctalia
+- Linux desktop config for Niri, Umbriel, Hyprland/Pyprland, and Noctalia
 - Windows window-manager config for Komorebi, GlazeWM, Zebar, and the `.pi` coding agent
 - macOS desktop config for AeroSpace, OmniWM, SketchyBar, and Borders
 - agent policy, MCP, provider, skill, and installer metadata under `home/.config/ooodnakov/agents/`
@@ -48,6 +48,29 @@ Reference-only material lives under `third_party/` and `docs/imports/`. It is st
 - `docs/`: reproducibility notes, architecture docs, CLI extension guidance, and import audits
 - `third_party/`: upstream and local reference trees
 - `fonts/meslo/`: bundled Meslo Nerd Font files used by the prompt and terminal defaults
+
+<!-- TOC START -->
+## Contents
+
+- [What This Repo Manages](#what-this-repo-manages)
+- [Repo Layout](#repo-layout)
+- [Quick Start](#quick-start)
+  - [Preferred install path on Linux or macOS](#preferred-install-path-on-linux-or-macos)
+  - [Bootstrap shortcut on Unix-like systems](#bootstrap-shortcut-on-unix-like-systems)
+  - [Windows PowerShell](#windows-powershell)
+- [CLI Entry Points](#cli-entry-points)
+- [Developer Automation](#developer-automation)
+- [Prerequisites](#prerequisites)
+- [Install Behavior](#install-behavior)
+  - [Installing Optional Dependencies](#installing-optional-dependencies)
+- [Pinned Dependencies](#pinned-dependencies)
+- [Fonts](#fonts)
+- [Environment and Local Overrides](#environment-and-local-overrides)
+- [WezTerm Workspace Ergonomics](#wezterm-workspace-ergonomics)
+- [CI/CD](#cicd)
+- [Upstream and Audit References](#upstream-and-audit-references)
+- [Development](#development)
+<!-- TOC END -->
 
 ## Quick Start
 
@@ -79,6 +102,24 @@ curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodna
 less /tmp/ooodnakov-bootstrap.sh
 bash /tmp/ooodnakov-bootstrap.sh
 ```
+
+For a small terminal-only machine, use a partial checkout and minimal shell
+setup. It omits the reference snapshots, bundled fonts, editor/desktop configs,
+and optional package installs; it links the `minimal` shell profile and syncs
+only Oh My Zsh. Git, Bash, and Zsh are required; Python 3 is used by the link
+planner, with no `uv` environment or repository packages installed.
+
+```bash
+git clone --filter=blob:none --no-checkout https://github.com/ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
+git -C ~/src/ooodnakov-config sparse-checkout init --cone
+git -C ~/src/ooodnakov-config sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh LICENSE
+git -C ~/src/ooodnakov-config checkout main
+cd ~/src/ooodnakov-config
+./scripts/setup/minimal-setup.sh
+```
+
+Or use the bootstrap shortcut with `OOODNAKOV_MINIMAL=1`; it performs the same
+partial checkout automatically.
 
 Release archives include `SHA256SUMS`. Verify an archive before extracting it;
 do not pipe a newly downloaded bootstrap script directly into a shell.
@@ -112,7 +153,7 @@ Primary commands:
 - `o`: short alias wrapper for `oooconf` with matching completion behavior
 - `oooconf install`: apply managed config and optional dependency installs
 - `oooconf deps`: install optional dependencies only, with a multi-select picker when `gum` is available
-- `oooconf update`: fast-forward pull the repo, then rerun install
+- `oooconf update`: fast-forward pull the repo, then rerun install; pass `--no-deps` to skip optional dependency installation
 - `oooconf dry-run`: preview setup actions without changing the system
 - `oooconf doctor`: validate managed links and key tools
 - `oooconf plan`: build a validated, side-effect-free operation plan in text or versioned JSON
@@ -349,7 +390,7 @@ Setup symlinks tracked config into standard locations and preserves replaced fil
 - Unix: `~/.local/state/ooodnakov-config/backups/`
 - Windows: `$HOME\.local\state\ooodnakov-config\backups\`
 
-On Unix, that managed tree includes `~/.config/niri` linked from [`home/.config/niri`](home/.config/niri), `~/.config/hypr` linked from [`home/.config/hypr`](home/.config/hypr), `~/.config/pypr` linked from [`home/.config/pypr`](home/.config/pypr), and `~/.config/noctalia` linked from [`home/.config/noctalia`](home/.config/noctalia) alongside the existing shell, terminal, editor, and `ooodnakov` config links.
+On Unix, that managed tree includes `~/.config/niri` linked from [`home/.config/niri`](home/.config/niri), `~/.config/umbriel` linked from [`home/.config/umbriel`](home/.config/umbriel), `~/.config/hypr` linked from [`home/.config/hypr`](home/.config/hypr), `~/.config/pypr` linked from [`home/.config/pypr`](home/.config/pypr), and `~/.config/noctalia` linked from [`home/.config/noctalia`](home/.config/noctalia) alongside the existing shell, terminal, editor, and `ooodnakov` config links.
 
 Each install, update, or doctor run also writes logs under:
 
@@ -416,6 +457,8 @@ Tracked secret references belong in:
 
 - `~/.config/ooodnakov/secrets/env.template`
 
+SSH host aliases come from `~/.ssh/config`, every file it `Include`s (the tracked managed config is `home/.config/ooodnakov/ssh/config`), and `~/.ssh/config.local`. In both zsh and PowerShell, `z <host>` opens an SSH session when `<host>` is one of those aliases; any other argument keeps the zoxide directory jump. In zsh, `z -- <name>` forces the directory jump when an alias shadows a zoxide entry; in PowerShell, `zi` is the interactive directory picker for that case.
+
 Tracked shared environment currently covers:
 
 - editor and pager defaults
@@ -431,6 +474,13 @@ Tracked shared environment currently covers:
 - optional `~/.local/bin/env` sourcing when present
 
 Runtime shell artifacts are intentionally not tracked. Zsh history is written under `~/.local/state/ooodnakov-config/zsh/` and the completion dump under `~/.cache/ooodnakov-config/zsh/`.
+
+OMP uses individual links from `home/.omp/`: `agent/config.yml`, `agent/themes/`,
+`agent/skills/`, `agent/vibes/`, and `extensions/rtk.ts`. `~/.omp` itself is a
+normal local directory, so credentials, databases, sessions, caches, and installed
+plugins stay on the machine. OMP's settings file is `config.yml`; legacy
+`settings.json` is not managed. See [OMP link migration](docs/symlink-manifest.md#omp-file-and-content-links)
+if your existing setup links the whole directory.
 
 Additional local-only files you may create per machine:
 
@@ -563,4 +613,4 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-The pre-commit hooks mirror the main local checks: Bash syntax, `shellcheck`, Ruff lint/format checks, and dependency lock reproducibility.
+The pre-commit hooks mirror the main local checks: Bash syntax, `shellcheck`, Ruff lint/format checks, dependency lock reproducibility, and a `gitleaks` scan of staged changes (`just secrets` scans the full git history).

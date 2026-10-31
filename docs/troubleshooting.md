@@ -20,6 +20,7 @@
 - **`oooconf` (or `o`) not found** — setup links `oooconf` and alias `o` into `~/.local/bin` (Unix: `oooconf`, `o`; Windows: `oooconf.ps1`, `oooconf.cmd`, `o.ps1`, `o.cmd`). Ensure that directory is on your `PATH`. New shell sessions pick it up automatically.
 - **Optional dependency not installed** — run `oooconf deps` to see the interactive picker (requires `gum`). Without `gum`, a text prompt lists available keys (from `optional-deps.toml`). Use `oooconf deps <key>` for specific tools.
 - **A tool is listed as "install attempted" but not present** — the installer respects your consent prompt. Re-run `oooconf deps <key>` to retry, or install the tool manually.
+- **In WSL, a tool resolves to a Windows host binary** — binaries installed on the Windows host are exposed to WSL as `/mnt/<drive>/...` paths. `oooconf` treats those as *not installed* inside the distro, so `oooconf deps <key>` installs a native Linux copy instead of silently using the host binary, and `oooconf doctor` reports them under `dependencies.native` (for example `bun -> /mnt/c/.../bun`). Windows-only binaries are still reachable inside WSL by their `.exe` name (`tool.exe`), not the bare command.
 
 ## `oooconf deps --latest` update warnings
 
@@ -43,6 +44,25 @@ Run `Get-Command pwsh.exe` in a working PowerShell session to check resolution.
 Compare `pwsh.exe -NoLogo -NoProfile` with `pwsh.exe -NoLogo`: if only the latter
 fails, inspect the profile's startup errors. `CloseOnCleanExit` merely keeps the
 failed pane visible; changing it does not fix the shell startup.
+
+## WezTerm right status shows the local host inside SSH
+
+The right status keeps the host visible even when the pane has no current
+directory. It resolves the host in this order:
+
+1. a remote OSC 7 working-directory host, which also handles nested SSH;
+2. the destination of a foreground `ssh` process, including `-p`, `-J`, `-o`,
+   attached short options, `ssh://` destinations, and `ssh.exe`;
+3. the matching `ssh_domains` entry from the effective WezTerm config;
+4. the local hostname.
+
+When SSH does not report a remote working directory, the status shows the SSH
+destination and omits the local path instead of displaying a misleading local
+cwd. Run the deterministic status-bar regressions after changing this logic:
+
+```bash
+lua tests/test_wezterm_right_status.lua
+```
 
 ## Default zsh prompt after install
 
@@ -96,6 +116,11 @@ mkdir -p ~/.config/git && touch ~/.config/git/git-prompt.sh
 ## Stale or broken symlinks
 
 Managed config is linked into `~/.config`. If something is misbehaving:
+
+- **`Managed link transaction failed`** — the failing operation and the underlying helper error are reported with the wrapper message. `oooconf apply` validates link creation before mutating anything, so a permission problem leaves the profile untouched.
+- **Windows cannot create symbolic links** — Windows requires `SeCreateSymbolicLinkPrivilege`. Enable Developer Mode (Settings → System → For developers) or run `oooconf link` from an elevated PowerShell; otherwise every new managed link fails with `WinError 1314`.
+- **`Another apply or rollback is active`** — another `oooconf` process holds `~/.local/state/ooodnakov-config/apply.lock`. If no such process is running, the previous run died before recording itself (or its process is gone); the next run reclaims the stale lock automatically. Delete the lock directory only if the message repeats with a live process id.
+- **`Symlink loop from ~/.omp/agent/...`** — a legacy whole-directory link (for example `~/.omp` pointing back into the repository) makes a child target resolve onto its own source. `oooconf link` now rejects that plan before mutating anything. Close OMP, follow the [one-time OMP migration](symlink-manifest.md#omp-file-and-content-links), then re-run `oooconf link`. If an older run already replaced a tracked source with a self-referential link, `oooconf rollback --last` removes the loop and restores the file from the recorded backup.
 
 Managed-link applies are journaled. To apply only the validated link transaction or
 undo the latest eligible transaction:

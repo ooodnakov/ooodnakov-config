@@ -81,7 +81,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-ZSH_THEME=""
+ZSH_THEME="robbyrussell"
 plugins=(
   git
   git-extras
@@ -102,6 +102,17 @@ plugins=(
   zsh-autosuggestions
   s3cmd
 )
+
+# A sparse/minimal install may intentionally contain only Oh My Zsh. Keep its
+# built-in plugins and load custom plugins only when their checkout is present.
+available_plugins=()
+for plugin in "${plugins[@]}"; do
+  if [[ -d "$ZSH/plugins/$plugin" || -d "$ZSH_CUSTOM/plugins/$plugin" ]]; then
+    available_plugins+=("$plugin")
+  fi
+done
+plugins=("${available_plugins[@]}")
+unset available_plugins plugin
 
 for brew_path in "${commands[brew]}" /opt/homebrew/bin/brew /usr/local/bin/brew "$HOME/.linuxbrew/bin/brew" /home/linuxbrew/.linuxbrew/bin/brew; do
   if [[ -x "$brew_path" ]]; then
@@ -237,6 +248,12 @@ fi
 
 if (( $+commands[zoxide] )); then
   eval "$(zoxide init zsh --cmd z)"
+  # `z <ssh-host>` connects over SSH for Host aliases from SSH config; see
+  # _oooconf_z_wrap_zoxide in .zshrc.d/10-shell.zsh. Must run after zoxide init
+  # so it replaces zoxide's own z function.
+  if (( $+functions[_oooconf_z_wrap_zoxide] )); then
+    _oooconf_z_wrap_zoxide
+  fi
 fi
 
 # direnv supress stdout during startup in path with .envrc
@@ -299,19 +316,22 @@ case "${OOOCONF_ZSH_PROMPT:-p10k}" in
 esac
 
 if [[ "${OOOCONF_ZSH_PROMPT:-p10k}" != ohmyposh ]]; then
+  p10k_available=0
   for p10k_theme_file in \
     "$OOODNAKOV_SHARE_HOME/powerlevel10k/powerlevel10k.zsh-theme" \
     "$HOME/.oh-my-zsh/custom/themes/powerlevel10k/powerlevel10k.zsh-theme" \
     "/usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme"; do
     if [ -f "$p10k_theme_file" ]; then
+      p10k_available=1
       source "$p10k_theme_file"
       break
     fi
   done
 
-  if (( ! $+functions[p10k] )); then
-    print -u2 "oooconf: powerlevel10k is missing at $OOODNAKOV_SHARE_HOME/powerlevel10k; run 'oooconf install' to restore the managed prompt."
-  fi
+  # The stock Oh My Zsh theme keeps the prompt usable without Nerd Fonts or
+  # Powerlevel10k on small/headless machines.
+  if (( ! p10k_available )); then ZSH_THEME=robbyrussell; fi
+  unset p10k_available
   unset p10k_theme_file
 
   if [ -f "$OOODNAKOV_CONFIG_HOME/p10k.zsh" ]; then

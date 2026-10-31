@@ -1,0 +1,23 @@
+# Input devices.
+#
+# The custom Universal Layout is resolved by name from ~/.config/xkb/symbols.
+# Those xkb_symbols files are generated from keyboard_layouts/ul_combo.xkb by
+# keyboard_layouts/generate_symbols.py, because Umbriel builds its keymap from
+# XKB layout names and cannot load a keymap file directly.
+#
+# Reference: https://docs.noctalia.dev/umbriel/input/
+
+[input.keyboard]
+layout = "ul_combo_en,ul_combo_ru"
+numlock_toggle = true
+
+[input.touchpad]
+tap = true
+natural_scroll = true
+
+[input.focus]
+follows_mouse = true
+
+[input.cursor]
+theme = "capitaine-cursors"
+size = 24

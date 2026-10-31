@@ -23,6 +23,7 @@ home/.config/noctalia/**/*.backup-[0-9]*
 home/.config/ooodnakov/local/sketchybar
 home/.config/ooodnakov/local/noctalia
 home/.config/ooodnakov/local/ohmyposh
+home/.config/ooodnakov/local/certs
 home/.config/ooodnakov/local/scripts
 home/.config/ooodnakov/local/yazi
 home/.config/ooodnakov/local/*.zsh
@@ -46,6 +47,7 @@ home/.glzr/zebar/errors.log
 # pi
 home/.pi/agent/auth.json
 home/.pi/agent/sessions
+home/.pi/agent/glm*
 home/.pi/cache
 home/.pi/context-mode
 home/.pi/agent/npm
@@ -62,10 +64,19 @@ home/.pi-lens/sessionstart.log
 home/.pi-lens/probe-cache.json
 
 # omp
-home/.omp/*
-!home/.omp/agent/
-home/.omp/agent/*
-!home/.omp/agent/config.yml
+/.omp/
+/home/.omp/*
+!/home/.omp/agent/
+/home/.omp/agent/*
+!/home/.omp/agent/config.yml
+!/home/.omp/agent/mcp.json
+!/home/.omp/agent/themes/
+!/home/.omp/agent/skills/
+/home/.omp/agent/skills/impeccable
+!/home/.omp/agent/vibes/
+!/home/.omp/extensions/
+/home/.omp/extensions/*
+!/home/.omp/extensions/rtk.ts
 
 .zcompdump*
 
@@ -76,6 +87,7 @@ home/.omp/agent/*
 .qwen
 .gemini
 .claude
+.commandcode
 
 home/.config/ooodnakov/local/bw-session
 pwsh_dir/

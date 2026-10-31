@@ -21,7 +21,7 @@ dependencies = ["wezterm", "nvim", "yazi", "fastfetch", "btop", "fzf", "rg", "fd
 
 [capabilities.developer]
 links = ["lazygit", "lazydocker", "ccstatusline", "pi", "pi-lens"]
-dependencies = ["lazygit", "lazydocker", "docker", "uv", "just", "node", "pnpm", "pi-coding-agent"]
+dependencies = ["lazygit", "lazydocker", "docker", "uv", "just", "node", "pnpm", "bun", "pi-coding-agent"]
 
 [capabilities.desktop-linux]
 platforms = ["linux"]

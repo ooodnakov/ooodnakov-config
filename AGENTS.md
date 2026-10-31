@@ -28,7 +28,8 @@ Authoritative managed config lives in:
 - `home/.config/powershell/`
 - `home/.config/ohmyposh/`
 - `home/.config/ooodnakov/`
-- desktop/window-manager trees under `home/.config/{niri,hypr,pypr,noctalia,komorebi,aerospace,omniwm,sketchybar,borders}/` and `home/.glzr/`
+- `home/.omp/` (only the explicit OMP config/content links; runtime state stays in `~/.omp`)
+- desktop/window-manager trees under `home/.config/{niri,umbriel,hypr,pypr,noctalia,komorebi,aerospace,omniwm,sketchybar,borders}/` and `home/.glzr/`
 
 Bootstrap behavior lives in:
 
@@ -100,9 +101,11 @@ The local overrides file is at `home/.config/ooodnakov/local/links.local.toml` (
   - `~/.config/ooodnakov/local/env.ps1`
 - Shell completions belong in:
   - `home/.config/ooodnakov/completions/` (auto-loaded by managed profiles)
+- `z <host>` connects over SSH when `<host>` is a `Host` alias from `~/.ssh/config`, its `Include`d files, or `~/.ssh/config.local`; other arguments keep the zoxide directory jump. The zsh parser is `_oooconf_ssh_hosts` in `home/.config/zsh/.zshrc.d/10-shell.zsh` (also used by `ssh-forward`), and the PowerShell profile mirrors it with `Get-OooconfSshHosts`. Keep both in sync.
 - These local files contain a `# --- LOCAL OVERRIDES START/END ---` section that survives `oooconf secrets sync`. User-added lines inside the markers are preserved across renders; everything outside is overwritten.
 - `oooconf secrets sync` can auto-unlock the vault if `BW_CLIENTID`, `BW_CLIENTSECRET`, and `BW_PASSWORD` are exported, avoiding interactive prompts.
 - If importing behavior from real machines, keep only portable parts in tracked config.
+- Node.js toolchain paths are owned by the shared env files, never by ad-hoc shell exports: pnpm globals live in `PNPM_HOME` (`~/.local/share/pnpm`) and npm globals in `NPM_CONFIG_PREFIX` (default `~/.npm-global`). Do not point either at a Node runtime directory (nvm/fnm version dir, pnpm runtime tree) or at a system prefix such as `/usr`; global installs must survive Node upgrades and pnpm store pruning.
 
 ## WezTerm policy
 

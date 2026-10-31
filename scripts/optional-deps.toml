@@ -609,6 +609,17 @@ macos.manager = "custom"
 windows.manager = "custom"
 
 [[deps]]
+key = "bun"
+display = "Bun"
+description = "JavaScript runtime, bundler, test runner, and package manager via the official install script"
+handler = "bun"
+ver = "1.4.2"
+check = "bun --version"
+linux.manager = "custom"
+macos.manager = "custom"
+windows.manager = "custom"
+
+[[deps]]
 key = "rtk"
 display = "rtk"
 description = "token-optimized command proxy for AI CLI workflows"
@@ -827,6 +838,19 @@ macos.manager = "pnpm"
 macos.package = "@earendil-works/pi-coding-agent"
 windows.manager = "pnpm"
 windows.package = "@earendil-works/pi-coding-agent"
+
+[[deps]]
+key = "agent-deck"
+display = "agent-deck"
+description = "terminal session manager for AI coding agents"
+bin = "agent-deck"
+check = "agent-deck version"
+linux.manager = "brew"
+linux.package = "asheshgoplani/tap/agent-deck"
+macos.manager = "brew"
+macos.package = "asheshgoplani/tap/agent-deck"
+windows.manager = "custom"
+windows.command = "not available on Windows; install inside WSL"
 
 [[deps]]
 key = "coreutils-win"

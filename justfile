@@ -50,3 +50,12 @@ completions:
 # Regenerate dependency lock artifacts.
 lock:
     @uv run python scripts/generate/generate_dependency_lock.py
+
+# Scan tracked files and full git history for secrets with gitleaks.
+secrets:
+    @if command -v gitleaks >/dev/null 2>&1; then \
+        gitleaks git . --no-banner --redact --log-opts="--all"; \
+    else \
+        docker run --rm -v "{{justfile_directory()}}:/repo" zricethezav/gitleaks:latest \
+            git /repo --no-banner --redact --log-opts="--all"; \
+    fi

@@ -25,6 +25,34 @@ doctor_check_command() {
   fi
 }
 
+doctor_check_wsl_native_tools() {
+  # Windows host binaries leak onto PATH in WSL as /mnt/<drive>/... paths.
+  # Nothing to verify outside WSL.
+  is_wsl || return 0
+
+  local key
+  local -a host_tools=()
+  while IFS= read -r key; do
+    [ -n "$key" ] || continue
+    if dependency_resolved_on_windows_host "$key"; then
+      host_tools+=("$key -> $(command -v "$key")")
+    fi
+  done < <(optional_dependency_keys)
+
+  if [ "${#host_tools[@]}" -eq 0 ]; then
+    ui_line ok "WSL: catalog tools resolve to Linux installs"
+    return 0
+  fi
+
+  ui_line warn "WSL: catalog tools resolve to Windows host binaries (not installed in this distro):"
+  local entry
+  for entry in "${host_tools[@]}"; do
+    ui_line hint "          $entry"
+  done
+  ui_line hint "          repair: oooconf deps <key> to install native Linux copies"
+  FAILURES+=("doctor wsl host tools")
+}
+
 doctor_check_nvim() {
   local version
   if ! command -v nvim >/dev/null 2>&1; then
@@ -103,6 +131,7 @@ run_doctor() {
   doctor_check_nvim
   doctor_check_command oooconf
   doctor_check_command o
+  doctor_check_wsl_native_tools
   doctor_check_managed_repo "oh-my-zsh" "$STATE_HOME/oh-my-zsh" "oh-my-zsh.sh"
   doctor_check_managed_repo "powerlevel10k" "$STATE_HOME/powerlevel10k" "powerlevel10k.zsh-theme"
   doctor_check_managed_repo "k" "$STATE_HOME/oh-my-zsh/custom/plugins/k" "k.sh"

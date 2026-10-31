@@ -14,10 +14,19 @@
         xcursor-size 24
     }
 
-    debug {
-        // Allows notification actions and window activation from Noctalia.
-        honor-xdg-activation-with-invalid-serial
-    }
+    // Apps such as Telegram and Discord create a fresh xdg-activation token
+    // when a message arrives, and those tokens carry no valid serial. Niri
+    // ignores them by default, which is what stops a notification from
+    // pulling focus away from what you are working on.
+    //
+    // The honor-xdg-activation-with-invalid-serial flag used to be enabled
+    // here so that clicking a tray icon or a notification raised the app. It
+    // also made every incoming message steal focus, so it is gone.
+    //
+    // Noctalia focuses windows over `niri msg action focus-window --id`, so
+    // the dock, the taskbar and the window switcher still work.
+    //
+    // niri 26.05 adds a per-window `on-xdg-activate` rule for finer control.
 
     hotkey-overlay {
         skip-at-startup

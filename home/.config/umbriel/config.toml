@@ -1,0 +1,47 @@
+# Umbriel configuration.
+#
+# Managed by the ooodnakov-config dotfiles repository. Mirrors the niri setup
+# in home/.config/niri, translated to Umbriel's TOML dialect.
+#
+# Reference: https://docs.noctalia.dev/umbriel/
+# Validate:  umbriel config validate
+
+[include]
+files = [
+  "/usr/share/umbriel/effects/animation/workspace_wipe/effect.toml",
+  "/usr/share/umbriel/effects/animation/squash/effect.toml",
+  "/usr/share/umbriel/effects/border/pulse/effect.toml",
+  "/usr/share/umbriel/effects/cursor/trail/effect.toml",
+  "/usr/share/umbriel/effects/cursor/trail-path/effect.toml",
+  "/usr/share/umbriel/effects/cursor/glow/effect.toml",
+  "/usr/share/umbriel/effects/animation/reveal/effect.toml",
+  "monitor.toml",
+  "noctalia.toml",
+  "cfg/animation.toml",
+  "cfg/appearance.toml",
+  "cfg/autostart.toml",
+  "cfg/input.toml",
+  "cfg/keybinds.toml",
+  "cfg/layout.toml",
+  "cfg/rules.toml",
+  "cfg/scratchpad.toml",
+  "cfg/workspaces.toml",
+]
+
+[general]
+mod_key = "Super"
+# niri skips the hotkey overlay at startup.
+show_cheatsheet = false
+# Apps that raise their own window when a notification arrives request
+# activation, which would pull focus away from what you are doing. Noctalia
+# focuses windows over `umbriel msg window-focus:<id>`, so dock and taskbar
+# clicks keep working. Enable this again, or per app with a
+# `[[window_rule]] focus_on_activate = true` rule, to let activation move
+# focus.
+focus_on_activate = false
+
+[environment]
+ELECTRON_OZONE_PLATFORM_HINT = "auto"
+QT_QPA_PLATFORM = "wayland"
+QT_QPA_PLATFORMTHEME = "gtk3"
+QT_WAYLAND_DISABLE_WINDOWDECORATION = "1"

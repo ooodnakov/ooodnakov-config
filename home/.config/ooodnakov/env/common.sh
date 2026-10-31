@@ -37,11 +37,17 @@ elif [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
-NPM_PACKAGES="$HOME/.npm"
-path_prepend "$NPM_PACKAGES/bin"
+# npm globals stay independent of whichever Node.js runtime is active (pnpm
+# runtime, nvm, fnm, or a system package). npm derives its global prefix from
+# the `node` binary that launched it, so an unset prefix makes `npm i -g`
+# write into a Node runtime directory or the pnpm content-addressed store.
+# pnpm globals keep their own bin dir through PNPM_HOME below.
+export NPM_CONFIG_PREFIX="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"
+path_prepend "$NPM_CONFIG_PREFIX/bin"
 
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 path_prepend "$BUN_INSTALL/bin"
+path_prepend "$HOME/.cache/.bun/bin"
 
 export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
 path_prepend "$PNPM_HOME"

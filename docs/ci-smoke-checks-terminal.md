@@ -87,8 +87,9 @@ The current CI keeps terminal/editor checks **static and deterministic**:
 
 1. Validate Neovim JSON files (`lazy-lock.json`, `lazyvim.json`).
 2. Verify core Neovim/WezTerm managed entrypoint files exist.
-3. Run cross-platform `oooconf` smoke checks (`install --dry-run`, expected-failing `doctor` on a fresh HOME, and `lock`).
-4. Validate lock artifacts with `scripts/generate/generate_dependency_lock.py` and targeted optional-dependency drift tests.
+3. Run deterministic WezTerm right-status Lua regressions for local, plain SSH, nested SSH, and SSH-domain host fallback (`tests/test_wezterm_right_status.lua`).
+4. Run cross-platform `oooconf` smoke checks (`install --dry-run`, expected-failing `doctor` on a fresh HOME, and `lock`).
+5. Validate lock artifacts with `scripts/generate/generate_dependency_lock.py` and targeted optional-dependency drift tests.
 
 Why this shape:
 

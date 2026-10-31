@@ -36,6 +36,36 @@ key = "pi-lens"
 source = "home/.pi-lens"
 target = "{HOME}/.pi-lens"
 
+[[links]]
+key = "omp-config"
+source = "home/.omp/agent/config.yml"
+target = "{HOME}/.omp/agent/config.yml"
+
+[[links]]
+key = "omp-themes"
+source = "home/.omp/agent/themes"
+target = "{HOME}/.omp/agent/themes"
+
+[[links]]
+key = "omp-skills"
+source = "home/.omp/agent/skills"
+target = "{HOME}/.omp/agent/skills"
+
+[[links]]
+key = "omp-mcp"
+source = "home/.omp/agent/mcp.json"
+target = "{HOME}/.omp/agent/mcp.json"
+
+[[links]]
+key = "omp-vibes"
+source = "home/.omp/agent/vibes"
+target = "{HOME}/.omp/agent/vibes"
+
+[[links]]
+key = "omp-rtk"
+source = "home/.omp/extensions/rtk.ts"
+target = "{HOME}/.omp/extensions/rtk.ts"
+
 # --- linux-only ---
 
 [[links]]

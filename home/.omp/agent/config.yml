@@ -1,0 +1,84 @@
+modelRoles:
+  smol: commandcode/deepseek/deepseek-v4.1-flash:high
+  judge: openai-codex/gpt-6.1-sol:high
+  commit: commandcode/deepseek/deepseek-v4.1-flash:high
+  memory: commandcode/deepseek/deepseek-v4.1-flash:high
+  plan: openai-codex/gpt-6.1-sol:high
+  vision: openai-codex/gpt-6-luna:high
+  advisor: openai-codex/gpt-6.1-sol:xhigh
+  task: commandcode/deepseek/deepseek-v4.1-flash:high
+  slow: openai-codex/gpt-6.1-sol:xhigh
+  default: commandcode/deepseek/deepseek-v4.1-flash:high
+  tiny: commandcode/deepseek/deepseek-v4.1-flash:high
+  widget: commandcode/deepseek/deepseek-v4.1-flash:low
+symbolPreset: nerd
+composer:
+  shape: box
+  tokenRate: true
+theme:
+  dark: noctalia
+  light: noctalia
+setupVersion: 2
+statusLine:
+  preset: nerd
+  separator: powerline-thin
+  contextLine: embedded
+  transparent: false
+terminal:
+  showProgress: true
+tui:
+  textSizing: true
+  autoGraph: always
+  codexResetFireworks: true
+  titleSpinner: braille
+  mouse: true
+  tight: false
+display:
+  shimmer: kitt
+  subagentLivePreview: true
+  showTokenUsage: true
+  showTurnTime: true
+  cacheMissMarker: true
+task:
+  showResolvedModelBadge: true
+memory:
+  backend: hindsight
+autolearn:
+  enabled: true
+edit:
+  mode: hashline
+astGrep:
+  enabled: true
+checkpoint:
+  enabled: true
+github:
+  enabled: true
+codexResets:
+  autoRedeem: "no"
+modelPresets:
+  main:
+    modelRoles:
+      smol: commandcode/deepseek/deepseek-v4.1-flash:high
+      judge: zai/glm-5.3:high
+      commit: zai/glm-5.3-flash:high
+      memory: commandcode/deepseek/deepseek-v4.1-flash:high
+      default: commandcode/deepseek/deepseek-v4.1-flash:high
+      plan: commandcode/MiniMaxAI/MiniMax-M3:high
+      vision: zai/glm-5.3-flash:high
+      advisor: openai-codex/gpt-6.1-sol:xhigh
+      task: commandcode/deepseek/deepseek-v4.1-flash:high
+      slow: openai-codex/gpt-6.1-sol:xhigh
+    defaultThinkingLevel: high
+mnemopi:
+  noEmbeddings: false
+  enhancedRecall: true
+  proactiveLinking: true
+  polyphonicRecall: true
+  autoRecall: true
+  embeddingVariant: multilingual
+hindsight:
+  apiUrl: https://hs.ooodnakov.ru
+  bankId: Main
+  scoping: per-project-tagged
+dev:
+  autoqaConsent: denied

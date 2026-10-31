@@ -36,6 +36,45 @@ is_verbose() {
   esac
 }
 
+is_wsl() {
+  if [ -n "${WSL_DETECTION_CACHE:-}" ]; then
+    [ "$WSL_DETECTION_CACHE" = "1" ]
+    return $?
+  fi
+
+  local detected=0
+  if [ -n "${WSL_DISTRO_NAME:-}" ] || [ -n "${WSL_INTEROP:-}" ]; then
+    detected=1
+  elif [ -r /proc/version ] && grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null; then
+    detected=1
+  fi
+
+  WSL_DETECTION_CACHE="$detected"
+  [ "$detected" = "1" ]
+}
+
+is_host_windows_command_path() {
+  case "$1" in
+  /mnt/?/*) return 0 ;;
+  *) return 1 ;;
+  esac
+}
+
+# In WSL, tools can silently resolve to Windows host binaries exposed through
+# /mnt/<drive>/... instead of the Linux install inside the distro.
+dependency_resolved_on_windows_host() {
+  local command_name
+  command_name="$1"
+
+  is_wsl || return 1
+
+  local resolved
+  resolved="$(command -v "$command_name" 2>/dev/null || true)"
+  [ -n "$resolved" ] || return 1
+
+  is_host_windows_command_path "$resolved"
+}
+
 progress_init() {
   PROGRESS_TOTAL="$1"
   PROGRESS_CURRENT=0

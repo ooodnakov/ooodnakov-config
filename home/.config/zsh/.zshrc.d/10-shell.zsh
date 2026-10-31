@@ -6,7 +6,10 @@ setopt share_history
 setopt auto_cd
 
 alias l="ls -lAhrtF"
-alias a="eza -lah --git --color-scale all -g --smart-group --icons always --hyperlink auto"
+unalias a 2>/dev/null
+function a() {
+  command eza -lah --git --color-scale all -g --smart-group --icons always --hyperlink auto "$@"
+}
 alias aa="a -s modified -r"
 alias e="exit"
 alias ip="ip --color=auto"
@@ -52,6 +55,71 @@ ipgeo() {
   fi
 }
 
+# Print the SSH host aliases the user can connect to: Host entries from
+# ~/.ssh/config and ~/.ssh/config.local, including every Include'd file (the
+# tracked managed config is reached through ~/.ssh/config's Include line).
+# Wildcard patterns (Host *.example, Host *) are not connectable aliases, so
+# they are dropped; output is deduplicated and one alias per line.
+_oooconf_ssh_hosts() {
+    emulate -L zsh
+    setopt localoptions null_glob glob_subst
+
+    local -a pending hosts
+    local file line keyword rest pattern
+    pending=("$HOME/.ssh/config" "$HOME/.ssh/config.local")
+
+    while (( ${#pending} )); do
+        file=${pending[1]}
+        shift pending
+        [[ -r $file ]] || continue
+
+        while IFS= read -r line || [[ -n $line ]]; do
+            line=${line%%\#*}
+            line=${line##[[:space:]]#}
+            line=${line%%[[:space:]]#}
+            [[ -n $line ]] || continue
+
+            keyword=${(L)${line%%[[:space:]]*}}
+            rest=${line#*[[:space:]]}
+            case $keyword in
+                host)
+                    hosts+=(${=rest})
+                    ;;
+                include)
+                    for pattern in ${=rest}; do
+                        [[ $pattern == '~'* ]] && pattern="$HOME${pattern#\~}"
+                        pending+=(${~pattern})
+                    done
+                    ;;
+            esac
+        done < "$file"
+    done
+
+    print -rl -- ${(u)hosts:#*[*?]*}
+}
+
+# True when $1 is an SSH config host alias.
+_oooconf_is_ssh_host() {
+    emulate -L zsh
+    local -a hosts
+    hosts=("${(@f)$(_oooconf_ssh_hosts)}")
+    (( ${hosts[(Ie)$1]} ))
+}
+
+# Wraps zoxide's z (defined by `zoxide init zsh --cmd z` in .zshrc) so
+# `z <ssh-host>` connects over SSH instead of jumping. Any other argument keeps
+# zoxide's directory jump; `z -- <name>` forces the jump when a host alias
+# shadows a zoxide entry.
+_oooconf_z_wrap_zoxide() {
+    function z() {
+        if (( $# > 0 )) && [[ $1 != -* ]] && _oooconf_is_ssh_host "$1"; then
+            command ssh "$@"
+            return
+        fi
+        __zoxide_z "$@"
+    }
+}
+
 # Advanced SSH Port Forwarding
 # Usage: ssh-forward [-r] [<host>] [<local-port>] [<remote-port>]
 #        ssh-forward-ls [-a|--all]
@@ -76,7 +144,7 @@ ssh-forward() {
         fi
 
         local candidates
-        candidates=$(awk '/^Host / && !/\*/ {for (i=2;i<=NF;i++) print $i}' ~/.ssh/config ~/.config/ooodnakov/ssh/config 2>/dev/null | sort -u)
+        candidates=$(_oooconf_ssh_hosts)
         if [[ -z $candidates ]]; then
             echo "ssh-forward: no SSH config hosts found." >&2
             return 1
@@ -238,30 +306,10 @@ ssh-forward-ls() {
     fi
 }
 
-# Smarter tab completion
-# Smarter tab completion reading from both standard and custom SSH configs
+# Smarter tab completion for ssh-forward, including Include'd SSH configs
 _ssh_forward_advanced() {
     local -a hosts
-    local -A unique_hosts  # Associative array to handle deduplication
-    local config_file
-
-    # Array of config paths to check
-    local config_files=(
-        ~/.ssh/config
-        ~/.config/ooodnakov/ssh/config
-    )
-
-    for config_file in $config_files; do
-        if [[ -f $config_file ]]; then
-            # Parse 'Host' lines, ignoring wildcards like '*'
-            for h in $(awk '/^Host / && !/\*/ {print $2}' "$config_file"); do
-                unique_hosts[$h]=1
-            done
-        fi
-    done
-
-    # Convert the unique keys back into a standard array
-    hosts=(${(k)unique_hosts})
+    hosts=("${(@f)$(_oooconf_ssh_hosts)}")
 
     # If first arg is -r, adjust the argument positions for completion
     if [[ "$words[2]" == "-r" ]]; then

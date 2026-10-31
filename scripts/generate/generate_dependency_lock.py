@@ -21,7 +21,11 @@ def parse_managed_tools() -> list[dict[str, str]]:
     import subprocess
 
     data = subprocess.run(
-        ["uv", "run", "scripts/cli/read_optional_deps.py", "managed-tools"],
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts/cli/read_optional_deps.py"),
+            "managed-tools",
+        ],
         capture_output=True,
         text=True,
         check=True,

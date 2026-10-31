@@ -40,6 +40,9 @@ $OooconfPs1Path = Join-Path $RepoRoot "scripts/setup/ooodnakov.ps1"
 if (Test-Path $OooconfPs1Path) {
     . $OooconfPs1Path
 }
+# Run-Python is shared with oooconf; load it directly so setup still works if
+# the oooconf entrypoint is unavailable.
+. (Join-Path $RepoRoot "scripts/setup/lib/oooconf-shell.ps1")
 
 $OptionalDepsScript = Join-Path $RepoRoot "scripts/cli/read_optional_deps.py"
 $AutogenCompletionsGenerator = Join-Path $RepoRoot "scripts/generate/generate_tool_completions.py"
@@ -212,7 +215,11 @@ try {
             if ($DryRun) {
                 Write-Output "[dry-run] would link:"
             }
-            $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/operation_plan.py") -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-links") 2>$null
+            $planScript = Join-Path $RepoRoot "scripts/cli/operation_plan.py"
+            $linkOutput = Run-Python -ScriptPath $planScript -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-links") 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                throw (Format-PythonFailure -Context "Managed link plan validation failed" -ScriptPath $planScript)
+            }
             if ($DryRun) {
                 $linkOutput -split "`n" | ForEach-Object {
                     if ([string]::IsNullOrWhiteSpace($_)) { return }
@@ -223,9 +230,10 @@ try {
                 }
                 return
             }
-            Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/transaction_apply.py") -ScriptArgs @("--repo-root", "$RepoRoot", "apply")
+            $applyScript = Join-Path $RepoRoot "scripts/cli/transaction_apply.py"
+            Run-Python -ScriptPath $applyScript -ScriptArgs @("--repo-root", "$RepoRoot", "apply")
             if ($LASTEXITCODE -ne 0) {
-                throw "Managed link transaction failed"
+                throw (Format-PythonFailure -Context "Managed link transaction failed" -ScriptPath $applyScript)
             }
         }
     }

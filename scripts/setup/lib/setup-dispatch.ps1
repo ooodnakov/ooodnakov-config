@@ -5,9 +5,10 @@ function Invoke-Install {
         [switch]$ContinueProgress
     )
 
-    Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/operation_plan.py") -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-links") | Out-Null
+    $planScript = Join-Path $RepoRoot "scripts/cli/operation_plan.py"
+    Run-Python -ScriptPath $planScript -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-links") | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw "Managed link plan validation failed before setup mutation"
+        throw (Format-PythonFailure -Context "Managed link plan validation failed before setup mutation" -ScriptPath $planScript)
     }
 
     if (-not $ContinueProgress) {
@@ -27,9 +28,10 @@ function Invoke-Install {
     Install-OptionalDependencies
 
     Step-Progress -Status "Linking managed configuration"
-    Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/transaction_apply.py") -ScriptArgs @("--repo-root", "$RepoRoot", "apply")
+    $applyScript = Join-Path $RepoRoot "scripts/cli/transaction_apply.py"
+    Run-Python -ScriptPath $applyScript -ScriptArgs @("--repo-root", "$RepoRoot", "apply")
     if ($LASTEXITCODE -ne 0) {
-        throw "Managed link transaction failed"
+        throw (Format-PythonFailure -Context "Managed link transaction failed" -ScriptPath $applyScript)
     }
 
     # Sync LazyVim plugins non-interactively (nvim post-link hook)

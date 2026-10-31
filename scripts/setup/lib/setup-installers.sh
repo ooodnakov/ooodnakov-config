@@ -404,6 +404,14 @@ check_dependency_status() {
   local log_name
   log_name="${2:-$1}"
 
+  # A tool that only resolves through the Windows host mount (/mnt/<drive>/...)
+  # is not installed inside WSL. Report it as missing so the native Linux
+  # package is installed instead of silently using the host binary.
+  if dependency_resolved_on_windows_host "$command_name"; then
+    ui_line warn "$log_name: found on Windows host ($(command -v "$command_name")), not installed in WSL"
+    return 1
+  fi
+
   if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
     printf "[-] %s...\r" "$log_name" >/dev/tty
   fi
@@ -1690,6 +1698,72 @@ maybe_install_pnpm() {
   else
     DEPENDENCY_SUMMARY+=("pnpm: install attempted")
     return 1
+  fi
+}
+
+maybe_install_bun() {
+  local _manager
+  _manager="$1"
+
+  if check_dependency_status "bun" "bun"; then
+    return 0
+  fi
+
+  if ! prompt_yes_no "Install Bun JavaScript runtime and package manager via the official install script?"; then
+    is_verbose && echo "skipping bun" >&2
+    DEPENDENCY_SUMMARY+=("bun: skipped")
+    return 0
+  fi
+
+  export BUN_INSTALL="${BUN_INSTALL:-$HOME_DIR/.bun}"
+
+  local bun_ver
+  bun_ver="$(get_dep_field bun ver 2>/dev/null || true)"
+
+  local -a bun_install_args=(https://bun.sh/install)
+  [ -n "$bun_ver" ] && bun_install_args+=("bun-v${bun_ver}")
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Download https://bun.sh/install"
+    echo "[dry-run] bash install.sh bun-v${bun_ver}"
+    echo "[dry-run] Add $BUN_INSTALL/bin to PATH"
+    DEPENDENCY_SUMMARY+=("bun: install preview via official install script")
+    return 0
+  fi
+
+  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("bun: missing (requires curl or wget)")
+    return 0
+  fi
+
+  # The official installer appends auto-load lines to the user's shell rc files.
+  # Those are managed symlinks into this repo, so run it against a throwaway HOME
+  # to keep machine-specific paths out of tracked config. BUN_INSTALL is set
+  # explicitly, so the binary still lands in the right place.
+  local bun_installer_home saved_home saved_zdotdir
+  bun_installer_home="$(mktemp -d)"
+  saved_home="$HOME"
+  saved_zdotdir="${ZDOTDIR:-}"
+  export HOME="$bun_installer_home"
+  export ZDOTDIR="$bun_installer_home"
+
+  run_with_spinner "Installing Bun${bun_ver:+ v$bun_ver} via official install script" \
+    download_and_run_installer "${bun_install_args[@]}" || true
+
+  export HOME="$saved_home"
+  if [ -n "$saved_zdotdir" ]; then
+    export ZDOTDIR="$saved_zdotdir"
+  else
+    unset ZDOTDIR
+  fi
+  rm -rf "$bun_installer_home"
+
+  export PATH="$BUN_INSTALL/bin:$PATH"
+
+  if command -v bun >/dev/null 2>&1 || [ -x "$BUN_INSTALL/bin/bun" ]; then
+    DEPENDENCY_SUMMARY+=("bun: installed")
+  else
+    DEPENDENCY_SUMMARY+=("bun: install attempted")
   fi
 }
 

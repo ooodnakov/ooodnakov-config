@@ -23,6 +23,13 @@ The runner labels are the durable promise; hosted-runner images and hardware can
 change. CI workflow files are authoritative for the currently exercised images and
 Python versions.
 
+Managed links are symbolic links on every platform, so a Windows profile needs
+`SeCreateSymbolicLinkPrivilege`: enable Developer Mode (Settings → System → For
+developers) or run `oooconf install` / `oooconf link` from an elevated PowerShell.
+Hosted runners are elevated, so CI cannot detect a non-elevated profile; the link
+transaction probes for symlink support before mutating anything and reports the
+privilege requirement instead of a generic failure.
+
 ## Design
 
 Tracked files:
@@ -72,6 +79,15 @@ Shell runtime state is kept outside the tracked config tree:
 - zsh history: `~/.local/state/ooodnakov-config/zsh/history`
 - zsh completion dump: `~/.cache/ooodnakov-config/zsh/.zcompdump-<host>-<zsh-version>`
 
+OMP follows the same separation: only `home/.omp/agent/config.yml`, the
+`themes/`, `skills/`, and `vibes/` directories beside it, and
+`home/.omp/extensions/rtk.ts` are linked. The parent `~/.omp` and `~/.omp/agent`
+remain real local directories. Authentication databases, history, sessions,
+model/MCP credentials and configuration, caches, plugins, and daemon state stay
+outside the repository. The empty managed content directories contain `.gitkeep`
+placeholders until custom content is added. Older whole-directory links require
+the [one-time migration](symlink-manifest.md#omp-file-and-content-links) before linking.
+
 ## SSH policy
 
 The tracked SSH file is an include fragment, not a full private SSH directory. It is safe to version because it contains host aliases only.
@@ -113,6 +129,15 @@ This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup scrip
 For Neovim, setup installs the pinned official GitHub release archive into the repo-managed data tree rather than relying on an OS package, so the managed `nvim` (validated `>= 0.10.0` for LazyVim) shadows any system binary on `PATH` and is adopted into `bin` tracking for Topgrade-driven updates.
 For Node.js, setup can install the pinned Node.js LTS version through an available `nvm` checkout, including the bundled `npm`. On Unix, the bootstrap can sync the managed `nvm` checkout first when only the repository-managed `nvm` tree is missing.
 For `pnpm`, the tracked shell environment reserves `PNPM_HOME`; setup first ensures Node.js/npm are available, then installs the pinned pnpm version through `corepack` when available or through `npm` into that path otherwise.
+
+Global npm and pnpm installs use separate, runtime-independent directories, so switching Node.js runtimes (pnpm runtime, nvm, fnm, or a distro package) never orphans or overwrites global CLI tools:
+
+| Tool | Global bin dir | Global root | Env |
+|---|---|---|---|
+| pnpm | `~/.local/share/pnpm` (`PNPM_HOME`) | `~/.local/share/pnpm/global` | `PNPM_HOME`, set by `home/.config/ooodnakov/env/common.{sh,ps1}` |
+| npm | `~/.npm-global/bin` | `~/.npm-global/lib/node_modules` | `NPM_CONFIG_PREFIX`, set by the same files |
+
+npm derives its global prefix from the `node` binary that launched it, so an unset prefix sends `npm install -g` into whichever runtime is active — the nvm/fnm version directory, the pnpm runtime tree, or a root-owned `/usr`. The tracked `NPM_CONFIG_PREFIX` prevents that; npm keeps its download cache in `~/.npm` regardless. When the same CLI exists in both places, `PNPM_HOME` precedes the npm prefix on `PATH`, so the pnpm-managed copy wins; install a given global tool through one manager only.
 
 ## Bootstrap trust model
 

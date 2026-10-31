@@ -28,6 +28,7 @@ def _profile_repo(tmp_path: Path) -> Path:
 def test_builtin_profile_inheritance_and_platform_skips(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.delenv("OOODNAKOV_PROFILE", raising=False)
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
     profile = resolve_profile(REPO_ROOT, "linux", "workstation")
     assert profile is not None
     assert profile.capabilities == (
@@ -82,6 +83,7 @@ def test_plan_filters_links_and_reports_inapplicable_capabilities(
 ) -> None:
     home = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(home / ".config"))
     monkeypatch.setenv("XDG_DATA_HOME", str(home / ".local/share"))
     monkeypatch.delenv("OOODNAKOV_PROFILE", raising=False)
@@ -102,6 +104,7 @@ def test_plan_filters_links_and_reports_inapplicable_capabilities(
 def test_no_profile_preserves_the_complete_platform_link_set(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     home = tmp_path / "home"
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(home / ".config"))
     monkeypatch.delenv("OOODNAKOV_PROFILE", raising=False)
 

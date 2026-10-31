@@ -53,34 +53,20 @@ $script:StepCurrent = 0
 $script:StepActivity = ""
 $ValidSetupCommands = @("install", "update", "doctor", "deps", "completions", "minimal", "link")
 
-# Run a Python script, preferring `uv run` when available.
-function Run-Python {
-    param([string]$ScriptPath, [string[]]$ScriptArgs)
-    $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
-    if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
-        $prevErrorAction = $ErrorActionPreference
-        $ErrorActionPreference = 'Continue'
-        try {
-            $output = & uv run $ScriptPath @ScriptArgs 2>$null
-            return $output
-        } finally {
-            $ErrorActionPreference = $prevErrorAction
-        }
-    } else {
-        $pyCmd = Get-PythonCommand
-        if ($pyCmd) {
-            & $pyCmd $ScriptPath @ScriptArgs
-        } else {
-            Write-Error "Python not found. Install Python 3.8+ or add it to your PATH."
-            exit 1
-        }
-    }
-}
-
+# Run-Python lives in oooconf-shell.ps1 so setup and oooconf share one
+# implementation with identical stderr and exit-code handling.
 
 function Get-PythonCommand {
     foreach ($candidate in @("python3", "python", "py")) {
-        if (Get-Command $candidate -ErrorAction SilentlyContinue) { return $candidate }
+        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        if (-not $command) { continue }
+        # Windows Store aliases exist on PATH but fail at runtime; probe them so
+        # a non-functional stub cannot mask a working interpreter.
+        $previousExitCode = $LASTEXITCODE
+        & $command.Source --version *>$null
+        $probeExitCode = $LASTEXITCODE
+        $global:LASTEXITCODE = $previousExitCode
+        if ($probeExitCode -eq 0) { return $candidate }
     }
     return $null
 }
@@ -904,6 +890,53 @@ function Install-PnpmIfMissing {
     }
 
     Add-DependencySummary "pnpm: install attempted"
+    return $false
+}
+
+function Install-BunIfMissing {
+    if (Get-Command bun -ErrorAction SilentlyContinue) {
+        Add-DependencySummary "bun: present"
+        return $true
+    }
+
+    if (-not (Confirm-Install "Install Bun JavaScript runtime and package manager via the official install script?")) {
+        Add-DependencySummary "bun: skipped"
+        return $false
+    }
+
+    $bunVer = (Get-DepInfo "bun").ver
+    $bunInstall = if ($env:BUN_INSTALL) { $env:BUN_INSTALL } else { Join-Path $HomeDir ".bun" }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Download https://bun.sh/install.ps1"
+        Write-Output "[dry-run] Install Bun $bunVer into $bunInstall"
+        Write-Output "[dry-run] Add $bunInstall/bin to PATH"
+        Add-DependencySummary "bun: install preview via official install script"
+        return $true
+    }
+
+    $env:BUN_INSTALL = $bunInstall
+
+    Invoke-ActionWithSpinner -Description "Installing Bun $bunVer via official install script" -Action {
+        param($version)
+        $installScript = [ScriptBlock]::Create((Invoke-RestMethod "https://bun.sh/install.ps1"))
+        & $installScript -Version $version | Out-Null
+    } -ArgumentList $bunVer
+    Update-SessionEnvironment
+
+    $bunBin = Join-Path $bunInstall "bin"
+    $pathParts = @($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ })
+    if ((Test-Path $bunBin) -and ($pathParts -notcontains $bunBin)) {
+        $env:PATH = "$bunBin$([IO.Path]::PathSeparator)$env:PATH"
+    }
+
+    if (Get-Command bun -ErrorAction SilentlyContinue) {
+        Add-DependencySummary "bun: installed"
+        Add-NewlyAvailableCommand -CommandNames @("bun")
+        return $true
+    }
+
+    Add-DependencySummary "bun: install attempted"
     return $false
 }
 

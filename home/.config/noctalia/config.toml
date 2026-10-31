@@ -26,9 +26,25 @@ margin_ends = 4
 margin_edge = 4
 widget_spacing = 6
 font_scale = 1.0
-start = ["launcher", "clock", "sysmon-cpu", "sysmon-temp", "sysmon-ram", "active-window", "media"]
+start = [
+    "launcher",
+    "clock",
+    "sysmon-cpu",
+    "sysmon-temp",
+    "sysmon-ram",
+    "active-window",
+    "media",
+]
 center = ["workspaces", "taskbar"]
-end = ["notifications", "network", "bluetooth", "volume", "brightness", "control-center", "session"]
+end = [
+    "notifications",
+    "network",
+    "bluetooth",
+    "volume",
+    "brightness",
+    "control-center",
+    "session",
+]
 
 [bar.default.monitor."DP-1"]
 match = "DP-1"
@@ -76,7 +92,16 @@ avatar_path = "/home/odnakov/Downloads/wallhaven-jx566m.jpg"
 time_format = "{:%H:%M}"
 
 [shell.launcher]
-pinned = ["zen", "vscodium-wayland", "org.kde.dolphin", "org.telegram.desktop", "net.lutris.Lutris", "vesktop", "steam", "org.prismlauncher.PrismLauncher"]
+pinned = [
+    "zen",
+    "vscodium-wayland",
+    "org.kde.dolphin",
+    "org.telegram.desktop",
+    "net.lutris.Lutris",
+    "vesktop",
+    "steam",
+    "org.prismlauncher.PrismLauncher",
+]
 sort_by_usage = true
 
 [shell.panel]
@@ -117,6 +142,7 @@ position = "bottom"
 enable_daemon = true
 background_opacity = 1.0
 position = "top_right"
+override_duration = 5000
 
 [osd]
 enabled = true

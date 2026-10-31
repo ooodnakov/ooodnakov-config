@@ -357,6 +357,7 @@ function Install-OptionalDependencyFromSpec {
         "bw" { return (Install-BitwardenCliIfMissing) }
         "node" { return (Install-NodeIfMissing) }
         "pnpm" { return (Install-PnpmIfMissing) }
+        "bun" { return (Install-BunIfMissing) }
         "cargo" { return (Install-CargoIfMissing) }
         "dua" { return (Install-DuaIfMissing) }
         "nvim" { return (Install-NeovimIfMissing) }

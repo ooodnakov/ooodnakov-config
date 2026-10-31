@@ -1,16 +1,68 @@
 # Dot-sourced by scripts/setup/ooodnakov.ps1; do not execute directly.
 
+# Run a Python helper, preferring `uv run` when available.
+# Returns the helper's stdout and leaves $LASTEXITCODE set. On failure the
+# helper's stderr is stored in $global:LastPythonError and echoed to the error
+# stream so callers can surface the real cause instead of a generic wrapper.
 function Run-Python {
-    param([string]$ScriptPath, [string[]]$ScriptArgs)
+    param([string]$ScriptPath, [string[]]$ScriptArgs = @())
+
+    $global:LastPythonError = ""
+    $exitCode = 0
+    $output = @()
+    $stderrPath = [System.IO.Path]::GetTempFileName()
     $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
-    if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
-        & uv run $ScriptPath @ScriptArgs
+    $prevErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path $pyprojectPath)) {
+            $output = & uv run --project $RepoRoot $ScriptPath @ScriptArgs 2>$stderrPath
+        } else {
+            $pyCmd = if (Get-Command Get-PythonCommand -ErrorAction SilentlyContinue) { Get-PythonCommand } else { $null }
+            if (-not $pyCmd) {
+                foreach ($candidate in @("python3", "python", "py")) {
+                    if (Get-Command $candidate -ErrorAction SilentlyContinue) { $pyCmd = $candidate; break }
+                }
+            }
+            if (-not $pyCmd) {
+                $ErrorActionPreference = $prevErrorAction
+                $global:LastPythonError = "Python not found. Install Python 3.8+ or add it to your PATH."
+                Write-Error $global:LastPythonError
+                $global:LASTEXITCODE = 1
+                return
+            }
+            $output = & $pyCmd $ScriptPath @ScriptArgs 2>$stderrPath
+        }
+        $exitCode = $LASTEXITCODE
+        $errorText = if (Test-Path -LiteralPath $stderrPath) {
+            Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue
+        } else {
+            ""
+        }
+    } finally {
+        $ErrorActionPreference = $prevErrorAction
+        Remove-Item -LiteralPath $stderrPath -Force -ErrorAction SilentlyContinue
+    }
+
+    $global:LASTEXITCODE = $exitCode
+    if (-not [string]::IsNullOrWhiteSpace($errorText)) {
+        $global:LastPythonError = $errorText.Trim()
+        if ($exitCode -ne 0) {
+            [Console]::Error.WriteLine($global:LastPythonError)
+        }
+    }
+    return $output
+}
+
+function Format-PythonFailure {
+    param([string]$Context, [string]$ScriptPath)
+
+    $detail = if ($global:LastPythonError) {
+        ": " + ($global:LastPythonError -replace '\s+', ' ')
     } else {
-        & python3 $ScriptPath @ScriptArgs
+        ""
     }
-    if ($LASTEXITCODE -ne 0) {
-        throw "Python helper failed with exit code $LASTEXITCODE`: $ScriptPath"
-    }
+    return "$Context (exit $LASTEXITCODE, $ScriptPath)$detail"
 }
 
 function Get-ShellConfigHome {

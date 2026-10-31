@@ -1,0 +1,59 @@
+# Animation timing.
+#
+# niri used spring curves with explicit damping and stiffness; Umbriel spells
+# the same thing as "spring:<damping>,<stiffness>".
+#
+# Reference: https://docs.noctalia.dev/umbriel/animation/
+
+[animation]
+enabled = true
+duration_ms = 250
+curve = "easeout"
+
+[animation.windows_in]
+enabled = true
+effect = "reveal"
+duration_ms = 200
+curve = "easeout"
+style = "popin"
+scale = 0.5
+
+[animation.windows_out]
+enabled = true
+duration_ms = 200
+curve = "easeout"
+style = "popin"
+scale = 0.8
+
+[animation.windows_move]
+effect = "squash"
+enabled = true
+curve = "spring:1,800"
+
+[animation.windows_resize]
+enabled = true
+curve = "spring:1,1000"
+
+[animation.workspaces]
+enabled = true
+style = "slide"
+effect = "workspace_wipe"
+duration_ms = 200
+curve = "easeout"
+
+[animation.overview]
+enabled = true
+curve = "spring:1,900"
+
+[animation.layers]
+enabled = true
+curve = "spring:0.6,1200"
+
+[animation.border]
+enabled = true
+curve = "spring:1,900"
+
+
+[effects]
+border = "pulse"
+cursor = "trail"
