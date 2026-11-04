@@ -256,6 +256,11 @@ if (( $+commands[zoxide] )); then
   fi
 fi
 
+# Worktrunk needs a shell function so switching worktrees changes directory.
+if (( $+commands[wt] )); then
+  eval "$(wt config shell init zsh)"
+fi
+
 # direnv supress stdout during startup in path with .envrc
 if (( $+commands[direnv] )); then
   autoload -Uz add-zsh-hook

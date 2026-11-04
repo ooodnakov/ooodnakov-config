@@ -412,6 +412,7 @@ Use `oooconf deps` to install optional tools interactively or specifically:
 - `oooconf deps bin topgrade` — Explicitly install the two primary dependency-management tools; they are also part of the minimal/install bootstrap flow.
 - `oooconf deps brew` — Install Homebrew on macOS or Linux with Homebrew's official installer.
 - `oooconf deps taskwarrior` — Install Taskwarrior through Homebrew (`task`) on Linux and macOS; Linux apt packages are intentionally avoided. Install Homebrew first if needed.
+- `oooconf deps worktrunk` — Install Worktrunk for parallel Git worktrees (Homebrew on Linux/macOS, winget on Windows). Managed Zsh and PowerShell profiles enable its shell integration when installed; use `git-wt` on Windows to avoid Windows Terminal's `wt` alias.
 - `oooconf deps docker` — On systemd Linux, enable and start existing Docker/containerd units at boot.
 - `oooconf deps --dry-run` — Preview without installing.
 

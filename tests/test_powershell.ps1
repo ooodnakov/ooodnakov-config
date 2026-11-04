@@ -114,6 +114,27 @@ foreach ($file in $filesToCheck) {
 }
 Assert-True (-not $foundBad) "No hard-coded dependency lists found outside optional-deps.toml"
 
+Write-Host "`n6. Checking Worktrunk does not resolve to Windows Terminal..."
+& {
+    . (Join-Path $RepoRoot "scripts/setup/lib/setup-optional-deps.ps1")
+    $worktrunk = $deps | Where-Object { $_.key -eq 'worktrunk' } | Select-Object -First 1
+    $script:WorktrunkTestSpec = [pscustomobject]@{
+        Key = $worktrunk.key
+        Bin = $worktrunk.bin
+        Check = $worktrunk.check
+        Windows = $worktrunk.windows
+    }
+    function Get-AllOptionalDependencySpecs { return @($script:WorktrunkTestSpec) }
+    function Get-OptionalDependencyPlatformConfig { param($Spec) return $Spec.Windows }
+    # Simulate Windows Terminal being present while Worktrunk is absent.
+    function Test-AnyCommand { param($Names) return $Names -contains 'wt' }
+    $names = @(Get-OptionalDependencyCommandNames -Key 'worktrunk')
+    Assert-True ($names.Count -eq 1 -and $names[0] -eq 'git-wt') "Windows checks only the Worktrunk executable"
+    Assert-True (-not (Test-OptionalDependencyPresent -Key 'worktrunk')) "Windows Terminal alone does not satisfy Worktrunk"
+    function Test-AnyCommand { param($Names) return $Names -contains 'git-wt' }
+    Assert-True (Test-OptionalDependencyPresent -Key 'worktrunk') "Installed git-wt satisfies Worktrunk"
+}
+
 Write-Host "`n=== Test Summary ===" -ForegroundColor Cyan
 Write-Host "Passed: $TestPassed" -ForegroundColor Green
 Write-Host "Failed: $TestFailed" -ForegroundColor $(if ($TestFailed -eq 0) { "Green" } else { "Red" })

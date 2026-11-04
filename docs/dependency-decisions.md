@@ -30,12 +30,13 @@ Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 | `todo-txt` | todotxt/todo.txt-cli | Plain-text todo manager |
 | `croc` | schollz/croc | Secure peer-to-peer file transfer (github-release on Linux, brew on macOS, winget/choco on Windows) |
 | `just` | casey/just | Cross-platform task runner for repeatable lint, format, test, completion, and lock commands |
+| `worktrunk` | max-sixty/worktrunk | Optional Git worktree manager for parallel coding agents; Homebrew on Linux/macOS and winget on Windows, with conditional managed shell integration and the `git-wt` Windows command to avoid Windows Terminal |
 
 All decisions, categories, versions, install methods, pins, and reasons are **defined exclusively** in `scripts/optional-deps.toml` (see `[managed-tools]` section and per-entry comments).
 
 The current optional dependency catalog includes:
 
-`bin`, `topgrade`, `wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `just`, `uv`, `bw`, `node`, `pnpm`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`, `agent-deck`, `croc`, `s5cmd`, `taskwarrior`, `taskwarrior-tui`
+`bin`, `topgrade`, `wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `just`, `uv`, `bw`, `node`, `pnpm`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`, `agent-deck`, `croc`, `s5cmd`, `taskwarrior`, `taskwarrior-tui`, `worktrunk`
 
 Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`. The `docker` entry is intentionally a configuration helper: it does not install Docker Engine, but on systemd Linux it enables and starts existing Docker and containerd units. Window-manager and agent-adjacent optional entries now include GlazeWM, Zebar, Overline Zebar widgets, RTK, the Pi coding agent, and agent-deck (installed from the `asheshgoplani/tap` Homebrew tap on Linux and macOS, and available on Windows through WSL).
 

@@ -132,6 +132,13 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     }
 }
 
+# Worktrunk uses git-wt on Windows to avoid the Windows Terminal alias.
+if (Get-Command git-wt -ErrorAction SilentlyContinue) {
+    Invoke-Expression (& git-wt config shell init powershell | Out-String)
+} elseif ($env:OS -ne 'Windows_NT' -and (Get-Command wt -ErrorAction SilentlyContinue)) {
+    Invoke-Expression (& wt config shell init powershell | Out-String)
+}
+
 # Ensure Update-Venv runs on every prompt (handles cd, z, zi, etc.)
 # We do this AFTER oh-my-posh and zoxide have potentially wrapped the prompt
 $oldPrompt = $function:prompt

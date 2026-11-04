@@ -237,6 +237,12 @@ function Get-OptionalDependencyCommandNames {
         return @($names)
     }
 
+    # A platform-specific executable takes precedence over shared binary names.
+    $platformConfig = Get-OptionalDependencyPlatformConfig -Spec $spec
+    if ($platformConfig.command -and $platformConfig.command -notmatch '\s') {
+        return @([string]$platformConfig.command)
+    }
+
     # 1. explicit binary name
     if ($spec.Bin -and $names -notcontains $spec.Bin) { $names.Add($spec.Bin) }
 
@@ -285,6 +291,14 @@ function Test-OptionalDependencyPresent {
     }
 
     $spec = Get-AllOptionalDependencySpecs | Where-Object { $_.Key -eq $Key } | Select-Object -First 1
+
+    # Do not execute a shared check for a different platform's binary.
+    if ($spec) {
+        $platformConfig = Get-OptionalDependencyPlatformConfig -Spec $spec
+        if ($platformConfig.command -and $platformConfig.command -notmatch '\s') {
+            return Test-AnyCommand -Names @(Get-OptionalDependencyCommandNames -Key $Key)
+        }
+    }
 
     # If a custom check string with arguments is provided, execute it literally.
     if ($spec -and $spec.Check -and $spec.Check -match '\s') {
