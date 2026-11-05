@@ -69,7 +69,8 @@ def test_listing_matches_eza(tmp_path: Path, shortcut: str, arguments: list[str]
         [
             "zsh",
             "-dfc",
-            f'source "$1"\nshift\n{shortcut} "$@"',
+            # Expand aliases only after the sourced config has defined them.
+            f'source "$1"\nshift\neval \'{shortcut} "$@"\'',
             "zsh-test",
             str(SHELL_CONFIG),
             *arguments,

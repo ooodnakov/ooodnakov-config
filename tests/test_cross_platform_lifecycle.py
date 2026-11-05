@@ -45,15 +45,22 @@ def _command(repo: Path, *arguments: str) -> list[str]:
 def _run(
     repo: Path, environment: dict[str, str], *arguments: str, check: bool = True
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    result = subprocess.run(
         _command(repo, *arguments),
         cwd=repo,
         env=environment,
         text=True,
         capture_output=True,
-        check=check,
+        check=False,
         timeout=90,
     )
+    if check and result.returncode:
+        pytest.fail(
+            f"oooconf {' '.join(arguments)} exited with {result.returncode}\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+            pytrace=False,
+        )
+    return result
 
 
 @pytest.mark.integration
@@ -76,6 +83,7 @@ def test_complete_lifecycle_in_isolated_home(tmp_path: Path) -> None:
             "OOODNAKOV_SKIP_DEPS": "1",
             "OOODNAKOV_INSTALL_OPTIONAL": "never",
             "OOODNAKOV_NO_NETWORK": "1",
+            "OOOCONF_THEME": "default",
             "NO_COLOR": "1",
             "OOOCONF_TEST_API_TOKEN": "lifecycle-secret-sentinel",
         }
@@ -120,12 +128,9 @@ def test_complete_lifecycle_in_isolated_home(tmp_path: Path) -> None:
     assert secret_sentinel not in snapshot_export.stderr
     assert secret_sentinel not in exported_snapshot.read_text(encoding="utf-8")
 
-    snapshot = tmp_path / "snapshot.toml"
-    snapshot.write_text(
-        'version = 1\nprofile = "minimal"\ncapabilities = ["shell"]\n\n[preferences]\ntheme = "default"\n',
-        encoding="utf-8",
-    )
-    _run(repo, environment, "snapshot", "apply", str(snapshot))
+    # Apply the exported snapshot so profile additions and platform-specific
+    # capabilities are exercised without a duplicate fixture drifting behind.
+    _run(repo, environment, "snapshot", "apply", str(exported_snapshot))
     assert (home / ".zshrc").is_symlink()
     local = repo / "home/.config/ooodnakov/local"
     assert "LOCAL OVERRIDES START" in (local / "env.zsh").read_text(encoding="utf-8")
