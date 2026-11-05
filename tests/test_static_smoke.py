@@ -148,3 +148,39 @@ def test_managed_zshrc_tolerates_missing_oh_my_zsh(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert "no such file or directory" not in result.stderr
     assert "oh-my-zsh is missing" in result.stderr
+
+
+def test_powershell_font_dry_run_does_not_mutate(tmp_path: Path) -> None:
+    """Previewing font installation must not copy files or write the registry."""
+    if not shutil.which("pwsh"):
+        pytest.skip("pwsh is not available")
+
+    script = tmp_path / "font-dry-run.ps1"
+    script.write_text(
+        r"""param([string]$RepoRoot, [string]$FontHome)
+$ErrorActionPreference = 'Stop'
+$DryRun = $true
+$env:LOCALAPPDATA = $FontHome
+function Invoke-Action { param($Description, $Action) return $true }
+function Write-UiLine { param($Role, $Message) Write-Output $Message }
+function Add-ToolSummary { param($Message) }
+. (Join-Path $RepoRoot 'scripts/setup/lib/setup-links.ps1')
+function Copy-Item { throw 'dry-run attempted to copy a font' }
+function New-Item { throw 'dry-run attempted to create a file or registry key' }
+function New-ItemProperty { throw 'dry-run attempted to register a font' }
+function Send-FontChangeBroadcast { throw 'dry-run attempted to notify applications' }
+Install-MesloFontsIfMissing
+""",
+        encoding="utf-8",
+    )
+    font_home = tmp_path / "font-home"
+    result = subprocess.run(
+        ["pwsh", "-NoProfile", "-File", str(script), str(REPO_ROOT), str(font_home)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "[dry-run]" in result.stdout
+    assert not font_home.exists()

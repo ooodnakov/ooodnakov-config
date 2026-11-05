@@ -439,7 +439,7 @@ Bundled Meslo Nerd Font files live in [`fonts/meslo`](fonts/meslo).
 
 On Linux, `oooconf install` installs them into `~/.local/share/fonts/ooodnakov` and refreshes the font cache when `fc-cache` is available.
 
-On Windows and macOS, the font files are bundled for manual installation if needed.
+On Windows, setup installs them per-user and registers them in the Windows font store. `install --dry-run` previews this step without copying fonts, writing registry entries, or notifying applications. On macOS, the bundled font files remain available for manual installation.
 
 ## Environment and Local Overrides
 

@@ -310,6 +310,12 @@ function Install-MesloFontsIfMissing {
         return
     }
 
+    if ($DryRun) {
+        Write-UiLine -Role hint -Message "[dry-run] Install bundled Meslo fonts for the current user"
+        Add-ToolSummary "fonts: install preview"
+        return
+    }
+
     $userFontDir = Join-Path $env:LOCALAPPDATA "Microsoft\Windows\Fonts"
     if (-not (Ensure-Directory -Path $userFontDir)) {
         return
