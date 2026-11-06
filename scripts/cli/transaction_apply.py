@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 import uuid
@@ -199,6 +200,99 @@ def _link_matches(source: Path, target: Path) -> bool:
         return False
 
 
+OMP_MCP_SOURCE = "home/.omp/agent/mcp.json"
+MCP_SCHEMA = "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json"
+
+
+def _read_json_object(path: Path) -> dict[str, object] | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _tracked_mcp_base(repo_root: Path) -> dict[str, object] | None:
+    """Read the committed base so uncommitted machine edits stay local."""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repo_root), "show", f"HEAD:{OMP_MCP_SOURCE}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if completed.returncode != 0:
+        return None
+    try:
+        data = json.loads(completed.stdout)
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _mcp_overrides(document: dict[str, object]) -> dict[str, object]:
+    overrides: dict[str, object] = {}
+    for key in ("disabledServers", "enabledServers"):
+        value = document.get(key)
+        if isinstance(value, list) and value:
+            overrides[key] = value
+    return overrides
+
+
+def reconcile_omp_mcp(home: Path, repo_root: Path) -> Path | None:
+    """Keep machine-local OMP MCP servers in ``~/.omp/agent/mcp.json``.
+
+    The tracked base is linked as ``~/.omp/agent/.mcp.json`` (lower precedence)
+    and OMP's primary user file stays a real local file. Writes from ``/mcp
+    add`` and ``oooconf agents sync`` then never touch the repository.
+
+    Legacy installs symlinked ``mcp.json`` into the repo. Convert that link into
+    a real file holding only the entries that differ from the committed base.
+    """
+    agent_dir = home / ".omp" / "agent"
+    base_path = agent_dir / ".mcp.json"
+    local_path = agent_dir / "mcp.json"
+    if not agent_dir.exists():
+        return None
+
+    current: dict[str, object] = {}
+    if local_path.is_symlink():
+        try:
+            resolved: Path | None = local_path.resolve(strict=True)
+        except (OSError, RuntimeError):
+            resolved = None
+        if resolved is not None and not resolved.is_relative_to(repo_root.resolve()):
+            return None
+        if resolved is not None:
+            current = _read_json_object(local_path) or {}
+        local_path.unlink()
+    elif local_path.exists():
+        return None
+    elif not base_path.exists():
+        return None
+
+    base = _tracked_mcp_base(repo_root) if current else _read_json_object(base_path)
+    base = base or {}
+    base_servers = base.get("mcpServers")
+    if not isinstance(base_servers, dict):
+        base_servers = {}
+    current_servers = current.get("mcpServers")
+    if not isinstance(current_servers, dict):
+        current_servers = {}
+
+    payload: dict[str, object] = {
+        "$schema": current.get("$schema") or base.get("$schema") or MCP_SCHEMA,
+        "mcpServers": {name: config for name, config in current_servers.items() if base_servers.get(name) != config},
+    }
+    payload.update(_mcp_overrides(current))
+    payload.update({key: value for key, value in _mcp_overrides(base).items() if key not in payload})
+
+    local_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return local_path
+
+
 def _is_self_link(target: Path) -> bool:
     """Return whether target is a symlink that points back at itself."""
     if not target.is_symlink():
@@ -327,6 +421,16 @@ def _rollback_entries(journal: dict[str, object]) -> list[str]:
     return errors
 
 
+def _prepare_local_omp_mcp(repo_root: Path) -> None:
+    try:
+        local_mcp = reconcile_omp_mcp(Path.home(), repo_root)
+    except OSError as error:
+        print(f"warning: could not prepare local OMP MCP config: {error}", file=sys.stderr)
+        return
+    if local_mcp is not None:
+        print(f"Prepared machine-local OMP MCP config: {local_mcp}")
+
+
 def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tuple[Path | None, int]:
     """Apply all currently required managed link operations as one transaction."""
     repo_root = repo_root.resolve()
@@ -338,6 +442,7 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
         profile.links if profile else None,
     )
     if not operations:
+        _prepare_local_omp_mcp(repo_root)
         print("No changes required.")
         return None, 0
     if any(operation.kind == "link" for operation in operations):
@@ -394,6 +499,7 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
         journal["status"] = "complete"
         journal["completed_at"] = _utc_now()
         _atomic_write(path, journal)
+    _prepare_local_omp_mcp(repo_root)
     print(f"Applied {len(operations)} operation(s). Journal: {path}")
     return path, 0
 

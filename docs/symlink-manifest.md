@@ -83,13 +83,31 @@ OMP deliberately uses explicit child links instead of linking `~/.omp` or
 | `omp-skills` | `home/.omp/agent/skills/` | `~/.omp/agent/skills` |
 | `omp-vibes` | `home/.omp/agent/vibes/` | `~/.omp/agent/vibes` |
 | `omp-rtk` | `home/.omp/extensions/rtk.ts` | `~/.omp/extensions/rtk.ts` |
+| `omp-mcp` | `home/.omp/agent/mcp.json` | `~/.omp/agent/.mcp.json` |
 
 The current OMP settings file is `agent/config.yml`; the legacy
 `agent/settings.json` is not linked. Add custom themes, skills, and vibes to the
-corresponding managed directories. Everything else stays local, including
-databases and their WAL files, credentials, model/MCP settings, sessions, blobs,
-caches, installed plugins, logs, and daemon sockets/PIDs. `.gitignore` allows only
-the managed paths under `home/.omp/`.
+corresponding managed directories.
+
+MCP configuration is layered so every machine can keep its own servers:
+
+- `~/.omp/agent/.mcp.json` is the tracked base, linked from the repository.
+- `~/.omp/agent/mcp.json` is a real machine-local file, never linked.
+
+OMP reads the primary `mcp.json` before `.mcp.json`, so a local entry can add a
+server or shadow a shared one by name. Everything that writes MCP config
+(`/mcp add`, `/mcp enable`, `oooconf agents sync`) targets the local file, which
+keeps API keys, machine paths, and one-off servers out of git.
+
+`oooconf link` creates the local file when it is missing and seeds it with the
+base `enabledServers`/`disabledServers` overrides. If an older release linked
+`mcp.json` itself into the repository, `oooconf link` converts that link into a
+real file holding only the entries that differ from the committed base.
+
+Everything else stays local, including databases and their WAL files,
+credentials, model settings, sessions, blobs, caches, installed plugins, logs,
+and daemon sockets/PIDs. `.gitignore` allows only the managed paths under
+`home/.omp/`.
 
 **Migrating an older whole-directory link:** close OMP and its daemons first.
 Before running `oooconf link`, preserve the old `~/.omp` symlink, then move the

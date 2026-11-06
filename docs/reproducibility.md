@@ -80,11 +80,13 @@ Shell runtime state is kept outside the tracked config tree:
 - zsh completion dump: `~/.cache/ooodnakov-config/zsh/.zcompdump-<host>-<zsh-version>`
 
 OMP follows the same separation: only `home/.omp/agent/config.yml`, the
-`themes/`, `skills/`, and `vibes/` directories beside it, and
-`home/.omp/extensions/rtk.ts` are linked. The parent `~/.omp` and `~/.omp/agent`
-remain real local directories. Authentication databases, history, sessions,
-model/MCP credentials and configuration, caches, plugins, and daemon state stay
-outside the repository. The empty managed content directories contain `.gitkeep`
+`themes/`, `skills/`, and `vibes/` directories beside it,
+`home/.omp/extensions/rtk.ts`, and the MCP base file
+(`home/.omp/agent/mcp.json` linked as `~/.omp/agent/.mcp.json`) are managed. The
+parent `~/.omp` and `~/.omp/agent` remain real local directories, and the primary
+`~/.omp/agent/mcp.json` stays machine-local so per-host servers never enter the
+repository. Authentication databases, history, sessions, credentials, caches,
+plugins, and daemon state also stay outside the repository. The empty managed content directories contain `.gitkeep`
 placeholders until custom content is added. Older whole-directory links require
 the [one-time migration](symlink-manifest.md#omp-file-and-content-links) before linking.
 

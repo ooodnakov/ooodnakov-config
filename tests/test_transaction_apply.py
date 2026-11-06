@@ -299,3 +299,83 @@ def test_unix_cli_apply_is_idempotent_and_rollback_restores_user_file(tmp_path: 
     assert rollback.returncode == 0, rollback.stderr
     assert not original.is_symlink()
     assert original.read_text(encoding="utf-8") == "original\n"
+
+
+def _git_commit_all(repo: Path, message: str = "base") -> None:
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", message],
+        cwd=repo,
+        check=True,
+    )
+
+
+def test_reconcile_omp_mcp_extracts_machine_servers_from_legacy_link(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "home/.omp/agent/mcp.json"
+    source.parent.mkdir(parents=True)
+    base = {
+        "$schema": "schema",
+        "mcpServers": {"exa": {"type": "http", "url": "https://mcp.exa.ai/mcp"}},
+        "disabledServers": ["context7:context7"],
+    }
+    source.write_text(json.dumps(base), encoding="utf-8")
+    _git_commit_all(repo)
+
+    home = _configure_home(monkeypatch, tmp_path)
+    agent_dir = home / ".omp/agent"
+    agent_dir.mkdir(parents=True)
+    local = agent_dir / "mcp.json"
+    local.symlink_to(source)
+    edited = {
+        **base,
+        "mcpServers": {**base["mcpServers"], "telegram-user": {"type": "stdio", "command": "tg"}},
+    }
+    source.write_text(json.dumps(edited), encoding="utf-8")
+
+    result = transaction_apply.reconcile_omp_mcp(home, repo)
+
+    assert result == local
+    assert not local.is_symlink()
+    payload = json.loads(local.read_text(encoding="utf-8"))
+    assert payload["mcpServers"] == {"telegram-user": {"type": "stdio", "command": "tg"}}
+    assert payload["disabledServers"] == ["context7:context7"]
+    assert payload["$schema"] == "schema"
+
+
+def test_reconcile_omp_mcp_seeds_missing_local_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    source = repo / "home/.omp/agent/mcp.json"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        json.dumps(
+            {"mcpServers": {"exa": {"type": "http", "url": "https://mcp.exa.ai/mcp"}}, "disabledServers": ["x"]}
+        ),
+        encoding="utf-8",
+    )
+    home = _configure_home(monkeypatch, tmp_path)
+    agent_dir = home / ".omp/agent"
+    agent_dir.mkdir(parents=True)
+    (agent_dir / ".mcp.json").symlink_to(source)
+
+    result = transaction_apply.reconcile_omp_mcp(home, repo)
+
+    payload = json.loads(result.read_text(encoding="utf-8"))
+    assert payload["mcpServers"] == {}
+    assert payload["disabledServers"] == ["x"]
+
+
+def test_reconcile_omp_mcp_leaves_regular_file_untouched(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    home = _configure_home(monkeypatch, tmp_path)
+    agent_dir = home / ".omp/agent"
+    agent_dir.mkdir(parents=True)
+    local = agent_dir / "mcp.json"
+    local.write_text('{"mcpServers": {"mine": {"command": "x"}}}\n', encoding="utf-8")
+
+    assert transaction_apply.reconcile_omp_mcp(home, repo) is None
+    assert json.loads(local.read_text(encoding="utf-8"))["mcpServers"] == {"mine": {"command": "x"}}
