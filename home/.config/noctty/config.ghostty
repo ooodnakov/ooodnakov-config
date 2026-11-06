@@ -122,8 +122,10 @@ bell-features = no-system,no-audio,attention,no-title,no-border
 
 # WezTerm: default_prog = { pwsh.exe, -NoLogo }, starting in the home folder.
 # A file `command` overrides `default-profile`, so the default is selected
-# through the `pscore` profile instead.
-default-profile = pscore
+# through the `pscore` profile instead. Settings writes the canonical
+# `user:<id>` form; choose "PowerShell Core" there, not "Automatic", because
+# Automatic deletes this line from the file.
+default-profile = user:pscore
 working-directory = home
 
 # WezTerm launch_menu (profile ids must not collide with noctty's reserved
