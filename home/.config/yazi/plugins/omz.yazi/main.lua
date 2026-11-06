@@ -1,10 +1,10 @@
 -- omz.yazi — Oh My Zsh prompt for Yazi.
 --
 -- Renders the active Oh My Zsh prompt in Yazi's header, the way omp.yazi does
--- for oh-my-posh. Every directory change starts an interactive zsh in the new
--- working directory, asks it to materialize `$PROMPT`, and paints the first
--- non-empty line into the header. The work runs in a Yazi job, so a slow shell
--- startup never blocks the UI.
+-- for oh-my-posh. Every directory change renders `$PROMPT` in a throwaway zsh
+-- running in the new working directory and paints the first non-empty line into
+-- the header. The work runs in a Yazi job, so a slow shell startup never blocks
+-- the UI.
 
 local save = ya.sync(function(st, cwd, output)
 	if cx.active.current.cwd == Url(cwd) then
@@ -18,15 +18,20 @@ local get_shell = ya.sync(function(st)
 	return st.shell
 end)
 
--- oh-my-zsh normally applies the theme during startup, but a non-interactive
--- shell or a failed theme initializer can leave `$PROMPT` at zsh's builtin
--- default. Source the configured theme once in that case so the header still
--- shows a faithful prompt.
+-- The prompt is rendered by a *non-interactive* zsh: interactive startup gives
+-- zsh/zle a controlling terminal and it starts probing it (DA1/DA2, DECRQM,
+-- mouse reporting). The terminal's answers stay queued in the tty input buffer
+-- and later show up as typed garbage in the shell that launched Yazi. A `-c`
+-- shell never touches the terminal, so we source the rc file ourselves and
+-- replay `precmd` hooks to make framework prompts materialize.
 --
--- The markers keep the prompt separate from anything the shell prints while
--- starting up (version-manager banners, framework notices), so only the prompt
--- line reaches the header.
+-- The markers keep the prompt separate from anything the rc file prints
+-- (version-manager banners, framework notices), so only the prompt line
+-- reaches the header.
 local render_script = [==[
+__omz_rc="${ZDOTDIR:-$HOME}/.zshrc"
+[[ -r "$__omz_rc" ]] && source "$__omz_rc" >/dev/null 2>&1
+unset __omz_rc
 if (( ${#precmd_functions} )); then
   for __omz_hook in ${precmd_functions[@]}; do
     (( $+functions[$__omz_hook] )) && $__omz_hook >/dev/null 2>&1
@@ -93,7 +98,7 @@ return {
 		end
 
 		local ok, output = pcall(function()
-			return Command(get_shell()):arg({ "-i", "-c", render_script }):cwd(cwd):output()
+			return Command(get_shell()):arg({ "-c", render_script }):cwd(cwd):output()
 		end)
 		if not ok or not output then
 			return

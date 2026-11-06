@@ -52,23 +52,30 @@ require("omz"):setup {
 
 ## How it works
 
-On startup and on every `cd`/`tab` event the plugin runs an interactive zsh in
-the new directory and asks it for its prompt. To make framework prompts
-materialize the way they do before a redraw, it replays the shell's registered
-`precmd` hooks first and then prints the fully expanded `$PROMPT`:
+On startup and on every `cd`/`tab` event the plugin renders the prompt in a
+throwaway **non-interactive** zsh running in the directory Yazi is in. The shell
+sources your rc file, replays the registered `precmd` hooks so framework prompts
+(Powerlevel10k, theme initializers) materialize the way they do before a redraw,
+and then prints the fully expanded `$PROMPT`:
 
 ```sh
-zsh -i -c 'for hook in ${precmd_functions[@]}; do $hook; done; print -r -- ${(%%)PROMPT}'
+zsh -c 'source "${ZDOTDIR:-$HOME}/.zshrc"; for hook in ${precmd_functions[@]}; do $hook; done; print -r -- ${(%%)PROMPT}'
 ```
 
-Only the text between the plugin's private markers is used, so banners printed
-during shell startup (version managers, framework notices) never leak into the
-header. The command runs as a Yazi job, so a slow shell startup never blocks the
-file manager; the header updates as soon as the prompt is ready.
+The shell is deliberately not `-i`. An interactive zsh attaches to the terminal
+and probes it (device attributes, DECRQM, mouse reporting); the terminal's
+answers are left queued in the tty input buffer and later appear as garbage
+typed into the shell that launched Yazi. A non-interactive shell never touches
+the terminal.
 
-If a shell still reports zsh's builtin default prompt, the plugin sources
+Only the text between the plugin's private markers is used, so banners printed
+while sourcing the rc file (version managers, framework notices) never leak into
+the header. The command runs as a Yazi job, so a slow shell startup never blocks
+the file manager; the header updates as soon as the prompt is ready.
+
+If the rc file leaves `$PROMPT` at zsh's builtin default, the plugin sources
 `$ZSH/themes/${ZSH_THEME}.zsh-theme` once before printing, which covers themes
-whose initializer could not run in a non-interactive shell.
+whose initializer could not run outside an interactive shell.
 
 ## Notes
 
