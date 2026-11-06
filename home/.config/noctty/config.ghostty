@@ -121,7 +121,9 @@ bell-features = no-system,no-audio,attention,no-title,no-border
 # --- shell ----------------------------------------------------------------
 
 # WezTerm: default_prog = { pwsh.exe, -NoLogo }, starting in the home folder.
-command = pwsh.exe -NoLogo
+# A file `command` overrides `default-profile`, so the default is selected
+# through the `pscore` profile instead.
+default-profile = pscore
 working-directory = home
 
 # WezTerm launch_menu (profile ids must not collide with noctty's reserved
