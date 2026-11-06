@@ -460,6 +460,8 @@ Tracked secret references belong in:
 
 SSH host aliases come from `~/.ssh/config`, every file it `Include`s (the tracked managed config is `home/.config/ooodnakov/ssh/config`), and `~/.ssh/config.local`. In both zsh and PowerShell, `z <host>` opens an SSH session when `<host>` is one of those aliases; any other argument keeps the zoxide directory jump. In zsh, `z -- <name>` forces the directory jump when an alias shadows a zoxide entry; in PowerShell, `zi` is the interactive directory picker for that case.
 
+In both shells, `y` opens Yazi and changes the shell directory to the directory Yazi exits in. On Windows this also puts Git's `usr\bin` (for `sh`/`file`) on `PATH` and sets `YAZI_FILE_ONE` to Git's `file.exe`.
+
 Tracked shared environment currently covers:
 
 - editor and pager defaults

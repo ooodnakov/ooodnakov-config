@@ -34,6 +34,19 @@ if ((Test-Path $WindowsApps) -and (($env:PATH -split [IO.Path]::PathSeparator) -
     $env:PATH = "$WindowsApps$([IO.Path]::PathSeparator)$env:PATH"
 }
 
+# yazi is installed through WinGet; its Links directory holds the shim.
+$WinGetLinks = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"
+if ((Test-Path $WinGetLinks) -and (($env:PATH -split [IO.Path]::PathSeparator) -notcontains $WinGetLinks)) {
+    $env:PATH = "$WinGetLinks$([IO.Path]::PathSeparator)$env:PATH"
+}
+
+# Git's POSIX tools (sh, gzip, ...) are used by Yazi previewers. Append them
+# so Windows binaries with the same name keep precedence.
+$gitUsrBin = Join-Path $env:ProgramFiles "Git\usr\bin"
+if ((Test-Path $gitUsrBin) -and (($env:PATH -split [IO.Path]::PathSeparator) -notcontains $gitUsrBin)) {
+    $env:PATH = "$env:PATH$([IO.Path]::PathSeparator)$gitUsrBin"
+}
+
 $CacheDir = if ($env:LOCALAPPDATA) {
     Join-Path $env:LOCALAPPDATA "ooodnakov/cache"
 } else {
@@ -110,6 +123,24 @@ function Get-OooconfSshHosts {
     }
 
     $hosts | Where-Object { $_ -notmatch '[*?]' } | Select-Object -Unique
+}
+
+# Yazi shell wrapper, mirroring the zsh `y` function: run yazi, then change
+# directory to the one it left (yazi writes it to --cwd-file on exit).
+function global:y {
+    $tmp = Join-Path $env:TEMP ("yazi-cwd-{0}.tmp" -f [guid]::NewGuid().ToString("N"))
+    try {
+        & yazi @args --cwd-file="$tmp"
+        $cwd = Get-Content -LiteralPath $tmp -Raw -ErrorAction SilentlyContinue
+        if ($cwd) {
+            $cwd = $cwd.Trim()
+            if ($cwd -and $cwd -ne $PWD.Path -and (Test-Path -LiteralPath $cwd -PathType Container)) {
+                Set-Location -LiteralPath $cwd
+            }
+        }
+    } finally {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
 }
 
 # Optimized zoxide initialization
