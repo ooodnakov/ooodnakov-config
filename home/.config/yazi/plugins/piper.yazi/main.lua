@@ -4,8 +4,27 @@ local M = {}
 
 local function fail(job, s) ya.preview_widget(job, ui.Text.parse(s):area(job.area):wrap(ui.Wrap.YES)) end
 
+-- Local Windows patch: resolve the shell absolutely so previewers do not
+-- depend on the terminal's inherited PATH. YAZI_PIPER_SHELL overrides it.
+local function piper_shell()
+	local configured = os.getenv("YAZI_PIPER_SHELL")
+	if configured and configured ~= "" then
+		return configured
+	end
+	if package.config:sub(1, 1) == "\\" then
+		local sh = (os.getenv("ProgramFiles") or "C:\\Program Files") .. "\\Git\\usr\\bin\\sh.exe"
+		local f = io.open(sh, "rb")
+		if f then
+			f:close()
+			return sh
+		end
+		return "sh.exe"
+	end
+	return "sh"
+end
+
 function M:peek(job)
-	local child, err = Command("sh")
+	local child, err = Command(piper_shell())
 		:arg({ "-c", job.args[1], "sh", tostring(job.file.path) })
 		:env("w", job.area.w)
 		:env("h", job.area.h)
