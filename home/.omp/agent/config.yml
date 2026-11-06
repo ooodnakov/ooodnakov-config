@@ -31,7 +31,7 @@ tui:
   autoGraph: always
   codexResetFireworks: true
   titleSpinner: braille
-  mouse: true
+  mouse: false
   tight: false
 display:
   shimmer: kitt
