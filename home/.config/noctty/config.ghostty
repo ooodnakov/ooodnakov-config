@@ -1,0 +1,231 @@
+# noctty configuration — WezTerm behaviour parity.
+#
+# Managed by the ooodnakov-config repo. Edit here, then reload with
+# Ctrl+Shift+, (or restart noctty for window-level settings).
+#
+# Noctty reads this file as %LOCALAPPDATA%\noctty\config.ghostty, or as
+# ~/.config/noctty/config.ghostty when XDG_CONFIG_HOME is set. Both paths are
+# linked to this file by scripts/links.toml.
+#
+# WezTerm features with no noctty equivalent are noted inline instead of
+# being faked: Acrylic/blur backdrops, random backdrop cycling, Lua hooks,
+# tab-width/index/tab-bar toggling, pane swapping, workspaces, and WezTerm's
+# per-window command palette styling.
+
+# --- font -----------------------------------------------------------------
+
+# WezTerm: MesloLGSDZ Nerd Font Mono, weight Medium (the family has no Medium
+# face, so WezTerm fell back to regular), 9.75pt on Windows.
+font-family = MesloLGSDZ Nerd Font Mono
+font-size = 9.75
+
+# WezTerm underline_thickness = "1.5pt"; noctty adjusts in pixels.
+adjust-underline-thickness = 1
+
+# WezTerm used 0.5cell padding on every side. Noctty pads in points; one line
+# is ~11.7pt at 9.75pt, so half a cell is ~6pt vertically and ~3pt across.
+window-padding-x = 3
+window-padding-y = 6
+window-padding-balance = false
+
+# --- colours (ported from ~/.config/wezterm/colors/Noctalia.toml) ---------
+
+background = #0e1112
+foreground = #ebdbb2
+selection-background = #665c54
+selection-foreground = #fbf1c7
+cursor-color = #fe8019
+cursor-text = #0e1112
+split-divider-color = #928374
+palette = 0=#282828
+palette = 1=#cc241d
+palette = 2=#98971a
+palette = 3=#d79921
+palette = 4=#458588
+palette = 5=#b16286
+palette = 6=#689d6a
+palette = 7=#a89984
+palette = 8=#928374
+palette = 9=#fb4934
+palette = 10=#b8bb26
+palette = 11=#fabd2f
+palette = 12=#83a598
+palette = 13=#d3869b
+palette = 14=#8ec07c
+palette = 15=#fbf1c7
+# WezTerm's scheme also overrides indexed 16/17.
+palette = 16=#b8bb26
+palette = 17=#fe8019
+
+# --- cursor ---------------------------------------------------------------
+
+# WezTerm: BlinkingBlock at 650ms, force_reverse_video_cursor.
+# Noctty has no blink-rate or easing setting; the shell's DECSCUSR still wins.
+cursor-style = block
+cursor-style-blink = true
+cursor-opacity = 1
+
+# --- window ---------------------------------------------------------------
+
+# WezTerm: 125x30, no session restore, no close confirmation.
+window-width = 125
+window-height = 30
+window-save-state = never
+confirm-close-surface = false
+
+# WezTerm: enable_tab_bar = true + hide_tab_bar_if_only_one_tab = false.
+# tab_max_width / show_tab_index_in_tab_bar have no noctty equivalent.
+window-show-tab-bar = always
+window-new-tab-position = end
+
+# WezTerm's window frame was #090909 with zero borders. Noctty has no border
+# width setting; ghostty window-theme is what enables the custom titlebar
+# colours. Keep native decorations so the window controls stay usable.
+window-decoration = auto
+window-theme = ghostty
+window-titlebar-background = #090909
+window-titlebar-foreground = #ebdbb2
+
+# WezTerm: inactive_pane_hsb left panes undimmed.
+unfocused-split-opacity = 1
+
+# WezTerm: scrollback_lines = 20000. Noctty counts bytes; ~8MB is roughly
+# 20k lines at 100 columns.
+scrollback-limit = 8000000
+scrollbar = system
+
+# WezTerm: enable_scroll_bar = true (noctty follows the Windows setting).
+# win32_system_backdrop = Acrylic and background opacity 0 are not
+# reproducible: noctty rejects DWM materials and implements opacity as a flat
+# window-wide tint. Keep the window opaque.
+background-opacity = 1
+background-blur = false
+
+# A single static backdrop is possible, but WezTerm's random/cyclic collection
+# is not. Point this at an existing image if wanted:
+# background-image = ~/.config/wezterm/backdrops/nord-space.png
+# background-image-fit = cover
+# background-image-opacity = 0.1
+
+# --- input ----------------------------------------------------------------
+
+# WezTerm: copy_on_select default true.
+copy-on-select = true
+mouse-hide-while-typing = false
+right-click-action = context-menu
+
+# WezTerm: audible_bell Disabled + visual_bell on CursorColor. Noctty has no
+# cursor-colour flash; use its visible attention cue and stay silent.
+bell-features = no-system,no-audio,attention,no-title,no-border
+
+# --- shell ----------------------------------------------------------------
+
+# WezTerm: default_prog = { pwsh.exe, -NoLogo }, starting in the home folder.
+command = pwsh.exe -NoLogo
+working-directory = home
+
+# WezTerm launch_menu (profile ids must not collide with noctty's reserved
+# names such as pwsh, cmd, wsl, git-bash, user, ssh).
+profile-command = msys2: C:\msys64\msys2_shell.cmd -defterm -here -no-start -ucrt64 -shell zsh
+profile-name = msys2: MSYS2 UCRT64 Zsh
+
+profile-command = pscore: pwsh.exe -NoLogo
+profile-name = pscore: PowerShell Core
+
+profile-command = cmdprompt: cmd.exe
+profile-name = cmdprompt: Command Prompt
+
+profile-command = nushell: nu.exe
+profile-name = nushell: Nushell
+
+# WezTerm's Ubuntu-24.04 WSL domain. Noctty also auto-detects installed WSL
+# distributions; this keeps the zsh login shell from the WezTerm domain.
+profile-command = wslubuntu: wsl.exe -d Ubuntu-24.04 -u user --cd ~ -- zsh -l
+profile-name = wslubuntu: WSL Ubuntu 24.04
+
+# WezTerm's SSH domains are covered by noctty's automatic Host parsing from
+# ~/.ssh/config.
+
+# --- key bindings ---------------------------------------------------------
+#
+# WezTerm used Alt as its "SUPER" modifier on Windows. Noctty's defaults use
+# Ctrl, so the WezTerm chords are added alongside them. WezTerm's leader is
+# Shift+Space > f/p; noctty key tables reproduce those two, but noctty key
+# sequences have no timeout.
+
+# Panes: smart-splits.nvim used alt+h/j/k/l and ctrl+alt+h/j/k/l.
+keybind = alt+h=goto_split:left
+keybind = alt+j=goto_split:down
+keybind = alt+k=goto_split:up
+keybind = alt+l=goto_split:right
+keybind = ctrl+alt+h=resize_split:left,3
+keybind = ctrl+alt+j=resize_split:down,3
+keybind = ctrl+alt+k=resize_split:up,3
+keybind = ctrl+alt+l=resize_split:right,3
+
+# WezTerm: Alt+arrow sent Home/End (the later SUPER alias overrode the esc b/f
+# bindings in its key list); Alt+Backspace deleted the previous word.
+# Alt+Up/Down were unbound in WezTerm, so pass them through instead of using
+# noctty's default split navigation.
+keybind = alt+arrow_left=esc:OH
+keybind = alt+arrow_right=esc:OF
+keybind = alt+arrow_up=unbind
+keybind = alt+arrow_down=unbind
+keybind = alt+backspace=text:\x17
+
+# WezTerm tabs/windows/panes.
+keybind = alt+t=new_tab
+keybind = alt+n=new_window
+keybind = alt+w=close_surface
+keybind = ctrl+alt+w=close_tab:this
+keybind = alt+[=previous_tab
+keybind = alt+]=next_tab
+keybind = ctrl+alt+[=move_tab:-1
+keybind = ctrl+alt+]=move_tab:1
+keybind = alt+backslash=new_split:right
+keybind = ctrl+alt+backslash=new_split:down
+keybind = alt+enter=toggle_split_zoom
+keybind = ctrl+alt+enter=toggle_maximize
+keybind = alt+0=prompt_tab_title
+
+# WezTerm copy/paste and scrolling.
+keybind = alt+c=copy_to_clipboard:mixed
+keybind = alt+v=paste_from_clipboard
+keybind = alt+u=scroll_page_lines:-5
+keybind = alt+d=scroll_page_lines:5
+keybind = page_up=scroll_page_fractional:-0.75
+keybind = page_down=scroll_page_fractional:0.75
+
+# WezTerm function keys and search.
+keybind = f1=toggle_copy_mode
+keybind = f2=toggle_command_palette
+keybind = f3=toggle_command_palette
+keybind = f4=toggle_tab_overview
+keybind = f11=toggle_fullscreen
+keybind = f12=inspector:toggle
+keybind = alt+f=start_search
+keybind = ctrl+alt+u=toggle_quick_select
+
+# WezTerm leader tables: Shift+Space then f/p. Shift+Space then Space opens
+# the command picker.
+keybind = shift+space>f=activate_key_table:resize_font
+keybind = shift+space>p=activate_key_table:resize_pane
+keybind = shift+space>space=toggle_command_palette
+
+keybind = resize_font/
+keybind = resize_font/k=increase_font_size:1
+keybind = resize_font/j=decrease_font_size:1
+keybind = resize_font/r=reset_font_size
+keybind = resize_font/escape=deactivate_key_table
+keybind = resize_font/q=deactivate_key_table
+
+keybind = resize_pane/
+keybind = resize_pane/k=resize_split:up,1
+keybind = resize_pane/j=resize_split:down,1
+keybind = resize_pane/h=resize_split:left,1
+keybind = resize_pane/l=resize_split:right,1
+keybind = resize_pane/escape=deactivate_key_table
+keybind = resize_pane/q=deactivate_key_table
+
+# WezTerm's PaneSelect swap, tab-bar toggle, workspace picker, backdrop
+# cycling, and window-by-pixels resizing have no noctty action.

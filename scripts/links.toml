@@ -1,10 +1,8 @@
 [discovery]
 autolink_dirs = ["home/.config", "home/.local", "home/.glzr"]
-# exclude = [
-#   "home/.config/ooodnakov",
-#   "home/.config/ooodnakov/bin",
-#   "home/.config/ooodnakov/local",
-# ]
+# noctty is Windows-only; it is linked explicitly in the Windows-only section
+# because it needs the additional %LOCALAPPDATA% target.
+exclude = ["home/.config/noctty"]
 
 [[links]]
 key = "zshrc"
@@ -118,6 +116,21 @@ target = "{CONFIG_HOME}/sketchybar"
 only = "macos"
 
 # --- Windows-only ---
+
+# noctty reads $XDG_CONFIG_HOME/noctty/config.ghostty when XDG_CONFIG_HOME is
+# set, and %LOCALAPPDATA%\noctty\config.ghostty otherwise. Link both so shells
+# and Explorer launches share the repo-managed file.
+[[links]]
+key = "noctty-config"
+source = "home/.config/noctty"
+target = "{CONFIG_HOME}/noctty"
+only = "windows"
+
+[[links]]
+key = "noctty-localappdata"
+source = "home/.config/noctty/config.ghostty"
+target = "{HOME}/AppData/Local/noctty/config.ghostty"
+only = "windows"
 
 [[links]]
 key = "gitbash-bashrc"

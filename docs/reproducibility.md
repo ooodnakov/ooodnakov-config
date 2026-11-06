@@ -36,6 +36,7 @@ Tracked files:
 
 - base shell config
 - base WezTerm config
+- base Noctty config (Windows)
 - base LazyVim/Neovim config
 - PowerShell profile
 - Python `uv` environment metadata (`pyproject.toml`, `.python-version`, tracked `uv.lock`; `.venv/` is an ignored local artifact)

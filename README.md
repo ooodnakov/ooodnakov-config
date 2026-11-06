@@ -19,7 +19,7 @@ Active tracked config lives under `home/` and includes:
 - Zsh entrypoints, modular Zsh config, pinned shell helpers, and generated completions
 - Git Bash (Windows) support: a pinned MSYS2 zsh package installed into the Git for Windows tree so Git Bash windows run the same managed zsh stack, plus managed `.bashrc`/`.bash_profile` entrypoints that exec into zsh
 - shared portable environment files plus ignored local override templates
-- WezTerm, Yazi, LazyVim/Neovim, LazyGit, LazyDocker, btop, CAVA, todo.txt, Taskwarrior, and ccstatusline config
+- WezTerm, Noctty (Windows), Yazi, LazyVim/Neovim, LazyGit, LazyDocker, btop, CAVA, todo.txt, Taskwarrior, and ccstatusline config
 - PowerShell profile, PowerShell completions, Oh My Posh, and shared SSH include config
 - Linux desktop config for Niri, Umbriel, Hyprland/Pyprland, and Noctalia
 - Windows window-manager config for Komorebi, GlazeWM, Zebar, and the `.pi` coding agent
