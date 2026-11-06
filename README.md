@@ -227,7 +227,7 @@ Window manager commands:
 The default window-manager and bar choices are stored in ignored local shell overrides (`OOODNAKOV_DEFAULT_WM` and `OOODNAKOV_DEFAULT_BAR`) so host-specific desktop preferences do not enter tracked config.
 
 On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
-The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, nvm-backed Node.js, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
+The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, official nodejs.org Node.js archives, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
 Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
 
 Shell completion:
@@ -467,7 +467,6 @@ Tracked shared environment currently covers:
 - `OOODNAKOV_SHARE_HOME`
 - `OOODNAKOV_STATE_HOME`
 - `OOODNAKOV_CACHE_HOME`
-- `NVM_DIR`
 - `PNPM_HOME`
 - `~/.local/bin`
 - `~/.local/share/ooodnakov-config/bin`

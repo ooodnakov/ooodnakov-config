@@ -127,17 +127,17 @@ Fonts are also manual for now. The tracked defaults assume a Nerd Font is instal
 This repo bundles the Meslo font files under `fonts/meslo`; the Unix setup script installs them for the current user.
 
 For Neovim, setup installs the pinned official GitHub release archive into the repo-managed data tree rather than relying on an OS package, so the managed `nvim` (validated `>= 0.10.0` for LazyVim) shadows any system binary on `PATH` and is adopted into `bin` tracking for Topgrade-driven updates.
-For Node.js, setup can install the pinned Node.js LTS version through an available `nvm` checkout, including the bundled `npm`. On Unix, the bootstrap can sync the managed `nvm` checkout first when only the repository-managed `nvm` tree is missing.
+For Node.js, setup installs the pinned official nodejs.org archive into the repo-managed data tree (`~/.local/share/ooodnakov-config/tools/node/v<ver>`), verifies its SHA-256 before extraction, and links `node`, `npm`, `npx`, and `corepack` into the managed bin directory. Windows setup uses winget instead.
 For `pnpm`, the tracked shell environment reserves `PNPM_HOME`; setup first ensures Node.js/npm are available, then installs the pinned pnpm version through `corepack` when available or through `npm` into that path otherwise.
 
-Global npm and pnpm installs use separate, runtime-independent directories, so switching Node.js runtimes (pnpm runtime, nvm, fnm, or a distro package) never orphans or overwrites global CLI tools:
+Global npm and pnpm installs use separate, runtime-independent directories, so switching Node.js runtimes (a version manager, the pnpm runtime, or a distro package) never orphans or overwrites global CLI tools:
 
 | Tool | Global bin dir | Global root | Env |
 |---|---|---|---|
 | pnpm | `~/.local/share/pnpm` (`PNPM_HOME`) | `~/.local/share/pnpm/global` | `PNPM_HOME`, set by `home/.config/ooodnakov/env/common.{sh,ps1}` |
 | npm | `~/.npm-global/bin` | `~/.npm-global/lib/node_modules` | `NPM_CONFIG_PREFIX`, set by the same files |
 
-npm derives its global prefix from the `node` binary that launched it, so an unset prefix sends `npm install -g` into whichever runtime is active — the nvm/fnm version directory, the pnpm runtime tree, or a root-owned `/usr`. The tracked `NPM_CONFIG_PREFIX` prevents that; npm keeps its download cache in `~/.npm` regardless. When the same CLI exists in both places, `PNPM_HOME` precedes the npm prefix on `PATH`, so the pnpm-managed copy wins; install a given global tool through one manager only.
+npm derives its global prefix from the `node` binary that launched it, so an unset prefix sends `npm install -g` into whichever runtime is active — the version-manager directory, the pnpm runtime tree, or a root-owned `/usr`. The tracked `NPM_CONFIG_PREFIX` prevents that; npm keeps its download cache in `~/.npm` regardless. When the same CLI exists in both places, `PNPM_HOME` precedes the npm prefix on `PATH`, so the pnpm-managed copy wins; install a given global tool through one manager only.
 
 ## Bootstrap trust model
 

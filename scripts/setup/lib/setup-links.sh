@@ -265,10 +265,6 @@ install_managed_tools() {
   p10k_repo=$(get_managed_tool powerlevel10k repo)
   local p10k_ref
   p10k_ref=$(get_managed_tool powerlevel10k ref)
-  local nvm_repo
-  nvm_repo=$(get_managed_tool nvm repo)
-  local nvm_ref
-  nvm_ref=$(get_managed_tool nvm ref)
   local k_repo
   k_repo=$(get_managed_tool k repo)
   local k_ref
@@ -333,7 +329,6 @@ install_managed_tools() {
 
   sync_repo "$ohmyzsh_repo" "$ohmyzsh_ref" "$STATE_HOME/oh-my-zsh" && TOOL_SUMMARY+=("oh-my-zsh: synced") || TOOL_SUMMARY+=("oh-my-zsh: failed")
   sync_repo "$p10k_repo" "$p10k_ref" "$STATE_HOME/powerlevel10k" && TOOL_SUMMARY+=("powerlevel10k: synced") || TOOL_SUMMARY+=("powerlevel10k: failed")
-  sync_repo "$nvm_repo" "$nvm_ref" "$HOME_DIR/.nvm" && TOOL_SUMMARY+=("nvm: synced") || TOOL_SUMMARY+=("nvm: failed")
   sync_repo "$k_repo" "$k_ref" "$STATE_HOME/oh-my-zsh/custom/plugins/k" && TOOL_SUMMARY+=("k: synced") || TOOL_SUMMARY+=("k: failed")
   sync_repo "$marker_repo" "$marker_ref" "$STATE_HOME/marker" && TOOL_SUMMARY+=("marker: synced") || TOOL_SUMMARY+=("marker: failed")
   sync_repo "$todo_repo" "$todo_ref" "$STATE_HOME/todo" && TOOL_SUMMARY+=("todo.txt-cli: synced") || TOOL_SUMMARY+=("todo.txt-cli: failed")

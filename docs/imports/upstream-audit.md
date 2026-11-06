@@ -125,7 +125,6 @@ Last checked (UTC): `2026-10-08T21:29:13+00:00`
 | `fzf-tab` | `up-to-date` | `24105b15714bfec37989ed5c5b6e60f572253019` | `24105b15714bfec37989ed5c5b6e60f572253019` |
 | `k` | `up-to-date` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` |
 | `marker` | `up-to-date` | `0f1fad95e9c3268c3077bc9d2c94ec6c58ab76a5` | `0f1fad95e9c3268c3077bc9d2c94ec6c58ab76a5` |
-| `nvm` | `up-to-date` | `913b8cb6254aa0de7085d3e13c1b3b386845e570` | `913b8cb6254aa0de7085d3e13c1b3b386845e570` |
 | `oh-my-zsh` | `up-to-date` | `60c9a7a839b790cd905d0fd4419435124fd1bdc0` | `60c9a7a839b790cd905d0fd4419435124fd1bdc0` |
 | `powerlevel10k` | `up-to-date` | `d05a1b00f9a61f9578bf9dc19b8451942dde8734` | `d05a1b00f9a61f9578bf9dc19b8451942dde8734` |
 | `s3cmd` | `up-to-date` | `97945760736bee4fd79eb3d357e48bd55d0ee60c` | `97945760736bee4fd79eb3d357e48bd55d0ee60c` |

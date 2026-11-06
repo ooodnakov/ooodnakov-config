@@ -1545,32 +1545,12 @@ maybe_install_dua_cli() {
   fi
 }
 
-source_nvm_if_available() {
-  export NVM_DIR="${NVM_DIR:-$HOME_DIR/.nvm}"
-  if [ -s "$NVM_DIR/nvm.sh" ]; then
-    # shellcheck disable=SC1091
-    . "$NVM_DIR/nvm.sh"
-    return 0
-  fi
-  return 1
-}
-
-ensure_nvm_checkout() {
-  export NVM_DIR="${NVM_DIR:-$HOME_DIR/.nvm}"
-  if [ -s "$NVM_DIR/nvm.sh" ]; then
-    return 0
-  fi
-
-  local nvm_repo nvm_ref
-  nvm_repo=$(get_managed_tool nvm repo)
-  nvm_ref=$(get_managed_tool nvm ref)
-
-  if [ -z "$nvm_repo" ] || [ -z "$nvm_ref" ]; then
-    return 1
-  fi
-
-  sync_repo "$nvm_repo" "$nvm_ref" "$NVM_DIR" >/dev/null 2>&1 || return 1
-  [ -s "$NVM_DIR/nvm.sh" ]
+node_dist_arch() {
+  case "$(uname -m)" in
+  x86_64 | amd64) printf '%s\n' x64 ;;
+  aarch64 | arm64) printf '%s\n' arm64 ;;
+  *) return 1 ;;
+  esac
 }
 
 maybe_install_node() {
@@ -1578,43 +1558,66 @@ maybe_install_node() {
   node_ver=$(get_dep_field node ver 2>/dev/null || true)
   [ -z "$node_ver" ] && node_ver="24.15.0"
 
-  source_nvm_if_available >/dev/null 2>&1 || true
-
   if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
     DEPENDENCY_SUMMARY+=("node: present")
     return 0
   fi
 
-  if ! prompt_yes_no "Install Node.js $node_ver with npm via nvm?"; then
+  local system arch asset_name node_url install_root node_bin_dir bin_dir archive_path
+  system="$(github_release_system)" || {
+    DEPENDENCY_SUMMARY+=("node: unsupported OS $(uname -s)")
+    return 1
+  }
+  arch="$(node_dist_arch)" || {
+    DEPENDENCY_SUMMARY+=("node: unsupported architecture $(uname -m)")
+    return 1
+  }
+
+  asset_name="node-v${node_ver}-${system}-${arch}.tar.xz"
+  node_url="https://nodejs.org/dist/v${node_ver}/${asset_name}"
+  install_root="$STATE_HOME/tools/node/v${node_ver}"
+  node_bin_dir="$install_root/node-v${node_ver}-${system}-${arch}/bin"
+  bin_dir="$STATE_HOME/bin"
+  archive_path="${TMPDIR:-/tmp}/${asset_name}"
+
+  if ! prompt_yes_no "Install Node.js $node_ver with bundled npm into $install_root?"; then
     is_verbose && echo "skipping Node.js" >&2
     DEPENDENCY_SUMMARY+=("node: skipped")
     return 1
   fi
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] nvm install $node_ver"
-    echo "[dry-run] nvm alias default $node_ver"
-    echo "[dry-run] nvm use default"
-    DEPENDENCY_SUMMARY+=("node: install preview via nvm")
+    echo "[dry-run] Download $node_url"
+    echo "[dry-run] Extract $asset_name -> $install_root"
+    echo "[dry-run] Link node, npm, npx, corepack into $bin_dir"
+    DEPENDENCY_SUMMARY+=("node: install preview via official archive")
     return 0
   fi
 
-  if ! ensure_nvm_checkout; then
-    DEPENDENCY_SUMMARY+=("node: missing (nvm unavailable)")
-    return 1
+  run_cmd mkdir -p "$install_root" "$bin_dir" || return 1
+
+  if [ ! -x "$node_bin_dir/node" ]; then
+    run_python "$REPO_ROOT/scripts/security/secure_artifact.py" download \
+      --archive "$archive_path" --dependency node --asset "$asset_name" --url "$node_url" || {
+      DEPENDENCY_SUMMARY+=("node: install attempted")
+      return 1
+    }
+    run_cmd tar -xf "$archive_path" -C "$install_root" || {
+      DEPENDENCY_SUMMARY+=("node: install attempted")
+      return 1
+    }
+    run_cmd rm -f "$archive_path"
   fi
 
-  if ! source_nvm_if_available >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("node: missing (nvm could not be loaded)")
-    return 1
-  fi
-
-  run_with_spinner "Installing Node.js $node_ver via nvm" nvm install "$node_ver"
-  run_with_spinner "Setting Node.js $node_ver as nvm default" nvm alias default "$node_ver"
-  nvm use default >/dev/null 2>&1 || nvm use "$node_ver" >/dev/null 2>&1 || true
+  local command_name
+  for command_name in node npm npx corepack; do
+    [ -e "$node_bin_dir/$command_name" ] || continue
+    run_cmd ln -sfn "$node_bin_dir/$command_name" "$bin_dir/$command_name" || return 1
+  done
+  hash -r 2>/dev/null || true
 
   if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
-    DEPENDENCY_SUMMARY+=("node: installed")
+    DEPENDENCY_SUMMARY+=("node: installed official v${node_ver}")
     return 0
   fi
 
@@ -1623,8 +1626,6 @@ maybe_install_node() {
 }
 
 ensure_node_available_for_pnpm() {
-  source_nvm_if_available >/dev/null 2>&1 || true
-
   if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
     return 0
   fi
@@ -1633,7 +1634,6 @@ ensure_node_available_for_pnpm() {
   if [ "$DRY_RUN" -eq 1 ]; then
     return 0
   fi
-  source_nvm_if_available >/dev/null 2>&1 || true
   command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1
 }
 

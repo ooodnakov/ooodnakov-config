@@ -32,8 +32,8 @@ $localBin = Join-Path $HOME ".local/bin"
 $cargoBin = Join-Path $HOME ".cargo/bin"
 $shareBin = Join-Path $env:OOODNAKOV_SHARE_HOME "bin"
 # npm globals stay independent of whichever Node.js runtime is active (pnpm
-# runtime, nvm, fnm, or a system package); pnpm globals keep their own bin dir
-# through PNPM_HOME below.
+# runtime, a version manager such as fnm, or a system package); pnpm globals
+# keep their own bin dir through PNPM_HOME below.
 $env:NPM_CONFIG_PREFIX = if ($env:NPM_CONFIG_PREFIX) { $env:NPM_CONFIG_PREFIX } else { Join-Path $HOME ".npm-global" }
 $npmBin = Join-Path $env:NPM_CONFIG_PREFIX "bin"
 # Add-PathEntry skips missing directories; create the prefix so the first

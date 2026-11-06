@@ -195,7 +195,6 @@ def test_all_managed_tools_present():
         "forgit",
         "you-should-use",
         "auto-uv-env",
-        "nvm",
         "k",
         "marker",
         "todo-txt",

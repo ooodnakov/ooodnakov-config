@@ -33,7 +33,6 @@ you-should-use = { repo = "https://github.com/MichaelAquilina/zsh-you-should-use
 s3cmd = { repo = "https://github.com/FFKL/s3cmd-zsh-plugin.git", ref = "97945760736bee4fd79eb3d357e48bd55d0ee60c" }
 powerlevel10k = { repo = "https://github.com/romkatv/powerlevel10k.git", ref = "d05a1b00f9a61f9578bf9dc19b8451942dde8734" }
 auto-uv-env = { repo = "https://github.com/ashwch/auto-uv-env.git", ref = "7bc8c17b4c7e0e34f170c1c940abfd184a3c15f0" }
-nvm = { repo = "https://github.com/nvm-sh/nvm.git", ref = "913b8cb6254aa0de7085d3e13c1b3b386845e570" }
 k = { repo = "https://github.com/supercrabtree/k.git", ref = "e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e" }
 marker = { repo = "https://github.com/jotyGill/marker.git", ref = "0f1fad95e9c3268c3077bc9d2c94ec6c58ab76a5" }
 todo-txt = { repo = "https://github.com/todotxt/todo.txt-cli.git", ref = "4a140a370c952ff019a829ef677949849292012b" }
@@ -589,18 +588,19 @@ integrity = { "bw-linux-${ver}.zip" = "0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db9
 [[deps]]
 key = "node"
 display = "Node.js"
-description = "Node.js runtime with bundled npm, installed through nvm when needed"
+description = "Node.js runtime with bundled npm from the official nodejs.org archive"
 handler = "node"
 ver = "24.15.0"
 check = "node --version && npm --version"
 linux.manager = "custom"
 macos.manager = "custom"
 windows.manager = "custom"
+integrity = { "node-v${ver}-linux-x64.tar.xz" = "472655581fb851559730c48763e0c9d3bc25975c59d518003fc0849d3e4ba0f6", "node-v${ver}-linux-arm64.tar.xz" = "f3d5a797b5d210ce8e2cb265544c8e482eaedcb8aa409a8b46da7e8595d0dda0", "node-v${ver}-darwin-x64.tar.xz" = "5d627245b9f53cb2512cc21b7aa6aad693106affadd91e0c8f42d600fb7ba444", "node-v${ver}-darwin-arm64.tar.xz" = "af5cfaeafe603aaf7599f287fd9d100bb41f16794f49788fa59dd3f25546930f" }
 
 [[deps]]
 key = "pnpm"
 display = "pnpm"
-description = "Node.js package manager via corepack or npm fallback; bootstraps Node.js through nvm when needed"
+description = "Node.js package manager via corepack or npm fallback; bootstraps Node.js when needed"
 handler = "pnpm"
 ver = "10.18.3"
 check = "pnpm --version"

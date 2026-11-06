@@ -26,7 +26,6 @@ Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 | `auto-uv-env` | ashwch/auto-uv-env | uv environment setup script |
 | `k` | supercrabtree/k | Standalone k command for directory jumping |
 | `marker` | jotyGill/marker | Git branch management UI |
-| `nvm` | nvm-sh/nvm | Node version manager (lazy-loaded) |
 | `todo-txt` | todotxt/todo.txt-cli | Plain-text todo manager |
 | `croc` | schollz/croc | Secure peer-to-peer file transfer (github-release on Linux, brew on macOS, winget/choco on Windows) |
 | `just` | casey/just | Cross-platform task runner for repeatable lint, format, test, completion, and lock commands |
@@ -62,7 +61,7 @@ Run `oooconf lock` after editing the TOML.
      extraction. If an upstream publishes only a mutable installer script, add a
      narrowly explained `checksum_exception`; the generated lock makes every such
      exception visible for review.
-   - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`). The `node` and `pnpm` handlers are intentionally paired so a fresh machine with only `nvm` can bootstrap Node.js, npm, and pnpm in one optional dependency run.
+   - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`). The `node` and `pnpm` handlers are intentionally paired so a fresh machine with neither can bootstrap the pinned Node.js archive, npm, and pnpm in one optional dependency run.
 2. Add/adjust presence checks:
    - `optional_dependency_present()` in `scripts/setup/setup.sh`
    - `Get-OptionalDependencyCommandNames` / `Test-OptionalDependencyPresent` in `scripts/setup/setup.ps1`

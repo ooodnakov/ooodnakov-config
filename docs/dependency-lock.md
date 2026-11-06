@@ -2,7 +2,7 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-10-15T13:28:52+00:00`
+Generated at (UTC): `2026-11-06T12:33:30+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
@@ -11,7 +11,6 @@ Generated at (UTC): `2026-10-15T13:28:52+00:00`
 | `fzf-tab` | `https://github.com/Aloxaf/fzf-tab.git` | `24105b15714bfec37989ed5c5b6e60f572253019` |
 | `k` | `https://github.com/supercrabtree/k.git` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` |
 | `marker` | `https://github.com/jotyGill/marker.git` | `0f1fad95e9c3268c3077bc9d2c94ec6c58ab76a5` |
-| `nvm` | `https://github.com/nvm-sh/nvm.git` | `913b8cb6254aa0de7085d3e13c1b3b386845e570` |
 | `oh-my-zsh` | `https://github.com/ohmyzsh/ohmyzsh.git` | `60c9a7a839b790cd905d0fd4419435124fd1bdc0` |
 | `powerlevel10k` | `https://github.com/romkatv/powerlevel10k.git` | `d05a1b00f9a61f9578bf9dc19b8451942dde8734` |
 | `s3cmd` | `https://github.com/FFKL/s3cmd-zsh-plugin.git` | `97945760736bee4fd79eb3d357e48bd55d0ee60c` |
@@ -52,6 +51,10 @@ Generated at (UTC): `2026-10-15T13:28:52+00:00`
 | `nvim` | `0.12.2` | `nvim-win64.zip` | `23fe150edbcc976eabe55092e1e9d2e5e237afde69553d170e936f776b405d53` |
 | `bw` | `1.22.1` | `bw-linux-1.22.1.zip` | `0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db911b2279dae5c674b116aa0e` |
 | `bw` | `1.22.1` | `bw-windows-1.22.1.zip` | `0902a867d82c96fb93d087eefaaa78867f6ecc48d2ce249f1de231f5f3efad1d` |
+| `node` | `24.15.0` | `node-v24.15.0-darwin-arm64.tar.xz` | `af5cfaeafe603aaf7599f287fd9d100bb41f16794f49788fa59dd3f25546930f` |
+| `node` | `24.15.0` | `node-v24.15.0-darwin-x64.tar.xz` | `5d627245b9f53cb2512cc21b7aa6aad693106affadd91e0c8f42d600fb7ba444` |
+| `node` | `24.15.0` | `node-v24.15.0-linux-arm64.tar.xz` | `f3d5a797b5d210ce8e2cb265544c8e482eaedcb8aa409a8b46da7e8595d0dda0` |
+| `node` | `24.15.0` | `node-v24.15.0-linux-x64.tar.xz` | `472655581fb851559730c48763e0c9d3bc25975c59d518003fc0849d3e4ba0f6` |
 | `rtk` | `0.48.0` | `rtk-aarch64-apple-darwin.tar.gz` | `99e20a59847dedbb64032a3f7985f2fe959fcb9674d8eaf940fc58a189e27eca` |
 | `rtk` | `0.48.0` | `rtk-aarch64-unknown-linux-gnu.tar.gz` | `1d8d7fcca6cb05e1867c08bb4e5aa5f107c037c607131e511b726ae33ac35a47` |
 | `rtk` | `0.48.0` | `rtk-x86_64-apple-darwin.tar.gz` | `4052e7740a87e121f671a2de269b3f015dcc58b6171d6bedb300da7599cb4d94` |
