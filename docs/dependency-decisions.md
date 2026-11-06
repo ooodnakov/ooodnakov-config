@@ -80,6 +80,8 @@ Run `oooconf lock` after editing the TOML.
 Yazi plugins and flavors under `home/.config/yazi/{plugins,flavors}/` are tracked files copied from upstream at a fixed revision, not git submodules and not installed by a plugin manager at runtime. `scripts/optional-deps.toml` installs the `yazi` binary only; the plugin tree must work offline from a fresh clone.
 
 - `plugins/omp.yazi` is pinned to [`saumyajyoti/omp.yazi`](https://github.com/saumyajyoti/omp.yazi) commit `32ae96c8da930641ee81c32f76b2d7452ba6c8d9` (`main.lua`, `README.md`, `LICENSE`); `screenshot.png` and the upstream default theme JSON are intentionally omitted.
+- `plugins/omz.yazi` is the in-repo source of [`ooodnakov/omz.yazi`](https://github.com/ooodnakov/omz.yazi) (MIT): it renders the zsh/Oh My Zsh prompt in the header, replaying `precmd` hooks so Powerlevel10k and theme prompts materialize. Tracked here so Yazi works offline from a fresh clone; publish changes upstream first, then copy them back.
+- `home/.config/yazi/init.lua` picks the plugin at runtime: `omp` for Windows and `OOOCONF_ZSH_PROMPT=ohmyposh`, `omz` for every other zsh prompt mode.
 - Update a vendored plugin by copying the new upstream files over the existing directory and recording the new revision here — never by adding a submodule entry, because an uninitialized submodule leaves an empty directory and `require()` in `init.lua` then aborts Yazi.
 
 ## Platform-Specific Installers

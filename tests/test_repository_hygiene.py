@@ -85,3 +85,39 @@ def test_dependency_lock_is_tracked_and_not_ignored() -> None:
         check=False,
     )
     assert result.returncode == 1, "deps.lock.json is tracked but also ignored"
+
+
+def _indexed_entries() -> list[tuple[str, str]]:
+    result = subprocess.run(
+        ["git", "ls-files", "-s", "-z"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+    )
+    entries: list[tuple[str, str]] = []
+    for raw in result.stdout.split(b"\0"):
+        if not raw:
+            continue
+        meta, path = raw.split(b"\t", 1)
+        entries.append((meta.split()[0].decode(), path.decode()))
+    return entries
+
+
+def test_yazi_plugins_are_tracked_files() -> None:
+    """A missing or empty plugin directory aborts Yazi before the first frame."""
+    entries = _indexed_entries()
+
+    gitlinks = sorted(path for mode, path in entries if mode == "160000")
+    assert not gitlinks, f"git submodules leave empty directories on clone: {gitlinks}"
+
+    plugins_root = "home/.config/yazi/plugins/"
+    tracked = {path for _, path in entries}
+    plugin_dirs = {path.split("/")[4] for path in tracked if path.startswith(plugins_root)}
+
+    broken = sorted(name for name in plugin_dirs if f"{plugins_root}{name}/main.lua" not in tracked)
+    assert not broken, f"plugin directories without main.lua: {broken}"
+
+    init = (REPO_ROOT / "home/.config/yazi/init.lua").read_text(encoding="utf-8")
+    required = set(re.findall(r'setup_plugin\("([^"]+)"', init))
+    available = {name.removesuffix(".yazi") for name in plugin_dirs}
+    assert required <= available, f"init.lua requires missing plugins: {sorted(required - available)}"

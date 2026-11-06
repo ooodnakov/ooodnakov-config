@@ -42,17 +42,29 @@ local function file_exists(path)
 	return false
 end
 
--- Render the same oh-my-posh theme the shell prompt uses, then fall back to
--- the tracked canonical theme so an install without a synced color theme still
--- gets a prompt line instead of the plugin's remote default config.
-local omp_config = os.getenv("OOOCONF_OMP_CONFIG")
-if not omp_config or omp_config == "" or not file_exists(omp_config) then
-	omp_config = config_home() .. "/ohmyposh/ooodnakov.omp.json"
+-- The header mirrors the prompt of the shell the terminal runs: PowerShell and
+-- the oh-my-posh zsh mode use the oh-my-posh plugin, every other zsh setup
+-- (Oh My Zsh themes, Powerlevel10k, plain $PROMPT) uses the omz plugin.
+local function is_windows()
+	return os.getenv("OS") == "Windows_NT"
 end
-if file_exists(omp_config) then
-	setup_plugin("omp", { config = omp_config })
+
+local shell_prompt = os.getenv("OOOCONF_ZSH_PROMPT") or "p10k"
+if is_windows() or shell_prompt == "ohmyposh" then
+	-- Render the same oh-my-posh theme the shell prompt uses, then fall back to
+	-- the tracked canonical theme so an install without a synced color theme
+	-- still gets a prompt line instead of the plugin's remote default config.
+	local omp_config = os.getenv("OOOCONF_OMP_CONFIG")
+	if not omp_config or omp_config == "" or not file_exists(omp_config) then
+		omp_config = config_home() .. "/ohmyposh/ooodnakov.omp.json"
+	end
+	if file_exists(omp_config) then
+		setup_plugin("omp", { config = omp_config })
+	else
+		notify("omp skipped: no oh-my-posh config found (run 'oooconf color <theme>')")
+	end
 else
-	notify("omp skipped: no oh-my-posh config found (run 'oooconf color <theme>')")
+	setup_plugin("omz")
 end
 
 setup_plugin("full-border")

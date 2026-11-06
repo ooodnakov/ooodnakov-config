@@ -124,7 +124,7 @@ Caused by:
 ```
 
 - **A plugin directory is empty after a fresh clone** — plugins are tracked files, not git submodules, so `git pull` (or re-running `oooconf link`) repopulates them. Verify with `ls ~/.config/yazi/plugins/*/main.lua`.
-- **The prompt header is missing** — `omp.yazi` renders the oh-my-posh line and is skipped when no config exists. Run `oooconf color <theme>` to generate `~/.config/ooodnakov/local/ohmyposh/<theme>-<mode>.omp.json`; Yazi prefers `OOOCONF_OMP_CONFIG` and falls back to `~/.config/ohmyposh/ooodnakov.omp.json`.
+- **The prompt header is missing or shows the wrong prompt** — `init.lua` loads `omz.yazi` for zsh prompt modes and `omp.yazi` on Windows or with `OOOCONF_ZSH_PROMPT=ohmyposh`. The `omz` plugin renders the real zsh prompt (Oh My Zsh themes and Powerlevel10k) and needs a working `zsh`; the `omp` plugin needs `oh-my-posh` plus a config (`OOOCONF_OMP_CONFIG`, else `~/.config/ohmyposh/ooodnakov.omp.json`). Switch with `oooconf shell prompt p10k|ohmyposh`, then restart Yazi.
 - **Anything else** — `init.lua` loads every plugin through `pcall`, so a broken plugin now shows a `yazi plugin` notification and leaves the file manager usable instead of killing it.
 
 ## Stale or broken symlinks
