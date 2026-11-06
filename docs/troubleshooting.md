@@ -113,6 +113,20 @@ mkdir -p ~/.config/git && touch ~/.config/git/git-prompt.sh
 - **A specific tool completion is missing** — the autogen generator only emits entries for binaries currently on `PATH`; install the tool first, then re-run `oooconf completions`.
 - **Manifest parse errors** — verify `scripts/generate/tool-completions.toml` keeps argv as arrays and maps each zsh entry to an `_name` output plus `provides` commands.
 
+## `y` prints `Error: Lua runtime failed`
+
+Yazi aborts before drawing when a plugin loaded from `home/.config/yazi/init.lua` is missing or throws:
+
+```
+Error: Lua runtime failed
+Caused by:
+    Failed to load plugin from ".../plugins/omp.yazi/main.lua"
+```
+
+- **A plugin directory is empty after a fresh clone** — plugins are tracked files, not git submodules, so `git pull` (or re-running `oooconf link`) repopulates them. Verify with `ls ~/.config/yazi/plugins/*/main.lua`.
+- **The prompt header is missing** — `omp.yazi` renders the oh-my-posh line and is skipped when no config exists. Run `oooconf color <theme>` to generate `~/.config/ooodnakov/local/ohmyposh/<theme>-<mode>.omp.json`; Yazi prefers `OOOCONF_OMP_CONFIG` and falls back to `~/.config/ohmyposh/ooodnakov.omp.json`.
+- **Anything else** — `init.lua` loads every plugin through `pcall`, so a broken plugin now shows a `yazi plugin` notification and leaves the file manager usable instead of killing it.
+
 ## Stale or broken symlinks
 
 Managed config is linked into `~/.config`. If something is misbehaving:

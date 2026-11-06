@@ -64,6 +64,7 @@ Do not treat `third_party/` as active config unless the user explicitly asks to 
 - Preserve reproducibility. Prefer pinned versions, deterministic paths, and explicit setup steps.
 - Keep cross-platform behavior in shared config only when it is safe on Linux, Windows, and macOS.
 - Put host-specific behavior in local override examples or documented local files, not in tracked base config.
+- Vendor Yazi plugins under `home/.config/yazi/plugins/<name>.yazi/` as tracked files pinned to an upstream revision. Never record a plugin as a git submodule or gitlink: a fresh clone leaves an empty directory and `require("<name>")` in `home/.config/yazi/init.lua` aborts Yazi before it starts.
 
 ## Symlink manifest
 

@@ -75,6 +75,13 @@ Run `oooconf lock` after editing the TOML.
    - `bash tests/test_shell.sh`
 7. Document the decision in this file under the appropriate table.
 
+## Vendored Yazi Plugins
+
+Yazi plugins and flavors under `home/.config/yazi/{plugins,flavors}/` are tracked files copied from upstream at a fixed revision, not git submodules and not installed by a plugin manager at runtime. `scripts/optional-deps.toml` installs the `yazi` binary only; the plugin tree must work offline from a fresh clone.
+
+- `plugins/omp.yazi` is pinned to [`saumyajyoti/omp.yazi`](https://github.com/saumyajyoti/omp.yazi) commit `32ae96c8da930641ee81c32f76b2d7452ba6c8d9` (`main.lua`, `README.md`, `LICENSE`); `screenshot.png` and the upstream default theme JSON are intentionally omitted.
+- Update a vendored plugin by copying the new upstream files over the existing directory and recording the new revision here — never by adding a submodule entry, because an uninitialized submodule leaves an empty directory and `require()` in `init.lua` then aborts Yazi.
+
 ## Platform-Specific Installers
 
 | Platform | Primary | Fallback |
