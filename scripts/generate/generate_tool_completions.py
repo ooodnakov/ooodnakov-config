@@ -236,17 +236,37 @@ def command_available(spec: ZshCompletion) -> bool:
     return shutil.which(spec.binary) is not None
 
 
+def resolved_argv(spec: ZshCompletion) -> list[str]:
+    """Resolve argv[0] to the real executable.
+
+    Windows package shims (npm, pnpm) are .CMD files: CreateProcess cannot run
+    them directly, so hand those to cmd.exe. Resolving first also makes a PATH
+    hit and the executed file the same one.
+    """
+    argv = list(spec.argv)
+    resolved = shutil.which(argv[0]) or shutil.which(spec.binary)
+    if resolved:
+        argv[0] = resolved
+    if argv and argv[0].lower().endswith((".cmd", ".bat")):
+        argv = [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/c", *argv]
+    return argv
+
+
 def generate_completion(spec: ZshCompletion, repo_root: Path) -> GeneratedCompletion:
     env = os.environ.copy()
     env.update(spec.env)
-    proc = subprocess.run(
-        spec.argv,
-        cwd=repo_root,
-        env=env,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    argv = resolved_argv(spec)
+    try:
+        proc = subprocess.run(
+            argv,
+            cwd=repo_root,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    except OSError as exc:
+        raise CompletionError(f"{spec.tool_key}: {' '.join(spec.argv)} failed: {exc}") from exc
     if proc.returncode != 0:
         stderr = proc.stderr.strip()
         stdout = proc.stdout.strip()

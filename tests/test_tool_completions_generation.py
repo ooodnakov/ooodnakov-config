@@ -19,6 +19,7 @@ from scripts.generate.generate_tool_completions import (  # noqa: E402
     ZshCompletion,
     ZshConfig,
     generate,
+    resolved_argv,
     validate_zsh_files,
 )
 
@@ -51,6 +52,17 @@ def make_config(tmp_path: Path) -> ZshConfig:
         prune=True,
         validate=False,
     )
+
+
+def test_resolved_argv_wraps_windows_cmd_shims(monkeypatch: pytest.MonkeyPatch) -> None:
+    spec = make_spec("npm", "_npm", argv=("npm", "completion"), binary="npm")
+    monkeypatch.setattr(shutil, "which", lambda name: r"C:\Program Files\nodejs\npm.CMD")
+
+    argv = resolved_argv(spec)
+
+    assert argv[0].lower().endswith("cmd.exe")
+    assert any(item.endswith("npm.CMD") for item in argv)
+    assert argv[-1] == "completion"
 
 
 def test_failing_tool_does_not_abort_other_generations(tmp_path: Path) -> None:
@@ -112,6 +124,9 @@ def test_validation_failure_drops_only_bad_file(tmp_path: Path) -> None:
 
 
 def test_cli_exits_zero_while_skipping_failing_tool(tmp_path: Path) -> None:
+    if os.name == "nt":
+        pytest.skip("extensionless shell shims are POSIX-only")
+
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     good = bin_dir / "fake-good"

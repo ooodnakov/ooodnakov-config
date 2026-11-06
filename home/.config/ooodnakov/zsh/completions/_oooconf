@@ -18,7 +18,7 @@ _oooconf_commands=(
   'remove:remove managed links only'
   'lock:regenerate dependency lock artifacts'
   'update-pins:check or update pinned refs'
-  'completions:regenerate tracked completion files'
+  'completions:regenerate tracked completions and the PowerShell tool-completion cache'
   'link:create or update symlinks from manifest'
   'agents:detect/sync/doctor/provider/update AGENTS.md workflows'
   'secrets:sync or validate local secret env files'
