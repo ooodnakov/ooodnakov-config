@@ -120,12 +120,14 @@ bell-features = no-system,no-audio,attention,no-title,no-border
 
 # --- shell ----------------------------------------------------------------
 
-# WezTerm: default_prog = { pwsh.exe, -NoLogo }, starting in the home folder.
-# A file `command` overrides `default-profile`, so the default is selected
-# through the `pscore` profile instead. Settings writes the canonical
-# `user:<id>` form; choose "PowerShell Core" there, not "Automatic", because
-# Automatic deletes this line from the file.
+# WezTerm: default_prog = { pwsh.exe, -NoLogo }. A file `command` overrides
+# `default-profile`, so the default is selected through the `pscore` profile
+# instead. Settings writes the canonical `user:<id>` form; choose "PowerShell
+# Core" there, not "Automatic", because Automatic deletes this line.
 default-profile = user:pscore
+# Explorer double-click starts Noctty in C:\WINDOWS\system32, so default to
+# home. The "Open noctty here" shell menu passes --working-directory and
+# overrides this for a project folder.
 working-directory = home
 
 # WezTerm launch_menu (profile ids must not collide with noctty's reserved
