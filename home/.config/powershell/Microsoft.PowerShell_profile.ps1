@@ -1,4 +1,3 @@
-if (Test-Path "$HOME\.x-cmd.root\local\data\pwsh\_index.ps1") { Set-ExecutionPolicy Bypass -Scope Process; . "$HOME\.x-cmd.root\local\data\pwsh\_index.ps1" };  # boot up x-cmd.
 $ConfigRoot = Join-Path $HOME ".config/ooodnakov"
 $DefaultPromptConfig = Join-Path $HOME ".config/ohmyposh/ooodnakov.omp.json"
 $SourcePromptConfig = Join-Path (Split-Path $PSScriptRoot -Parent) "ohmyposh/ooodnakov.omp.json"
@@ -18,6 +17,18 @@ $LocalBin = Join-Path $HOME ".local/bin"
 # Configure fzf to use a popup-style window to prevent screen shifting
 # We use a smaller height and no border to minimize displacement of multi-line prompts.
 $env:FZF_DEFAULT_OPTS = "--height 40% --inline-info --clear"
+
+# x-cmd is no longer started. Inherited shells and the persisted user PATH can
+# still carry its bin directories, so drop them from this session's PATH.
+if ($env:PATH -and $env:PATH.IndexOf('.x-cmd.root', [System.StringComparison]::OrdinalIgnoreCase) -ge 0) {
+    $keptPathParts = [System.Collections.Generic.List[string]]::new()
+    foreach ($pathPart in $env:PATH.Split([IO.Path]::PathSeparator)) {
+        if ($pathPart -and $pathPart -notmatch '[\\/]\.x-cmd\.root([\\/]|$)') {
+            $keptPathParts.Add($pathPart)
+        }
+    }
+    $env:PATH = $keptPathParts -join [IO.Path]::PathSeparator
+}
 
 if (Test-Path $LocalBin) {
     $pathParts = @($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ })
@@ -60,6 +71,24 @@ function Test-InteractiveConsoleHost {
         -not [Console]::IsOutputRedirected -and
         $Host.Name -eq 'ConsoleHost'
     )
+}
+
+# `Get-Module -ListAvailable` parses every manifest on PSModulePath (30-80 ms);
+# a directory probe per module root answers "is it installed" in about a
+# millisecond, and Import-Module still reports a broken manifest.
+function Test-ModuleAvailable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    foreach ($moduleRoot in ($env:PSModulePath -split [IO.Path]::PathSeparator)) {
+        if (-not $moduleRoot) { continue }
+        if (Test-Path -LiteralPath (Join-Path $moduleRoot $Name) -PathType Container) {
+            return $true
+        }
+    }
+    return $false
 }
 
 # ---[ PLUGINS & CONFIG ]---
@@ -130,7 +159,13 @@ function Get-OooconfSshHosts {
 function global:y {
     $tmp = Join-Path $env:TEMP ("yazi-cwd-{0}.tmp" -f [guid]::NewGuid().ToString("N"))
     try {
-        & yazi @args --cwd-file="$tmp"
+        # With no arguments, open Yazi on the current directory instead of
+        # letting it fall back to $HOME.
+        if ($args.Count -eq 0) {
+            & yazi "$PWD" --cwd-file="$tmp"
+        } else {
+            & yazi @args --cwd-file="$tmp"
+        }
         $cwd = Get-Content -LiteralPath $tmp -Raw -ErrorAction SilentlyContinue
         if ($cwd) {
             $cwd = $cwd.Trim()
@@ -172,10 +207,30 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
 }
 
 # Worktrunk uses git-wt on Windows to avoid the Windows Terminal alias.
-if (Get-Command git-wt -ErrorAction SilentlyContinue) {
-    Invoke-Expression (& git-wt config shell init powershell | Out-String)
+# `config shell init` spawns the tool (~80ms) and its output only changes when
+# the tool is upgraded, so cache it next to the other generated init scripts.
+# The generated file must be dot-sourced at script scope: it defines a git-wt
+# function (not a global: one) that has to outlive this block.
+$worktrunkTool = if (Get-Command git-wt -ErrorAction SilentlyContinue) {
+    'git-wt'
 } elseif ($env:OS -ne 'Windows_NT' -and (Get-Command wt -ErrorAction SilentlyContinue)) {
-    Invoke-Expression (& wt config shell init powershell | Out-String)
+    'wt'
+} else {
+    $null
+}
+
+if ($worktrunkTool) {
+    $worktrunkCache = Join-Path $CacheDir "$worktrunkTool.ps1"
+    $worktrunkExe = Get-Item -LiteralPath (
+        Get-Command $worktrunkTool -CommandType Application | Select-Object -First 1
+    ).Source -ErrorAction SilentlyContinue
+    if (
+        -not (Test-Path -LiteralPath $worktrunkCache) -or
+        ($worktrunkExe -and $worktrunkExe.LastWriteTime -gt (Get-Item -LiteralPath $worktrunkCache).LastWriteTime)
+    ) {
+        & $worktrunkTool config shell init powershell | Out-String | Set-Content -LiteralPath $worktrunkCache
+    }
+    . $worktrunkCache
 }
 
 # Ensure Update-Venv runs on every prompt (handles cd, z, zi, etc.)
@@ -197,11 +252,16 @@ if (Test-Path $LocalEnv) {
 
 # posh-git prompt status duplicates the oh-my-posh git segment (~290ms import);
 # opt in with OOODNAKOV_POSH_GIT=enabled for its branch-name tab completions.
-if ($env:OOODNAKOV_POSH_GIT -eq 'enabled' -and $null -ne (Get-Module -ListAvailable -Name posh-git)) {
+# Completions only exist in an interactive console, so scripts skip the import.
+if (
+    $env:OOODNAKOV_POSH_GIT -eq 'enabled' -and
+    (Test-InteractiveConsoleHost) -and
+    (Test-ModuleAvailable posh-git)
+) {
     Import-Module posh-git -ErrorAction SilentlyContinue
 }
 
-if ((Test-InteractiveConsoleHost) -and $null -ne (Get-Module -ListAvailable -Name PSFzf)) {
+if ((Test-InteractiveConsoleHost) -and (Test-ModuleAvailable PSFzf)) {
     Import-Module PSFzf -ErrorAction SilentlyContinue
 }
 
@@ -209,7 +269,7 @@ Set-Alias oooconf oooconf.ps1 -ErrorAction SilentlyContinue
 
 # PSReadLine + PSFzf configuration is prompt/tab-completion work — skip it in
 # redirected/non-interactive hosts so scripts and runspaces start fast.
-if ((Test-InteractiveConsoleHost) -and $null -ne (Get-Module -ListAvailable -Name PSReadLine)) {
+if ((Test-InteractiveConsoleHost) -and (Test-ModuleAvailable PSReadLine)) {
     Set-PSReadLineOption -HistorySearchCursorMovesToEnd
 
     # Prediction rendering fails in redirected/non-VT hosts (for example RTK-wrapped commands).
@@ -338,9 +398,11 @@ function Invoke-ForgitOrGit {
 }
 
 $forgitMode = $env:OOODNAKOV_FORGIT_ALIAS_MODE ?? "plain"
-$forgitAvailable = $null -ne (Get-Command "forgit*" -ErrorAction SilentlyContinue)
 
-if ($forgitMode -eq "forgit" -and $forgitAvailable) {
+# Probing "forgit*" costs a full PATH scan (~30ms). The wrappers below already
+# fall back to plain git when a forgit command is missing, so the probe moves
+# to first use instead of blocking startup.
+if ($forgitMode -eq "forgit") {
     function gd {
         Invoke-ForgitOrGit -ForgitNames @("forgit_diff") -GitFallback { git diff @args }
     }

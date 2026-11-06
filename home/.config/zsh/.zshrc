@@ -502,11 +502,7 @@ bindkey '^R' fzf_history_search
 
 # To customize the Powerlevel10k prompt, edit ~/.config/ooodnakov/p10k.zsh.
 
-unalias x 2>/dev/null
-[ -f "$HOME/.x-cmd.root/X" ] && . "$HOME/.x-cmd.root/X" # boot up x-cmd.
-unalias h 2>/dev/null
-
-# Re-add pnpm after x-cmd so it takes precedence over brew
+# Keep pnpm ahead of other package-manager bin dirs (brew, npm, etc.)
 # Only modify PATH if pnpm is not already at position 1
 if [ -n "$PNPM_HOME" ] && [ "$path[1]" != "$PNPM_HOME" ]; then
   # Remove any existing pnpm entries
@@ -515,7 +511,7 @@ if [ -n "$PNPM_HOME" ] && [ "$path[1]" != "$PNPM_HOME" ]; then
   path=("$PNPM_HOME" "$PNPM_HOME/bin" "$path[@]")
 fi
 
-# Remove duplicate PATH entries (x-cmd adds duplicates)
+# Remove duplicate PATH entries
 typeset -U path
 
 function y() {

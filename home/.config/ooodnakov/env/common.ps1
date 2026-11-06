@@ -17,6 +17,8 @@ if (-not $env:YAZI_FILE_ONE) {
     if (Test-Path $yaziFileOne) { $env:YAZI_FILE_ONE = $yaziFileOne }
 }
 $ENV:PILENS_DATA_DIR = Join-Path $HOME ".pi-lens" "data"
+$script:__oooconfPathParts = $null
+$script:__oooconfPathValue = $null
 function Add-PathEntry {
     param(
         [Parameter(Mandatory = $true)]
@@ -27,9 +29,20 @@ function Add-PathEntry {
         return
     }
 
-    $pathParts = @($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ })
-    if ($pathParts -notcontains $PathEntry) {
+    # Splitting PATH for every entry costs more than the membership test, so
+    # keep a case-insensitive set of the current entries and rebuild it only
+    # when PATH changed underneath us.
+    if ($null -eq $script:__oooconfPathParts -or $script:__oooconfPathValue -cne $env:PATH) {
+        $script:__oooconfPathParts = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($part in ($env:PATH -split [IO.Path]::PathSeparator)) {
+            if ($part) { [void]$script:__oooconfPathParts.Add($part) }
+        }
+        $script:__oooconfPathValue = $env:PATH
+    }
+
+    if ($script:__oooconfPathParts.Add($PathEntry)) {
         $env:PATH = "$PathEntry$([IO.Path]::PathSeparator)$env:PATH"
+        $script:__oooconfPathValue = $env:PATH
     }
 }
 
@@ -56,10 +69,13 @@ Add-PathEntry -PathEntry $npmBin
 Add-PathEntry -PathEntry $bunBin
 Add-PathEntry -PathEntry $buncacheBin
 
-foreach ($brewBin in @("/opt/homebrew/bin", "/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin")) {
-    if (Test-Path (Join-Path $brewBin "brew")) {
-        Add-PathEntry -PathEntry $brewBin
-        break
+# Homebrew lives outside Windows; the three Test-Path calls are pure overhead there.
+if (-not $IsWindows) {
+    foreach ($brewBin in @("/opt/homebrew/bin", "/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin")) {
+        if (Test-Path (Join-Path $brewBin "brew")) {
+            Add-PathEntry -PathEntry $brewBin
+            break
+        }
     }
 }
 
@@ -102,6 +118,61 @@ function Get-DirenvConfigRoot {
     return Join-Path $HOME ".config/direnv"
 }
 
+# A generated completion script registers its completer while being dot-sourced,
+# so a large file (uv's is ~750 KB) costs ~100 ms of parsing on every startup.
+# Register a stub instead and capture/execute the real completer on the first
+# Tab press; the stub then forwards to the exact same scriptblock.
+function Register-LazyNativeCompletion {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CommandName,
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $lazyCompletion = @{ Path = $Path; Script = $null; Loaded = $false; Names = $null }
+    Register-ArgumentCompleter -Native -CommandName $CommandName -ScriptBlock {
+        param($wordToComplete, $commandAst, $cursorPosition)
+
+        if (-not $lazyCompletion.Loaded) {
+            $lazyCompletion.Loaded = $true
+            $global:__oooconfLazyCapture = $null
+            $global:__oooconfLazyNames = [System.Collections.Generic.List[string]]::new()
+            # Shadow the registration so the generated file hands over its
+            # scriptblock instead of registering a second completer.
+            function global:Register-ArgumentCompleter {
+                param(
+                    [switch]$Native,
+                    [string[]]$CommandName,
+                    [scriptblock]$ScriptBlock
+                )
+                $global:__oooconfLazyCapture = $ScriptBlock
+                if ($CommandName) { $global:__oooconfLazyNames.AddRange($CommandName) }
+            }
+            try {
+                . $lazyCompletion.Path
+            } finally {
+                Remove-Item function:\Register-ArgumentCompleter -ErrorAction SilentlyContinue
+            }
+            $lazyCompletion.Names = $global:__oooconfLazyNames
+            $lazyCompletion.Script = $global:__oooconfLazyCapture
+            $global:__oooconfLazyCapture = $null
+            $global:__oooconfLazyNames = $null
+
+            # Unexpected generated format (not a single completer for this
+            # command): fall back to letting the script register itself.
+            if ($null -eq $lazyCompletion.Script -or $lazyCompletion.Names.Count -ne 1 -or $lazyCompletion.Names[0] -ne $CommandName) {
+                $lazyCompletion.Script = $null
+                . $lazyCompletion.Path
+            }
+        }
+
+        if ($lazyCompletion.Script) {
+            & $lazyCompletion.Script $wordToComplete $commandAst $cursorPosition
+        }
+    }.GetNewClosure()
+}
+
 function Invoke-CachedCompletionScript {
     param(
         [Parameter(Mandatory = $true)]
@@ -109,7 +180,8 @@ function Invoke-CachedCompletionScript {
         [Parameter(Mandatory = $true)]
         [string]$Tool,
         [Parameter(Mandatory = $true)]
-        [scriptblock]$Generator
+        [scriptblock]$Generator,
+        [switch]$Lazy
     )
 
     $toolCommand = Get-Command $Tool -ErrorAction SilentlyContinue
@@ -137,12 +209,19 @@ function Invoke-CachedCompletionScript {
         }
     }
 
-    if (Test-Path -LiteralPath $cacheFile) {
+    if (-not (Test-Path -LiteralPath $cacheFile)) {
+        return
+    }
+
+    if ($Lazy) {
+        Register-LazyNativeCompletion -CommandName $Name -Path $cacheFile
+    } else {
         . $cacheFile
     }
 }
 
-Invoke-CachedCompletionScript -Name uv -Tool uv -Generator { uv generate-shell-completion powershell }
+# uv's completion file is by far the largest generated script; load it on demand.
+Invoke-CachedCompletionScript -Name uv -Tool uv -Lazy -Generator { uv generate-shell-completion powershell }
 
 Invoke-CachedCompletionScript -Name rustup -Tool rustup -Generator { rustup completions powershell }
 
@@ -160,15 +239,22 @@ if (Get-Command direnv -ErrorAction SilentlyContinue) {
     # This prevents direnv from constantly trying to "fix" the case (e.g., Path -> PATH)
     # which can be noisy and sometimes disrupts other shell hooks on Windows.
     $varsToNormalize = @("Path", "ComSpec", "SystemRoot", "windir", "ProgramFiles", "CommonProgramFiles", "SystemDrive", "TEMP", "TMP", "HOME")
+    # One dictionary beats a Get-ChildItem env:/ lookup per name (each one
+    # crosses the provider layer).
+    $envNames = [System.Collections.Generic.Dictionary[string, string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in [Environment]::GetEnvironmentVariables().Keys) {
+        $envNames[[string]$name] = [string]$name
+    }
     foreach ($v in $varsToNormalize) {
-        $envVar = Get-ChildItem "env:/$v" -ErrorAction SilentlyContinue
-        if ($null -ne $envVar) {
-            $u = $v.ToUpperInvariant()
-            if ($envVar.Name -cne $u) {
-                $val = $envVar.Value
-                Remove-Item "env:/$($envVar.Name)"
-                Set-Content "env:/$u" $val
-            }
+        $actualName = $null
+        if (-not $envNames.TryGetValue($v, [ref]$actualName)) {
+            continue
+        }
+        $u = $v.ToUpperInvariant()
+        if ($actualName -cne $u) {
+            $val = [Environment]::GetEnvironmentVariable($actualName)
+            [Environment]::SetEnvironmentVariable($actualName, $null)
+            [Environment]::SetEnvironmentVariable($u, $val)
         }
     }
 
