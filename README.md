@@ -171,7 +171,7 @@ Primary commands:
 - `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
 - `oooconf update-pins --apply`: update pinned refs in `scripts/optional-deps.toml`, then regenerate lock artifacts
 - `oooconf link`: create or update symlinks from manifest (also runs automatically during install)
-- `oooconf completions`: regenerate tracked completion files (autogen zsh + `oooconf` command completions)
+- `oooconf completions`: regenerate completion files (autogen zsh + `oooconf` command completions + the PowerShell tool-completion cache)
 - `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
 - `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
 - `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content

@@ -469,9 +469,10 @@ EOF
       cat <<'EOF' | ui_render_help_block
 Usage: oooconf completions [--dry-run]
 
-Regenerate tracked shell completion files:
+Regenerate completion files:
   - autogen zsh completions under home/.config/ooodnakov/zsh/completions/autogen
   - oooconf command completions for zsh and PowerShell
+  - PowerShell tool-completion cache under ~/.cache/ooodnakov-config/completions
 This does not install dependencies; it only rebuilds completion files.
 Examples:
   oooconf completions                  # rebuild tracked completion files

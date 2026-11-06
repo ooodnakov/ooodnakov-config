@@ -49,7 +49,7 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | `oooconf remove` | remove managed links only | linux, macos, windows | `oooconf.remove` | — |
 | `oooconf lock` | regenerate dependency lock artifacts | linux, macos, windows | `oooconf.lock` | — |
 | `oooconf update-pins` | check or update pinned refs | linux, macos, windows | `oooconf.update-pins` | `--apply`, `--offline`, `--dry-run` |
-| `oooconf completions` | regenerate tracked completion files | linux, macos, windows | `oooconf.completions` | `--dry-run` |
+| `oooconf completions` | regenerate tracked completions and the PowerShell tool-completion cache | linux, macos, windows | `oooconf.completions` | `--dry-run` |
 | `oooconf link` | create or update symlinks from manifest | linux, macos, windows | `oooconf.link` | `--dry-run` |
 | `oooconf agents` | detect/sync/doctor/provider/update AGENTS.md workflows | linux, macos, windows | `oooconf.agents` | — |
 | `oooconf agents detect` | detect configured agent CLIs on PATH | linux, macos, windows | `oooconf.agents.detect` | `--repo-root`, `--config`, `--json` |

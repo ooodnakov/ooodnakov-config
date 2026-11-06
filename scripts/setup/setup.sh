@@ -246,13 +246,15 @@ fi
 
 initialize_logging
 if [ "$COMMAND" = "completions" ]; then
-  progress_init 3 "oooconf completions"
+  progress_init 4 "oooconf completions"
   progress_step "Preparing completion output path"
   prepare_completion_output_path
   progress_step "Generating tracked autogen completions"
   generate_autogen_completions || true
   progress_step "Generating oooconf command completions"
   generate_oooconf_completions || true
+  progress_step "Generating PowerShell completion cache"
+  generate_powershell_completions || true
   echo
   ui_line ok "Completion generation complete."
   if [ -n "$LOG_FILE" ]; then

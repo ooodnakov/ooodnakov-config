@@ -181,7 +181,7 @@ Phase-1 setup ergonomics are implemented with:
 - `doctor` command to validate managed links and key tool presence after install
 - `deps` command to install optional dependencies separately from the full config-linking flow
 - `oooconf deps worktrunk` optionally installs Worktrunk via Homebrew on Linux/macOS or winget on Windows; managed shell profiles conditionally enable worktree switching (`wt` in Zsh, `git-wt` on Windows PowerShell).
-- `completions` command to regenerate tracked completion files (autogen zsh + oooconf command completions)
+- `completions` command to regenerate completion files (autogen zsh + oooconf command completions + the PowerShell tool-completion cache)
 - `doctor --format json` and `status --format json` for a stable, secret-free
   inventory contract with explicit health-check exit semantics
 - `snapshot export|inspect|apply` for portable profile and allowlisted preference

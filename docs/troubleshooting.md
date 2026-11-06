@@ -109,7 +109,7 @@ mkdir -p ~/.config/git && touch ~/.config/git/git-prompt.sh
 
 ## Completion generation issues
 
-- **Completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview). This regenerates local autogen zsh completions under `home/.config/ooodnakov/zsh/completions/autogen`, prunes stale autogen files, and refreshes tracked `oooconf` command completion scripts.
+- **Completion files look stale** — run `oooconf completions` (or `oooconf completions --dry-run` to preview). This regenerates local autogen zsh completions under `home/.config/ooodnakov/zsh/completions/autogen`, prunes stale autogen files, refreshes tracked `oooconf` command completion scripts, and rebuilds the PowerShell tool-completion cache under `~/.cache/ooodnakov-config/completions`.
 - **A specific tool completion is missing** — the autogen generator only emits entries for binaries currently on `PATH`; install the tool first, then re-run `oooconf completions`.
 - **Manifest parse errors** — verify `scripts/generate/tool-completions.toml` keeps argv as arrays and maps each zsh entry to an `_name` output plus `provides` commands.
 

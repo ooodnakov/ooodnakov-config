@@ -178,7 +178,7 @@ options = { "--apply" = "apply pin updates", "--offline" = "skip remote HEAD res
 [commands.completions]
 handler_id = "oooconf.completions"
 platforms = ["linux", "macos", "windows"]
-description = "regenerate tracked completion files"
+description = "regenerate tracked completions and the PowerShell tool-completion cache"
 options = { "--dry-run" = "preview actions without changing files" }
 
 [commands.link]

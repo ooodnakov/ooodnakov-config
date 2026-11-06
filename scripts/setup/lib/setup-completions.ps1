@@ -48,10 +48,35 @@ function Generate-OooconfCompletions {
     } -ArgumentList $OooconfCompletionsGenerator
 }
 
+function Generate-PowerShellCompletions {
+    $generator = Join-Path $RepoRoot "scripts/generate/generate_powershell_completions.ps1"
+    if (-not (Test-Path -LiteralPath $generator)) {
+        Add-ToolSummary "PowerShell completions: generator missing ($generator)"
+        return
+    }
+
+    $pwshCommand = Get-Command pwsh -ErrorAction SilentlyContinue
+    if (-not $pwshCommand) {
+        Add-ToolSummary "PowerShell completions: pwsh not found"
+        return
+    }
+
+    if ($DryRun) {
+        Write-Output "[dry-run] Generating PowerShell completion cache"
+        return
+    }
+
+    Invoke-ActionWithSpinner -Description "Generating PowerShell completion cache" -Action {
+        param($pwshPath, $scriptPath)
+        & $pwshPath -NoLogo -NoProfile -File $scriptPath
+    } -ArgumentList @($pwshCommand.Source, $generator) | Out-Null
+}
+
 function Generate-TrackedCompletions {
     Initialize-CompletionOutputPath
     Generate-AutogenCompletions
     Generate-OooconfCompletions
+    Generate-PowerShellCompletions
 }
 
 function Add-NewlyAvailableCommand {

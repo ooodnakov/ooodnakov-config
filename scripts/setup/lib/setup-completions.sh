@@ -46,8 +46,31 @@ generate_oooconf_completions() {
     run_python "$OOOCONF_COMPLETIONS_GENERATOR"
 }
 
+generate_powershell_completions() {
+  local generator="$REPO_ROOT/scripts/generate/generate_powershell_completions.ps1"
+
+  if ! command -v pwsh >/dev/null 2>&1; then
+    TOOL_SUMMARY+=("PowerShell completions: pwsh not found")
+    return 0
+  fi
+
+  if [ ! -f "$generator" ]; then
+    TOOL_SUMMARY+=("PowerShell completions: generator missing ($generator)")
+    return 1
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    echo "[dry-run] Generating PowerShell completion cache"
+    return 0
+  fi
+
+  run_with_spinner "Generating PowerShell completion cache" \
+    pwsh -NoLogo -NoProfile -File "$generator"
+}
+
 generate_tracked_completions() {
   prepare_completion_output_path
   generate_autogen_completions
   generate_oooconf_completions
+  generate_powershell_completions
 }

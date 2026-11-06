@@ -193,13 +193,15 @@ try {
             Step-Progress -Status "Done"
         }
         "completions" {
-            Start-StepProgress -Total 4 -Activity "oooconf completions"
+            Start-StepProgress -Total 5 -Activity "oooconf completions"
             Step-Progress -Status "Preparing completion output path"
             Initialize-CompletionOutputPath
             Step-Progress -Status "Generating tracked autogen completions"
             Generate-AutogenCompletions
             Step-Progress -Status "Generating oooconf command completions"
             Generate-OooconfCompletions
+            Step-Progress -Status "Generating PowerShell completion cache"
+            Generate-PowerShellCompletions
             Write-Output ""
             Write-Output "Completion generation complete."
             Step-Progress -Status "Done"
