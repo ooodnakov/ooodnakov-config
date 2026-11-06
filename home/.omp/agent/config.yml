@@ -18,7 +18,7 @@ composer:
 theme:
   dark: noctalia
   light: noctalia
-setupVersion: 2
+setupVersion: 3
 statusLine:
   preset: nerd
   separator: powerline-thin
@@ -82,3 +82,5 @@ hindsight:
   scoping: per-project-tagged
 dev:
   autoqaConsent: denied
+update:
+  auto: false
