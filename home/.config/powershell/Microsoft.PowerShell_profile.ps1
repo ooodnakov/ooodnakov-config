@@ -26,6 +26,14 @@ if (Test-Path $LocalBin) {
     }
 }
 
+# Explorer-launched terminals can inherit a PATH without the per-user
+# WindowsApps alias directory. oh-my-posh is installed there, so add it
+# before the prompt initialisation below.
+$WindowsApps = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps"
+if ((Test-Path $WindowsApps) -and (($env:PATH -split [IO.Path]::PathSeparator) -notcontains $WindowsApps)) {
+    $env:PATH = "$WindowsApps$([IO.Path]::PathSeparator)$env:PATH"
+}
+
 $CacheDir = if ($env:LOCALAPPDATA) {
     Join-Path $env:LOCALAPPDATA "ooodnakov/cache"
 } else {
