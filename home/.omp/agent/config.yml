@@ -11,6 +11,7 @@ modelRoles:
   advisor: openai-codex/gpt-6.1-sol:xhigh
   widget: commandcode/deepseek/deepseek-v4.1-flash:low
   judge: openai-codex/gpt-6.1-sol:high
+  reviewer: openai-codex/gpt-6.1-sol:high
 symbolPreset: nerd
 composer:
   shape: box
@@ -33,6 +34,7 @@ tui:
   titleSpinner: braille
   mouse: false
   tight: false
+  resizeScrollback: append
 display:
   shimmer: kitt
   subagentLivePreview: true
@@ -41,6 +43,7 @@ display:
   cacheMissMarker: true
 task:
   showResolvedModelBadge: true
+  disabledAgents: []
 memory:
   backend: hindsight
 autolearn:
@@ -101,4 +104,5 @@ dev: null
 update:
   auto: false
   autoqaConsent: denied
+hideThinkingBlock: false
 defaultThinkingLevel: high
