@@ -66,6 +66,11 @@ key = "omp-rtk"
 source = "home/.omp/extensions/rtk.ts"
 target = "{HOME}/.omp/extensions/rtk.ts"
 
+[[links]]
+key = "omp-keybinds"
+source = "home/.omp/agent/keybindings.yml"
+target = "{HOME}/.omp/agent/keybindings.yml"
+
 # --- linux-only ---
 
 [[links]]

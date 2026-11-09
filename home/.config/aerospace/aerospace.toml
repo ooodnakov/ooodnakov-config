@@ -284,6 +284,10 @@ if.app-id = 'com.github.wez.wezterm'
 run = 'layout floating'
 
 [[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+run = 'layout floating'
+
+[[on-window-detected]]
 if.app-id = 'app.zen-browser.zen'
 run = 'move-node-to-workspace B'
 
