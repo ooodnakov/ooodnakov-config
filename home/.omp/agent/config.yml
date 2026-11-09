@@ -1,16 +1,15 @@
 modelRoles:
-  smol: commandcode/deepseek/deepseek-v4.1-flash:high
-  judge: openai-codex/gpt-6.1-sol:high
-  commit: commandcode/deepseek/deepseek-v4.1-flash:high
-  memory: commandcode/deepseek/deepseek-v4.1-flash:high
-  plan: openai-codex/gpt-6.1-sol:high
-  vision: openai-codex/gpt-6-luna:high
-  advisor: openai-codex/gpt-6.1-sol:xhigh
-  task: commandcode/deepseek/deepseek-v4.1-flash:high
-  slow: openai-codex/gpt-6.1-sol:xhigh
-  default: commandcode/deepseek/deepseek-v4.1-flash:high
-  tiny: commandcode/deepseek/deepseek-v4.1-flash:high
-  widget: commandcode/deepseek/deepseek-v4.1-flash:low
+  smol: glm-byok/zai/glm-5.3-flash:high
+  default: glm-byok/zai/glm-5.3-flash:high
+  slow: glm-byok/zai/glm-5.3:high
+  vision: glm-byok/zai/glm-5.3-flash:high
+  plan: glm-byok/zai/glm-5.3:high
+  commit: nestor-gateway/tgpt/deepseek-v4-flash-0731:high
+  tiny: nestor-gateway/tgpt/deepseek-v4-flash-0731:high
+  memory: nestor-gateway/tgpt/deepseek-v4-flash-0731:high
+  task: glm-byok/zai/glm-5.3-flash:high
+  advisor: glm-byok/zai/glm-5.3:high
+  widget: nestor-gateway/tgpt/deepseek-v4-flash-0731:high
 symbolPreset: nerd
 composer:
   shape: box
@@ -59,15 +58,31 @@ modelPresets:
   main:
     modelRoles:
       smol: commandcode/deepseek/deepseek-v4.1-flash:high
-      judge: zai/glm-5.3:high
-      commit: zai/glm-5.3-flash:high
+      judge: openai-codex/gpt-6.1-sol:high
+      commit: commandcode/deepseek/deepseek-v4.1-flash:high
       memory: commandcode/deepseek/deepseek-v4.1-flash:high
-      default: commandcode/deepseek/deepseek-v4.1-flash:high
-      plan: commandcode/MiniMaxAI/MiniMax-M3:high
-      vision: zai/glm-5.3-flash:high
+      plan: openai-codex/gpt-6.1-sol:high
+      vision: openai-codex/gpt-6-luna:high
       advisor: openai-codex/gpt-6.1-sol:xhigh
       task: commandcode/deepseek/deepseek-v4.1-flash:high
       slow: openai-codex/gpt-6.1-sol:xhigh
+      default: commandcode/deepseek/deepseek-v4.1-flash:high
+      tiny: commandcode/deepseek/deepseek-v4.1-flash:high
+      widget: commandcode/deepseek/deepseek-v4.1-flash:low
+    defaultThinkingLevel: high
+  work:
+    modelRoles:
+      smol: glm-byok/zai/glm-5.3-flash:high
+      default: glm-byok/zai/glm-5.3-flash:high
+      slow: glm-byok/zai/glm-5.3:high
+      vision: glm-byok/zai/glm-5.3-flash:high
+      plan: glm-byok/zai/glm-5.3:high
+      commit: nestor-gateway/tgpt/deepseek-v4-flash-0731:high
+      tiny: nestor-gateway/tgpt/deepseek-v4-flash-0731:high
+      memory: nestor-gateway/tgpt/deepseek-v4-flash-0731:high
+      task: glm-byok/zai/glm-5.3-flash:high
+      advisor: glm-byok/zai/glm-5.3:high
+      widget: nestor-gateway/tgpt/deepseek-v4-flash-0731:high
     defaultThinkingLevel: high
 mnemopi:
   noEmbeddings: false
@@ -81,6 +96,6 @@ hindsight:
   bankId: Main
   scoping: per-project-tagged
 dev:
-  autoqaConsent: denied
 update:
   auto: false
+  autoqaConsent: denied
