@@ -575,14 +575,17 @@ The tab/status bar remains local to this repo rather than replacing it wholesale
 - Noctalia palette from [`home/.config/ghostty/themes/Noctalia`](home/.config/ghostty/themes/Noctalia), copied from the managed WezTerm color scheme
 - `MesloLGSDZ Nerd Font Mono`, the same initial 125×30 grid, and matching cursor/padding behavior
 - `ALT` as the SUPER modifier, with `ALT+h/j/k/l` pane navigation and `ALT+Ctrl+h/j/k/l` resizing, matching the WezTerm smart-splits bindings
+- Shell integration with `ssh-env`/`ssh-terminfo`, so `z <host>`/`ssh-forward` sessions get `TERM` propagation and remote terminfo automatically; `ALT+Shift+Up/Down` jumps between prompts
+- Quake-style quick terminal bound to ``Cmd+` `` (macOS global shortcut) with an ``Alt+` `` fallback in-window
+- Command-finish notifications when a long command finishes while unfocused, and a Neovide-like cursor trail shader vendored at [`home/.config/ghostty/shaders/cursor_warp.glsl`](home/.config/ghostty/shaders/cursor_warp.glsl)
 
 `oooconf color` writes the selected theme to `~/.config/ooodnakov/local/ghostty.conf`, which the managed config loads through an optional `config-file` include. Put machine-local font size, opacity, or theme overrides in that file; [`home/.config/ooodnakov/local/ghostty.conf.example`](home/.config/ooodnakov/local/ghostty.conf.example) shows the format.
 
 ## CI/CD
 
 - CI runs on pushes to `main` and pull requests
-- Linux and macOS jobs run Python lint/format checks, Bash syntax validation, `shellcheck`, lockfile reproducibility checks, static Neovim/WezTerm smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
-- Windows jobs run Python lint/format checks, PowerShell parser validation, static Neovim/WezTerm smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
+- Linux and macOS jobs run Python lint/format checks, Bash syntax validation, `shellcheck`, lockfile reproducibility checks, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
+- Windows jobs run Python lint/format checks, PowerShell parser validation, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
 - tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases
 - Fleet automation is reproducibly locked, validated without network-backed tests,
   and preview-only for merges by default; see

@@ -24,7 +24,9 @@ font-size = 9.75
 cursor-style = block
 cursor-style-blink = true
 # Keep the block cursor at prompts instead of Ghostty's bar.
-shell-integration-features = no-cursor
+# ssh-env/ssh-terminfo propagate TERM and install terminfo on remote hosts so
+# the repo's `z <host>` / ssh-forward workflow works without manual setup.
+shell-integration-features = no-cursor,ssh-env,ssh-terminfo
 
 # --- Window --------------------------------------------------------------
 # WezTerm: initial_cols = 125, initial_rows = 30, 0.5cell padding.
@@ -42,6 +44,35 @@ bell-features = no-system,no-audio,no-attention,no-title,no-border
 scrollback-limit = 2000000
 # Integrated client-side decorations instead of server-side titlebars.
 window-decoration = client
+
+# --- Quick terminal ------------------------------------------------------
+# `global:` shortcuts are macOS-only; Linux keeps an in-window fallback.
+quick-terminal-position = top
+quick-terminal-size = 30%
+keybind = global:cmd+grave_accent=toggle_quick_terminal
+keybind = alt+grave_accent=toggle_quick_terminal
+
+# --- Notifications -------------------------------------------------------
+# Notify when a long command finishes while the surface is unfocused (1.3+).
+notify-on-command-finish = unfocused
+notify-on-command-finish-action = notify,no-bell
+notify-on-command-finish-after = 10s
+
+# --- Interaction ---------------------------------------------------------
+mouse-hide-while-typing = true
+cursor-click-to-move = true
+link-previews = true
+window-subtitle = working-directory
+selection-clear-on-typing = true
+# Security posture made explicit (these are Ghostty's defaults).
+clipboard-read = ask
+clipboard-write = allow
+clipboard-paste-protection = true
+
+# --- Shader --------------------------------------------------------------
+# Neovide-like cursor trail, vendored from sahaj-b/cursor-shaders (MIT).
+custom-shader = shaders/cursor_warp.glsl
+custom-shader-animation = true
 
 # --- Keybindings ---------------------------------------------------------
 # ALT is the SUPER modifier on Linux/Windows in home/.config/wezterm.
@@ -73,6 +104,9 @@ keybind = alt+d=scroll_page_lines:5
 keybind = alt+f=start_search
 keybind = F2=toggle_command_palette
 keybind = F11=toggle_fullscreen
+# Prompt jumps require shell integration (enabled above).
+keybind = alt+shift+up=jump_to_prompt:-1
+keybind = alt+shift+down=jump_to_prompt:1
 # WezTerm sends readline word motions for ALT+arrows/Backspace.
 keybind = alt+left=text:\x1bb
 keybind = alt+right=text:\x1bf

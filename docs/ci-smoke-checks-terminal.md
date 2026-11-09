@@ -58,6 +58,7 @@ These checks are deterministic and do not depend on GUI/session state.
    - Ensure each `keybind` value contains both a trigger and an action
    - Ensure the configured `theme` file exists under `home/.config/ghostty/themes/`
    - Ensure the `config-file` include stays optional (`?` prefix) so a fresh clone works without a local override
+   - Ensure every `custom-shader` path exists and defines `mainImage`
    - Ensure the theme defines palette indexes 0–15 as hex colors
 
 ## Possible with extra setup (good value, but adds runtime/dependency complexity)

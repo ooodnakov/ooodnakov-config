@@ -71,6 +71,11 @@ def test_managed_ghostty_config_and_theme_are_consistent() -> None:
         assert trigger.strip(), "keybind trigger missing"
         assert action.strip(), f"keybind {trigger!r} has no action"
 
+    for _key, shader in (entry for entry in config if entry[0] == "custom-shader"):
+        shader_path = ghostty_dir / shader.lstrip("?")
+        assert shader_path.is_file(), f"custom-shader not found: {shader_path}"
+        assert "void mainImage" in shader_path.read_text(encoding="utf-8")
+
     theme = _parse_ghostty_entries(ghostty_dir / "themes" / "Noctalia")
     assert not any(key in {"theme", "config-file"} for key, _ in theme)
     palette = {int(value.split("=", 1)[0]): value.split("=", 1)[1] for key, value in theme if key == "palette"}
