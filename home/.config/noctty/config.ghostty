@@ -68,8 +68,8 @@ cursor-opacity = 1
 # --- window ---------------------------------------------------------------
 
 # WezTerm: 125x30, no session restore, no close confirmation.
-window-width = 125
-window-height = 30
+window-width = 200
+window-height = 60
 window-save-state = never
 confirm-close-surface = false
 
