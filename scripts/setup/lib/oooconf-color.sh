@@ -141,7 +141,7 @@ Themes:
   default, catppuccin, gruvbox, nord, tokyonight, noctalia
 Available modes:
   dark, light
-This also syncs theme-friendly overrides for yazi, wezterm local override, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
+This also syncs theme-friendly overrides for yazi, wezterm and ghostty local overrides, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
 Status output also reports detected nvim and oh-my-posh theme config state.
 Examples:
   oooconf color status                 # print current theme and synced config state

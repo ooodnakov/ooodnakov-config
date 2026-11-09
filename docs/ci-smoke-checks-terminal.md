@@ -14,12 +14,14 @@ This note documents the low-risk CI checks for managed terminal/editor config un
 
 - `home/.config/nvim/`
 - `home/.config/wezterm/`
+- `home/.config/ghostty/`
 
 ## What exists today (relevant context)
 
 - Neovim config bootstraps `lazy.nvim` by cloning from GitHub if missing, then loads plugin spec/imports via LazyVim.
 - WezTerm config is modular Lua, with dynamic event/module loading and optional local override from `~/.config/ooodnakov/local/wezterm.lua`.
-- `.github/workflows/ci.yml` runs static smoke checks for managed Neovim and WezTerm config on Linux, macOS, and Windows, alongside shell syntax, Python lint/format, lock reproducibility, optional-dependency drift, and `oooconf` smoke checks.
+- Ghostty config is a single `key = value` file with an optional `config-file` include for `~/.config/ooodnakov/local/ghostty.conf`; the Noctalia theme lives in `home/.config/ghostty/themes/Noctalia`.
+- `.github/workflows/ci.yml` runs static smoke checks for managed Neovim, WezTerm, and Ghostty config on Linux, macOS, and Windows, alongside shell syntax, Python lint/format, lock reproducibility, optional-dependency drift, and `oooconf` smoke checks.
 
 ## Definitely safe now (low flake risk)
 
@@ -44,6 +46,19 @@ These checks are deterministic and do not depend on GUI/session state.
      - `home/.config/wezterm/config/init.lua`
 2. **Reference asset presence checks (if configured as defaults)**
    - If a default backdrop list is expected, ensure files referenced by default config exist.
+
+### Ghostty
+
+1. **Managed entrypoint presence checks**
+   - Ensure these files exist:
+     - `home/.config/ghostty/config`
+     - `home/.config/ghostty/themes/Noctalia`
+2. **Static syntax and reference checks**
+   - Parse every non-comment line as `key = value`
+   - Ensure each `keybind` value contains both a trigger and an action
+   - Ensure the configured `theme` file exists under `home/.config/ghostty/themes/`
+   - Ensure the `config-file` include stays optional (`?` prefix) so a fresh clone works without a local override
+   - Ensure the theme defines palette indexes 0–15 as hex colors
 
 ## Possible with extra setup (good value, but adds runtime/dependency complexity)
 

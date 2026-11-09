@@ -379,7 +379,7 @@ The setup scripts intentionally do not try to provision a full workstation from 
 | **macOS**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
 
-On Windows, `oooconf deps zsh` (from PowerShell) installs the pinned MSYS2 zsh package into the Git for Windows directory and Git Bash windows then start the managed zsh automatically. The bundled Meslo Nerd Font is installed per-user by setup and a managed `~/.minttyrc` pins mintty's `Font=`, so Git Bash windows render the same prompt icons as WezTerm. Set `OOODNAKOV_GITBASH_ZSH=0` to keep plain bash for a session.
+On Windows, `oooconf deps zsh` (from PowerShell) installs the pinned MSYS2 zsh package into the Git for Windows directory and Git Bash windows then start the managed zsh automatically. The bundled Meslo Nerd Font is installed per-user by setup and a managed `~/.minttyrc` pins mintty's `Font=`, so Git Bash windows render the same prompt icons as WezTerm. Set `OOODNAKOV_GITBASH_ZSH=0` to keep plain bash for a session. Ghostty is optional; when installed, its managed config mirrors the WezTerm theme and keybindings.
 
 See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
 
@@ -489,6 +489,7 @@ Additional local-only files you may create per machine:
 - `~/.config/ooodnakov/local/env.zsh`
 - `~/.config/ooodnakov/local/env.ps1`
 - `~/.config/ooodnakov/local/wezterm.lua`
+- `~/.config/ooodnakov/local/ghostty.conf`
 - `~/.config/task/local/taskrc` for Taskwarrior sync credentials and private overrides
 
 Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local). Taskwarrior's local example lives in [`home/.config/task/local/taskrc.example`](home/.config/task/local/taskrc.example).
@@ -566,6 +567,16 @@ The managed WezTerm setup also loads a small, cross-platform plugin layer:
 - pane navigation keeps the existing platform `SUPER+h/j/k/l` shortcuts but routes them through `smart-splits.nvim` so they can cross Neovim and WezTerm pane boundaries; `SUPER_REV+h/j/k/l` resizes panes the same way
 
 The tab/status bar remains local to this repo rather than replacing it wholesale with an external tab plugin. It borrows the useful pieces from the retro/tabline ecosystem: workspace and leader/mode cells, zoom indicators, tab indexes, pane counts, host/current-directory context, battery, and clock.
+
+## Ghostty
+
+[Ghostty](https://ghostty.org) is supported as an optional alternative to WezTerm. Its managed config is [`home/.config/ghostty/config`](home/.config/ghostty/config), linked to `~/.config/ghostty`, and mirrors the WezTerm setup:
+
+- Noctalia palette from [`home/.config/ghostty/themes/Noctalia`](home/.config/ghostty/themes/Noctalia), copied from the managed WezTerm color scheme
+- `MesloLGSDZ Nerd Font Mono`, the same initial 125×30 grid, and matching cursor/padding behavior
+- `ALT` as the SUPER modifier, with `ALT+h/j/k/l` pane navigation and `ALT+Ctrl+h/j/k/l` resizing, matching the WezTerm smart-splits bindings
+
+`oooconf color` writes the selected theme to `~/.config/ooodnakov/local/ghostty.conf`, which the managed config loads through an optional `config-file` include. Put machine-local font size, opacity, or theme overrides in that file; [`home/.config/ooodnakov/local/ghostty.conf.example`](home/.config/ooodnakov/local/ghostty.conf.example) shows the format.
 
 ## CI/CD
 

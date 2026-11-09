@@ -16,7 +16,7 @@ links = ["task", "taskrc", "todo"]
 dependencies = []
 
 [capabilities.terminal]
-links = ["wezterm", "nvim", "yazi", "fastfetch", "btop"]
+links = ["wezterm", "ghostty", "nvim", "yazi", "fastfetch", "btop"]
 dependencies = ["wezterm", "nvim", "yazi", "fastfetch", "btop", "fzf", "rg", "fd", "bat", "zoxide"]
 
 [capabilities.developer]

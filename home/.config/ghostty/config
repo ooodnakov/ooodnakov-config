@@ -1,0 +1,79 @@
+# Managed by ooodnakov-config.
+# Mirrors the managed WezTerm setup: Noctalia palette, Meslo Nerd Font,
+# ALT-as-SUPER keys, and matching window/cursor behavior.
+#
+# Ghostty reads `config.ghostty` first (1.2.3+) then `config`; this file is
+# named `config` so older releases pick it up too.
+
+# --- Colors --------------------------------------------------------------
+# themes/Noctalia mirrors home/.config/wezterm/colors/Noctalia.toml.
+theme = Noctalia
+window-theme = ghostty
+
+# Machine-local overrides written by `oooconf color` (optional).
+# Loaded after this file, so a local `theme = ...` wins.
+config-file = ?../ooodnakov/local/ghostty.conf
+
+# --- Font ----------------------------------------------------------------
+font-family = MesloLGSDZ Nerd Font Mono
+# WezTerm uses 9.75pt on Linux and 12pt on macOS; override locally on macOS.
+font-size = 9.75
+
+# --- Cursor --------------------------------------------------------------
+# WezTerm: BlinkingBlock with a 650ms blink rate.
+cursor-style = block
+cursor-style-blink = true
+# Keep the block cursor at prompts instead of Ghostty's bar.
+shell-integration-features = no-cursor
+
+# --- Window --------------------------------------------------------------
+# WezTerm: initial_cols = 125, initial_rows = 30, 0.5cell padding.
+window-width = 125
+window-height = 30
+window-padding-x = 4
+window-padding-y = 6
+window-padding-balance = true
+# WezTerm runs opaque on Linux (backdrops are in focus mode by default).
+background-opacity = 1.0
+# WezTerm: window_close_confirmation = NeverPrompt, bell disabled.
+confirm-close-surface = false
+bell-features = no-system,no-audio,no-attention,no-title,no-border
+# WezTerm: scrollback_lines = 20000 (~2 MB for typical lines).
+scrollback-limit = 2000000
+# Integrated client-side decorations instead of server-side titlebars.
+window-decoration = client
+
+# --- Keybindings ---------------------------------------------------------
+# ALT is the SUPER modifier on Linux/Windows in home/.config/wezterm.
+# Pane navigation/resizing matches smart-splits.nvim (ALT + h/j/k/l).
+keybind = alt+c=copy_to_clipboard
+keybind = alt+v=paste_from_clipboard
+keybind = alt+t=new_tab
+keybind = alt+n=new_window
+keybind = alt+w=close_surface
+keybind = alt+ctrl+w=close_tab
+keybind = alt+[=previous_tab
+keybind = alt+]=next_tab
+keybind = alt+ctrl+[=move_tab:-1
+keybind = alt+ctrl+]=move_tab:1
+keybind = alt+enter=toggle_split_zoom
+keybind = alt+ctrl+enter=toggle_maximize
+keybind = alt+\=new_split:right
+keybind = alt+ctrl+\=new_split:down
+keybind = alt+h=goto_split:left
+keybind = alt+j=goto_split:down
+keybind = alt+k=goto_split:up
+keybind = alt+l=goto_split:right
+keybind = alt+ctrl+h=resize_split:left,20
+keybind = alt+ctrl+j=resize_split:down,20
+keybind = alt+ctrl+k=resize_split:up,20
+keybind = alt+ctrl+l=resize_split:right,20
+keybind = alt+u=scroll_page_lines:-5
+keybind = alt+d=scroll_page_lines:5
+keybind = alt+f=start_search
+keybind = F2=toggle_command_palette
+keybind = F11=toggle_fullscreen
+# WezTerm sends readline word motions for ALT+arrows/Backspace.
+keybind = alt+left=text:\x1bb
+keybind = alt+right=text:\x1bf
+keybind = alt+backspace=text:\x17

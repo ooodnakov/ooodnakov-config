@@ -35,11 +35,48 @@ def test_managed_neovim_json_is_valid(path: Path) -> None:
         Path("home/.config/nvim/lua/config/lazy.lua"),
         Path("home/.config/wezterm/wezterm.lua"),
         Path("home/.config/wezterm/config/init.lua"),
+        Path("home/.config/ghostty/config"),
+        Path("home/.config/ghostty/themes/Noctalia"),
     ],
 )
 def test_managed_terminal_entrypoints_exist(path: Path) -> None:
-    """Catch accidental removal of core managed Neovim/WezTerm entrypoints."""
+    """Catch accidental removal of core managed Neovim/WezTerm/Ghostty entrypoints."""
     assert (REPO_ROOT / path).is_file()
+
+
+def _parse_ghostty_entries(path: Path) -> list[tuple[str, str]]:
+    """Parse Ghostty's `key = value` syntax, rejecting malformed managed lines."""
+    entries: list[tuple[str, str]] = []
+    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        assert "=" in line, f"{path}:{lineno}: expected key = value, got {line!r}"
+        key, value = line.split("=", 1)
+        entries.append((key.strip(), value.strip()))
+    return entries
+
+
+def test_managed_ghostty_config_and_theme_are_consistent() -> None:
+    """Ghostty has no tracked runtime validator, so check references statically."""
+    ghostty_dir = REPO_ROOT / "home/.config/ghostty"
+    config = _parse_ghostty_entries(ghostty_dir / "config")
+
+    settings = dict(config)
+    assert settings["theme"] == "Noctalia"
+    assert (ghostty_dir / "themes" / settings["theme"]).is_file()
+    assert settings["config-file"].startswith("?"), "local override include must be optional"
+
+    for trigger, action in (value.split("=", 1) for key, value in config if key == "keybind"):
+        assert trigger.strip(), "keybind trigger missing"
+        assert action.strip(), f"keybind {trigger!r} has no action"
+
+    theme = _parse_ghostty_entries(ghostty_dir / "themes" / "Noctalia")
+    assert not any(key in {"theme", "config-file"} for key, _ in theme)
+    palette = {int(value.split("=", 1)[0]): value.split("=", 1)[1] for key, value in theme if key == "palette"}
+    assert set(range(16)) <= set(palette)
+    for index, color in palette.items():
+        assert re.fullmatch(r"#[0-9a-fA-F]{6}", color), f"palette {index} is not a hex color: {color}"
 
 
 def test_setup_entrypoint_module_references_exist() -> None:
