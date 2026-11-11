@@ -321,12 +321,20 @@ case "$command" in
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" "$UPDATE_PINS" $dry_run_arg "$@"
     ;;
   agents)
-    require_no_dry_run agents
     if ! command -v python3 >/dev/null 2>&1; then
       ui_error fail "python3 is required for agents command."
       exit 1
     fi
-    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$AGENTS_TOOL" --repo-root "$REPO_ROOT" "$@"
+    # Subcommands own --dry-run, so forward the hoisted global flag at the end.
+    dry_run_arg=""
+    if [ "$dry_run_requested" -eq 1 ]; then
+      if [ "$#" -eq 0 ]; then
+        ui_error fail "--dry-run is not supported for agents"
+        exit 1
+      fi
+      dry_run_arg="--dry-run"
+    fi
+    exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$AGENTS_TOOL" --repo-root "$REPO_ROOT" "$@" $dry_run_arg
     ;;
   secrets)
     OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"

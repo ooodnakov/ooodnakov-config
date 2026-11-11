@@ -339,13 +339,17 @@ switch ($command) {
         Invoke-DeltaCommand -DeltaArgs $remaining
     }
     "agents" {
-        Assert-NoDryRun -CommandName "agents"
         if ($remaining.Count -eq 0 -or $remaining[0] -in @("-h", "--help", "help")) {
             Show-CommandUsage "agents"
             exit 0
         }
+        # Subcommands own --dry-run, so forward the hoisted global flag at the end.
+        $agentsDryRun = @()
+        if ($dryRunRequested) {
+            $agentsDryRun = @("--dry-run")
+        }
         Require-PythonRuntime
-        Run-Python -ScriptPath $AgentsToolScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining)
+        Run-Python -ScriptPath $AgentsToolScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining + $agentsDryRun)
     }
     "wm" {
         if ($remaining.Count -ge 2 -and $remaining[0] -eq "bar" -and $remaining[1] -in @("-h", "--help")) {

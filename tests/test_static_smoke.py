@@ -226,3 +226,43 @@ Install-MesloFontsIfMissing
     assert result.returncode == 0, result.stdout + result.stderr
     assert "[dry-run]" in result.stdout
     assert not font_home.exists()
+
+
+def test_unix_agents_dry_run_is_forwarded_to_subcommands() -> None:
+    """The dispatcher hoists --dry-run for agents; it must reach the Python subcommand."""
+    if sys.platform == "win32" or not shutil.which("bash"):
+        pytest.skip("bash is not available")
+
+    env = os.environ.copy()
+    env["OOODNAKOV_REPO_ROOT"] = str(REPO_ROOT)
+    result = subprocess.run(
+        ["bash", "scripts/setup/ooodnakov.sh", "-n", "agents", "detect"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        env=env,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "is not supported for agents" not in result.stdout + result.stderr
+    assert "dry-run" in result.stdout.lower()
+
+
+def test_powershell_agents_dry_run_is_forwarded_to_subcommands() -> None:
+    """Mirror of the Bash check: PowerShell must forward --dry-run to agents subcommands."""
+    if not shutil.which("pwsh"):
+        pytest.skip("pwsh is not available")
+
+    env = os.environ.copy()
+    env["OOODNAKOV_REPO_ROOT"] = str(REPO_ROOT)
+    result = subprocess.run(
+        ["pwsh", "-NoProfile", "-File", "scripts/setup/ooodnakov.ps1", "-n", "agents", "detect"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        env=env,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "is not supported for agents" not in result.stdout + result.stderr
+    assert "dry-run" in result.stdout.lower()
