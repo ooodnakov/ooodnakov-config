@@ -14,6 +14,12 @@ import sys
 import tempfile
 from pathlib import Path
 
+SCRIPTS_CLI_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_CLI_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_CLI_DIR))
+
+from cli_ui import error, status  # noqa: E402
+
 START = "# --- LOCAL OVERRIDES START ---"
 END = "# --- LOCAL OVERRIDES END ---"
 KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -141,10 +147,10 @@ def main() -> int:
         write_override(local / "env.zsh", key, f"export {key}={shlex.quote(value)}")
         ps_value = value.replace("'", "''")
         write_override(local / "env.ps1", key, f"$env:{key} = '{ps_value}'")
-        print(f"Updated {key} in {local / 'env.zsh'} and {local / 'env.ps1'}")
+        status("ok", f"Updated {key} in {local / 'env.zsh'} and {local / 'env.ps1'}")
         if upload:
             item_id = upload_to_bitwarden(key, value)
-            print(f"Uploaded {key} to Bitwarden item {item_id}")
+            status("ok", f"Uploaded {key} to Bitwarden item {item_id}")
         return 0
     except (
         ValueError,
@@ -154,7 +160,7 @@ def main() -> int:
         json.JSONDecodeError,
     ) as exc:
         detail = exc.stderr.strip() if isinstance(exc, subprocess.CalledProcessError) and exc.stderr else str(exc)
-        print(f"oooconf env: {detail}", file=sys.stderr)
+        error("fail", f"oooconf env: {detail}")
         return 1
 
 

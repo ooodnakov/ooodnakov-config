@@ -49,7 +49,7 @@ function Invoke-Install {
         if ($syncExitCode -eq 0) {
             Add-ToolSummary "nvim: plugins synced"
         } else {
-            Write-Warning "LazyVim plugin sync exited with code $syncExitCode"
+            Write-UiError -Role warn -Message "LazyVim plugin sync exited with code $syncExitCode"
         }
     }
 
@@ -66,8 +66,8 @@ function Invoke-Install {
     Step-Progress -Status "Writing setup summary"
     Write-Summary
     Write-Output ""
-    Write-Output "Bootstrap complete."
-    Write-Output "If needed, create local overrides in $ConfigHome/ooodnakov/local."
+    Write-UiLine -Role ok -Message "Bootstrap complete."
+    Write-UiLine -Role hint -Message "If needed, create local overrides in $ConfigHome/ooodnakov/local."
     Step-Progress -Status "Done"
 }
 

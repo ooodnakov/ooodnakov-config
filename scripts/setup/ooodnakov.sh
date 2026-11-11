@@ -81,7 +81,7 @@ command=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -C|--repo-root)
-      [ "$#" -ge 2 ] || { echo "Missing value for $1" >&2; exit 1; }
+      [ "$#" -ge 2 ] || { ui_error fail "Missing value for $1"; exit 1; }
       REPO_ROOT="$2"
       SETUP="$REPO_ROOT/scripts/setup/setup.sh"
       DELETE="$REPO_ROOT/scripts/setup/delete.sh"
@@ -98,7 +98,7 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     --print-repo-root)
-      ui_line info "$REPO_ROOT"
+      printf '%s\n' "$REPO_ROOT"
       exit 0
       ;;
     -V|--version)
@@ -139,7 +139,7 @@ while [ "$#" -gt 0 ]; do
       shift
       ;;
     --profile)
-      [ "$#" -ge 2 ] || { echo "Missing value for --profile" >&2; exit 1; }
+      [ "$#" -ge 2 ] || { ui_error fail "Missing value for --profile"; exit 1; }
       profile_requested="$2"
       shift 2
       ;;
@@ -209,7 +209,7 @@ if should_normalize_global_flags "$command"; then
         shift
         ;;
       --profile)
-        [ "$#" -ge 2 ] || { echo "Missing value for --profile" >&2; exit 1; }
+        [ "$#" -ge 2 ] || { ui_error fail "Missing value for --profile"; exit 1; }
         profile_requested="$2"
         shift 2
         ;;
@@ -296,7 +296,7 @@ case "$command" in
     ;;
   dry-run)
     if [ "$dry_run_requested" -eq 1 ]; then
-      echo "Use either dry-run or --dry-run, not both" >&2
+      ui_error fail "Use either dry-run or --dry-run, not both"
       exit 1
     fi
     OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$OPERATION_PLAN" --repo-root "$REPO_ROOT" "$@"
@@ -323,7 +323,7 @@ case "$command" in
   agents)
     require_no_dry_run agents
     if ! command -v python3 >/dev/null 2>&1; then
-      echo "python3 is required for agents command." >&2
+      ui_error fail "python3 is required for agents command."
       exit 1
     fi
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$AGENTS_TOOL" --repo-root "$REPO_ROOT" "$@"

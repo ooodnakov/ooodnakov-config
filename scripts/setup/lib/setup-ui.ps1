@@ -199,13 +199,13 @@ function Step-Progress {
     $percent = [Math]::Min([Math]::Floor(($script:StepCurrent * 100) / $script:StepTotal), 100)
 
     if (Test-Interactive) {
-        Write-Output "Step: $Status"
+        Write-UiLine -Role hint -Message "Step: $Status"
         Write-Progress -Activity $script:StepActivity -Status ("[{0}/{1}] {2}" -f $script:StepCurrent, $script:StepTotal, $Status) -PercentComplete $percent
         if ($script:StepCurrent -ge $script:StepTotal) {
             Write-Progress -Activity $script:StepActivity -Completed
         }
     } else {
-        Write-Output ("[{0}/{1}] {2}" -f $script:StepCurrent, $script:StepTotal, $Status)
+        Write-UiLine -Role hint -Message ("[{0}/{1}] {2}" -f $script:StepCurrent, $script:StepTotal, $Status)
     }
 }
 

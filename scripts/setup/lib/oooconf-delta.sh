@@ -136,7 +136,7 @@ delta_inject() {
   local dry_run="${OOODNAKOV_DELTA_DRY_RUN:-0}"
 
   if ! check_git_installed; then
-    ui_line error "git is not installed — cannot update ~/.gitconfig"
+    ui_line fail "git is not installed — cannot update ~/.gitconfig"
     return 1
   fi
 
@@ -145,7 +145,7 @@ delta_inject() {
 
   if ! delta_block_present "$gitconfig"; then
     if [ "$dry_run" -eq 1 ]; then
-      ui_line info "[dry-run] would write delta config to $gitconfig"
+      ui_line hint "[dry-run] would write delta config to $gitconfig"
       return 0
     fi
 
@@ -160,7 +160,7 @@ delta_inject() {
 
     if [ "$warned" -eq 1 ]; then
       ui_line warn "warning: existing [$section] sections were not modified"
-      ui_line info "run 'oooconf delta remove' first if you want a clean slate"
+      ui_line hint "run 'oooconf delta remove' first if you want a clean slate"
     fi
 
     # Append our block
@@ -170,10 +170,10 @@ delta_inject() {
       printf '%s\n' "$DELTA_SECTION_END"
     } >> "$gitconfig"
 
-    ui_line success "delta config injected into $gitconfig"
+    ui_line ok "delta config injected into $gitconfig"
 
     if check_delta_installed; then
-      ui_line success "delta is installed — config is active"
+      ui_line ok "delta is installed — config is active"
     else
       ui_line warn "delta is not installed — run 'oooconf deps delta' to install it"
     fi
@@ -187,7 +187,7 @@ delta_status() {
   local gitconfig="${GIT_CONFIG_GLOBAL:-"$HOME/.gitconfig"}"
 
   if delta_block_present "$gitconfig"; then
-    ui_line success "delta config: managed block found in $gitconfig"
+    ui_line ok "delta config: managed block found in $gitconfig"
   else
     ui_line info "delta config: no managed block in $gitconfig"
   fi
@@ -195,7 +195,7 @@ delta_status() {
   if check_delta_installed; then
     local ver
     ver="$(delta --version 2>/dev/null | awk '{print $NF}')"
-    ui_line success "delta: installed ($ver)"
+    ui_line ok "delta: installed ($ver)"
   else
     ui_line warn "delta: not installed (run 'oooconf deps delta' to install)"
   fi
@@ -206,7 +206,7 @@ delta_status() {
     pager="$(git config --global core.pager 2>/dev/null || true)"
     if [ -n "$pager" ]; then
       if echo "$pager" | grep -q "delta"; then
-        ui_line success "core.pager: $pager"
+        ui_line ok "core.pager: $pager"
       else
         ui_line info "core.pager: $pager (not delta)"
       fi
@@ -220,7 +220,7 @@ delta_remove() {
   local dry_run="${OOODNAKOV_DELTA_DRY_RUN:-0}"
 
   if ! check_git_installed; then
-    ui_line error "git is not installed"
+    ui_line fail "git is not installed"
     return 1
   fi
 
@@ -232,10 +232,10 @@ delta_remove() {
   fi
 
   if [ "$dry_run" -eq 1 ]; then
-    ui_line info "[dry-run] would remove delta config block from $gitconfig"
+    ui_line hint "[dry-run] would remove delta config block from $gitconfig"
     return 0
   fi
 
   delta_remove_from_gitconfig "$gitconfig"
-  ui_line success "delta config removed from $gitconfig"
+  ui_line ok "delta config removed from $gitconfig"
 }

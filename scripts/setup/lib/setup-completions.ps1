@@ -7,7 +7,7 @@ function Get-AutogenCompletionsTargetDir {
 function Initialize-CompletionOutputPath {
     $targetDir = Get-AutogenCompletionsTargetDir
     if ($DryRun) {
-        Write-Output "[dry-run] ensure directory $targetDir"
+        Write-UiLine -Role hint -Message "[dry-run] ensure directory $targetDir"
         return
     }
 
@@ -33,7 +33,7 @@ function Generate-AutogenCompletions {
 
 function Generate-OooconfCompletions {
     if ($DryRun) {
-        Write-Output "[dry-run] Generating oooconf command completions"
+        Write-UiLine -Role hint -Message "[dry-run] Generating oooconf command completions"
         return
     }
 
@@ -68,7 +68,7 @@ function Generate-PowerShellCompletions {
     }
 
     if ($DryRun) {
-        Write-Output "[dry-run] Generating PowerShell completion cache"
+        Write-UiLine -Role hint -Message "[dry-run] Generating PowerShell completion cache"
         return
     }
 

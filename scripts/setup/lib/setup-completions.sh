@@ -9,7 +9,7 @@ prepare_completion_output_path() {
   local target_dir
   target_dir="$(completion_autogen_target_dir)"
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] ensure directory $target_dir"
+    ui_line hint "[dry-run] ensure directory $target_dir"
     return 0
   fi
 
@@ -33,7 +33,7 @@ generate_autogen_completions() {
 
 generate_oooconf_completions() {
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Generating oooconf command completions"
+    ui_line hint "[dry-run] Generating oooconf command completions"
     return 0
   fi
 
@@ -67,7 +67,7 @@ generate_powershell_completions() {
   fi
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Generating PowerShell completion cache"
+    ui_line hint "[dry-run] Generating PowerShell completion cache"
     return 0
   fi
 

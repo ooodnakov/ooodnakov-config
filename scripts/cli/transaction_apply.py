@@ -19,6 +19,7 @@ from typing import Iterator
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.cli.cli_ui import error, status  # noqa: E402
 from scripts.cli.operation_plan import Operation, PlanError, build_link_operations  # noqa: E402
 from scripts.cli.profile_manager import ProfileError, resolve_profile  # noqa: E402
 from scripts.link_manager import get_platform  # noqa: E402
@@ -424,11 +425,11 @@ def _rollback_entries(journal: dict[str, object]) -> list[str]:
 def _prepare_local_omp_mcp(repo_root: Path) -> None:
     try:
         local_mcp = reconcile_omp_mcp(Path.home(), repo_root)
-    except OSError as error:
-        print(f"warning: could not prepare local OMP MCP config: {error}", file=sys.stderr)
+    except OSError as exc:
+        error("warn", f"could not prepare local OMP MCP config: {exc}")
         return
     if local_mcp is not None:
-        print(f"Prepared machine-local OMP MCP config: {local_mcp}")
+        status("ok", f"Prepared machine-local OMP MCP config: {local_mcp}")
 
 
 def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tuple[Path | None, int]:
@@ -443,7 +444,7 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
     )
     if not operations:
         _prepare_local_omp_mcp(repo_root)
-        print("No changes required.")
+        status("ok", "No changes required.")
         return None, 0
     if any(operation.kind == "link" for operation in operations):
         _assert_link_support()
@@ -500,7 +501,7 @@ def apply(repo_root: Path, platform: str, profile_name: str | None = None) -> tu
         journal["completed_at"] = _utc_now()
         _atomic_write(path, journal)
     _prepare_local_omp_mcp(repo_root)
-    print(f"Applied {len(operations)} operation(s). Journal: {path}")
+    status("ok", f"Applied {len(operations)} operation(s). Journal: {path}")
     return path, 0
 
 
@@ -543,7 +544,7 @@ def rollback_last() -> int:
         _atomic_write(path, journal)
     if errors:
         raise TransactionError(f"Rollback requires manual recovery: {_redact('; '.join(errors))}")
-    print(f"Rolled back transaction {journal['transaction_id']}.")
+    status("ok", f"Rolled back transaction {journal['transaction_id']}.")
     return 0
 
 
@@ -571,12 +572,12 @@ def cli(argv: list[str] | None = None) -> int:
             return rollback_last()
         incomplete = incomplete_journals()
         for path in incomplete:
-            print(f"Incomplete transaction: {path}")
+            status("warn", f"Incomplete transaction: {path}")
         if not incomplete:
-            print("No incomplete transactions.")
+            status("ok", "No incomplete transactions.")
         return 1 if args.check_incomplete and incomplete else 0
-    except (OSError, RuntimeError, PlanError, ProfileError, TransactionError) as error:
-        print(f"transaction_apply: error: {error}", file=sys.stderr)
+    except (OSError, RuntimeError, PlanError, ProfileError, TransactionError) as exc:
+        error("fail", f"{exc}")
         return 1
     return 2
 

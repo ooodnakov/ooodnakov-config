@@ -33,95 +33,18 @@ _tui = importlib.import_module("tui")
 is_interactive = _tui.is_interactive
 interactive_select = _tui.interactive_select
 
+from cli_ui import bullet as print_bullet  # noqa: E402
+from cli_ui import error as print_error_line  # noqa: E402
+from cli_ui import section as print_section  # noqa: E402
+from cli_ui import spacer as print_spacer  # noqa: E402
+from cli_ui import status as print_status_line  # noqa: E402
+from cli_ui import supports_nerd_font_output  # noqa: E402,F401
+
 MANAGED_BEGIN = "<!-- oooconf:agents-common:start -->"
 MANAGED_END = "<!-- oooconf:agents-common:end -->"
 RTK_BEGIN = "<!-- oooconf:rtk:start -->"
 RTK_END = "<!-- oooconf:rtk:end -->"
 DEFAULT_CONFIG_PATH = Path("home/.config/ooodnakov/agents/config.json")
-ASCII_ICONS = {
-    "section": "==",
-    "ok": "[ok]",
-    "warn": "[warn]",
-    "fail": "[fail]",
-    "missing": "[missing]",
-    "outdated": "[outdated]",
-    "info": "[info]",
-    "bullet": "-",
-}
-NERD_FONT_ICONS = {
-    "section": "▸",
-    "ok": "✓",
-    "warn": "⚠",
-    "fail": "✗",
-    "missing": "✗",
-    "outdated": "󰏫",
-    "info": "ℹ",
-    "bullet": "•",
-}
-ANSI_RESET = "\033[0m"
-ANSI_BOLD = "\033[1m"
-THEME_COLORS = {
-    "default": {
-        "section": 111,
-        "ok": 78,
-        "warn": 221,
-        "fail": 203,
-        "missing": 203,
-        "outdated": 215,
-        "info": 117,
-        "muted": 245,
-    },
-    "catppuccin": {
-        "section": 111,
-        "ok": 150,
-        "warn": 223,
-        "fail": 203,
-        "missing": 203,
-        "outdated": 181,
-        "info": 117,
-        "muted": 145,
-    },
-    "gruvbox": {
-        "section": 214,
-        "ok": 142,
-        "warn": 214,
-        "fail": 167,
-        "missing": 167,
-        "outdated": 214,
-        "info": 109,
-        "muted": 248,
-    },
-    "nord": {
-        "section": 110,
-        "ok": 108,
-        "warn": 180,
-        "fail": 174,
-        "missing": 174,
-        "outdated": 109,
-        "info": 110,
-        "muted": 146,
-    },
-    "tokyonight": {
-        "section": 111,
-        "ok": 114,
-        "warn": 221,
-        "fail": 203,
-        "missing": 203,
-        "outdated": 180,
-        "info": 117,
-        "muted": 146,
-    },
-    "noctalia": {
-        "section": 141,
-        "ok": 110,
-        "warn": 180,
-        "fail": 174,
-        "missing": 174,
-        "outdated": 109,
-        "info": 117,
-        "muted": 146,
-    },
-}
 ENV_PLACEHOLDER_PATTERN = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
 BRACED_ENV_REF_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 SIMPLE_ENV_REF_PATTERN = re.compile(r"(?<!\$)\$([A-Za-z_][A-Za-z0-9_]*)")
@@ -410,7 +333,7 @@ def load_common_data(repo_root: Path, config: dict[str, Any], include_local: boo
                         current_exts.append(ext)
                 common_data["extensions"] = current_exts
         except Exception as exc:
-            print(f"warning: failed to load local agent data: {exc}", file=sys.stderr)
+            print_error_line("warn", f"failed to load local agent data: {exc}")
 
     return common_data
 
@@ -564,54 +487,6 @@ def parse_agent_update_specs(raw: list[dict[str, str]]) -> list[AgentUpdateSpec]
         )
         for entry in raw
     ]
-
-
-def supports_nerd_font_output() -> bool:
-    if os.environ.get("OOOCONF_ASCII") == "1":
-        return False
-    if not sys.stdout.isatty():
-        return False
-    encoding = (sys.stdout.encoding or "").lower()
-    return "utf" in encoding
-
-
-def supports_color_output() -> bool:
-    mode = os.environ.get("OOOCONF_COLOR", "").lower()
-    if mode in {"0", "false", "never"} or os.environ.get("NO_COLOR") is not None:
-        return False
-    if mode in {"1", "true", "always"} or os.environ.get("FORCE_COLOR") is not None:
-        return True
-    return sys.stdout.isatty()
-
-
-def _theme_palette() -> dict[str, int]:
-    return THEME_COLORS.get(os.environ.get("OOOCONF_THEME", "default").lower(), THEME_COLORS["default"])
-
-
-def colorize(text: str, role: str, *, bold: bool = False) -> str:
-    if not supports_color_output():
-        return text
-    palette = _theme_palette()
-    color_num = palette.get(role)
-    color = f"\033[38;5;{color_num}m" if color_num is not None else ""
-    weight = ANSI_BOLD if bold else ""
-    return f"{weight}{color}{text}{ANSI_RESET}"
-
-
-def icon(name: str) -> str:
-    palette = NERD_FONT_ICONS if supports_nerd_font_output() else ASCII_ICONS
-    return palette[name]
-
-
-def print_section(title: str) -> None:
-    prefix = icon("section")
-    print(f"{colorize(prefix, 'section', bold=True)} {colorize(title, 'section', bold=True)}")
-    line = "─" * (len(title) + 2) if prefix != ASCII_ICONS["section"] else "-" * (len(title) + 3)
-    print(colorize(line, "muted"))
-
-
-def print_status_line(status: str, message: str) -> None:
-    print(f"{colorize(icon(status), status, bold=True)} {message}")
 
 
 def detect_clis(agent_clis: list[AgentCli]) -> list[dict[str, str | bool]]:
@@ -889,7 +764,7 @@ def sync_global_configs(
                         if not check_only:
                             mcp_file.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8")
                 except Exception as exc:
-                    print(f"warning: failed to sync mcp file {mcp_file}: {exc}", file=sys.stderr)
+                    print_error_line("warn", f"failed to sync mcp file {mcp_file}: {exc}")
             continue
 
         if target.mcp_skip:
@@ -914,7 +789,7 @@ def sync_global_configs(
                     if not check_only:
                         existing.write_text(updated, encoding="utf-8")
             except Exception as exc:
-                print(f"warning: failed to sync global markdown {existing}: {exc}", file=sys.stderr)
+                print_error_line("warn", f"failed to sync global markdown {existing}: {exc}")
             continue
 
         if target.format == "toml":
@@ -952,7 +827,7 @@ def sync_global_configs(
                     if not check_only:
                         existing.write_text(updated, encoding="utf-8")
             except Exception as exc:
-                print(f"warning: failed to sync global toml {existing}: {exc}", file=sys.stderr)
+                print_error_line("warn", f"failed to sync global toml {existing}: {exc}")
             continue
 
         if target.format != "json":
@@ -1021,7 +896,7 @@ def sync_global_configs(
                 if not check_only:
                     existing.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except Exception as exc:
-            print(f"warning: failed to sync global config {existing}: {exc}", file=sys.stderr)
+            print_error_line("warn", f"failed to sync global config {existing}: {exc}")
 
     return len(changed), changed
 
@@ -1036,9 +911,9 @@ def cmd_detect(config: dict[str, Any], json_output: bool, dry_run: bool = False)
             status = "ok" if row["installed"] else "missing"
             location = row["path"] or "-"
             print_status_line(status, f"{row['name']} ({row['command']})")
-            print(f"  path: {location}")
-        print("")
-        print(f"Summary: would detect {installed}/{len(rows)} configured agent CLIs.")
+            print_status_line("hint", f"  path: {location}")
+        print_spacer()
+        print_status_line("info", f"Summary: would detect {installed}/{len(rows)} configured agent CLIs.")
         return 0
 
     if json_output:
@@ -1049,9 +924,9 @@ def cmd_detect(config: dict[str, Any], json_output: bool, dry_run: bool = False)
             status = "ok" if row["installed"] else "missing"
             location = row["path"] or "-"
             print_status_line(status, f"{row['name']} ({row['command']})")
-            print(f"  path: {location}")
-        print("")
-        print(f"Summary: detected {installed}/{len(rows)} configured agent CLIs.")
+            print_status_line("hint", f"  path: {location}")
+        print_spacer()
+        print_status_line("info", f"Summary: detected {installed}/{len(rows)} configured agent CLIs.")
     return 0
 
 
@@ -1079,7 +954,7 @@ def cmd_sync(
     common_text = get_platform_common_text(repo_root, config)
 
     print_section("AGENTS Sync (dry-run)" if dry_run else "AGENTS Sync")
-    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
+    print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
 
     g_count = 0
     g_files = []
@@ -1097,7 +972,7 @@ def cmd_sync(
                 instructions="SPACE toggle  ENTER confirm  A all  N none  Q quit",
             )
             if selected is None:
-                print("Aborted.")
+                print_status_line("warn", "Aborted.")
                 return 1
             agents = selected
 
@@ -1107,12 +982,12 @@ def cmd_sync(
         if dry_run:
             merged_data = load_common_data(repo_root, config, include_local=True)
             managed_block_global = render_markdown_block(common_text, merged_data)
-            print(f"Global configs that would be updated: {len(config_targets)}")
-            print("Managed block preview:")
+            print_status_line("hint", f"Global configs that would be updated: {len(config_targets)}")
+            print_status_line("hint", "Managed block preview:")
             for line in managed_block_global.split("\n")[:20]:
-                print(f"  {line}")
+                print_status_line("hint", f"  {line}")
             if len(managed_block_global.split("\n")) > 20:
-                print("  ...")
+                print_status_line("hint", "  ...")
             return 0
 
         g_count, g_files = sync_global_configs(
@@ -1123,17 +998,17 @@ def cmd_sync(
             check_only,
             materialize_secrets=materialize_secrets,
         )
-        print(f"Global configs scanned: {len(config_targets)}")
-        print(f"Global configs needing updates: {g_count}")
+        print_status_line("hint", f"Global configs scanned: {len(config_targets)}")
+        print_status_line("hint", f"Global configs needing updates: {g_count}")
         if g_files:
             for file_path in g_files:
-                print(f"{icon('bullet')} {file_path}")
+                print_bullet(str(file_path))
     else:
-        print("Repo-specific sync is disabled. Use --global to sync global agent configs.")
+        print_status_line("info", "Repo-specific sync is disabled. Use --global to sync global agent configs.")
 
     if global_sync and g_count == 0:
-        print("")
-        print("All target files are up to date.")
+        print_spacer()
+        print_status_line("ok", "All target files are up to date.")
 
     return 1 if check_only and global_sync and g_count > 0 else 0
 
@@ -1152,7 +1027,7 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool, dry_
 
     if dry_run:
         print_section("AGENTS Doctor (dry-run)")
-        print("Agent Configs that would FAIL:")
+        print_status_line("info", "Agent Configs that would FAIL:")
         dry_failures = 0
         for result in config_results:
             target = result.target
@@ -1172,12 +1047,11 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool, dry_
         for row in missing_clis:
             print_status_line("missing", f"{row['name']} ({row['command']})")
             dry_failures += 1
-        print("")
-        print(f"Summary: {dry_failures} checks would fail.")
+        print_spacer()
+        print_status_line("info", f"Summary: {dry_failures} checks would fail.")
         return 0
 
-    print("Agent Configs")
-    print("-------------")
+    print_section("Agent Configs")
     for result in config_results:
         target = result.target
         if result.existing_path is None:
@@ -1191,26 +1065,25 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool, dry_
 
         if result.parse_error:
             print_status_line("fail", f"{target.name}: failed parsing {result.existing_path}")
-            print(f"  error: {result.parse_error}")
+            print_status_line("hint", f"  error: {result.parse_error}")
             continue
 
         if result.missing_mcp or result.missing_skills:
             print_status_line("fail", f"{target.name}: missing required markers in {result.existing_path}")
             if result.missing_mcp:
-                print(f"  missing MCPs: {', '.join(result.missing_mcp)}")
+                print_status_line("hint", f"  missing MCPs: {', '.join(result.missing_mcp)}")
             if result.missing_skills:
-                print(f"  missing skills: {', '.join(result.missing_skills)}")
+                print_status_line("hint", f"  missing skills: {', '.join(result.missing_skills)}")
             continue
         if result.shape_issues:
             print_status_line("fail", f"{target.name}: config shape mismatch in {result.existing_path}")
-            print(f"  issues: {', '.join(result.shape_issues)}")
+            print_status_line("hint", f"  issues: {', '.join(result.shape_issues)}")
             continue
 
         print_status_line("ok", f"{target.name}: required MCP/skills markers found in {result.existing_path}")
 
-    print("")
-    print("Agent CLIs")
-    print("----------")
+    print_spacer()
+    print_section("Agent CLIs")
     missing_clis = [row for row in rows if not row["installed"]]
     installed_clis = [row for row in rows if row["installed"]]
     for row in installed_clis:
@@ -1218,9 +1091,9 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool, dry_
     for row in missing_clis:
         print_status_line("missing", f"{row['name']} ({row['command']})")
 
-    print("")
+    print_spacer()
     strict_note = "strict config paths enabled" if strict_paths else "missing config paths are warnings"
-    print(f"Summary: {len(installed_clis)}/{len(rows)} CLIs installed, {strict_note}.")
+    print_status_line("info", f"Summary: {len(installed_clis)}/{len(rows)} CLIs installed, {strict_note}.")
 
     failed = failed or config_failures
 
@@ -1242,14 +1115,14 @@ def resolve_update_command(spec: AgentUpdateSpec) -> tuple[list[str], str]:
 def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
     specs = parse_agent_update_specs(config.get("agent_updates", []))
     if not specs:
-        print("No agent_updates configured.", file=sys.stderr)
+        print_error_line("fail", "No agent_updates configured.")
         return 1
 
     install_dir = repo_root / "home" / ".config" / "ooodnakov" / "agents" / "install"
     install_dir.mkdir(parents=True, exist_ok=True)
 
     print_section("Building Agent Install Scripts")
-    print(f"Target: {install_dir}")
+    print_status_line("hint", f"Target: {install_dir}")
 
     count = 0
     for spec in specs:
@@ -1296,7 +1169,8 @@ def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
         print_status_line("ok", f"{spec.name} ({spec.command})")
         count += 1
 
-    print(f"\nSummary: built install scripts for {count} agents.")
+    print_spacer()
+    print_status_line("info", f"Summary: built install scripts for {count} agents.")
     return 0
 
 
@@ -1361,9 +1235,9 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
     command_display = shlex.join(command)
     if check_only:
         print_status_line("ok", f"Plan: install {spec.name} via {runner}")
-        print(f"  command: {command_display}")
+        print_status_line("hint", f"  command: {command_display}")
         if spec.install_script:
-            print(f"  post-install: {spec.install_script}")
+            print_status_line("hint", f"  post-install: {spec.install_script}")
         return True, False
 
     resolved_runner = shutil.which(command[0])
@@ -1373,7 +1247,7 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
 
     command_exec = [resolved_runner, *command[1:]]
     print_status_line("info", f"Installing {spec.name} via {runner}")
-    print(f"  command: {command_display}")
+    print_status_line("hint", f"  command: {command_display}")
     try:
         subprocess.run(command_exec, check=True)
         print_status_line("ok", f"Successfully installed {spec.name}")
@@ -1418,7 +1292,7 @@ def cmd_install(
 ) -> int:
     specs = parse_agent_update_specs(config.get("agent_updates", []))
     if not specs:
-        print("No agent_updates configured.", file=sys.stderr)
+        print_error_line("fail", "No agent_updates configured.")
         return 1
 
     selected, errors = select_install_specs(specs, agent_queries, install_all=install_all, missing_only=missing_only)
@@ -1436,8 +1310,8 @@ def cmd_install(
             scope = f"missing selected agents ({scope})"
     else:
         scope = "missing configured agents"
-    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'install'}")
-    print(f"Scope: {scope}")
+    print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'install'}")
+    print_status_line("hint", f"Scope: {scope}")
 
     if not selected:
         print_status_line("ok", "No matching agents require installation.")
@@ -1454,9 +1328,9 @@ def cmd_install(
         else:
             failed += 1
 
-    print("")
+    print_spacer()
     action = "planned" if check_only else "installed"
-    print(f"Summary: {action} {planned_or_installed}/{attempted} agents; failed {failed}.")
+    print_status_line("info", f"Summary: {action} {planned_or_installed}/{attempted} agents; failed {failed}.")
     return 1 if failed else 0
 
 
@@ -1503,11 +1377,11 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
 
     specs = parse_agent_update_specs(config.get("agent_updates", []))
     if not specs:
-        print("No agent_updates configured.", file=sys.stderr)
+        print_error_line("fail", "No agent_updates configured.")
         return 1
 
     print_section("Agent CLI Updates (dry-run)" if dry_run else "Agent CLI Updates")
-    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'update'}")
+    print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'update'}")
 
     attempted = 0
     failed = 0
@@ -1534,8 +1408,8 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
         if check_only or dry_run:
             print_status_line("ok", f"Plan: update {spec.name} via {runner}")
             if version_before:
-                print(f"  current version: {version_before}")
-            print(f"  command: {command_display}")
+                print_status_line("hint", f"  current version: {version_before}")
+            print_status_line("hint", f"  command: {command_display}")
             continue
         resolved_runner = shutil.which(command[0])
         if not resolved_runner:
@@ -1545,7 +1419,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
 
         command_exec = [resolved_runner, *command[1:]]
         print_status_line("info", f"Updating {spec.name} via {runner}")
-        print(f"  command: {command_display}")
+        print_status_line("hint", f"  command: {command_display}")
 
         output_lines: list[str] = []
         process = subprocess.Popen(
@@ -1579,22 +1453,23 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
                 if "Already up to date" not in output_str and "is up to date" not in output_str:
                     print_status_line("warn", f"{spec.name} version did not change ({version_after}).")
                     if is_shadowed:
-                        print(
-                            f"  {colorize('Note:', 'warn')} active binary '{installed_path}' is SHADOWING the {runner} version."
+                        print_status_line(
+                            "hint",
+                            f"  Note: active binary '{installed_path}' is SHADOWING the {runner} version.",
                         )
-                        print(f"  Expected in: {runner_bin_dir}")
+                        print_status_line("hint", f"  Expected in: {runner_bin_dir}")
                 else:
                     if is_shadowed:
                         print_status_line("warn", f"{spec.name} is up to date in {runner}, but SHADOWED on PATH.")
-                        print(f"  Active: {installed_path}")
-                        print(f"  Try: pnpm remove -g {spec.package} (if installed via pnpm)")
+                        print_status_line("hint", f"  Active: {installed_path}")
+                        print_status_line("hint", f"  Try: pnpm remove -g {spec.package} (if installed via pnpm)")
                     else:
                         print_status_line("ok", f"{spec.name} is already up to date ({version_after})")
             else:
                 if is_shadowed:
                     print_status_line("warn", f"{spec.name} updated, but still SHADOWED on PATH.")
-                    print(f"  Active version: {version_after}")
-                    print(f"  Active path: {installed_path}")
+                    print_status_line("hint", f"  Active version: {version_after}")
+                    print_status_line("hint", f"  Active path: {installed_path}")
                 else:
                     print_status_line(
                         "ok", f"{spec.name} updated: {version_before or 'unknown'} -> {version_after or 'unknown'}"
@@ -1603,10 +1478,12 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
         else:
             print_status_line("fail", f"{spec.name} update failed via {runner}")
             if output_lines:
-                print("  (combined stdout/stderr shown above)")
+                print_status_line("hint", "  (combined stdout/stderr shown above)")
             failed += 1
-    print("")
-    print(f"Summary: updated {updated}/{attempted} attempted; skipped {skipped} missing; failed {failed}.")
+    print_spacer()
+    print_status_line(
+        "info", f"Summary: updated {updated}/{attempted} attempted; skipped {skipped} missing; failed {failed}."
+    )
     return 1 if failed else 0
 
 
@@ -1616,7 +1493,7 @@ def cmd_skills_sync(
     common_data = load_common_data(repo_root, config, include_local=True)
     skill_specs = common_data.get("skill_specs", [])
     if not skill_specs:
-        print("No skill_specs configured.", file=sys.stderr)
+        print_error_line("fail", "No skill_specs configured.")
         return 0
 
     # Get unique agent keys from skill specs
@@ -1637,9 +1514,9 @@ def cmd_skills_sync(
             return 0
 
     print_section("Agent Skills Sync (dry-run)" if dry_run else "Agent Skills Sync")
-    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
+    print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
     if agents:
-        print(f"Agents: {', '.join(agents)}")
+        print_status_line("hint", f"Agents: {', '.join(agents)}")
 
     attempted = 0
     failed = 0
@@ -1691,11 +1568,11 @@ def cmd_skills_sync(
         command_display = shlex.join(command)
         if check_only or dry_run:
             print_status_line("ok", f"Plan: {name} for {agent_cli.name}")
-            print(f"  command: {command_display}")
+            print_status_line("hint", f"  command: {command_display}")
             continue
 
         print_status_line("ok", f"Syncing {name} for {agent_cli.name}...")
-        print(f"  command: {command_display}")
+        print_status_line("hint", f"  command: {command_display}")
         try:
             subprocess.run(command, check=True, shell=os.name == "nt")
             print_status_line("ok", f"Successfully synced {name}")
@@ -1704,8 +1581,8 @@ def cmd_skills_sync(
             print_status_line("fail", f"Failed to sync {name}: {exc}")
             failed += 1
 
-    print("")
-    print(f"Summary: synced {synced}/{attempted} attempted; skipped {skipped}; failed {failed}.")
+    print_spacer()
+    print_status_line("info", f"Summary: synced {synced}/{attempted} attempted; skipped {skipped}; failed {failed}.")
     return 1 if failed else 0
 
 
@@ -1717,20 +1594,20 @@ def cmd_skills_view(json_output: bool, check_only: bool) -> int:
     print_section("Agent Skills View")
     if check_only:
         print_status_line("ok", "Plan: list global shared skills catalog")
-        print(f"  command: {command_display}")
+        print_status_line("hint", f"  command: {command_display}")
         return 0
 
     if not shutil.which("pnpm"):
         print_status_line("missing", "pnpm not found; cannot run skills catalog view.")
-        print("  install pnpm first, then rerun: oooconf agents skills view")
+        print_status_line("hint", "  install pnpm first, then rerun: oooconf agents skills view")
         return 1
 
     print_status_line("info", "Listing global shared skills catalog via pnpm dlx")
-    print(f"  command: {command_display}")
+    print_status_line("hint", f"  command: {command_display}")
     result = subprocess.run(command, shell=os.name == "nt")
     if result.returncode != 0:
         print_status_line("fail", "skills list command failed.")
-        print("  ensure the `skills` package is reachable from pnpm dlx in your environment.")
+        print_status_line("hint", "  ensure the `skills` package is reachable from pnpm dlx in your environment.")
         return result.returncode
     return 0
 
@@ -1758,7 +1635,7 @@ def cmd_mcp_add(
         payload = sys.stdin.read()
     else:
         prompt = "multiple MCP JSON entries" if allow_multi else "single MCP JSON object"
-        print(f"Paste {prompt} and press Ctrl-D:", file=sys.stderr)
+        print_error_line("hint", f"Paste {prompt} and press Ctrl-D:")
         payload = sys.stdin.read()
     if not payload.strip():
         print_status_line("fail", "No MCP JSON payload provided.")
@@ -2140,11 +2017,11 @@ def cmd_provider_sync(
             return 0
 
     print_section("Agent Provider Sync (dry-run)" if dry_run else "Agent Provider Sync")
-    print(f"Provider: {provider}")
-    print(f"Region: {region}")
-    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
+    print_status_line("hint", f"Provider: {provider}")
+    print_status_line("hint", f"Region: {region}")
+    print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
     if agents:
-        print(f"Agents: {', '.join(agents)}")
+        print_status_line("hint", f"Agents: {', '.join(agents)}")
 
     if materialize_secrets and not os.environ.get(MINIMAX_ENV_KEY):
         print_status_line("fail", f"{MINIMAX_ENV_KEY} is not set; refusing to materialize an empty API key.")
@@ -2170,15 +2047,22 @@ def cmd_provider_sync(
         if changed:
             changed_paths.append(path)
 
-    print("")
-    print(f"Summary: {len(changed_paths)} supported provider config(s) {'would change' if check_only else 'changed'}.")
+    print_spacer()
+    print_status_line(
+        "info",
+        f"Summary: {len(changed_paths)} supported provider config(s) {'would change' if check_only else 'changed'}.",
+    )
     if not materialize_secrets:
-        print(f"Hint: export {MINIMAX_ENV_KEY} in your local env before launching Codex.")
-        print(
-            f"Hint: Claude Code requires ANTHROPIC_AUTH_TOKEN to contain the MiniMax key; export ANTHROPIC_AUTH_TOKEN=${MINIMAX_ENV_KEY} before launching Claude or rerun with --materialize-secrets."
+        print_status_line("hint", f"Hint: export {MINIMAX_ENV_KEY} in your local env before launching Codex.")
+        print_status_line(
+            "hint",
+            "Hint: Claude Code requires ANTHROPIC_AUTH_TOKEN to contain the MiniMax key; export "
+            f"ANTHROPIC_AUTH_TOKEN=${MINIMAX_ENV_KEY} before launching Claude or rerun with --materialize-secrets.",
         )
-        print(
-            "Hint: OpenCode stores provider credentials via `opencode auth login --provider minimax`; rerun with --materialize-secrets only if you intentionally want the key written to opencode.json."
+        print_status_line(
+            "hint",
+            "Hint: OpenCode stores provider credentials via `opencode auth login --provider minimax`; rerun with "
+            "--materialize-secrets only if you intentionally want the key written to opencode.json.",
         )
     return 1 if check_only and changed_paths else 0
 
@@ -2191,7 +2075,7 @@ def cmd_mcp_sync(
     managed_mcps = {name: cfg for name, cfg in mcp_servers.items() if "source" in cfg}
 
     if not managed_mcps:
-        print("No managed MCP servers (with 'source') configured.")
+        print_status_line("info", "No managed MCP servers (with 'source') configured.")
         return 0
 
     mcp_names = sorted(managed_mcps.keys())
@@ -2211,9 +2095,9 @@ def cmd_mcp_sync(
             return 0
 
     print_section("MCP Sync (dry-run)" if dry_run else "MCP Sync")
-    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
+    print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
     if agents:
-        print(f"Agents: {', '.join(agents)}")
+        print_status_line("hint", f"Agents: {', '.join(agents)}")
 
     attempted = 0
     failed = 0
@@ -2229,13 +2113,13 @@ def cmd_mcp_sync(
 
         if dry_run:
             if not mcp_dir.exists():
-                print(f"  {icon('bullet')} Would clone into {mcp_dir}")
+                print_status_line("hint", f"  Would clone into {mcp_dir}")
             else:
-                print(f"  {icon('bullet')} Would pull latest changes in {mcp_dir}")
+                print_status_line("hint", f"  Would pull latest changes in {mcp_dir}")
             if install_cmd:
-                print(f"  {icon('bullet')} Would run install: {install_cmd}")
+                print_status_line("hint", f"  Would run install: {install_cmd}")
             else:
-                print(f"  {icon('bullet')} No install needed")
+                print_status_line("hint", "  No install needed")
             continue
 
         if not mcp_dir.parent.exists():
@@ -2243,7 +2127,7 @@ def cmd_mcp_sync(
                 mcp_dir.parent.mkdir(parents=True, exist_ok=True)
 
         if not mcp_dir.exists():
-            print(f"  {icon('bullet')} Cloning into {mcp_dir}...")
+            print_status_line("hint", f"  Cloning into {mcp_dir}...")
             if check_only:
                 synced += 1
                 continue
@@ -2254,7 +2138,7 @@ def cmd_mcp_sync(
                 failed += 1
                 continue
         else:
-            print(f"  {icon('bullet')} Pulling latest changes in {mcp_dir}...")
+            print_status_line("hint", f"  Pulling latest changes in {mcp_dir}...")
             if not check_only:
                 try:
                     subprocess.run(["git", "-C", str(mcp_dir), "pull", "--ff-only"], check=True)
@@ -2262,7 +2146,7 @@ def cmd_mcp_sync(
                     print_status_line("warn", f"Failed to pull {name} (continuing): {exc}")
 
         if install_cmd:
-            print(f"  {icon('bullet')} Running install: {install_cmd}")
+            print_status_line("hint", f"  Running install: {install_cmd}")
             if check_only:
                 synced += 1
                 continue
@@ -2283,8 +2167,8 @@ def cmd_mcp_sync(
             print_status_line("ok", f"Synced {name} (no install needed)")
             synced += 1
 
-    print("")
-    print(f"Summary: synced {synced}/{attempted} managed MCPs; failed {failed}.")
+    print_spacer()
+    print_status_line("info", f"Summary: synced {synced}/{attempted} managed MCPs; failed {failed}.")
     return 1 if failed else 0
 
 
@@ -2321,11 +2205,11 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool, dry_
     installed_agents = {row["command"] for row in rows if row["installed"]}
 
     if not installed_agents:
-        print("No agents detected; nothing to initialize.")
+        print_status_line("info", "No agents detected; nothing to initialize.")
         return 0
 
     print_section("RTK Init (dry-run)" if dry_run else "RTK Init")
-    print(f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'init'}")
+    print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'init'}")
 
     # Mapping of agent commands to rtk init flags
     # rtk supports: claude (default), cursor, gemini, opencode, codex
@@ -2347,7 +2231,7 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool, dry_
             cmd = ["rtk", "init", "--global", *flags]
             cmd_display = shlex.join(cmd)
             print_status_line("info", f"Initializing RTK for {agent_cmd}")
-            print(f"  command: {cmd_display}")
+            print_status_line("hint", f"  command: {cmd_display}")
 
             if check_only or dry_run:
                 synced += 1
@@ -2361,8 +2245,8 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool, dry_
                 print_status_line("fail", f"Failed to initialize {agent_cmd}: {exc}")
                 failed += 1
 
-    print("")
-    print(f"Summary: initialized RTK for {synced}/{attempted} detected agents; failed {failed}.")
+    print_spacer()
+    print_status_line("info", f"Summary: initialized RTK for {synced}/{attempted} detected agents; failed {failed}.")
     return 1 if failed else 0
 
 
@@ -2388,7 +2272,7 @@ if __name__ == "__main__":
     try:
         cfg = load_config(config_path)
     except Exception as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        print_error_line("fail", f"{exc}")
         raise SystemExit(1)
 
     if args.command == "detect":

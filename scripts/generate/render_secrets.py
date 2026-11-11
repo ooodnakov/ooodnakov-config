@@ -16,7 +16,7 @@ SCRIPTS_CLI_DIR = Path(__file__).resolve().parents[1] / "cli"
 if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
 
-from cli_ui import bullet, section, status  # noqa: E402
+from cli_ui import bullet, section, spacer, status  # noqa: E402
 
 DEFAULT_TEMPLATE_RELATIVE_PATH = Path("home/.config/ooodnakov/secrets/env.template")
 DEFAULT_CONFIG_RELATIVE_PATH = Path(".config/ooodnakov")
@@ -612,7 +612,7 @@ def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[t
                     pass  # will error during resolution with proper context
         if item_ids:
             total_ids = len(item_ids)
-            print(f"Fetching {total_ids} Bitwarden item(s) in batch...", flush=True)
+            status("hint", f"Fetching {total_ids} Bitwarden item(s) in batch...")
             cache = build_item_cache(item_ids)
             missing_item_ids = item_ids - set(cache.keys())
             if missing_item_ids:
@@ -621,7 +621,7 @@ def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[t
     resolved_entries: list[tuple[str, str]] = []
     total = len(entries)
     for index, entry in enumerate(entries, start=1):
-        print(f"Resolving {index}/{total}: {entry.key}", flush=True)
+        status("hint", f"Resolving {index}/{total}: {entry.key}")
         resolved_entries.append((entry.key, resolve_value(entry, backend, cache)))
     return resolved_entries
 
@@ -825,9 +825,9 @@ def prompt_login_method(default_method: str) -> str:
     }
     default_choice = "2" if default_method == "apikey" else "1"
 
-    print("Choose Bitwarden login method:")
-    print("  1) email/password")
-    print("  2) clientid/clientsecret (API key)")
+    status("info", "Choose Bitwarden login method:")
+    status("hint", "  1) email/password")
+    status("hint", "  2) clientid/clientsecret (API key)")
 
     while True:
         try:
@@ -945,7 +945,7 @@ def list_command(args: argparse.Namespace, repo_root: Path) -> int:
 
     section("Secrets List")
     status("info", f"Template: {template_path}")
-    print()
+    spacer()
 
     for entry in entries:
         is_bw_ref = entry.value.startswith("bw://")
@@ -981,7 +981,7 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
     section("Secrets Status")
     status("info", f"Template: {template_path}")
     status("info", f"Backend: {os.environ.get('OOODNAKOV_SECRETS_BACKEND', 'bw')}")
-    print()
+    spacer()
 
     for local_path in (zsh_path, ps1_path):
         if not local_path.exists():
@@ -1011,7 +1011,7 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
     else:
         status("warn", "Vault status: no BW_SESSION available")
 
-    print()
+    spacer()
     if problems:
         section("Issues")
         for problem in problems:

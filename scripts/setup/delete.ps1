@@ -11,6 +11,38 @@ $HomeDir = if ($env:HOME) { $env:HOME } else { $HOME }
 $ConfigHome = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HomeDir ".config" }
 $BackupRoot = if ($env:OOODNAKOV_BACKUP_ROOT) { $env:OOODNAKOV_BACKUP_ROOT } else { Join-Path $HomeDir ".local/state/ooodnakov-config/backups" }
 
+function Test-UiNerdFont {
+    if ($env:OOOCONF_ASCII -eq "1") { return $false }
+    if ([Console]::IsOutputRedirected) { return $false }
+    return ([Console]::OutputEncoding.WebName -match "utf")
+}
+
+function Get-UiIcon {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("ok", "info", "section", "hint")]
+        [string]$Role
+    )
+
+    if (Test-UiNerdFont) {
+        $codepoint = switch ($Role) {
+            "ok" { 0xF00C }
+            "info" { 0xF05A }
+            "section" { 0xF054 }
+            "hint" { 0xF061 }
+        }
+        return [char]::ConvertFromUtf32($codepoint)
+    }
+
+    $ascii = switch ($Role) {
+        "ok" { "[ok]" }
+        "info" { "[info]" }
+        "section" { "==" }
+        "hint" { "->" }
+    }
+    return $ascii
+}
+
 function Write-UiLine {
     param(
         [Parameter(Mandatory = $true)]
@@ -21,25 +53,18 @@ function Write-UiLine {
         [string]$Message
     )
 
+    $iconText = Get-UiIcon -Role $Role
     $isInteractive = [Environment]::UserInteractive
     if (-not $isInteractive -or $env:NO_COLOR) {
-        $icon = switch ($Role) {
-            "ok" { "✓" }
-            "info" { "ℹ" }
-            "section" { "▸" }
-            "hint" { "💡" }
-            default { "✗" }
-        }
-        Write-Output "$icon $Message"
+        Write-Output "$iconText $Message"
         return
     }
 
     $iconCode = switch ($Role) {
-        "ok" { "`e[1;38;5;78m✓`e[0m" }
-        "info" { "`e[1;38;5;117mℹ`e[0m" }
-        "section" { "`e[1;38;5;111m▸`e[0m" }
-        "hint" { "`e[1;38;5;220m💡`e[0m" }
-        default { "`e[1;38;5;203m✗`e[0m" }
+        "ok" { "`e[1;38;5;78m$iconText`e[0m" }
+        "info" { "`e[1;38;5;117m$iconText`e[0m" }
+        "section" { "`e[1;38;5;111m$iconText`e[0m" }
+        "hint" { "`e[1;38;5;220m$iconText`e[0m" }
     }
 
     $textColorCode = switch ($Role) {

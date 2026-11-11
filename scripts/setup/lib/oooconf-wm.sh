@@ -25,7 +25,7 @@ EOF
     set)
       if [ -z "${2:-}" ]; then
         visible_error "Usage: oooconf wm set <wm>"
-        printf '%s\n' "Available: ${KNOWN_WM_MODES[*]}"
+        ui_line info "Available: ${KNOWN_WM_MODES[*]}"
         return 1
       fi
       set_default_wm "$2"
@@ -161,7 +161,7 @@ set_default_wm() {
     komorebi|glazewm|aerospace|omniwm) ;;
     *)
       visible_error "Unknown window manager: $wm"
-      printf '%s\n' "Available: ${KNOWN_WM_MODES[*]}"
+      ui_line info "Available: ${KNOWN_WM_MODES[*]}"
       return 1
       ;;
   esac

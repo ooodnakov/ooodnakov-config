@@ -83,16 +83,16 @@ while [ "$#" -gt 0 ]; do
     exit 0
     ;;
   --*)
-    echo "unknown option: $1" >&2
+    ui_error fail "unknown option: $1"
     usage >&2
     exit 1
     ;;
   *)
     if ! optional_dependency_exists_any "$1"; then
-      echo "unknown dependency key: $1" >&2
+      ui_error fail "unknown dependency key: $1"
       suggestion="$(suggest_dependency_key "$1")"
       if [ -n "$suggestion" ]; then
-        echo "Did you mean: $suggestion" >&2
+        ui_error hint "Did you mean: $suggestion"
       fi
       exit 1
     fi
@@ -152,7 +152,7 @@ deps)
       _deps_gum_rc=$?
       case $_deps_gum_rc in
       2)
-        echo "All optional dependencies are already present."
+        ui_line ok "All optional dependencies are already present."
         exit 0
         ;;
       3)
@@ -167,7 +167,7 @@ deps)
           _deps_fallback_rc=$?
           case $_deps_fallback_rc in
           2)
-            echo "All optional dependencies are already present."
+            ui_line ok "All optional dependencies are already present."
             exit 0
             ;;
           3)
@@ -175,20 +175,20 @@ deps)
             exit 0
             ;;
           *)
-            echo "No optional dependencies selected." >&2
+            ui_error fail "No optional dependencies selected."
             exit 1
             ;;
           esac
         fi
         ;;
       *)
-        echo "No optional dependencies selected." >&2
+        ui_error fail "No optional dependencies selected."
         exit 1
         ;;
       esac
     fi
   elif [ -z "$selected_optional_key_csv" ] && ! is_interactive; then
-    echo "oooconf deps needs explicit dependency keys in non-interactive mode." >&2
+    ui_error fail "oooconf deps needs explicit dependency keys in non-interactive mode."
     exit 1
   fi
   INSTALL_OPTIONAL=always
@@ -203,7 +203,7 @@ minimal)
 completions) ;;
 link)
   if ! command -v python3 >/dev/null 2>&1; then
-    echo "oooconf link requires python3" >&2
+    ui_error fail "oooconf link requires python3"
     exit 1
   fi
   if [ "$DRY_RUN" -eq 1 ]; then
@@ -254,7 +254,7 @@ esac
 
 if [ "$COMMAND" = "install" ] || [ "$COMMAND" = "update" ]; then
   if ! python3 "$OPERATION_PLAN" --repo-root "$REPO_ROOT" --scope links --emit-links >/dev/null; then
-    echo "Managed link plan validation failed before setup mutation." >&2
+    ui_error fail "Managed link plan validation failed before setup mutation."
     exit 1
   fi
 fi

@@ -22,7 +22,7 @@ function Install-Fonts {
     Step-Progress -Status "Installing bundled fonts"
     $fontDir = Join-Path $RepoRoot "fonts/meslo"
     if (-not (Test-Path $fontDir)) {
-        Write-Warning "Font directory not found at $fontDir"
+        Write-UiError -Role warn -Message "Font directory not found at $fontDir"
         return
     }
 
@@ -33,7 +33,7 @@ function Install-Fonts {
     foreach ($font in $fonts) {
         $targetPath = Join-Path $env:SystemRoot "Fonts\$($font.Name)"
         if (-not (Test-Path $targetPath)) {
-            Write-Output "Installing font: $($font.Name)"
+            Write-UiLine -Role info -Message "Installing font: $($font.Name)"
             $fontsFolder.CopyHere($font.FullName, 0x10)
         } else {
             Write-Verbose "Font already installed: $($font.Name)"
@@ -103,7 +103,7 @@ function Test-DependencyStatus {
 
     if (-not $DryRun -and (Test-VerboseMode)) {
         if (Test-Interactive) {
-            Write-Host "[-] Checking $SummaryName..." -NoNewline
+            Write-Host "$(Format-UiText -Text (Get-UiIcon hint) -Role hint -Bold) Checking $SummaryName..." -NoNewline
         }
     }
 
@@ -117,9 +117,9 @@ function Test-DependencyStatus {
     if ($isPresent) {
         if (-not $DryRun) {
             if (Test-Interactive -and (Test-VerboseMode)) {
-                Write-Host "`r[ok] $SummaryName is present.             "
+                Write-Host ("`r$(Format-UiText -Text (Get-UiIcon ok) -Role ok -Bold) $SummaryName is present.             ")
             } else {
-                Write-Output "[ok] $SummaryName is present."
+                Write-UiLine -Role ok -Message "$SummaryName is present."
             }
         }
         Add-DependencySummary "${SummaryName}: present"
@@ -257,7 +257,7 @@ function Install-PackageIfMissing {
     if ($WingetId -and (Get-Command winget -ErrorAction SilentlyContinue)) {
         if (Confirm-Install "Install $Description with winget?") {
             if ($DryRun) {
-                Write-Output "[dry-run] winget install --exact --id $WingetId"
+                Write-UiLine -Role hint -Message "[dry-run] winget install --exact --id $WingetId"
                 Add-DependencySummary "${SummaryName}: install preview via winget"
                 return $false
             }
@@ -286,7 +286,7 @@ function Install-PackageIfMissing {
     if ($ChocoId -and (Get-Command choco -ErrorAction SilentlyContinue)) {
         if (Confirm-Install "Install $Description with Chocolatey?") {
             if ($DryRun) {
-                Write-Output "[dry-run] choco install $ChocoId -y"
+                Write-UiLine -Role hint -Message "[dry-run] choco install $ChocoId -y"
                 Add-DependencySummary "${SummaryName}: install preview via choco"
                 return $false
             }
@@ -315,7 +315,7 @@ function Install-PackageIfMissing {
     if ($ScoopPackage -and (Get-Command scoop -ErrorAction SilentlyContinue)) {
         if (Confirm-Install "Install $Description with Scoop?") {
             if ($DryRun) {
-                Write-Output "[dry-run] scoop install $ScoopPackage"
+                Write-UiLine -Role hint -Message "[dry-run] scoop install $ScoopPackage"
                 Add-DependencySummary "${SummaryName}: install preview via scoop"
                 return $false
             }
@@ -366,9 +366,9 @@ function Install-PackageIfMissing {
 
             if ($DryRun) {
                 if ($CargoGitUrl -match "^https?://" -or $CargoGitUrl -match "^git@") {
-                    Write-Output "[dry-run] cargo install --locked --git $CargoGitUrl"
+                    Write-UiLine -Role hint -Message "[dry-run] cargo install --locked --git $CargoGitUrl"
                 } else {
-                    Write-Output "[dry-run] cargo install $CargoGitUrl"
+                    Write-UiLine -Role hint -Message "[dry-run] cargo install $CargoGitUrl"
                 }
                 Add-DependencySummary "${SummaryName}: install preview via cargo"
                 return $false
@@ -500,7 +500,7 @@ function Install-GitBashZshIfMissing {
 
     $gitRoot = Get-GitForWindowsRoot
     if (-not $gitRoot) {
-        Write-Warning "Git for Windows installation not found; cannot install zsh for Git Bash."
+        Write-UiError -Role warn -Message "Git for Windows installation not found; cannot install zsh for Git Bash."
         Add-DependencySummary "zsh: skipped (Git for Windows not found)"
         return $false
     }
@@ -522,9 +522,9 @@ function Install-GitBashZshIfMissing {
     $assetName = Split-Path -Leaf $url
 
     if ($DryRun) {
-        Write-Output "[dry-run] Download $url"
-        Write-Output "[dry-run] Extract $assetName -> staging"
-        Write-Output "[dry-run] Merge staged usr/etc -> $gitRoot (may require administrator approval)"
+        Write-UiLine -Role hint -Message "[dry-run] Download $url"
+        Write-UiLine -Role hint -Message "[dry-run] Extract $assetName -> staging"
+        Write-UiLine -Role hint -Message "[dry-run] Merge staged usr/etc -> $gitRoot (may require administrator approval)"
         Add-DependencySummary "zsh: install preview for Git Bash"
         return $false
     }
@@ -587,7 +587,7 @@ function Install-GitBashZshIfMissing {
                     throw "elevated merge exited with code $($process.ExitCode)"
                 }
             } catch {
-                Write-Warning "Administrator approval was declined or the merge failed; zsh remains staged at $stagingRoot."
+                Write-UiError -Role warn -Message "Administrator approval was declined or the merge failed; zsh remains staged at $stagingRoot."
                 throw
             }
         }
@@ -655,7 +655,7 @@ function Install-GitHubReleaseDependencyIfMissing {
     # tracked binaries when --latest is requested.
     if ($Spec.Key -ne "bin" -and (Get-Command bin -ErrorAction SilentlyContinue)) {
         if ($DryRun) {
-            Write-Output "[dry-run] bin install --name $assetName github.com/$repo/releases/tag/v$version"
+            Write-UiLine -Role hint -Message "[dry-run] bin install --name $assetName github.com/$repo/releases/tag/v$version"
             return $true
         }
         $res = Invoke-ActionWithSpinner -Description "Installing $Description with bin" -Action {
@@ -681,9 +681,9 @@ function Install-GitHubReleaseDependencyIfMissing {
     $targetBinary = Join-Path $LocalBinDir $binaryFile
 
     if ($DryRun) {
-        Write-Output "[dry-run] Download $releaseUrl"
-        Write-Output "[dry-run] Extract $archivePath -> $installRoot"
-        Write-Output "[dry-run] Copy $binaryFile -> $targetBinary"
+        Write-UiLine -Role hint -Message "[dry-run] Download $releaseUrl"
+        Write-UiLine -Role hint -Message "[dry-run] Extract $archivePath -> $installRoot"
+        Write-UiLine -Role hint -Message "[dry-run] Copy $binaryFile -> $targetBinary"
         Add-DependencySummary "${SummaryName}: install preview via GitHub release"
         return $false
     }
@@ -766,7 +766,7 @@ function Install-NodeIfMissing {
 
     if ($IsWindows -and (Get-Command winget -ErrorAction SilentlyContinue)) {
         if ($DryRun) {
-            Write-Output "[dry-run] winget install --exact --id OpenJS.NodeJS.LTS --version $nodeVer --accept-package-agreements --accept-source-agreements --silent"
+            Write-UiLine -Role hint -Message "[dry-run] winget install --exact --id OpenJS.NodeJS.LTS --version $nodeVer --accept-package-agreements --accept-source-agreements --silent"
             Add-DependencySummary "node: install preview via winget"
             return $true
         }
@@ -833,16 +833,16 @@ function Install-PnpmIfMissing {
     if (-not $pnpmVer) { $pnpmVer = "10.18.3" }  # fallback only during transition
 
     if ($DryRun) {
-        Write-Output "[dry-run] corepack enable --install-directory $pnpmHome pnpm"
-        Write-Output "[dry-run] corepack prepare pnpm@$pnpmVer --activate"
+        Write-UiLine -Role hint -Message "[dry-run] corepack enable --install-directory $pnpmHome pnpm"
+        Write-UiLine -Role hint -Message "[dry-run] corepack prepare pnpm@$pnpmVer --activate"
         Add-DependencySummary "pnpm: install preview via corepack"
         return $false
     }
 
     if (Get-Command corepack -ErrorAction SilentlyContinue) {
         if ($DryRun) {
-            Write-Output "[dry-run] corepack enable --install-directory $pnpmHome pnpm"
-            Write-Output "[dry-run] corepack prepare pnpm@$pnpmVer --activate"
+            Write-UiLine -Role hint -Message "[dry-run] corepack enable --install-directory $pnpmHome pnpm"
+            Write-UiLine -Role hint -Message "[dry-run] corepack prepare pnpm@$pnpmVer --activate"
             Add-DependencySummary "pnpm: install preview via corepack"
             return $false
         }
@@ -854,7 +854,7 @@ function Install-PnpmIfMissing {
         } -ArgumentList $pnpmHome, $pnpmVer
     } elseif (Get-Command npm -ErrorAction SilentlyContinue) {
         if ($DryRun) {
-            Write-Output "[dry-run] npm install --global pnpm@$pnpmVer --prefix $pnpmHome"
+            Write-UiLine -Role hint -Message "[dry-run] npm install --global pnpm@$pnpmVer --prefix $pnpmHome"
             Add-DependencySummary "pnpm: install preview via npm"
             return $false
         }
@@ -893,9 +893,9 @@ function Install-BunIfMissing {
     $bunInstall = if ($env:BUN_INSTALL) { $env:BUN_INSTALL } else { Join-Path $HomeDir ".bun" }
 
     if ($DryRun) {
-        Write-Output "[dry-run] Download https://bun.sh/install.ps1"
-        Write-Output "[dry-run] Install Bun $bunVer into $bunInstall"
-        Write-Output "[dry-run] Add $bunInstall/bin to PATH"
+        Write-UiLine -Role hint -Message "[dry-run] Download https://bun.sh/install.ps1"
+        Write-UiLine -Role hint -Message "[dry-run] Install Bun $bunVer into $bunInstall"
+        Write-UiLine -Role hint -Message "[dry-run] Add $bunInstall/bin to PATH"
         Add-DependencySummary "bun: install preview via official install script"
         return $true
     }
@@ -937,7 +937,7 @@ function Install-PoshGitIfMissing {
     }
 
     if ($DryRun) {
-        Write-Output "[dry-run] Install-Module posh-git -Scope CurrentUser -Force"
+        Write-UiLine -Role hint -Message "[dry-run] Install-Module posh-git -Scope CurrentUser -Force"
         Add-DependencySummary "posh-git: install preview via PowerShell Gallery"
         return $false
     }
@@ -978,7 +978,7 @@ function Install-PSFzfIfMissing {
     }
 
     if ($DryRun) {
-        Write-Output "[dry-run] Install-Module PSFzf -Scope CurrentUser -Force"
+        Write-UiLine -Role hint -Message "[dry-run] Install-Module PSFzf -Scope CurrentUser -Force"
         Add-DependencySummary "psfzf: install preview via PowerShell Gallery"
         return $false
     }
@@ -1025,9 +1025,9 @@ function Install-RtkIfMissing {
     $targetBinary = Join-Path $LocalBinDir "rtk.exe"
 
     if ($DryRun) {
-        Write-Output "[dry-run] Download $releaseUrl"
-        Write-Output "[dry-run] Expand-Archive $archivePath -> $installRoot"
-        Write-Output "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Write-UiLine -Role hint -Message "[dry-run] Download $releaseUrl"
+        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $archivePath -> $installRoot"
+        Write-UiLine -Role hint -Message "[dry-run] Copy $sourceBinary -> $targetBinary"
         Add-DependencySummary "rtk: install preview via official archive"
         return $false
     }
@@ -1107,9 +1107,9 @@ function Install-NeovimIfMissing {
     $targetBinary = Join-Path $LocalBinDir "nvim.exe"
 
     if ($DryRun) {
-        Write-Output "[dry-run] Download $releaseUrl"
-        Write-Output "[dry-run] Expand-Archive $archivePath -> $installRoot"
-        Write-Output "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Write-UiLine -Role hint -Message "[dry-run] Download $releaseUrl"
+        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $archivePath -> $installRoot"
+        Write-UiLine -Role hint -Message "[dry-run] Copy $sourceBinary -> $targetBinary"
         Add-DependencySummary "nvim: install preview via official GitHub release"
         return $false
     }
@@ -1163,7 +1163,7 @@ function Install-TectonicIfMissing {
         return $false
     }
     if ($DryRun) {
-        Write-Output "[dry-run] cargo install tectonic --version $version --locked"
+        Write-UiLine -Role hint -Message "[dry-run] cargo install tectonic --version $version --locked"
         Add-DependencySummary "tectonic: install preview via cargo"
         return $false
     }
@@ -1201,9 +1201,9 @@ function Install-BitwardenCliIfMissing {
     $targetBinary = Join-Path $LocalBinDir "bw.exe"
 
     if ($DryRun) {
-        Write-Output "[dry-run] Download $releaseUrl"
-        Write-Output "[dry-run] Expand-Archive $archivePath -> $installRoot"
-        Write-Output "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Write-UiLine -Role hint -Message "[dry-run] Download $releaseUrl"
+        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $archivePath -> $installRoot"
+        Write-UiLine -Role hint -Message "[dry-run] Copy $sourceBinary -> $targetBinary"
         Add-DependencySummary "bw: install preview via official archive"
         return $false
     }
@@ -1257,7 +1257,7 @@ function Install-CargoIfMissing {
 
     if (Get-Command winget -ErrorAction SilentlyContinue) {
         if ($DryRun) {
-            Write-Output "[dry-run] winget install Rustlang.Rustup"
+            Write-UiLine -Role hint -Message "[dry-run] winget install Rustlang.Rustup"
             Add-DependencySummary "cargo: install preview via winget"
             return $false
         }
@@ -1318,7 +1318,7 @@ function Install-DuaIfMissing {
     }
 
     if ($DryRun) {
-        Write-Output "[dry-run] cargo install --locked --git $duaRepoUrl dua-cli"
+        Write-UiLine -Role hint -Message "[dry-run] cargo install --locked --git $duaRepoUrl dua-cli"
         Add-DependencySummary "dua: install preview via cargo"
         return $false
     }
@@ -1342,12 +1342,12 @@ function Install-DuaIfMissing {
 function Install-OptionalDependencies {
     if ($SkipDeps) {
         if (Test-VerboseMode) {
-            Write-Output "Skipping optional dependency installation (--skip-deps)"
+            Write-UiLine -Role info -Message "Skipping optional dependency installation (--skip-deps)"
         }
         return
     }
     if (Test-VerboseMode) {
-        Write-Output "Dependency check:"
+        Write-UiSection -Title "Dependency check:"
     }
     $specs = @(Get-OptionalDependencySpecs)
     $selectedSpecs = @($specs | Where-Object { Test-OptionalDependencySelected -Key $_.Key })
@@ -1376,9 +1376,9 @@ function Install-OptionalDependencies {
         if ($DryRun) { $adoptArgs += "--dry-run" }
         try {
             Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/security/bin_track.py") -ScriptArgs $adoptArgs
-            if ($LASTEXITCODE -ne 0) { Write-Warning "Could not adopt existing GitHub binaries into bin (exit $LASTEXITCODE)" }
+            if ($LASTEXITCODE -ne 0) { Write-UiError -Role warn -Message "Could not adopt existing GitHub binaries into bin (exit $LASTEXITCODE)" }
         } catch {
-            Write-Warning "Could not adopt existing GitHub binaries into bin: $_"
+            Write-UiError -Role warn -Message "Could not adopt existing GitHub binaries into bin: $_"
         }
     }
 }
@@ -1386,7 +1386,7 @@ function Install-OptionalDependencies {
 function Invoke-UpgradeOrchestrator {
     if (-not $DepsLatest) { return }
     if ($DryRun) {
-        Write-Output "[dry-run] topgrade --yes --no-self-update --no-ask-retry --auto-retry 2 (includes bin update for GitHub releases)"
+        Write-UiLine -Role hint -Message "[dry-run] topgrade --yes --no-self-update --no-ask-retry --auto-retry 2 (includes bin update for GitHub releases)"
         return
     }
     $topgrade = Get-Command topgrade -ErrorAction SilentlyContinue
@@ -1404,7 +1404,7 @@ function Invoke-UpgradeOrchestrator {
         $env:GITHUB_AUTH_TOKEN = $githubAuthToken
     }
 
-    Write-Output "Checking package managers and bin-managed GitHub releases with Topgrade"
+    Write-UiLine -Role hint -Message "Checking package managers and bin-managed GitHub releases with Topgrade"
     $topgradeArgs = @("--yes", "--no-self-update", "--no-ask-retry", "--auto-retry", "2")
     # Keep progress and prompts visible and preserve foreground console input.
     & $topgrade.Source @topgradeArgs
@@ -1412,7 +1412,7 @@ function Invoke-UpgradeOrchestrator {
     if ($status -ne 0) {
         $warning = "topgrade: completed with warnings (exit code $status; one or more update steps failed)"
         Add-DependencySummary $warning
-        Write-Warning $warning
+        Write-UiError -Role warn -Message $warning
         if ($env:OOODNAKOV_DEPS_LATEST_STRICT -eq "1") {
             throw "Topgrade upgrade orchestration failed with exit code $status"
         }

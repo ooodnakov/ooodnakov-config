@@ -171,7 +171,7 @@ maybe_install_brew() {
   esac
 
   if ! prompt_yes_no "Install Homebrew package manager with the official install script?"; then
-    is_verbose && echo "skipping Homebrew" >&2
+    is_verbose && ui_error hint "skipping Homebrew"
     DEPENDENCY_SUMMARY+=("brew: skipped")
     return 0
   fi
@@ -480,7 +480,7 @@ check_dependency_status() {
   fi
 
   if [ "$DRY_RUN" -ne 1 ] && is_interactive && is_verbose; then
-    printf "[-] %s...\r" "$log_name" >/dev/tty
+    printf '%s %s...\r' "$(ui_colorize hint "$(ui_icon hint)")" "$log_name" >/dev/tty
   fi
 
   # Use check command from central TOML if available, fallback to command -v.
@@ -618,7 +618,7 @@ maybe_install_dependency() {
         DEPENDENCY_SUMMARY+=("$command_name: install attempted")
       fi
     else
-      is_verbose && echo "skipping $command_name" >&2
+      is_verbose && ui_error hint "skipping $command_name"
       DEPENDENCY_SUMMARY+=("$command_name: skipped")
     fi
     return 0
@@ -626,7 +626,7 @@ maybe_install_dependency() {
 
   if [ "$manager" = "apt" ] && ! apt_package_available "$package_name"; then
     if is_interactive; then
-      echo "APT package not available: $package_name ($description); skipping automatic install." >/dev/tty
+      printf '%s %s\n' "$(ui_colorize warn "$(ui_icon warn)")" "APT package not available: $package_name ($description); skipping automatic install." >/dev/tty
     fi
     DEPENDENCY_SUMMARY+=("$command_name: missing (apt package unavailable)")
     return 0
@@ -640,7 +640,7 @@ maybe_install_dependency() {
       DEPENDENCY_SUMMARY+=("$command_name: install attempted")
     fi
   else
-    is_verbose && echo "skipping $package_name" >&2
+    is_verbose && ui_error hint "skipping $package_name"
     DEPENDENCY_SUMMARY+=("$command_name: skipped")
   fi
 }
@@ -717,7 +717,7 @@ download_to_file() {
   elif command -v wget >/dev/null 2>&1; then
     run_with_spinner "Downloading $(basename "$output")" wget -qO "$output" "$url"
   else
-    echo "Neither curl nor wget is available for downloading $url" >&2
+    ui_error fail "Neither curl nor wget is available for downloading $url"
     return 1
   fi
 }
@@ -901,9 +901,9 @@ maybe_install_github_release() {
   target_binary="$bin_dir/$command_name"
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Download $release_url"
-    echo "[dry-run] Extract $archive_path -> $install_root"
-    echo "[dry-run] Link $target_binary"
+    ui_line hint "[dry-run] Download $release_url"
+    ui_line hint "[dry-run] Extract $archive_path -> $install_root"
+    ui_line hint "[dry-run] Link $target_binary"
     DEPENDENCY_SUMMARY+=("$command_name: install preview via GitHub release")
     return 0
   fi
@@ -1007,7 +1007,7 @@ install_pinned_neovim_unix() {
   os="$(uname -s)"
 
   asset_name="$(neovim_release_asset)" || {
-    echo "Unsupported platform for pinned Neovim install: $os $(uname -m)" >&2
+    ui_error fail "Unsupported platform for pinned Neovim install: $os $(uname -m)"
     return 1
   }
   extracted_dir="${asset_name%.tar.gz}"
@@ -1019,9 +1019,9 @@ install_pinned_neovim_unix() {
   archive_path="${TMPDIR:-/tmp}/${asset_name}"
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Download $release_url"
-    echo "[dry-run] Extract $archive_path -> $install_root"
-    echo "[dry-run] Link $bin_dir/nvim"
+    ui_line hint "[dry-run] Download $release_url"
+    ui_line hint "[dry-run] Extract $archive_path -> $install_root"
+    ui_line hint "[dry-run] Link $bin_dir/nvim"
     return 0
   fi
 
@@ -1082,7 +1082,7 @@ maybe_note_dependency() {
   fi
 
   if is_interactive; then
-    echo "Optional tool not found: $command_name ($description)." >&2
+    ui_error warn "Optional tool not found: $command_name ($description)."
   fi
   DEPENDENCY_SUMMARY+=("$command_name: missing (manual install)")
 }
@@ -1136,9 +1136,9 @@ maybe_install_rtk() {
   esac
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Download $target_url"
-    echo "[dry-run] Extract ${target_url##*/}"
-    echo "[dry-run] Copy rtk -> $HOME_DIR/.local/bin/rtk"
+    ui_line hint "[dry-run] Download $target_url"
+    ui_line hint "[dry-run] Extract ${target_url##*/}"
+    ui_line hint "[dry-run] Copy rtk -> $HOME_DIR/.local/bin/rtk"
     DEPENDENCY_SUMMARY+=("rtk: install preview via official archive")
     return 0
   fi
@@ -1264,7 +1264,7 @@ maybe_install_eza() {
   dnf)
     DEPENDENCY_SUMMARY+=("eza: manual install recommended on Fedora 42+")
     if is_interactive; then
-      echo "eza upstream notes Fedora 42+ may require manual install or cargo; skipping automatic dnf install." >/dev/tty
+      printf '%s %s\n' "$(ui_colorize warn "$(ui_icon warn)")" "eza upstream notes Fedora 42+ may require manual install or cargo; skipping automatic dnf install." >/dev/tty
     fi
     ;;
   apt)
@@ -1497,7 +1497,7 @@ maybe_install_uv() {
   fi
 
   if ! prompt_yes_no "Install uv for Python package manager (official installer)?"; then
-    is_verbose && echo "skipping uv" >&2
+    is_verbose && ui_error hint "skipping uv"
     DEPENDENCY_SUMMARY+=("uv: skipped")
     return 0
   fi
@@ -1534,7 +1534,7 @@ extract_zip_archive() {
   elif command -v bsdtar >/dev/null 2>&1; then
     run_with_spinner "Extracting $(basename "$archive_path")" bsdtar -xf "$archive_path" -C "$destination_dir"
   else
-    echo "Neither unzip nor bsdtar is available for extracting $archive_path" >&2
+    ui_error fail "Neither unzip nor bsdtar is available for extracting $archive_path"
     return 1
   fi
 }
@@ -1551,7 +1551,7 @@ maybe_install_bw() {
   fi
 
   if ! prompt_yes_no "Install Bitwarden CLI from the official native executable archive?"; then
-    is_verbose && echo "skipping bw" >&2
+    is_verbose && ui_error hint "skipping bw"
     DEPENDENCY_SUMMARY+=("bw: skipped")
     return 0
   fi
@@ -1582,9 +1582,9 @@ maybe_install_bw() {
   target_binary="$bin_dir/bw"
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Download $release_url"
-    echo "[dry-run] Extract $archive_path -> $install_root"
-    echo "[dry-run] Link $target_binary"
+    ui_line hint "[dry-run] Download $release_url"
+    ui_line hint "[dry-run] Extract $archive_path -> $install_root"
+    ui_line hint "[dry-run] Link $target_binary"
     DEPENDENCY_SUMMARY+=("bw: install preview via official archive")
     return 0
   fi
@@ -1634,7 +1634,7 @@ maybe_install_dua_cli() {
   fi
 
   if ! prompt_yes_no "Install dua-cli for disk usage analysis from byron/dua-cli via cargo?"; then
-    is_verbose && echo "skipping dua-cli" >&2
+    is_verbose && ui_error hint "skipping dua-cli"
     DEPENDENCY_SUMMARY+=("dua: skipped")
     return 0
   fi
@@ -1692,15 +1692,15 @@ maybe_install_node() {
   archive_path="${TMPDIR:-/tmp}/${asset_name}"
 
   if ! prompt_yes_no "Install Node.js $node_ver with bundled npm into $install_root?"; then
-    is_verbose && echo "skipping Node.js" >&2
+    is_verbose && ui_error hint "skipping Node.js"
     DEPENDENCY_SUMMARY+=("node: skipped")
     return 1
   fi
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Download $node_url"
-    echo "[dry-run] Extract $asset_name -> $install_root"
-    echo "[dry-run] Link node, npm, npx, corepack into $bin_dir"
+    ui_line hint "[dry-run] Download $node_url"
+    ui_line hint "[dry-run] Extract $asset_name -> $install_root"
+    ui_line hint "[dry-run] Link node, npm, npx, corepack into $bin_dir"
     DEPENDENCY_SUMMARY+=("node: install preview via official archive")
     return 0
   fi
@@ -1758,7 +1758,7 @@ maybe_install_pnpm() {
   fi
 
   if ! prompt_yes_no "Install pnpm package manager?"; then
-    is_verbose && echo "skipping pnpm" >&2
+    is_verbose && ui_error hint "skipping pnpm"
     DEPENDENCY_SUMMARY+=("pnpm: skipped")
     return 0
   fi
@@ -1778,8 +1778,8 @@ maybe_install_pnpm() {
   [ -z "$pnpm_ver" ] && pnpm_ver="10.18.3"
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] corepack enable --install-directory $PNPM_HOME pnpm"
-    echo "[dry-run] corepack prepare pnpm@$pnpm_ver --activate"
+    ui_line hint "[dry-run] corepack enable --install-directory $PNPM_HOME pnpm"
+    ui_line hint "[dry-run] corepack prepare pnpm@$pnpm_ver --activate"
     DEPENDENCY_SUMMARY+=("pnpm: install preview via corepack")
     return 0
   fi
@@ -1821,7 +1821,7 @@ maybe_install_bun() {
   fi
 
   if ! prompt_yes_no "Install Bun JavaScript runtime and package manager via the official install script?"; then
-    is_verbose && echo "skipping bun" >&2
+    is_verbose && ui_error hint "skipping bun"
     DEPENDENCY_SUMMARY+=("bun: skipped")
     return 0
   fi
@@ -1835,9 +1835,9 @@ maybe_install_bun() {
   [ -n "$bun_ver" ] && bun_install_args+=("bun-v${bun_ver}")
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    echo "[dry-run] Download https://bun.sh/install"
-    echo "[dry-run] bash install.sh bun-v${bun_ver}"
-    echo "[dry-run] Add $BUN_INSTALL/bin to PATH"
+    ui_line hint "[dry-run] Download https://bun.sh/install"
+    ui_line hint "[dry-run] bash install.sh bun-v${bun_ver}"
+    ui_line hint "[dry-run] Add $BUN_INSTALL/bin to PATH"
     DEPENDENCY_SUMMARY+=("bun: install preview via official install script")
     return 0
   fi
@@ -1884,7 +1884,7 @@ maybe_install_cargo() {
   fi
 
   if ! prompt_yes_no "Install Rust and cargo via rustup (official installer)?"; then
-    is_verbose && echo "skipping cargo" >&2
+    is_verbose && ui_error hint "skipping cargo"
     DEPENDENCY_SUMMARY+=("cargo: skipped")
     return 0
   fi

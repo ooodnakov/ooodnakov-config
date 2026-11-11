@@ -5,9 +5,16 @@ import argparse
 import json
 import os
 import re
+import sys
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
+
+SCRIPTS_CLI_DIR = Path(__file__).resolve().parents[1] / "cli"
+if str(SCRIPTS_CLI_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_CLI_DIR))
+
+from cli_ui import status  # noqa: E402
 
 CSS_MANAGED_BEGIN = "/* oooconf color:start */"
 CSS_MANAGED_END = "/* oooconf color:end */"
@@ -1285,18 +1292,18 @@ def main() -> int:
 
     if args.action == "status":
         for line in current_status():
-            print(line)
+            status("hint", line)
         return 0
 
-    print(set_yazi_theme(args.theme, args.mode))
-    print(set_wezterm_theme(args.theme, args.mode))
-    print(set_ghostty_theme(args.theme, args.mode))
+    status("ok", set_yazi_theme(args.theme, args.mode))
+    status("ok", set_wezterm_theme(args.theme, args.mode))
+    status("ok", set_ghostty_theme(args.theme, args.mode))
     for line in set_komorebi_theme(args.theme, args.mode):
-        print(line)
-    print(set_sketchybar_theme(args.theme, args.mode))
-    print(set_zebar_theme(args.theme, args.mode))
-    print(set_overline_zebar_theme(args.theme, args.mode))
-    print(set_oh_my_posh_theme(args.theme, args.mode))
+        status("ok", line)
+    status("ok", set_sketchybar_theme(args.theme, args.mode))
+    status("ok", set_zebar_theme(args.theme, args.mode))
+    status("ok", set_overline_zebar_theme(args.theme, args.mode))
+    status("ok", set_oh_my_posh_theme(args.theme, args.mode))
     return 0
 
 

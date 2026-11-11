@@ -25,7 +25,7 @@ function Add-Failure {
     )
 
     $script:Failures.Add($Item) | Out-Null
-    Write-UiLine -Role fail -Message "[failed] $Item"
+    Write-UiLine -Role fail -Message "$Item"
 }
 
 function Start-SetupLogging {
@@ -42,7 +42,7 @@ function Start-SetupLogging {
                 New-Item -ItemType Directory -Force -Path $resolvedLogRoot | Out-Null
             }
         } catch {
-            Write-Warning "Failed to create log directory under $LogRoot or $resolvedLogRoot"
+            Write-UiError -Role warn -Message "Failed to create log directory under $LogRoot or $resolvedLogRoot"
             return
         }
     }
@@ -59,7 +59,7 @@ function Start-SetupLogging {
     }
 
     if (Test-VerboseMode) {
-        Write-Output "Logging to $script:LogFile"
+        Write-UiLine -Role info -Message "Logging to $script:LogFile"
     }
 }
 
@@ -116,7 +116,7 @@ function Invoke-ActionWithSpinner {
 
     if (-not (Test-VerboseMode)) {
         if (Test-Interactive) {
-            Write-Host -NoNewline "[-] $Description..."
+            Write-Host -NoNewline "$(Format-UiText -Text (Get-UiIcon hint) -Role hint -Bold) $Description..."
         }
 
         $stdoutLog = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-{0}.stdout.log" -f ([guid]::NewGuid().ToString("N")))
@@ -125,16 +125,16 @@ function Invoke-ActionWithSpinner {
         try {
             & $Action @ArgumentList > $stdoutLog 2> $stderrLog
             if (Test-Interactive) {
-                Write-Host ("`r[ok] $Description")
+                Write-Host ("`r$(Format-UiText -Text (Get-UiIcon ok) -Role ok -Bold) $Description")
             } else {
-                Write-UiLine -Role ok -Message "[ok] $Description"
+                Write-UiLine -Role ok -Message "$Description"
             }
             return $true
         } catch {
             if (Test-Interactive) {
-                Write-Host ("`r[failed] $Description")
+                Write-Host ("`r$(Format-UiText -Text (Get-UiIcon fail) -Role fail -Bold) $Description")
             } else {
-                Write-UiLine -Role fail -Message "[failed] $Description"
+                Write-UiLine -Role fail -Message "$Description"
             }
             if (Test-Path $stdoutLog) {
                 Get-Content -LiteralPath $stdoutLog -ErrorAction SilentlyContinue | Write-Output
@@ -154,9 +154,9 @@ function Invoke-ActionWithSpinner {
     $interactive = Test-Interactive
 
     if (-not $interactive) {
-        Write-Output "[-] $Description..."
+        Write-UiLine -Role hint -Message "$Description..."
     } else {
-        Write-Host "[-] $Description..." -NoNewline
+        Write-Host "$(Format-UiText -Text (Get-UiIcon hint) -Role hint -Bold) $Description..." -NoNewline
     }
 
     $ps = [PowerShell]::Create()
@@ -175,7 +175,7 @@ function Invoke-ActionWithSpinner {
     $i = 0
     while (-not $asyncResult.IsCompleted) {
         if ($interactive) {
-            Write-Host "`r[$($frames[$i])] $Description..." -NoNewline
+            Write-Host "`r$(Format-UiText -Text (Get-UiIcon hint) -Role hint -Bold) [$($frames[$i])] $Description..." -NoNewline
             $i = ($i + 1) % $frames.Length
             Start-Sleep -Milliseconds 120
         } else {
@@ -190,7 +190,7 @@ function Invoke-ActionWithSpinner {
         # Streams.Error might contain non-terminating errors from native commands (like winget).
         # We'll just echo them instead of failing immediately.
         foreach ($err in $ps.Streams.Error) {
-            Write-Output "Message: $err"
+            Write-UiLine -Role hint -Message "Message: $err"
         }
     } catch {
         $hadErrors = $true
@@ -201,16 +201,16 @@ function Invoke-ActionWithSpinner {
 
     if (-not $hadErrors) {
         if ($interactive) {
-            Write-Host "`r[ok] $Description                            "
+            Write-Host ("`r$(Format-UiText -Text (Get-UiIcon ok) -Role ok -Bold) $Description                            ")
         } else {
-            Write-UiLine -Role ok -Message "[ok] $Description"
+            Write-UiLine -Role ok -Message "$Description"
         }
         return $true
     } else {
         if ($interactive) {
-            Write-Host "`r[failed] $Description                        "
+            Write-Host ("`r$(Format-UiText -Text (Get-UiIcon fail) -Role fail -Bold) $Description                        ")
         } else {
-            Write-UiLine -Role fail -Message "[failed] $Description"
+            Write-UiLine -Role fail -Message "$Description"
         }
         Add-Failure $Description
         return $false
@@ -234,7 +234,7 @@ function Invoke-Action {
         & $Action
         return $true
     } catch {
-        Write-UiLine -Role fail -Message "[failed] $Description"
+        Write-UiLine -Role fail -Message "$Description"
         Add-Failure $Description
         return $false
     }

@@ -16,15 +16,15 @@ ASCII_ICONS = {
 }
 
 NERD_FONT_ICONS = {
-    "section": "▸",
-    "ok": "✓",
-    "warn": "⚠",
-    "fail": "✗",
-    "missing": "✗",
-    "outdated": "󰏫",
-    "info": "ℹ",
-    "hint": "→",
-    "bullet": "•",
+    "section": "\uf054",
+    "ok": "\uf00c",
+    "warn": "\uf071",
+    "fail": "\uf057",
+    "missing": "\uf057",
+    "outdated": "\uf017",
+    "info": "\uf05a",
+    "hint": "\uf061",
+    "bullet": "\uf111",
 }
 
 COMMAND_ICONS_ASCII = {
@@ -54,29 +54,29 @@ COMMAND_ICONS_ASCII = {
 }
 
 COMMAND_ICONS_NERD = {
-    "bootstrap": "󰌠",
-    "install": "󰗠",
-    "deps": "󰏖",
-    "update": "󰚰",
-    "doctor": "󰓙",
-    "dry-run": "󰜉",
-    "version": "󰎆",
-    "delete": "󰩺",
-    "remove": "󱈸",
-    "lock": "󰌾",
-    "update-pins": "󱥂",
-    "completions": "󰩫",
-    "link": "🔗",
-    "shell": "󱆃",
-    "color": "󰏘",
-    "secrets": "󰠮",
-    "agents": "󰭹",
-    "check": "󰓙",
-    "preview": "󰜉",
-    "upgrade": "󰚰",
-    "minimal": "󰘍",
-    "wm": "󰘍",
-    "komorebi": "󰘍",
+    "bootstrap": "\U000f0320",
+    "install": "\U000f05e0",
+    "deps": "\U000f03d6",
+    "update": "\U000f06b0",
+    "doctor": "\U000f04d9",
+    "dry-run": "\U000f0709",
+    "version": "\U000f0386",
+    "delete": "\U000f0a7a",
+    "remove": "\U000f1238",
+    "lock": "\U000f033e",
+    "update-pins": "\U000f1942",
+    "completions": "\U000f0a6b",
+    "link": "\U000f0337",
+    "shell": "\U000f1183",
+    "color": "\U000f03d8",
+    "secrets": "\U000f082e",
+    "agents": "\U000f0b79",
+    "check": "\U000f04d9",
+    "preview": "\U000f0709",
+    "upgrade": "\U000f06b0",
+    "minimal": "\U000f060d",
+    "wm": "\U000f030f",
+    "komorebi": "\U000f0319",
 }
 
 ANSI_RESET = "\033[0m"
@@ -273,6 +273,10 @@ def section(title: str) -> None:
 
 def status(role: str, message: str) -> None:
     print(f"{colorize(icon(role), role, bold=True)} {message}")
+
+
+def error(role: str, message: str) -> None:
+    print(f"{colorize(icon(role), role, bold=True)} {message}", file=sys.stderr)
 
 
 def bullet(message: str) -> None:

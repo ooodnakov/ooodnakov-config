@@ -27,13 +27,43 @@ ui_is_interactive() {
   [ -t 1 ]
 }
 
+ui_use_nerd_font() {
+  if [ "${OOOCONF_ASCII:-0}" = "1" ]; then
+    return 1
+  fi
+  if ! ui_is_interactive; then
+    return 1
+  fi
+  if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+    return 1
+  fi
+  if [ "${BASH_VERSINFO[0]:-0}" -eq 4 ] && [ "${BASH_VERSINFO[1]:-0}" -lt 2 ]; then
+    return 1
+  fi
+  case "$(locale charmap 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)" in
+    utf-8|utf8) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 ui_icon() {
   local name="$1"
+  if ui_use_nerd_font; then
+    case "$name" in
+      section) printf '\U0000F054' ;;
+      ok) printf '\U0000F00C' ;;
+      info) printf '\U0000F05A' ;;
+      hint) printf '\U0000F061' ;;
+      *) printf '\U0000F057' ;;
+    esac
+    return 0
+  fi
   case "$name" in
-    ok) printf '✓' ;;
-    info) printf 'ℹ' ;;
-    section) printf '▸' ;;
-    *) printf '✗' ;;
+    section) printf '%s' '==' ;;
+    ok) printf '%s' '[ok]' ;;
+    info) printf '%s' '[info]' ;;
+    hint) printf '%s' '->' ;;
+    *) printf '%s' '[fail]' ;;
   esac
 }
 

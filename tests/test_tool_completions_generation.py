@@ -187,7 +187,6 @@ def test_cli_exits_zero_while_skipping_failing_tool(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, result.stderr
-    assert "warning:" in result.stderr
     assert "badtool" in result.stderr
     assert (tmp_path / "out" / "_fgood").exists()
     assert not (tmp_path / "out" / "_fbad").exists()

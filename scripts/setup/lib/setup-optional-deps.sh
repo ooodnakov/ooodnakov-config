@@ -343,7 +343,7 @@ choose_optional_dependencies_without_gum() {
   ui_line info "Available optional dependencies:"
   local i
   for ((i = 0; i < ${#all_keys[@]}; i++)); do
-    printf "  %-10s %s\n" "${all_keys[$i]}" "${all_labels[$i]}" >&2
+    printf '%s %-10s %s\n' "$(ui_colorize hint "$(ui_icon hint)")" "${all_keys[$i]}" "${all_labels[$i]}" >&2
   done
   echo >&2
   printf "Enter space/comma-separated keys to install (or empty to skip): " >&2
@@ -578,7 +578,7 @@ install_optional_dependency_from_catalog() {
 
 install_optional_dependencies() {
   if [ "$SKIP_DEPS" -eq 1 ]; then
-    is_verbose && echo "Skipping optional dependency installation (--skip-deps)"
+    is_verbose && ui_line hint "Skipping optional dependency installation (--skip-deps)"
     return 0
   fi
   local manager
@@ -587,11 +587,11 @@ install_optional_dependencies() {
   PACKAGE_MANAGER="$manager"
 
   if [ "$manager" != "none" ] && [ "$manager" != "brew" ] && is_interactive; then
-    is_verbose && printf "Refreshing sudo credentials before dependency installation...\n" >/dev/tty
+    is_verbose && printf '%s %s\n' "$(ui_colorize hint "$(ui_icon hint)")" "Refreshing sudo credentials before dependency installation..." >/dev/tty
     sudo -v || return 1
   fi
 
-  is_verbose && echo "Dependency check:"
+  is_verbose && ui_line hint "Dependency check:"
   load_optional_deps_platform_catalog_cache
   load_optional_deps_check_command_cache
   load_optional_deps_handler_cache

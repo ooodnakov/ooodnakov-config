@@ -26,8 +26,10 @@ function Get-UiIcon {
     if (Test-UiNerdFont) {
         $codepoint = $UiNerd[$Name]
         if ($codepoint) { return [char]::ConvertFromUtf32($codepoint) }
+        return [char]::ConvertFromUtf32($UiNerd.bullet)
     }
-    return $UiAscii[$Name]
+    if ($UiAscii.ContainsKey($Name)) { return $UiAscii[$Name] }
+    return $UiAscii.bullet
 }
 
 $script:OooconfThemePaletteCache = $null
@@ -46,7 +48,7 @@ function Get-UiCommandIcon {
             "delete" { return [char]::ConvertFromUtf32(0xF0A7A) }
             "remove" { return [char]::ConvertFromUtf32(0xF1238) }
             "lock" { return [char]::ConvertFromUtf32(0xF033E) }
-            "update-pins" { return [char]::ConvertFromUtf32(0xF1962) }
+            "update-pins" { return [char]::ConvertFromUtf32(0xF1942) }
             "completions" { return [char]::ConvertFromUtf32(0xF0A6B) }
             "link" { return [char]::ConvertFromUtf32(0xF0337) }
             "shell" { return [char]::ConvertFromUtf32(0xF1183) }
@@ -58,6 +60,7 @@ function Get-UiCommandIcon {
             "preview" { return [char]::ConvertFromUtf32(0xF0709) }
             "upgrade" { return [char]::ConvertFromUtf32(0xF06B0) }
             "wm" { return [char]::ConvertFromUtf32(0xF030F) }
+            "minimal" { return [char]::ConvertFromUtf32(0xF060D) }
             default { return [char]::ConvertFromUtf32(0xF060D) }
         }
     }
@@ -84,6 +87,7 @@ function Get-UiCommandIcon {
         "preview" { return "[dry]" }
         "upgrade" { return "[up]" }
         "wm" { return "[wm]" }
+        "minimal" { return "[min]" }
         default { return "[cmd]" }
     }
 }
@@ -118,6 +122,15 @@ function Write-UiLine {
     )
     $icon = Format-UiText -Text (Get-UiIcon $Role) -Role $Role -Bold
     Write-Output "$icon $Message"
+}
+
+function Write-UiError {
+    param(
+        [Parameter(Mandatory = $true)][string]$Role,
+        [Parameter(Mandatory = $true)][string]$Message
+    )
+    $icon = Format-UiText -Text (Get-UiIcon $Role) -Role $Role -Bold
+    [Console]::Error.WriteLine("$icon $Message")
 }
 
 function Write-UiSection {

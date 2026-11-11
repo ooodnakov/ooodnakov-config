@@ -20,14 +20,33 @@ load_known_commands() {
   fi
 }
 
+# Cached at source time: functions that decide styling run inside command
+# substitutions, where fd 1 is a pipe and a live `[ -t 1 ]` would misreport.
+__OOOCONF_UI_TTY=0
+if [ -t 1 ]; then
+  __OOOCONF_UI_TTY=1
+fi
+
 ui_is_interactive() {
-  [ -t 1 ]
+  [ "$__OOOCONF_UI_TTY" = "1" ]
+}
+
+ui_supports_utf_escape() {
+  # printf \UXXXXXXXX arrived in bash 4.2; older bash must fall back to ASCII.
+  if [ "${BASH_VERSINFO[0]:-0}" -gt 4 ]; then
+    return 0
+  fi
+  if [ "${BASH_VERSINFO[0]:-0}" -eq 4 ] && [ "${BASH_VERSINFO[1]:-0}" -ge 2 ]; then
+    return 0
+  fi
+  return 1
 }
 
 ui_use_nerd_font() {
   if [ "${OOOCONF_ASCII:-0}" = "1" ] || ! ui_is_interactive; then
     return 1
   fi
+  ui_supports_utf_escape || return 1
   case "$(ui_stdout_charmap)" in
     utf-8|utf8) return 0 ;;
     *) return 1 ;;
@@ -54,15 +73,31 @@ ui_stdout_charmap() {
 
 ui_icon() {
   local name="$1"
+  if ui_use_nerd_font; then
+    case "$name" in
+      section) printf '\U0000F054' ;;
+      ok) printf '\U0000F00C' ;;
+      warn) printf '\U0000F071' ;;
+      fail | missing) printf '\U0000F057' ;;
+      outdated) printf '\U0000F017' ;;
+      info) printf '\U0000F05A' ;;
+      hint) printf '\U0000F061' ;;
+      bullet) printf '\U0000F111' ;;
+      *) printf '\U0000F111' ;;
+    esac
+    return 0
+  fi
   case "$name" in
-    section) printf '▸' ;;
-    ok) printf '✓' ;;
-    warn) printf '⚠' ;;
-    fail) printf '✗' ;;
-    missing) printf '✗' ;;
-    info) printf 'ℹ' ;;
-    hint) printf '→' ;;
-    *) printf '•' ;;
+    section) printf '%s' '==' ;;
+    ok) printf '%s' '[ok]' ;;
+    warn) printf '%s' '[warn]' ;;
+    fail) printf '%s' '[fail]' ;;
+    missing) printf '%s' '[missing]' ;;
+    outdated) printf '%s' '[outdated]' ;;
+    info) printf '%s' '[info]' ;;
+    hint) printf '%s' '->' ;;
+    bullet) printf '%s' '-' ;;
+    *) printf '%s' '-' ;;
   esac
 }
 
@@ -70,27 +105,30 @@ ui_cmd_icon() {
   local name="$1"
   if ui_use_nerd_font; then
     case "$name" in
-      bootstrap) printf '󰌠' ;;
-      install) printf '󰗠' ;;
-      deps) printf '󰏖' ;;
-      update) printf '󰚰' ;;
-      doctor) printf '󰓙' ;;
-      dry-run) printf '󰜉' ;;
-      version) printf '󰎆' ;;
-      delete) printf '󰩺' ;;
-      remove) printf '󱈸' ;;
-      lock) printf '󰌾' ;;
-      update-pins) printf '󱥂' ;;
-      completions) printf '󰩫' ;;
-      link) printf '🔗' ;;
-      shell) printf '󱆃' ;;
-      color) printf '󰏘' ;;
-      secrets) printf '󰠮' ;;
-      agents) printf '󰭹' ;;
-      check) printf '󰓙' ;;
-      preview) printf '󰜉' ;;
-      upgrade) printf '󰚰' ;;
-      *) printf '󰘍' ;;
+      bootstrap) printf '\U000F0320' ;;
+      install) printf '\U000F05E0' ;;
+      deps) printf '\U000F03D6' ;;
+      update) printf '\U000F06B0' ;;
+      doctor) printf '\U000F04D9' ;;
+      dry-run) printf '\U000F0709' ;;
+      version) printf '\U000F0386' ;;
+      delete) printf '\U000F0A7A' ;;
+      remove) printf '\U000F1238' ;;
+      lock) printf '\U000F033E' ;;
+      update-pins) printf '\U000F1942' ;;
+      completions) printf '\U000F0A6B' ;;
+      link) printf '\U000F0337' ;;
+      shell) printf '\U000F1183' ;;
+      color) printf '\U000F03D8' ;;
+      secrets) printf '\U000F082E' ;;
+      agents) printf '\U000F0B79' ;;
+      komorebi) printf '\U000F0319' ;;
+      check) printf '\U000F04D9' ;;
+      preview) printf '\U000F0709' ;;
+      upgrade) printf '\U000F06B0' ;;
+      wm) printf '\U000F030F' ;;
+      minimal) printf '\U000F060D' ;;
+      *) printf '\U000F060D' ;;
     esac
   else
     case "$name" in
@@ -111,9 +149,12 @@ ui_cmd_icon() {
       color) printf '[clr]' ;;
       secrets) printf '[sec]' ;;
       agents) printf '[agt]' ;;
+      komorebi) printf '[kom]' ;;
       check) printf '[doc]' ;;
       preview) printf '[dry]' ;;
       upgrade) printf '[up]' ;;
+      wm) printf '[wm]' ;;
+      minimal) printf '[min]' ;;
       *) printf '[cmd]' ;;
     esac
   fi
@@ -231,6 +272,12 @@ ui_line() {
   local role="$1"
   shift
   printf '%s %s\n' "$(ui_colorize "$role" "$(ui_icon "$role")")" "$*"
+}
+
+ui_error() {
+  local role="$1"
+  shift
+  printf '%s %s\n' "$(ui_colorize "$role" "$(ui_icon "$role")")" "$*" >&2
 }
 
 ui_repeat_char() {

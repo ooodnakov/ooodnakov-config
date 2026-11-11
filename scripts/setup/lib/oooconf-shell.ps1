@@ -27,7 +27,7 @@ function Run-Python {
             if (-not $pyCmd) {
                 $ErrorActionPreference = $prevErrorAction
                 $global:LastPythonError = "Python not found. Install Python 3.8+ or add it to your PATH."
-                Write-Error $global:LastPythonError
+                Write-UiError -Role fail -Message $global:LastPythonError
                 $global:LASTEXITCODE = 1
                 return
             }
@@ -48,7 +48,7 @@ function Run-Python {
     if (-not [string]::IsNullOrWhiteSpace($errorText)) {
         $global:LastPythonError = $errorText.Trim()
         if ($exitCode -ne 0) {
-            [Console]::Error.WriteLine($global:LastPythonError)
+            Write-UiError -Role fail -Message $global:LastPythonError
         }
     }
     return $output

@@ -138,7 +138,7 @@ function Invoke-DeltaInject {
     }
 
     if ($dryRun) {
-        Write-UiLine -Role info -Message "[dry-run] would write delta config to $gitConfigPath"
+        Write-UiLine -Role hint -Message "[dry-run] would write delta config to $gitConfigPath"
         return
     }
 
@@ -202,7 +202,7 @@ function Invoke-DeltaRemove {
     }
 
     if ($dryRun) {
-        Write-UiLine -Role info -Message "[dry-run] would remove delta config block from $gitConfigPath"
+        Write-UiLine -Role hint -Message "[dry-run] would remove delta config block from $gitConfigPath"
         return
     }
 

@@ -10,7 +10,7 @@ handle_bar_command() {
     set)
       if [ -z "${2:-}" ]; then
         visible_error "Usage: oooconf wm bar set <bar>"
-        printf '%s\n' "Available: ${KNOWN_BAR_TYPES[*]}"
+        ui_line info "Available: ${KNOWN_BAR_TYPES[*]}"
         return 1
       fi
       set_default_bar "$2"
@@ -50,7 +50,7 @@ set_default_bar() {
     zebar|yabs|sketchybar) ;;
     *)
       visible_error "Unknown bar type: $bar"
-      printf '%s\n' "Available: ${KNOWN_BAR_TYPES[*]}"
+      ui_line info "Available: ${KNOWN_BAR_TYPES[*]}"
       return 1
       ;;
   esac

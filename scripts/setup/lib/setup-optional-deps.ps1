@@ -442,7 +442,7 @@ function Install-OptionalDependencyFromSpec {
             return $res
         }
         "k" {
-            Write-Warning "k is not available on Windows."
+            Write-UiError -Role warn -Message "k is not available on Windows."
             Add-DependencySummary "k: skipped"
             return $false
         }

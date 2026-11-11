@@ -14,6 +14,12 @@ assert spec is not None and spec.loader is not None
 sys.modules["agents_tool"] = agents_tool
 spec.loader.exec_module(agents_tool)
 
+cli_ui_spec = importlib.util.spec_from_file_location("cli_ui", ROOT / "scripts/cli/cli_ui.py")
+cli_ui = importlib.util.module_from_spec(cli_ui_spec)
+assert cli_ui_spec is not None and cli_ui_spec.loader is not None
+sys.modules["cli_ui"] = cli_ui
+cli_ui_spec.loader.exec_module(cli_ui)
+
 
 def test_render_opencode_entry_shape_and_env_materialization(monkeypatch):
     monkeypatch.setenv("CTX_KEY", "secret-123")
@@ -330,30 +336,30 @@ def test_supports_color_output(monkeypatch):
     # Test OOOCONF_COLOR=0/false/never
     for val in ["0", "false", "never"]:
         monkeypatch.setenv("OOOCONF_COLOR", val)
-        assert agents_tool.supports_color_output() is False
+        assert cli_ui.supports_color_output() is False
 
     # Test NO_COLOR
     monkeypatch.delenv("OOOCONF_COLOR", raising=False)
     monkeypatch.setenv("NO_COLOR", "1")
-    assert agents_tool.supports_color_output() is False
+    assert cli_ui.supports_color_output() is False
     monkeypatch.delenv("NO_COLOR")
 
     # Test OOOCONF_COLOR=1/true/always
     for val in ["1", "true", "always"]:
         monkeypatch.setenv("OOOCONF_COLOR", val)
-        assert agents_tool.supports_color_output() is True
+        assert cli_ui.supports_color_output() is True
 
     # Test FORCE_COLOR
     monkeypatch.delenv("OOOCONF_COLOR", raising=False)
     monkeypatch.setenv("FORCE_COLOR", "1")
-    assert agents_tool.supports_color_output() is True
+    assert cli_ui.supports_color_output() is True
     monkeypatch.delenv("FORCE_COLOR")
 
     # Test TTY fallback
     monkeypatch.setattr(sys, "stdout", MockStdout(tty=True))
-    assert agents_tool.supports_color_output() is True
+    assert cli_ui.supports_color_output() is True
     monkeypatch.setattr(sys, "stdout", MockStdout(tty=False))
-    assert agents_tool.supports_color_output() is False
+    assert cli_ui.supports_color_output() is False
 
 
 def test_run_install_spec_post_install_safe_execution(monkeypatch, capsys):

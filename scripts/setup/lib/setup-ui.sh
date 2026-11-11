@@ -80,10 +80,9 @@ progress_init() {
   PROGRESS_CURRENT=0
   PROGRESS_TITLE="$2"
   if is_interactive; then
-    printf "\n%s\n" "$PROGRESS_TITLE"
-  else
-    echo "$PROGRESS_TITLE"
+    ui_spacer
   fi
+  ui_line section "$PROGRESS_TITLE"
 }
 
 progress_step() {
@@ -92,11 +91,11 @@ progress_step() {
   PROGRESS_CURRENT=$((PROGRESS_CURRENT + 1))
 
   if ! is_interactive; then
-    printf '[%s/%s] %s\n' "$PROGRESS_CURRENT" "$PROGRESS_TOTAL" "$description"
+    ui_line hint "[$PROGRESS_CURRENT/$PROGRESS_TOTAL] $description"
     return 0
   fi
 
-  printf 'Step: %s\n' "$description"
+  ui_line hint "Step: $description"
 
   local width=24 filled=0 empty=0 percent=0 bar
   if [ "$PROGRESS_TOTAL" -gt 0 ]; then
@@ -198,7 +197,7 @@ initialize_logging() {
 }
 
 bullet() {
-  ui_line info "$*"
+  ui_line bullet "$*"
 }
 
 run_cmd() {
@@ -250,7 +249,7 @@ run_with_spinner() {
   if ! is_verbose; then
     local logfile status
     if is_interactive; then
-      printf "[-] %s..." "$label" >/dev/tty
+      printf '%s %s...' "$(ui_colorize hint "$(ui_icon hint)")" "$label" >/dev/tty
     fi
     logfile="$(mktemp)"
     (
@@ -260,9 +259,9 @@ run_with_spinner() {
     if [ $status -ne 0 ]; then
       if is_interactive; then
         printf "\r" >/dev/tty
-        ui_line fail "[failed] $label"
+        ui_line fail "$label"
       else
-        ui_line fail "[failed] $label"
+        ui_line fail "$label"
       fi
       cat "$logfile" >&2
       if [ "${OOODNAKOV_RECORD_SPINNER_FAILURES:-1}" != "0" ]; then
@@ -271,9 +270,9 @@ run_with_spinner() {
     else
       if is_interactive; then
         printf "\r" >/dev/tty
-        ui_line ok "[ok] $label"
+        ui_line ok "$label"
       else
-        ui_line ok "[ok] $label"
+        ui_line ok "$label"
       fi
     fi
     rm -f "$logfile"
@@ -282,7 +281,7 @@ run_with_spinner() {
 
   # Print the intent immediately so the user knows what we are starting,
   # especially helpful if is_interactive is false or sudo prompts.
-  printf "[-] %s..." "$label"
+  printf '%s %s...' "$(ui_colorize hint "$(ui_icon hint)")" "$label"
 
   local logfile pid spinner_index=0
   local -a frames=('-' "\\" '|' '/')
@@ -311,7 +310,7 @@ run_with_spinner() {
       printf "\r" >/dev/tty
       ui_line ok "[ok] $label"
     else
-      # Overwrite the "[-] label..." line with [ok]
+      # Overwrite the spinner line with [ok]
       ui_line ok "[ok] $label"
     fi
   else
@@ -386,5 +385,5 @@ record_failure() {
   local label
   label="$1"
   FAILURES+=("$label")
-  ui_line fail "[failed] $label"
+  ui_line fail "$label"
 }

@@ -131,7 +131,7 @@ try {
         }
         # User cancelled (Esc in gum picker, or empty input in text prompt) — exit cleanly
         if (-not $allPresent -and $selected.Count -eq 0) {
-            Write-Output "No optional dependencies selected."
+            Write-UiLine -Role warn -Message "No optional dependencies selected."
             return
         }
         if (-not $allPresent) {
@@ -148,7 +148,7 @@ try {
             Start-StepProgress -Total 8 -Activity "oooconf update"
             Step-Progress -Status "Pulling latest repository changes"
             if ($DryRun) {
-                Write-Output "[dry-run] git -C $RepoRoot pull --ff-only"
+                Write-UiLine -Role hint -Message "[dry-run] git -C $RepoRoot pull --ff-only"
             } else {
                 Invoke-ActionWithSpinner -Description "Pulling repository" -Action {
                     git -C $RepoRoot pull --ff-only
@@ -158,14 +158,14 @@ try {
         }
         "doctor" {
             if ($DryRun) {
-                Write-Output "[dry-run] would run doctor checks"
+                Write-UiLine -Role hint -Message "[dry-run] would run doctor checks"
                 return
             }
             Test-Doctor
         }
         "deps" {
             if ($allPresent) {
-                Write-Output "Optional dependency install complete."
+                Write-UiLine -Role ok -Message "Optional dependency install complete."
                 break
             }
 
@@ -173,7 +173,7 @@ try {
             Step-Progress -Status "Preparing dependency install paths"
             foreach ($dir in @($DataHome, $StateHome, $ShareHome, (Join-Path $ShareHome "bin"), $LocalBinDir)) {
                 if ($DryRun) {
-                    Write-Output "[dry-run] ensure directory $dir"
+                    Write-UiLine -Role hint -Message "[dry-run] ensure directory $dir"
                 } else {
                     Ensure-Directory -Path $dir | Out-Null
                 }
@@ -181,7 +181,7 @@ try {
 
             Step-Progress -Status "Installing selected optional dependencies"
             if ($DryRun) {
-                Write-Output "[dry-run] install optional dependencies: $($script:SelectedOptionalKeys -join ', ')"
+                Write-UiLine -Role hint -Message "[dry-run] install optional dependencies: $($script:SelectedOptionalKeys -join ', ')"
             } else {
                 Install-OptionalDependencies
                 Invoke-UpgradeOrchestrator
@@ -189,7 +189,7 @@ try {
             Step-Progress -Status "Writing dependency summary"
             Write-Summary
             Write-Output ""
-            Write-Output "Optional dependency install complete."
+            Write-UiLine -Role ok -Message "Optional dependency install complete."
             Step-Progress -Status "Done"
         }
         "completions" {
@@ -207,19 +207,19 @@ try {
             }
             Generate-PowerShellCompletions
             Write-Output ""
-            Write-Output "Completion generation complete."
+            Write-UiLine -Role ok -Message "Completion generation complete."
             Step-Progress -Status "Done"
         }
         "minimal" {
             if ($DryRun) {
-                Write-Output "[dry-run] would run minimal-setup.sh"
+                Write-UiLine -Role hint -Message "[dry-run] would run minimal-setup.sh"
                 return
             }
             & (Join-Path $RepoRoot "scripts/setup/minimal-setup.ps1")
         }
         "link" {
             if ($DryRun) {
-                Write-Output "[dry-run] would link:"
+                Write-UiLine -Role hint -Message "[dry-run] would link:"
             }
             $planScript = Join-Path $RepoRoot "scripts/cli/operation_plan.py"
             $linkOutput = Run-Python -ScriptPath $planScript -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-links") 2>$null
@@ -231,7 +231,7 @@ try {
                     if ([string]::IsNullOrWhiteSpace($_)) { return }
                     $parts = $_ -split '\|'
                     if ($parts.Count -ge 3) {
-                        Write-Output "[dry-run]   $($parts[2]) -> $($parts[1])"
+                        Write-UiLine -Role hint -Message "[dry-run]   $($parts[2]) -> $($parts[1])"
                     }
                 }
                 return
@@ -245,7 +245,7 @@ try {
     }
 } finally {
     if ($script:LogFile) {
-        Write-Output "Log file: $script:LogFile"
+        Write-UiLine -Role info -Message "Log file: $script:LogFile"
     }
     Stop-SetupLogging
 }

@@ -10,6 +10,12 @@ import sys
 import tomllib
 from pathlib import Path
 
+SCRIPTS_CLI_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_CLI_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_CLI_DIR))
+
+from cli_ui import error  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TOML_PATH = REPO_ROOT / "scripts" / "optional-deps.toml"
 
@@ -393,7 +399,7 @@ def main() -> int:
         print(f"command -v {key}")
         return 0
     else:
-        print(f"Unknown command: {cmd}", file=sys.stderr)
+        error("fail", f"Unknown command: {cmd}")
         return 1
     return 0
 

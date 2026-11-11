@@ -13,7 +13,7 @@ SCRIPTS_CLI_DIR = Path(__file__).resolve().parents[1] / "cli"
 if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
 
-from cli_ui import bullet, section, status  # noqa: E402
+from cli_ui import bullet, section, spacer, status  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 OPTIONAL_DEPS = REPO_ROOT / "scripts" / "optional-deps.toml"
@@ -142,11 +142,11 @@ def main() -> int:
         status(role, f"{row['name'].lower():<20} {row['status']:<16} {row['current'][:10]} -> {row['latest'][:10]}")
 
     if args.dry_run:
-        print()
+        spacer()
         bullet("Dry run: skipped report and lock artifact writes.")
     else:
         update_report(rows)
-        print()
+        spacer()
         bullet(f"Updated automated pin-check section in {REPORT_PATH}.")
 
         run_lock_generator()

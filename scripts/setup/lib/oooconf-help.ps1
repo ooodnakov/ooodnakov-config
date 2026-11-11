@@ -257,6 +257,8 @@ UI controls:
   `$env:OOOCONF_COLOR='always'       override color output
   `$env:OOOCONF_ASCII='1'            force ASCII icons and borders
   `$env:OOOCONF_THEME='<theme>'      set the CLI color theme for this run
+  Nerd Font icons render automatically on UTF-8 terminals; ASCII tags are
+  used when output is redirected or the glyphs are unavailable.
 Common workflows:
   # Initial setup on Windows:
   ./scripts/setup/setup.ps1 install

@@ -15,7 +15,7 @@ link_file() {
     record_failure "Linking $target"
     return 1
   }
-  echo "linked $target"
+  ui_line ok "linked $target"
 }
 
 backup_target() {
@@ -47,7 +47,7 @@ backup_target() {
   else
     run_cmd mv "$target" "$backup_dir/${target_name}.${TIMESTAMP}"
   fi
-  echo "backed up $target -> $backup_dir/${target_name}.${TIMESTAMP}"
+  ui_line ok "backed up $target -> $backup_dir/${target_name}.${TIMESTAMP}"
 }
 
 backup_incomplete_checkout() {
@@ -84,7 +84,7 @@ backup_incomplete_checkout() {
 
   run_cmd mkdir -p "$backup_dir" || return 1
   run_cmd mv "$target" "$backup_path" || return 1
-  echo "backed up incomplete checkout $target -> $backup_path"
+  ui_line ok "backed up incomplete checkout $target -> $backup_path"
 }
 
 clone_repo_with_fallbacks() {
@@ -191,7 +191,7 @@ ensure_oh_my_zsh_permissions() {
   local repo_root
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    printf '[dry-run] normalize file permissions under %s\n' "$omz_root"
+    ui_line hint "[dry-run] normalize file permissions under $omz_root"
     TOOL_SUMMARY+=("oh-my-zsh permissions: preview")
     return 0
   fi
@@ -226,13 +226,13 @@ ensure_ssh_include() {
   run_cmd touch "$ssh_config"
 
   if [ "$DRY_RUN" -eq 1 ]; then
-    printf '[dry-run] ensure SSH include in %s\n' "$ssh_config"
+    ui_line hint "[dry-run] ensure SSH include in $ssh_config"
     return 0
   fi
 
   if ! grep -Fqx "$include_line" "$ssh_config"; then
     if [ "$DRY_RUN" -eq 1 ]; then
-      printf '[dry-run] prepend SSH include in %s\n' "$ssh_config"
+      ui_line hint "[dry-run] prepend SSH include in $ssh_config"
     elif printf "%s\n\n" "$include_line" | cat - "$ssh_config" >"$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
       :
     else
@@ -409,7 +409,7 @@ install_auto_uv_env() {
   run_cmd mkdir -p "$bin_dir"
   run_cmd mkdir -p "$share_dir"
   if [ "$DRY_RUN" -eq 1 ]; then
-    printf '[dry-run] install auto-uv-env share files into %s\n' "$share_dir"
+    ui_line hint "[dry-run] install auto-uv-env share files into $share_dir"
   elif ! find "$source_dir/share/auto-uv-env" -maxdepth 1 -type f -exec install -m 0644 {} "$share_dir/" \;; then
     TOOL_SUMMARY+=("auto-uv-env: failed to install share files")
     record_failure "Installing auto-uv-env share files"

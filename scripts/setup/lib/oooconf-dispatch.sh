@@ -4,7 +4,7 @@
 require_repo_script() {
   local script_path="$1"
   if [ ! -x "$script_path" ]; then
-    echo "Required script is missing or not executable: $script_path" >&2
+    ui_error fail "Required script is missing or not executable: $script_path"
     exit 1
   fi
 }
@@ -33,7 +33,7 @@ exec_setup_command() {
   require_repo_script "$SETUP"
   if [ "$dry_run_requested" -eq 1 ]; then
     if [ "$supports_dry_run" -ne 1 ]; then
-      echo "--dry-run is not supported for $setup_command" >&2
+      ui_error fail "--dry-run is not supported for $setup_command"
       exit 1
     fi
     if [ "$yes_optional_requested" -eq 1 ]; then
@@ -51,7 +51,7 @@ exec_setup_command() {
 require_no_dry_run() {
   local command_name="$1"
   if [ "$dry_run_requested" -eq 1 ]; then
-    echo "--dry-run is not supported for $command_name" >&2
+    ui_error fail "--dry-run is not supported for $command_name"
     exit 1
   fi
 }

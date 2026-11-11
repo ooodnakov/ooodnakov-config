@@ -55,17 +55,21 @@ $UiAscii = @{
     warn = "[warn]"
     fail = "[fail]"
     missing = "[missing]"
+    outdated = "[outdated]"
     info = "[info]"
     hint = "->"
+    bullet = "-"
 }
 $UiNerd = @{
-    section = 0x25B8
-    ok = 0x2713
-    warn = 0x26A0
-    fail = 0x2717
-    missing = 0x2717
-    info = 0x2139
-    hint = 0x2192
+    section = 0xF054
+    ok = 0xF00C
+    warn = 0xF071
+    fail = 0xF057
+    missing = 0xF057
+    outdated = 0xF017
+    info = 0xF05A
+    hint = 0xF061
+    bullet = 0xF111
 }
 $UiAnsi = @{
     Reset = "$([char]27)[0m"
@@ -121,7 +125,7 @@ for ($i = 0; $i -lt $Arguments.Count; $i++) {
             $i++
         }
         "--print-repo-root" {
-            Write-UiLine -Role info -Message $RepoRoot
+            Write-Output $RepoRoot
             exit 0
         }
         "-V" {

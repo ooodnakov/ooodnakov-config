@@ -19,6 +19,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.cli.cli_ui import colorize, icon, status  # noqa: E402
 from scripts.cli.env_tool import write_override  # noqa: E402
 from scripts.cli.operation_plan import build_plan, selected_links  # noqa: E402
 from scripts.cli.profile_manager import ProfileError, resolve_profile  # noqa: E402
@@ -243,11 +244,13 @@ def diagnostics(repo_root: Path, platform: str, profile_name: str | None, mode: 
 def render_diagnostics(document: dict[str, object], output_format: str) -> str:
     if output_format == "json":
         return json.dumps(document, indent=2, sort_keys=True)
+    role_by_status = {"pass": "ok", "warning": "warn", "error": "fail", "skipped": "hint"}
     lines = [f"oooconf {document['command']} ({document['platform']}, schema v{document['schema_version']})"]
     for item in document["checks"]:
-        lines.append(f"- [{item['status']}] {item['id']}: {item['message']}")
+        role = role_by_status.get(str(item["status"]), "info")
+        lines.append(f"{colorize(icon(role), role, bold=True)} {item['id']}: {item['message']}")
         if item["remediation"]:
-            lines.append(f"  remediation: {item['remediation']}")
+            lines.append(f"  {colorize(icon('hint'), 'hint')} remediation: {item['remediation']}")
     summary = document["summary"]
     lines.append(f"Summary: {summary['pass']} passed, {summary['warning']} warning(s), {summary['error']} error(s)")
     return "\n".join(lines)
@@ -395,7 +398,7 @@ def cli(argv: list[str] | None = None) -> int:
         if args.snapshot_command == "export":
             document = _snapshot_document(args.repo_root, platform, args.profile)
             _atomic_text(args.output, render_snapshot(document))
-            print(f"Exported portable snapshot to {args.output}")
+            status("ok", f"Exported portable snapshot to {args.output}")
             return 0
         document = load_snapshot(args.file, args.repo_root, platform)
         if args.snapshot_command == "inspect":
@@ -403,10 +406,11 @@ def cli(argv: list[str] | None = None) -> int:
             if args.format == "json":
                 print(json.dumps(preview, indent=2, sort_keys=True))
             else:
-                print(f"Valid snapshot for profile {preview['profile']}.")
-                print(f"Capabilities: {', '.join(preview['capabilities'])}")
-                print(
-                    f"Preferences: {len(preview['preferences'])}; planned operations: {preview['planned_operations']}"
+                status("ok", f"Valid snapshot for profile {preview['profile']}.")
+                status("hint", f"Capabilities: {', '.join(preview['capabilities'])}")
+                status(
+                    "hint",
+                    f"Preferences: {len(preview['preferences'])}; planned operations: {preview['planned_operations']}",
                 )
             return 0
         return apply_snapshot(document, args.repo_root, platform)
