@@ -531,3 +531,181 @@ def test_tui_select_cancels_on_escape(monkeypatch):
     monkeypatch.setattr(tui, "curses", _fake_curses(window))
 
     assert tui._curses_select(["Claude Code"], "Select agents", "hint") is None
+
+
+def test_agent_target_aliases_accept_command_keys():
+    specs = [
+        agents_tool.AgentUpdateSpec("Claude Code", "claude", "npm", "@anthropic-ai/claude-code"),
+        agents_tool.AgentUpdateSpec("OpenAI Codex CLI", "codex", "npm", "@openai/codex"),
+        agents_tool.AgentUpdateSpec("Oh My Pi", "omp", "npm", "@oh-my-pi/pi-coding-agent"),
+    ]
+    targets = [
+        agents_tool.AgentConfigTarget("Claude Code", "json", [], agents=("claude",)),
+        agents_tool.AgentConfigTarget("Claude Global Instructions", "markdown", [], agents=("claude",)),
+        agents_tool.AgentConfigTarget("OpenAI Codex CLI", "toml", [], agents=("codex",)),
+        agents_tool.AgentConfigTarget("Codex Global Instructions", "markdown", [], agents=("codex",)),
+        agents_tool.AgentConfigTarget("Oh My Pi", "yaml", [], agents=("omp",)),
+    ]
+
+    selected, unmatched = agents_tool.select_agent_targets(targets, specs, ["claude", "codex"])
+
+    assert unmatched == []
+    assert [target.name for target in selected] == [
+        "Claude Code",
+        "Claude Global Instructions",
+        "OpenAI Codex CLI",
+        "Codex Global Instructions",
+    ]
+
+
+def test_resolve_repo_root_defaults_to_repository_root(monkeypatch):
+    monkeypatch.delenv("OOODNAKOV_REPO_ROOT", raising=False)
+    assert agents_tool.resolve_repo_root(None) == ROOT
+
+
+def test_parse_mcp_json_input_accepts_trailing_comma():
+    for payload in (
+        '{"demo":{"command":"npx","args":["-y","pkg"],},}',
+        '"demo":{"command":"npx","args":["-y","pkg"],},',
+    ):
+        name, cfg = agents_tool.parse_mcp_json_input(payload)
+        assert name == "demo"
+        assert cfg["command"] == "npx"
+
+
+def test_render_mcp_entry_keeps_env_placeholders_without_materialize(monkeypatch):
+    monkeypatch.setenv("CTX_KEY", "secret-123")
+    target = agents_tool.AgentConfigTarget("Claude Code", "json", [], agents=("claude",))
+    cfg = {
+        "command": "pnpm",
+        "args": ["dlx", "@upstash/context7-mcp", "--api-key", "{CTX_KEY}"],
+        "env_vars": ["CTX_KEY"],
+    }
+
+    plain = agents_tool.render_mcp_server_entry(target, "context7", cfg, Path("/tmp/repo"), materialize_secrets=False)
+    materialized = agents_tool.render_mcp_server_entry(
+        target, "context7", cfg, Path("/tmp/repo"), materialize_secrets=True
+    )
+
+    assert plain["args"][-1] == "{CTX_KEY}"
+    assert plain["env"]["CTX_KEY"] == "{CTX_KEY}"
+    assert materialized["args"][-1] == "secret-123"
+    assert materialized["env"]["CTX_KEY"] == "secret-123"
+
+
+def test_provider_sync_dry_run_does_not_write_and_accepts_agent_keys(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    cfg = {
+        "agent_configs": [
+            {
+                "name": "Claude Code",
+                "agents": ["claude"],
+                "format": "json",
+                "default_paths": ["~/.claude/settings.json"],
+            },
+            {
+                "name": "OpenAI Codex CLI",
+                "agents": ["codex"],
+                "format": "toml",
+                "default_paths": ["~/.codex/config.toml"],
+            },
+            {
+                "name": "OpenCode",
+                "agents": ["opencode"],
+                "format": "json",
+                "default_paths": ["~/.config/opencode/opencode.json"],
+            },
+        ]
+    }
+
+    rc = agents_tool.cmd_provider_sync(
+        cfg,
+        "minimax",
+        check_only=False,
+        materialize_secrets=False,
+        region="global",
+        agents=["claude", "codex"],
+        dry_run=True,
+    )
+
+    assert rc == 0
+    assert not (home / ".claude/settings.json").exists()
+    assert not (home / ".codex/config.toml").exists()
+    assert not (home / ".config/opencode/opencode.json").exists()
+
+
+def test_install_dry_run_never_executes_installers(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        agents_tool,
+        "run_install_spec",
+        lambda spec, check_only: calls.append((spec.command, check_only)) or (True, False),
+    )
+    cfg = {
+        "agent_updates": [
+            {"name": "OpenAI Codex CLI", "command": "codex", "preferred": "npm", "package": "@openai/codex"}
+        ]
+    }
+
+    rc = agents_tool.cmd_install(
+        tmp_path,
+        cfg,
+        ["codex"],
+        check_only=False,
+        install_all=False,
+        missing_only=False,
+        dry_run=True,
+    )
+
+    assert rc == 0
+    assert calls == [("codex", True)]
+
+
+def test_update_dry_run_does_not_rebuild_install_scripts(tmp_path, monkeypatch):
+    rebuilt = []
+    monkeypatch.setattr(
+        agents_tool,
+        "cmd_install_scripts_build",
+        lambda *args: rebuilt.append(True) or 0,
+    )
+    monkeypatch.setattr(agents_tool.shutil, "which", lambda _command: None)
+    cfg = {
+        "agent_updates": [
+            {"name": "OpenAI Codex CLI", "command": "codex", "preferred": "npm", "package": "@openai/codex"}
+        ]
+    }
+
+    rc = agents_tool.cmd_update(tmp_path, cfg, check_only=False, dry_run=True)
+
+    assert rc == 0
+    assert rebuilt == []
+
+
+def test_sync_check_defaults_to_global_targets(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "common.md").write_text("# Policy\n", encoding="utf-8")
+    (repo / "common.json").write_text('{"mcp_servers":{},"skills":[]}', encoding="utf-8")
+    cfg = {
+        "common_text_file": "common.md",
+        "common_data_file": "common.json",
+        "agent_configs": [
+            {
+                "name": "Claude Global Instructions",
+                "agents": ["claude"],
+                "format": "markdown",
+                "default_paths": ["~/.claude/CLAUDE.md"],
+            }
+        ],
+    }
+
+    assert agents_tool.cmd_sync(repo, cfg, check_only=True, agents=["claude"]) == 1
+    assert agents_tool.cmd_sync(repo, cfg, check_only=False, agents=["claude"]) == 0
+    assert agents_tool.cmd_sync(repo, cfg, check_only=True, agents=["claude"]) == 0
+    assert "oooconf shared agent policy" in (home / ".claude/CLAUDE.md").read_text(encoding="utf-8")

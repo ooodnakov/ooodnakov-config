@@ -190,13 +190,13 @@ Primary commands:
 - `oooconf link`: create or update symlinks from manifest (also runs automatically during install)
 - `oooconf completions`: regenerate completion files (autogen zsh + `oooconf` command completions + the PowerShell tool-completion cache, Windows hosts only)
 - `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
-- `oooconf agents sync`: append/update shared managed AGENTS.md policy sections
-- `oooconf agents doctor`: verify AGENTS.md managed sections and common MCP/skills content
-- `oooconf agents mcp sync|status`: manage tracked MCP server clones/install state
+- `oooconf agents sync`: write the managed policy block and MCP/skill markers into global agent configs (all targets by default; `--agents`/`--select` narrow the set)
+- `oooconf agents doctor`: verify managed blocks and common MCP/skills content in agent configs
+- `oooconf agents mcp sync|status`: manage tracked MCP server clones/install state (`mcp sync --servers` limits the set)
 - `oooconf agents mcp add`: add one or many MCP JSON entries to shared common-data (`--multi`), with optional `--preview`, and normalize `npx -y` to `pnpm dlx`
 - `oooconf agents rtk init`: run RTK global init for detected agents
-- `oooconf agents provider sync minimax`: configure MiniMax-M2.7 provider backends for Claude Code, OpenCode, and Codex CLI
-- `oooconf agents skills sync`: synchronize configured agent skill specs
+- `oooconf agents provider sync minimax`: configure MiniMax-M2.7 provider backends for Claude Code, OpenCode, and Codex CLI (`--agents`/`--select` narrow the set)
+- `oooconf agents skills sync`: synchronize configured agent skill specs (`--agents`/`--select` narrow the set)
 - `oooconf agents skills view`: list the global shared skills catalog via `pnpm dlx skills ls -g` (add `--json` for machine output)
 - `oooconf agents skills add <source>`: add one shared skill source (e.g. `vercel-labs/agent-skills`) and optionally sync
 - `oooconf agents update`: update installed agent CLIs using their preferred package manager (pnpm-based tools are updated via `pnpm`)
@@ -344,11 +344,15 @@ Agent policy management:
 ```bash
 oooconf agents detect
 oooconf agents sync
+oooconf agents sync --check
+oooconf agents sync --agents claude
 oooconf agents doctor
 oooconf agents mcp sync
+oooconf agents mcp sync --servers context7
 oooconf agents mcp status
 oooconf agents rtk init
 oooconf agents provider sync minimax
+oooconf agents provider sync minimax --agents codex
 oooconf agents skills sync
 oooconf agents skills view
 oooconf agents install --check
@@ -367,9 +371,11 @@ The shared AGENTS policy snippets are configured in:
 - `docs/agents-config-research.md` (cross-agent config model comparison and rationale)
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
-`oooconf agents install` installs missing configured agent CLIs by default. Pass one or more agent keys such as `codex gemini`, `--missing` for explicit missing-only mode, or `--all` to install or upgrade every configured agent CLI. `--check` previews the installer commands without running them.
-`oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, and routes all pnpm-preferred agents through `pnpm add -g <package>@latest`.
-`oooconf agents sync --global` now understands MCP `env_vars` shorthands and resolves `{env_var}` placeholders from the current environment when generating Codex, Claude, and Gemini MCP configs. `oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in local environment by default for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is intentionally used on private machine config.
+`oooconf agents sync` targets every configured global agent config by default and is idempotent. Pass agent keys such as `--agents claude codex` to narrow it, or `--select` to choose interactively. `--check` exits non-zero when any target is stale; `--dry-run` prints the same plan without writing.
+`oooconf agents install` installs missing configured agent CLIs by default. Pass one or more agent keys such as `codex gemini`, `--missing` for explicit missing-only mode, or `--all` to install or upgrade every configured agent CLI. `--check` and `--dry-run` preview the installer commands and post-install steps without running them.
+`oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, routes pnpm-preferred agents through `pnpm add -g <package>@latest` (falling back to `npm install -g` when pnpm is unavailable), and reruns configured post-install steps.
+`oooconf agents sync` understands MCP `env_vars` shorthands. `{env_var}`/`$env_var` placeholders are kept verbatim unless `--materialize-secrets` is passed, so generated configs stay secret-free by default.
+`oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in the local environment by default for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is intentionally used on private machine config.
 
 ## Developer Automation
 

@@ -52,23 +52,23 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | `oooconf completions` | regenerate tracked completions and the PowerShell tool-completion cache | linux, macos, windows | `oooconf.completions` | `--dry-run` |
 | `oooconf link` | create or update symlinks from manifest | linux, macos, windows | `oooconf.link` | `--dry-run` |
 | `oooconf agents` | detect/sync/doctor/provider/update AGENTS.md workflows | linux, macos, windows | `oooconf.agents` | — |
-| `oooconf agents detect` | detect configured agent CLIs on PATH | linux, macos, windows | `oooconf.agents.detect` | `--repo-root`, `--config`, `--json` |
-| `oooconf agents sync` | append or update shared AGENTS.md block | linux, macos, windows | `oooconf.agents.sync` | `--repo-root`, `--config`, `--check`, `--global`, `--materialize-secrets`, `--agents` |
-| `oooconf agents doctor` | verify AGENTS.md shared block is current | linux, macos, windows | `oooconf.agents.doctor` | `--repo-root`, `--config`, `--strict-config-paths` |
+| `oooconf agents detect` | detect configured agent CLIs on PATH | linux, macos, windows | `oooconf.agents.detect` | `--repo-root`, `--config`, `--json`, `--dry-run` |
+| `oooconf agents sync` | sync managed policy and MCP entries into global agent configs | linux, macos, windows | `oooconf.agents.sync` | `--repo-root`, `--config`, `--check`, `--dry-run`, `--materialize-secrets`, `--agents`, `--select` |
+| `oooconf agents doctor` | verify AGENTS.md shared block is current | linux, macos, windows | `oooconf.agents.doctor` | `--repo-root`, `--config`, `--strict-config-paths`, `--dry-run` |
 | `oooconf agents mcp` | manage Model Context Protocol (MCP) servers | linux, macos, windows | `oooconf.agents.mcp` | — |
-| `oooconf agents mcp sync` | synchronize managed MCP servers | linux, macos, windows | `oooconf.agents.mcp.sync` | `--check`, `--agents` |
+| `oooconf agents mcp sync` | synchronize managed MCP servers | linux, macos, windows | `oooconf.agents.mcp.sync` | `--check`, `--dry-run`, `--servers`, `--select` |
 | `oooconf agents mcp status` | show managed MCP status | linux, macos, windows | `oooconf.agents.mcp.status` | — |
 | `oooconf agents mcp add` | add one MCP JSON entry into common-data and optionally sync | linux, macos, windows | `oooconf.agents.mcp.add` | `--name`, `--json`, `--multi`, `--preview`, `--sync-now`, `--check` |
 | `oooconf agents status` | show status of managed MCP servers | linux, macos, windows | `oooconf.agents.status` | — |
 | `oooconf agents rtk` | manage RTK integration across agents | linux, macos, windows | `oooconf.agents.rtk` | — |
-| `oooconf agents rtk init` | run 'rtk init --global' for detected agents | linux, macos, windows | `oooconf.agents.rtk.init` | `--check` |
+| `oooconf agents rtk init` | run 'rtk init --global' for detected agents | linux, macos, windows | `oooconf.agents.rtk.init` | `--check`, `--dry-run` |
 | `oooconf agents provider` | configure model/API providers for agent CLIs | linux, macos, windows | `oooconf.agents.provider` | — |
-| `oooconf agents provider sync` | sync a provider backend into supported agent configs | linux, macos, windows | `oooconf.agents.provider.sync` | `--check`, `--materialize-secrets`, `--region`, `--agents` |
-| `oooconf agents update` | update installed agent CLIs | linux, macos, windows | `oooconf.agents.update` | `--repo-root`, `--config`, `--check` |
-| `oooconf agents install` | install one specific agent CLI | linux, macos, windows | `oooconf.agents.install` | `--repo-root`, `--config`, `--all`, `--missing`, `--check` |
+| `oooconf agents provider sync` | sync a provider backend into supported agent configs | linux, macos, windows | `oooconf.agents.provider.sync` | `--check`, `--dry-run`, `--materialize-secrets`, `--region`, `--agents`, `--select` |
+| `oooconf agents update` | update installed agent CLIs | linux, macos, windows | `oooconf.agents.update` | `--repo-root`, `--config`, `--check`, `--dry-run` |
+| `oooconf agents install` | install one specific agent CLI | linux, macos, windows | `oooconf.agents.install` | `--repo-root`, `--config`, `--all`, `--missing`, `--check`, `--dry-run` |
 | `oooconf agents install-scripts-build` | build standalone install scripts for agents | linux, macos, windows | `oooconf.agents.install-scripts-build` | — |
 | `oooconf agents skills` | manage agent skills and extensions | linux, macos, windows | `oooconf.agents.skills` | — |
-| `oooconf agents skills sync` | synchronize configured skill specs across agents | linux, macos, windows | `oooconf.agents.skills.sync` | `--check`, `--agents` |
+| `oooconf agents skills sync` | synchronize configured skill specs across agents | linux, macos, windows | `oooconf.agents.skills.sync` | `--check`, `--dry-run`, `--agents`, `--select` |
 | `oooconf agents skills view` | list global shared skills catalog via pnpm dlx | linux, macos, windows | `oooconf.agents.skills.view` | `--check`, `--json` |
 | `oooconf agents skills add` | add one shared skill source and optionally sync | linux, macos, windows | `oooconf.agents.skills.add` | `--agent`, `--sync-now`, `--check` |
 | `oooconf secrets` | sync or validate local secret env files | linux, macos, windows | `oooconf.secrets` | — |

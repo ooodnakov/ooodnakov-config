@@ -79,7 +79,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:detect' = @{
-            Options = @('--repo-root', '--config', '--json')
+            Options = @('--repo-root', '--config', '--json', '--dry-run')
             OptionsWithArgs = @('--repo-root', '--config')
             Values = @()
             Subcommands = @()
@@ -87,7 +87,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:doctor' = @{
-            Options = @('--repo-root', '--config', '--strict-config-paths')
+            Options = @('--repo-root', '--config', '--strict-config-paths', '--dry-run')
             OptionsWithArgs = @('--repo-root', '--config')
             Values = @()
             Subcommands = @()
@@ -95,7 +95,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:install' = @{
-            Options = @('--repo-root', '--config', '--all', '--missing', '--check')
+            Options = @('--repo-root', '--config', '--all', '--missing', '--check', '--dry-run')
             OptionsWithArgs = @('--repo-root', '--config')
             Values = @('codex', 'claude', 'gemini', 'qwen', 'cursor-agent', 'opencode', 'aider', 'pi', 'omp', 'command-code')
             Subcommands = @()
@@ -135,7 +135,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:mcp:sync' = @{
-            Options = @('--check', '--agents')
+            Options = @('--check', '--dry-run', '--servers', '--select')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
@@ -151,11 +151,12 @@ function Get-OooconfCompletions {
             }
         }
         'agents:provider:sync' = @{
-            Options = @('--check', '--materialize-secrets', '--region', '--agents')
-            OptionsWithArgs = @('--region')
+            Options = @('--check', '--dry-run', '--materialize-secrets', '--region', '--agents', '--select')
+            OptionsWithArgs = @('--region', '--agents')
             Values = @()
             Subcommands = @()
             OptionValues = @{
+                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code')
                 '--region' = @('global', 'china')
             }
         }
@@ -168,7 +169,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:rtk:init' = @{
-            Options = @('--check')
+            Options = @('--check', '--dry-run')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
@@ -192,11 +193,12 @@ function Get-OooconfCompletions {
             }
         }
         'agents:skills:sync' = @{
-            Options = @('--check', '--agents')
-            OptionsWithArgs = @()
+            Options = @('--check', '--dry-run', '--agents', '--select')
+            OptionsWithArgs = @('--agents')
             Values = @()
             Subcommands = @()
             OptionValues = @{
+                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code')
             }
         }
         'agents:skills:view' = @{
@@ -216,15 +218,16 @@ function Get-OooconfCompletions {
             }
         }
         'agents:sync' = @{
-            Options = @('--repo-root', '--config', '--check', '--global', '--materialize-secrets', '--agents')
-            OptionsWithArgs = @('--repo-root', '--config')
+            Options = @('--repo-root', '--config', '--check', '--dry-run', '--materialize-secrets', '--agents', '--select')
+            OptionsWithArgs = @('--repo-root', '--config', '--agents')
             Values = @()
             Subcommands = @()
             OptionValues = @{
+                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code')
             }
         }
         'agents:update' = @{
-            Options = @('--repo-root', '--config', '--check')
+            Options = @('--repo-root', '--config', '--check', '--dry-run')
             OptionsWithArgs = @('--repo-root', '--config')
             Values = @()
             Subcommands = @()

@@ -11,6 +11,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -47,8 +48,10 @@ RTK_BEGIN = "<!-- oooconf:rtk:start -->"
 RTK_END = "<!-- oooconf:rtk:end -->"
 DEFAULT_CONFIG_PATH = Path("home/.config/ooodnakov/agents/config.json")
 ENV_PLACEHOLDER_PATTERN = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
-BRACED_ENV_REF_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
-SIMPLE_ENV_REF_PATTERN = re.compile(r"(?<!\$)\$([A-Za-z_][A-Za-z0-9_]*)")
+ENV_REFERENCE_PATTERN = re.compile(
+    r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)|\{([A-Za-z_][A-Za-z0-9_]*)\}"
+)
+_JSON_TRAILING_COMMA_PATTERN = re.compile(r",\s*([}\]])")
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,7 @@ class AgentConfigTarget:
     docs_url: str = ""
     mcp_paths: list[str] | None = None
     mcp_skip: bool = False
+    agents: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -85,37 +89,65 @@ class AgentUpdateSpec:
     preferred: str
     package: str
     install_script: str | None = None
+    install_script_ps: str | None = None
 
 
-def parse_args() -> argparse.Namespace:
+AGENTS_EPILOG = """\
+Examples:
+  oooconf agents detect                 list configured agent CLIs
+  oooconf agents sync                   sync global AGENTS.md and MCP configs
+  oooconf agents sync --check           fail if global configs are stale
+  oooconf agents sync --agents claude   sync only one agent (config + instructions)
+  oooconf agents doctor                 validate agent configs
+  oooconf agents mcp sync --servers context7
+  oooconf agents provider sync minimax --agents codex
+  oooconf agents skills view --json
+"""
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="oooconf agents",
         description="Detect AI agent CLIs and manage shared AGENTS.md instructions.",
+        epilog=AGENTS_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--repo-root", default=None, help="Repo root containing oooconf agent config.")
     parser.add_argument("--config", default=None, help="Override agent config JSON path.")
 
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(dest="command", required=False)
 
     detect_parser = subparsers.add_parser("detect", help="Detect known agent CLIs available on PATH.")
     detect_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON output.")
     detect_parser.add_argument("--dry-run", action="store_true", help="Show what would be detected.")
 
-    sync_parser = subparsers.add_parser("sync", help="Append/update a managed common block in AGENTS.md files.")
+    sync_parser = subparsers.add_parser(
+        "sync", help="Sync the managed AGENTS.md block and MCP entries into global agent configs."
+    )
     sync_parser.add_argument("--check", action="store_true", help="Validate only; do not write files.")
-    sync_parser.add_argument("--dry-run", action="store_true", help="Show what would be written to AGENTS.md.")
+    sync_parser.add_argument("--dry-run", action="store_true", help="Show what would change without writing files.")
     sync_parser.add_argument(
         "--materialize-secrets",
         action="store_true",
-        help="Materialize env vars into generated global MCP configs (otherwise keep placeholders).",
+        help="Write current env values instead of keeping {VAR} placeholders (never commit the result).",
     )
     sync_parser.add_argument(
-        "--global", dest="global_sync", action="store_true", help="Also sync MCP servers to global agent configs."
+        "--global",
+        dest="global_sync",
+        action="store_true",
+        default=True,
+        help=argparse.SUPPRESS,
     )
     sync_parser.add_argument(
         "--agents",
-        nargs="*",
-        help="Filter sync to specific agents by name or key.",
+        nargs="+",
+        metavar="AGENT",
+        help="Sync only these agents (accepts keys such as claude, codex, omp).",
+    )
+    sync_parser.add_argument(
+        "--select",
+        action="store_true",
+        help="Pick agents interactively instead of syncing all targets.",
     )
 
     doctor_parser = subparsers.add_parser(
@@ -134,11 +166,18 @@ def parse_args() -> argparse.Namespace:
     mcp_sync_parser.add_argument("--check", action="store_true", help="Print planned actions without executing.")
     mcp_sync_parser.add_argument("--dry-run", action="store_true", help="Show what MCP servers would be synced.")
     mcp_sync_parser.add_argument(
+        "--servers",
         "--agents",
-        metavar="AGENT",
-        nargs="*",
+        dest="servers",
+        metavar="SERVER",
+        nargs="+",
         default=None,
-        help="Restrict sync to specific agents. If omitted, interactive mode.",
+        help="Restrict sync to these MCP servers (legacy alias: --agents).",
+    )
+    mcp_sync_parser.add_argument(
+        "--select",
+        action="store_true",
+        help="Pick managed MCP servers interactively instead of syncing all of them.",
     )
     mcp_add_parser = mcp_subparsers.add_parser("add", help="Add an MCP server entry to common-data.json.")
     mcp_add_parser.add_argument("--name", help="Optional MCP server name (otherwise inferred from JSON key).")
@@ -153,8 +192,8 @@ def parse_args() -> argparse.Namespace:
     mcp_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
     mcp_subparsers.add_parser("status", help="Show status of managed MCP servers.")
 
-    help_parser = subparsers.add_parser("help", help="Show this help message.")
-    help_parser.add_argument("topic", nargs="?", default=None, help="Topic to show help for.")
+    help_parser = subparsers.add_parser("help", help="Show this help message or a subcommand's help.")
+    help_parser.add_argument("topics", nargs="*", help="One or more subcommand names, e.g. 'help mcp sync'.")
 
     rtk_parser = subparsers.add_parser("rtk", help="Manage RTK (Rust Token Killer) integration.")
     rtk_subparsers = rtk_parser.add_subparsers(dest="subcommand", required=True)
@@ -228,9 +267,14 @@ def parse_args() -> argparse.Namespace:
     provider_sync_parser.add_argument(
         "--agents",
         metavar="AGENT",
-        nargs="*",
+        nargs="+",
         default=None,
-        help="Restrict sync to specific agents (e.g., claude codex opencode). If omitted, interactive mode.",
+        help="Restrict sync to these agents (e.g., claude codex opencode).",
+    )
+    provider_sync_parser.add_argument(
+        "--select",
+        action="store_true",
+        help="Pick supported agents interactively instead of configuring all of them.",
     )
 
     skills_parser = subparsers.add_parser(
@@ -246,9 +290,14 @@ def parse_args() -> argparse.Namespace:
     skills_sync_parser.add_argument(
         "--agents",
         metavar="AGENT",
-        nargs="*",
+        nargs="+",
         default=None,
-        help="Restrict sync to specific agents. If omitted, interactive mode.",
+        help="Restrict sync to these agents.",
+    )
+    skills_sync_parser.add_argument(
+        "--select",
+        action="store_true",
+        help="Pick agents interactively instead of syncing every configured skill spec.",
     )
     skills_view_parser = skills_subparsers.add_parser(
         "view",
@@ -264,11 +313,20 @@ def parse_args() -> argparse.Namespace:
 
     subparsers.add_parser("status", help="Show status of managed MCP servers.")
 
-    return parser.parse_args()
+    return parser
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    return build_parser().parse_args(argv)
 
 
 def resolve_repo_root(repo_root: str | None) -> Path:
-    return Path(repo_root).expanduser().resolve() if repo_root else Path(__file__).resolve().parent.parent
+    if repo_root:
+        return Path(repo_root).expanduser().resolve()
+    env_root = os.environ.get("OOODNAKOV_REPO_ROOT")
+    if env_root:
+        return Path(env_root).expanduser().resolve()
+    return Path(__file__).resolve().parents[2]
 
 
 def resolve_config_path(repo_root: Path, config_override: str | None) -> Path:
@@ -293,6 +351,29 @@ def read_text(repo_root: Path, relative_path: str) -> str:
     if not path.exists():
         raise FileNotFoundError(f"missing configured file: {path}")
     return path.read_text(encoding="utf-8").rstrip() + "\n"
+
+
+def write_text_atomic(path: Path, text: str, *, mode: int | None = None) -> None:
+    """Replace ``path`` atomically so a failed write cannot truncate a live config."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+        if mode is not None:
+            os.chmod(tmp_name, mode)
+        os.replace(tmp_name, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+def write_json_atomic(path: Path, data: Any, *, sort_keys: bool = False) -> None:
+    write_text_atomic(path, json.dumps(data, indent=2, sort_keys=sort_keys) + "\n")
 
 
 def read_json(repo_root: Path, relative_path: str) -> dict[str, Any]:
@@ -344,53 +425,74 @@ def common_data_path(repo_root: Path, config: dict[str, Any]) -> Path:
 
 
 def write_common_data(repo_root: Path, config: dict[str, Any], data: dict[str, Any]) -> None:
-    path = common_data_path(repo_root, config)
-    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_json_atomic(common_data_path(repo_root, config), data, sort_keys=True)
+
+
+TOML_BARE_KEY_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def toml_key(key: str) -> str:
+    return key if TOML_BARE_KEY_PATTERN.match(key) else json.dumps(key)
 
 
 def normalize_mcp_command(config: dict[str, Any]) -> dict[str, Any]:
     updated = dict(config)
     command = str(updated.get("command", "")).strip()
-    args = [str(arg) for arg in updated.get("args", [])]
-    if command in {"npx", "npm"} and args[:1] == ["-y"]:
+    args = [str(arg) for arg in (updated.get("args") or [])]
+    if command == "npx":
+        if args[:1] in (["-y"], ["--yes"]):
+            args = args[1:]
+        updated["command"] = "pnpm"
+        updated["args"] = ["dlx", *args]
+    elif command == "npm" and args[:1] == ["exec"]:
         updated["command"] = "pnpm"
         updated["args"] = ["dlx", *args[1:]]
     return updated
 
 
-def parse_mcp_json_input(payload: str) -> tuple[str, dict[str, Any]]:
+def _strip_trailing_commas(text: str) -> str:
+    return _JSON_TRAILING_COMMA_PATTERN.sub(r"\1", text).rstrip().removesuffix(",")
+
+
+def _json_object_candidates(payload: str) -> list[str]:
     raw = payload.strip()
-    candidates = [raw]
+    if not raw:
+        return []
 
     # Heuristics for common paste mistakes:
     # 1) User pastes `"name": {...}` without outer braces.
-    # 2) User pastes object with trailing comma.
-    # 3) User pastes single-quoted JSON-like dict.
-    if raw and not raw.startswith("{") and ":" in raw:
-        candidates.append("{" + raw + "}")
-    if raw.endswith(","):
-        candidates.append(raw[:-1])
+    # 2) User pastes object with a trailing comma.
+    # 3) User pastes a single-quoted JSON-like dict.
+    variants = [raw, _strip_trailing_commas(raw)]
     if "'" in raw and '"' not in raw:
-        candidates.append(raw.replace("'", '"'))
-        if not raw.startswith("{") and ":" in raw:
-            candidates.append("{" + raw.replace("'", '"') + "}")
+        fixed = raw.replace("'", '"')
+        variants.extend([fixed, _strip_trailing_commas(fixed)])
 
+    candidates: list[str] = []
+    for variant in variants:
+        candidates.append(variant)
+        if not variant.startswith("{") and ":" in variant:
+            candidates.append("{" + variant + "}")
+    return list(dict.fromkeys(candidates))
+
+
+def _load_json_object(payload: str) -> dict[str, Any]:
     parse_errors: list[str] = []
-    obj: dict[str, Any] | None = None
-    for candidate in candidates:
+    for candidate in _json_object_candidates(payload):
         try:
             parsed = json.loads(candidate)
-            if isinstance(parsed, dict):
-                obj = parsed
-                break
         except json.JSONDecodeError as exc:
             parse_errors.append(str(exc))
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    hint = 'Ensure the input is a JSON object, e.g. {"name": {"command": "pnpm", "args": ["dlx", "pkg"]}}.'
+    details = parse_errors[0] if parse_errors else "Invalid JSON payload."
+    raise ValueError(f"{details}. {hint}")
 
-    if obj is None:
-        hint = 'Ensure the input is a JSON object, e.g. {"name": {"command": "pnpm", "args": ["dlx", "pkg"]}}.'
-        details = parse_errors[0] if parse_errors else "Invalid JSON payload."
-        raise ValueError(f"{details} {hint}")
 
+def parse_mcp_json_input(payload: str) -> tuple[str, dict[str, Any]]:
+    obj = _load_json_object(payload)
     if len(obj) != 1:
         raise ValueError("MCP JSON input must contain exactly one top-level server entry.")
     name, cfg = next(iter(obj.items()))
@@ -405,14 +507,7 @@ def parse_mcp_json_inputs(payload: str, *, allow_multi: bool = False) -> dict[st
     if not allow_multi:
         name, cfg = parse_mcp_json_input(payload)
         return {name: cfg}
-    raw = payload.strip()
-    try:
-        obj = json.loads(raw if raw.startswith("{") else "{" + raw + "}")
-    except json.JSONDecodeError:
-        fixed = raw.replace("'", '"') if "'" in raw and '"' not in raw else raw
-        obj = json.loads(fixed if fixed.startswith("{") else "{" + fixed + "}")
-    if not isinstance(obj, dict):
-        raise ValueError("MCP payload must be a JSON object.")
+    obj = _load_json_object(payload)
     normalized: dict[str, dict[str, Any]] = {}
     for key, value in obj.items():
         if not isinstance(value, dict):
@@ -445,17 +540,6 @@ def canonicalize_skill_source(source: str) -> str:
     return f"https://github.com/{src.rstrip('/')}"
 
 
-def discover_agent_files(repo_root: Path, configured_files: list[str], include_missing: bool = False) -> list[Path]:
-    discovered: set[Path] = set()
-    for rel in configured_files:
-        candidate = (repo_root / rel).resolve()
-        if candidate.exists() and candidate.is_file():
-            discovered.add(candidate)
-        elif include_missing and candidate.parent.exists():
-            discovered.add(candidate)
-    return sorted(list(discovered))
-
-
 def parse_agent_clis(raw: list[dict[str, str]]) -> list[AgentCli]:
 
     return [AgentCli(name=entry["name"], command=entry["command"]) for entry in raw]
@@ -464,6 +548,9 @@ def parse_agent_clis(raw: list[dict[str, str]]) -> list[AgentCli]:
 def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
     targets: list[AgentConfigTarget] = []
     for entry in raw:
+        raw_agents = entry.get("agents") or ()
+        if isinstance(raw_agents, str):
+            raw_agents = [raw_agents]
         targets.append(
             AgentConfigTarget(
                 name=entry["name"],
@@ -472,9 +559,47 @@ def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
                 docs_url=entry.get("docs_url", ""),
                 mcp_paths=entry.get("mcp_paths"),
                 mcp_skip=entry.get("mcp_skip", False),
+                agents=tuple(raw_agents),
             )
         )
     return targets
+
+
+def _target_aliases(target: AgentConfigTarget, update_specs: list[AgentUpdateSpec]) -> set[str]:
+    aliases = {
+        target.name.lower(),
+        target.name.lower().replace(" ", "-"),
+        target.name.lower().replace(" ", ""),
+    }
+    aliases.update(alias.lower() for alias in target.agents)
+    if not target.agents:
+        aliases.add(re.split(r"[^a-z0-9]+", target.name.lower())[0])
+    for spec in update_specs:
+        if spec.command.lower() in aliases or spec.name.lower() in aliases:
+            aliases.update({spec.command.lower(), spec.name.lower(), spec.name.lower().replace(" ", "-")})
+    return aliases
+
+
+def select_agent_targets(
+    targets: list[AgentConfigTarget],
+    update_specs: list[AgentUpdateSpec],
+    queries: list[str] | None,
+) -> tuple[list[AgentConfigTarget], list[str]]:
+    """Filter targets by agent key or name. Returns (selected, unmatched_queries)."""
+    if queries is None:
+        return list(targets), []
+    selected: list[AgentConfigTarget] = []
+    unmatched: list[str] = []
+    for query in queries:
+        normalized = query.strip().lower()
+        matches = [target for target in targets if normalized in _target_aliases(target, update_specs)]
+        if not matches:
+            unmatched.append(query)
+            continue
+        for target in matches:
+            if target not in selected:
+                selected.append(target)
+    return selected, unmatched
 
 
 def parse_agent_update_specs(raw: list[dict[str, str]]) -> list[AgentUpdateSpec]:
@@ -485,6 +610,7 @@ def parse_agent_update_specs(raw: list[dict[str, str]]) -> list[AgentUpdateSpec]
             preferred=entry.get("preferred", ""),
             package=entry.get("package", ""),
             install_script=entry.get("install_script") or None,
+            install_script_ps=entry.get("install_script_ps") or None,
         )
         for entry in raw
     ]
@@ -526,27 +652,14 @@ def upsert_managed_block(existing: str, managed_block: str) -> str:
     if MANAGED_BEGIN in existing and MANAGED_END in existing:
         start = existing.index(MANAGED_BEGIN)
         end = existing.rindex(MANAGED_END) + len(MANAGED_END)
-        return existing[:start].rstrip() + "\n\n" + managed_block + existing[end:].lstrip("\n")
+        prefix = existing[:start]
+        suffix = existing[end:].lstrip("\n")
+        if not prefix.strip():
+            return managed_block + suffix
+        return prefix.rstrip() + "\n\n" + managed_block + suffix
+    if not existing.strip():
+        return managed_block
     return existing.rstrip() + "\n\n" + managed_block
-
-
-def sync_files(agent_files: list[Path], managed_block: str, check_only: bool) -> tuple[int, list[Path]]:
-    changed: list[Path] = []
-    for path in agent_files:
-        if not path.exists():
-            changed.append(path)
-            if not check_only:
-                # For new files, the managed block is the entire content
-                path.write_text(managed_block, encoding="utf-8")
-            continue
-
-        current = path.read_text(encoding="utf-8")
-        updated = upsert_managed_block(current, managed_block)
-        if updated != current:
-            changed.append(path)
-            if not check_only:
-                path.write_text(updated, encoding="utf-8")
-    return len(changed), changed
 
 
 def extract_search_space(path: Path, fmt: str) -> str:
@@ -763,7 +876,7 @@ def sync_global_configs(
                     if needs_update:
                         changed.append(mcp_file)
                         if not check_only:
-                            mcp_file.write_text(json.dumps(mcp_data, indent=2) + "\n", encoding="utf-8")
+                            write_json_atomic(mcp_file, mcp_data)
                 except Exception as exc:
                     print_error_line("warn", f"failed to sync mcp file {mcp_file}: {exc}")
             continue
@@ -780,7 +893,7 @@ def sync_global_configs(
                 if not existing.exists():
                     changed.append(existing)
                     if not check_only:
-                        existing.write_text(managed_block, encoding="utf-8")
+                        write_text_atomic(existing, managed_block)
                     continue
 
                 current = existing.read_text(encoding="utf-8")
@@ -788,7 +901,7 @@ def sync_global_configs(
                 if updated != current:
                     changed.append(existing)
                     if not check_only:
-                        existing.write_text(updated, encoding="utf-8")
+                        write_text_atomic(existing, updated)
             except Exception as exc:
                 print_error_line("warn", f"failed to sync global markdown {existing}: {exc}")
             continue
@@ -800,33 +913,32 @@ def sync_global_configs(
                 needs_update = False
                 mcp_servers = common_data.get("mcp_servers", {})
                 for name, config in mcp_servers.items():
-                    # Check for [mcp_servers.name] or [mcp_servers."name"]
-                    if f"[mcp_servers.{name}]" not in updated and f'[mcp_servers."{name}"]' not in updated:
-                        if "command" not in config:
-                            continue
+                    table = f"mcp_servers.{toml_key(name)}"
+                    if toml_table_exists(updated, table):
+                        continue
+                    if "command" not in config:
+                        continue
 
-                        entry = render_mcp_server_entry(
-                            target, name, config, repo_root, materialize_secrets=materialize_secrets
-                        )
+                    entry = render_mcp_server_entry(
+                        target, name, config, repo_root, materialize_secrets=materialize_secrets
+                    )
 
-                        # Basic TOML injection (appending to end of file)
-                        block = (
-                            f"\n[mcp_servers.{name}]\n"
-                            f"command = {json.dumps(entry['command'])}\n"
-                            f"args = {json.dumps(entry['args'])}\n"
-                        )
-                        if "env" in entry:
-                            block += f"[mcp_servers.{name}.env]\n"
-                            for key, value in entry["env"].items():
-                                block += f"{key} = {json.dumps(value)}\n"
+                    # Basic TOML injection (appending to end of file)
+                    block = (
+                        f"\n[{table}]\ncommand = {json.dumps(entry['command'])}\nargs = {json.dumps(entry['args'])}\n"
+                    )
+                    if "env" in entry:
+                        block += f"[{table}.env]\n"
+                        for key, value in entry["env"].items():
+                            block += f"{toml_key(key)} = {json.dumps(value)}\n"
 
-                        updated += block
-                        needs_update = True
+                    updated += block
+                    needs_update = True
 
                 if needs_update:
                     changed.append(existing)
                     if not check_only:
-                        existing.write_text(updated, encoding="utf-8")
+                        write_text_atomic(existing, updated)
             except Exception as exc:
                 print_error_line("warn", f"failed to sync global toml {existing}: {exc}")
             continue
@@ -895,7 +1007,7 @@ def sync_global_configs(
             if needs_update:
                 changed.append(existing)
                 if not check_only:
-                    existing.write_text(json.dumps(data, indent=2), encoding="utf-8")
+                    write_json_atomic(existing, data)
         except Exception as exc:
             print_error_line("warn", f"failed to sync global config {existing}: {exc}")
 
@@ -947,71 +1059,77 @@ def cmd_sync(
     repo_root: Path,
     config: dict[str, Any],
     check_only: bool,
-    global_sync: bool,
     materialize_secrets: bool = False,
     agents: list[str] | None = None,
+    select: bool = False,
     dry_run: bool = False,
 ) -> int:
+    read_only = check_only or dry_run
     common_text = get_platform_common_text(repo_root, config)
+    merged_data = load_common_data(repo_root, config, include_local=True)
+    managed_block = render_markdown_block(common_text, merged_data)
+    all_targets = parse_agent_targets(config["agent_configs"])
+    update_specs = parse_agent_update_specs(config.get("agent_updates", []))
 
     print_section("AGENTS Sync (dry-run)" if dry_run else "AGENTS Sync")
     print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
 
-    g_count = 0
-    g_files = []
-    if global_sync:
-        merged_data = load_common_data(repo_root, config, include_local=True)
-        managed_block_global = render_markdown_block(common_text, merged_data)
-        config_targets = parse_agent_targets(config["agent_configs"])
+    if select and agents is not None:
+        print_status_line("fail", "--select cannot be combined with --agents.")
+        return 1
 
-        # Filter to selected agents if not all specified
-        if agents is None and not check_only and not dry_run and is_interactive():
-            agent_names = [t.name for t in config_targets]
-            selected = interactive_select(
-                agent_names,
-                title="Select agents to sync",
-                instructions="SPACE toggle  ENTER confirm  A all  N none  Q quit",
-            )
-            if selected is None:
-                print_status_line("warn", "Aborted.")
-                return 1
-            agents = selected
-
-        if agents is not None:
-            config_targets = [t for t in config_targets if t.name in agents]
-
-        if dry_run:
-            merged_data = load_common_data(repo_root, config, include_local=True)
-            managed_block_global = render_markdown_block(common_text, merged_data)
-            print_status_line("hint", f"Global configs that would be updated: {len(config_targets)}")
-            print_status_line("hint", "Managed block preview:")
-            for line in managed_block_global.split("\n")[:20]:
-                print_status_line("hint", f"  {line}")
-            if len(managed_block_global.split("\n")) > 20:
-                print_status_line("hint", "  ...")
-            return 0
-
-        g_count, g_files = sync_global_configs(
-            repo_root,
-            config_targets,
-            merged_data,
-            managed_block_global,
-            check_only,
-            materialize_secrets=materialize_secrets,
+    if select:
+        if not is_interactive():
+            print_status_line("fail", "--select requires an interactive terminal.")
+            return 1
+        selected_names = interactive_select(
+            [target.name for target in all_targets],
+            title="Select agents to sync",
+            instructions="SPACE toggle  ENTER confirm  A all  N none  Q quit",
         )
-        print_status_line("hint", f"Global configs scanned: {len(config_targets)}")
-        print_status_line("hint", f"Global configs needing updates: {g_count}")
-        if g_files:
-            for file_path in g_files:
-                print_bullet(str(file_path))
+        if selected_names is None:
+            print_status_line("info", "Cancelled.")
+            return 1
+        if not selected_names:
+            print_status_line("info", "No agents selected.")
+            return 0
+        targets = [target for target in all_targets if target.name in selected_names]
     else:
-        print_status_line("info", "Repo-specific sync is disabled. Use --global to sync global agent configs.")
+        targets, unmatched = select_agent_targets(all_targets, update_specs, agents)
+        for query in unmatched:
+            print_status_line("warn", f"No global config target matches agent '{query}'.")
 
-    if global_sync and g_count == 0:
+    if not targets:
+        print_status_line("warn", "No agent config targets selected.")
+        return 1 if agents or select else 0
+
+    if dry_run:
+        print_status_line("hint", f"Targets: {len(targets)}")
+        print_status_line("hint", "Managed block preview:")
+        preview = managed_block.split("\n")
+        for line in preview[:20]:
+            print_status_line("hint", f"  {line}")
+        if len(preview) > 20:
+            print_status_line("hint", "  ...")
+
+    g_count, g_files = sync_global_configs(
+        repo_root,
+        targets,
+        merged_data,
+        managed_block,
+        read_only,
+        materialize_secrets=materialize_secrets,
+    )
+    print_status_line("hint", f"Global configs scanned: {len(targets)}")
+    print_status_line("hint", f"Global configs needing updates: {g_count}")
+    if g_files:
+        for file_path in g_files:
+            print_bullet(str(file_path))
+    if g_count == 0:
         print_spacer()
         print_status_line("ok", "All target files are up to date.")
 
-    return 1 if check_only and global_sync and g_count > 0 else 0
+    return 1 if check_only and g_count > 0 else 0
 
 
 def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool, dry_run: bool = False) -> int:
@@ -1027,14 +1145,14 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool, dry_
     print_section("AGENTS Doctor (dry-run)" if dry_run else "AGENTS Doctor")
 
     if dry_run:
-        print_section("AGENTS Doctor (dry-run)")
         print_status_line("info", "Agent Configs that would FAIL:")
         dry_failures = 0
         for result in config_results:
             target = result.target
             if result.existing_path is None:
                 print_status_line("warn", f"{target.name}: config path not found")
-                dry_failures += 1
+                if strict_paths:
+                    dry_failures += 1
                 continue
             if result.parse_error:
                 print_status_line("fail", f"{target.name}: parse error")
@@ -1115,6 +1233,69 @@ def resolve_update_command(spec: AgentUpdateSpec) -> tuple[list[str], str]:
     raise RuntimeError(f"unsupported preferred update manager: {spec.preferred!r}")
 
 
+def _script_lines(script: str | None) -> list[str]:
+    if not script:
+        return []
+    normalized = script.replace("&&", "\n").replace("\r\n", "\n")
+    return [line.strip() for line in normalized.split("\n") if line.strip()]
+
+
+def _post_install_script(spec: AgentUpdateSpec) -> tuple[str | None, bool]:
+    """Return the post-install script and whether it must run through PowerShell."""
+    if os.name == "nt" and spec.install_script_ps:
+        return spec.install_script_ps, True
+    return spec.install_script, False
+
+
+def run_post_install(spec: AgentUpdateSpec) -> bool:
+    script, use_powershell = _post_install_script(spec)
+    if not script:
+        return True
+
+    if use_powershell:
+        shell = shutil.which("pwsh") or shutil.which("powershell")
+        if shell is None:
+            print_status_line("fail", "No PowerShell executable found for the post-install step.")
+            return False
+        print_status_line("info", "Running post-install step via PowerShell")
+        try:
+            subprocess.run([shell, "-NoProfile", "-NonInteractive", "-Command", script], check=True)
+        except subprocess.CalledProcessError as exc:
+            print_status_line("fail", f"Post-install step failed: {exc}")
+            return False
+        print_status_line("ok", "Post-install step succeeded")
+        return True
+
+    for line in _script_lines(script):
+        print_status_line("info", f"Running post-install step: {line}")
+        try:
+            cmd_parts = shlex.split(line)
+        except ValueError as exc:
+            print_status_line("fail", f"Post-install step failed to parse: {exc}")
+            return False
+        if not cmd_parts:
+            continue
+        try:
+            subprocess.run(cmd_parts, check=True)
+        except subprocess.CalledProcessError as exc:
+            print_status_line("fail", f"Post-install step failed: {exc}")
+            return False
+        print_status_line("ok", "Post-install step succeeded")
+    return True
+
+
+def resolve_exec_command(spec: AgentUpdateSpec, command: list[str]) -> list[str] | None:
+    """Resolve the installer executable, falling back from pnpm to npm."""
+    resolved = shutil.which(command[0])
+    if resolved:
+        return [resolved, *command[1:]]
+    if command[0] == "pnpm":
+        npm = shutil.which("npm")
+        if npm:
+            return [npm, "install", "-g", f"{spec.package}@latest"]
+    return None
+
+
 def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
     specs = parse_agent_update_specs(config.get("agent_updates", []))
     if not specs:
@@ -1132,42 +1313,27 @@ def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
         cmd_list, runner = resolve_update_command(spec)
         cmd_str = shlex.join(cmd_list)
 
-        # Build Unix .sh script
-        sh_path = install_dir / f"install-{spec.command}.sh"
         sh_lines = [
-            f'#!/bin/sh\n# Generated by oooconf agents install-scripts-build\necho "Installing {spec.name} via {runner}..."\n{cmd_str}\n'
+            "#!/usr/bin/env sh",
+            "set -eu",
+            "# Generated by oooconf agents install-scripts-build",
+            f'echo "Installing {spec.name} via {runner}..."',
+            cmd_str,
+            *_script_lines(spec.install_script),
         ]
+        sh_path = install_dir / f"install-{spec.command}.sh"
+        write_text_atomic(sh_path, "\n".join(sh_lines) + "\n", mode=0o755)
 
-        # Append post-install script if configured (supports multiline via \n or &&)
-        if spec.install_script:
-            script = spec.install_script
-            # Normalize: allow \n or && as separators, collapse excess whitespace
-            script = script.replace("&&", "\n").replace("\r\n", "\n")
-            for line in script.split("\n"):
-                line = line.strip()
-                if line:
-                    sh_lines.append(f"{line}\n")
-
-        sh_content = "".join(sh_lines)
-        sh_path.write_text(sh_content, encoding="utf-8")
-        sh_path.chmod(0o755)
-
-        # Build PowerShell .ps1 script
-        ps1_path = install_dir / f"install-{spec.command}.ps1"
+        ps1_script = spec.install_script_ps or spec.install_script
         ps1_lines = [
-            f'# Generated by oooconf agents install-scripts-build\nWrite-Host "Installing {spec.name} via {runner}..."\n{cmd_str}\n'
+            "# Generated by oooconf agents install-scripts-build",
+            "$ErrorActionPreference = 'Stop'",
+            f'Write-Host "Installing {spec.name} via {runner}..."',
+            cmd_str,
+            *_script_lines(ps1_script),
         ]
-
-        if spec.install_script:
-            script = spec.install_script
-            script = script.replace("&&", "\n").replace("\r\n", "\n")
-            for line in script.split("\n"):
-                line = line.strip()
-                if line:
-                    ps1_lines.append(f"{line}\n")
-
-        ps1_content = "".join(ps1_lines)
-        ps1_path.write_text(ps1_content, encoding="utf-8")
+        ps1_path = install_dir / f"install-{spec.command}.ps1"
+        write_text_atomic(ps1_path, "\n".join(ps1_lines) + "\n")
 
         print_status_line("ok", f"{spec.name} ({spec.command})")
         count += 1
@@ -1239,16 +1405,15 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
     if check_only:
         print_status_line("ok", f"Plan: install {spec.name} via {runner}")
         print_status_line("hint", f"  command: {command_display}")
-        if spec.install_script:
-            print_status_line("hint", f"  post-install: {spec.install_script}")
+        if spec.install_script or spec.install_script_ps:
+            print_status_line("hint", f"  post-install: {spec.install_script_ps or spec.install_script}")
         return True, False
 
-    resolved_runner = shutil.which(command[0])
-    if not resolved_runner:
+    command_exec = resolve_exec_command(spec, command)
+    if command_exec is None:
         print_status_line("fail", f"{spec.name}: required installer '{command[0]}' is not installed.")
         return False, False
 
-    command_exec = [resolved_runner, *command[1:]]
     print_status_line("info", f"Installing {spec.name} via {runner}")
     print_status_line("hint", f"  command: {command_display}")
     try:
@@ -1258,27 +1423,8 @@ def run_install_spec(spec: AgentUpdateSpec, check_only: bool) -> tuple[bool, boo
         print_status_line("fail", f"Failed to install {spec.name}: {exc}")
         return False, False
 
-    # Run post-install script if configured
-    if spec.install_script:
-        script = spec.install_script
-        script = script.replace("&&", "\n").replace("\r\n", "\n")
-        for line in script.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-            print_status_line("info", f"Running post-install step: {line}")
-            try:
-                cmd_parts = shlex.split(line)
-                if not cmd_parts:
-                    continue
-                subprocess.run(cmd_parts, check=True)
-                print_status_line("ok", "Post-install step succeeded")
-            except ValueError as exc:
-                print_status_line("fail", f"Post-install step failed to parse: {exc}")
-                return False, False
-            except subprocess.CalledProcessError as exc:
-                print_status_line("fail", f"Post-install step failed: {exc}")
-                return False, False
+    if not run_post_install(spec):
+        return False, False
 
     return True, True
 
@@ -1325,14 +1471,14 @@ def cmd_install(
     failed = 0
     for spec in selected:
         attempted += 1
-        ok, installed = run_install_spec(spec, check_only)
+        ok, _installed = run_install_spec(spec, check_only or dry_run)
         if ok:
             planned_or_installed += 1
         else:
             failed += 1
 
     print_spacer()
-    action = "planned" if check_only else "installed"
+    action = "planned" if check_only or dry_run else "installed"
     print_status_line("info", f"Summary: {action} {planned_or_installed}/{attempted} agents; failed {failed}.")
     return 1 if failed else 0
 
@@ -1375,7 +1521,7 @@ def get_runner_bin_dir(runner: str) -> str | None:
 
 def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_run: bool = False) -> int:
     # First, autobuild install scripts
-    if not check_only:
+    if not check_only and not dry_run:
         cmd_install_scripts_build(repo_root, config)
 
     specs = parse_agent_update_specs(config.get("agent_updates", []))
@@ -1413,14 +1559,14 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
             if version_before:
                 print_status_line("hint", f"  current version: {version_before}")
             print_status_line("hint", f"  command: {command_display}")
+            if spec.install_script or spec.install_script_ps:
+                print_status_line("hint", f"  post-install: {spec.install_script_ps or spec.install_script}")
             continue
-        resolved_runner = shutil.which(command[0])
-        if not resolved_runner:
+        command_exec = resolve_exec_command(spec, command)
+        if command_exec is None:
             print_status_line("fail", f"{spec.name}: required updater '{command[0]}' is not installed.")
             failed += 1
             continue
-
-        command_exec = [resolved_runner, *command[1:]]
         print_status_line("info", f"Updating {spec.name} via {runner}")
         print_status_line("hint", f"  command: {command_display}")
 
@@ -1440,6 +1586,9 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
                 print(f"  {line}")
         return_code = process.wait()
         if return_code == 0:
+            if not run_post_install(spec):
+                failed += 1
+                continue
             version_after = get_command_version(spec.command)
             runner_bin_dir = get_runner_bin_dir(runner)
 
@@ -1491,7 +1640,12 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
 
 
 def cmd_skills_sync(
-    repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None, dry_run: bool = False
+    repo_root: Path,
+    config: dict[str, Any],
+    check_only: bool,
+    agents: list[str] | None = None,
+    dry_run: bool = False,
+    select: bool = False,
 ) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     skill_specs = common_data.get("skill_specs", [])
@@ -1500,21 +1654,31 @@ def cmd_skills_sync(
         return 0
 
     # Get unique agent keys from skill specs
-    spec_agents = sorted(set(s.get("agent", "").lower() for s in skill_specs if s.get("agent")))
-    if agents is None and not check_only and is_interactive():
+    spec_agents = sorted(set(str(s.get("agent", "")).lower() for s in skill_specs if s.get("agent")))
+    if select and agents is not None:
+        print_status_line("fail", "--select cannot be combined with --agents.")
+        return 1
+    if select:
+        if not is_interactive():
+            print_status_line("fail", "--select requires an interactive terminal.")
+            return 1
         agents = interactive_select(spec_agents, title="Select agents to sync skills for")
         if agents is None:
             print_status_line("info", "Cancelled.")
-            return 0
+            return 1
         if not agents:
             print_status_line("info", "No agents selected.")
             return 0
 
     if agents:
-        skill_specs = [s for s in skill_specs if s.get("agent", "").lower() in [a.lower() for a in agents]]
+        wanted = {agent.lower() for agent in agents}
+        unmatched = sorted(wanted - set(spec_agents))
+        for agent in unmatched:
+            print_status_line("warn", f"No skill specs configured for agent '{agent}'.")
+        skill_specs = [s for s in skill_specs if str(s.get("agent", "")).lower() in wanted]
         if not skill_specs:
             print_status_line("warn", f"No skill specs match agents: {', '.join(agents)}")
-            return 0
+            return 1
 
     print_section("Agent Skills Sync (dry-run)" if dry_run else "Agent Skills Sync")
     print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
@@ -1577,7 +1741,7 @@ def cmd_skills_sync(
         print_status_line("ok", f"Syncing {name} for {agent_cli.name}...")
         print_status_line("hint", f"  command: {command_display}")
         try:
-            subprocess.run(command, check=True, shell=os.name == "nt")
+            subprocess.run(command, check=True)
             print_status_line("ok", f"Successfully synced {name}")
             synced += 1
         except subprocess.CalledProcessError as exc:
@@ -1607,7 +1771,7 @@ def cmd_skills_view(json_output: bool, check_only: bool) -> int:
 
     print_status_line("info", "Listing global shared skills catalog via pnpm dlx")
     print_status_line("hint", f"  command: {command_display}")
-    result = subprocess.run(command, shell=os.name == "nt")
+    result = subprocess.run(command)
     if result.returncode != 0:
         print_status_line("fail", "skills list command failed.")
         print_status_line("hint", "  ensure the `skills` package is reachable from pnpm dlx in your environment.")
@@ -1616,10 +1780,16 @@ def cmd_skills_view(json_output: bool, check_only: bool) -> int:
 
 
 def prompt_yes_no(question: str) -> bool:
-    if shutil.which("gum") and sys.stdin.isatty():
-        result = subprocess.run(["gum", "confirm", question], shell=False)
+    if not sys.stdin.isatty():
+        return False
+    if shutil.which("gum"):
+        result = subprocess.run(["gum", "confirm", question], check=False)
         return result.returncode == 0
-    return False
+    try:
+        answer = input(f"{question} [y/N] ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        return False
+    return answer in {"y", "yes"}
 
 
 def cmd_mcp_add(
@@ -1656,14 +1826,22 @@ def cmd_mcp_add(
         except json.JSONDecodeError:
             pass
 
-    parsed_entries = parse_mcp_json_inputs(single_named_payload, allow_multi=allow_multi)
+    try:
+        parsed_entries = parse_mcp_json_inputs(single_named_payload, allow_multi=allow_multi)
+        normalized_entries: dict[str, dict[str, Any]] = {}
+        for parsed_name, entry in parsed_entries.items():
+            key = name or parsed_name
+            normalized = normalize_mcp_command(entry)
+            validate_mcp_entry(key, normalized)
+            normalized_entries[key] = normalized
+    except ValueError as exc:
+        print_status_line("fail", str(exc))
+        return 1
+
     data = read_json(repo_root, config["common_data_file"])
     mcp_servers = data.setdefault("mcp_servers", {})
     planned: list[str] = []
-    for parsed_name, entry in parsed_entries.items():
-        key = name or parsed_name
-        normalized = normalize_mcp_command(entry)
-        validate_mcp_entry(key, normalized)
+    for key, normalized in normalized_entries.items():
         mcp_servers[key] = normalized
         planned.append(key)
     if check_only:
@@ -1684,7 +1862,7 @@ def cmd_mcp_add(
     print_status_line("ok", f"Added MCP(s) {', '.join(planned)} to {config['common_data_file']}")
     should_sync = sync_now or prompt_yes_no("Sync global agent configs now?")
     if should_sync:
-        return cmd_sync(repo_root, config, check_only=False, global_sync=True)
+        return cmd_sync(repo_root, config, check_only=False)
     return 0
 
 
@@ -1739,13 +1917,11 @@ def resolve_env_reference(var_name: str) -> str | None:
 
 def replace_env_references(text: str) -> str:
     def replace_with_value(match: re.Match[str]) -> str:
-        name = match.group(1)
+        name = next(group for group in match.groups() if group)
         value = resolve_env_reference(name)
         return value if value is not None else match.group(0)
 
-    rewritten = BRACED_ENV_REF_PATTERN.sub(replace_with_value, text)
-    rewritten = SIMPLE_ENV_REF_PATTERN.sub(replace_with_value, rewritten)
-    return ENV_PLACEHOLDER_PATTERN.sub(replace_with_value, rewritten)
+    return ENV_REFERENCE_PATTERN.sub(replace_with_value, text)
 
 
 def render_mcp_value(
@@ -1753,9 +1929,10 @@ def render_mcp_value(
     *,
     mcp_dir: Path,
     repo_root: Path,
+    materialize_secrets: bool = False,
 ) -> str:
     rendered = expand_mcp_vars(value, mcp_dir, repo_root)
-    return replace_env_references(rendered)
+    return replace_env_references(rendered) if materialize_secrets else rendered
 
 
 def build_mcp_env(
@@ -1773,7 +1950,12 @@ def build_mcp_env(
 
     for key, value in config.get("env", {}).items():
         if isinstance(value, str):
-            env[key] = render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root) if materialize_secrets else value
+            env[key] = render_mcp_value(
+                value,
+                mcp_dir=mcp_dir,
+                repo_root=repo_root,
+                materialize_secrets=materialize_secrets,
+            )
         else:
             env[key] = value
 
@@ -1794,8 +1976,12 @@ def render_mcp_server_entry(
             config["command"],
             mcp_dir=mcp_dir,
             repo_root=repo_root,
+            materialize_secrets=materialize_secrets,
         ),
-        "args": [render_mcp_value(arg, mcp_dir=mcp_dir, repo_root=repo_root) for arg in config.get("args", [])],
+        "args": [
+            render_mcp_value(arg, mcp_dir=mcp_dir, repo_root=repo_root, materialize_secrets=materialize_secrets)
+            for arg in (config.get("args") or [])
+        ],
     }
 
     env = build_mcp_env(config, mcp_dir=mcp_dir, repo_root=repo_root, materialize_secrets=materialize_secrets)
@@ -1891,17 +2077,15 @@ def upsert_claude_minimax_config(path: Path, region: str, materialize_secrets: b
         env_updates["ANTHROPIC_AUTH_TOKEN"] = api_key
     changed = upsert_nested_dict(data, {"env": env_updates})
     env = data.get("env")
-    if (
-        not materialize_secrets
-        and isinstance(env, dict)
-        and env.get("ANTHROPIC_AUTH_TOKEN") == f"{{{MINIMAX_ENV_KEY}}}"
-    ):
-        del env["ANTHROPIC_AUTH_TOKEN"]
-        changed = True
+    if not materialize_secrets and isinstance(env, dict):
+        token = env.get("ANTHROPIC_AUTH_TOKEN")
+        if token is not None and (token == f"{{{MINIMAX_ENV_KEY}}}" or (api_key is not None and token == api_key)):
+            del env["ANTHROPIC_AUTH_TOKEN"]
+            changed = True
     if changed:
         ensure_parent(path, check_only)
         if not check_only:
-            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            write_json_atomic(path, data)
     return changed
 
 
@@ -1927,7 +2111,7 @@ def upsert_opencode_minimax_config(path: Path, region: str, materialize_secrets:
     if changed:
         ensure_parent(path, check_only)
         if not check_only:
-            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            write_json_atomic(path, data)
     return changed
 
 
@@ -1967,7 +2151,7 @@ def append_codex_minimax_config(path: Path, region: str, materialize_secrets: bo
     if changed:
         ensure_parent(path, check_only)
         if not check_only:
-            path.write_text(updated, encoding="utf-8")
+            write_text_atomic(path, updated)
     return changed
 
 
@@ -1996,28 +2180,41 @@ def cmd_provider_sync(
     region: str,
     agents: list[str] | None = None,
     dry_run: bool = False,
+    select: bool = False,
 ) -> int:
     if provider != "minimax":
         print_status_line("fail", f"Unsupported provider: {provider}")
         return 1
 
-    targets = parse_agent_targets(config["agent_configs"])
+    read_only = check_only or dry_run
+    all_targets = parse_agent_targets(config["agent_configs"])
+    update_specs = parse_agent_update_specs(config.get("agent_updates", []))
     supported = {
         "Claude Code": upsert_claude_minimax_config,
         "OpenCode": upsert_opencode_minimax_config,
         "OpenAI Codex CLI": append_codex_minimax_config,
     }
 
-    # Filter to only supported agents
-    supported_names = sorted(supported.keys())
-    if agents is None and not check_only and is_interactive():
+    if select and agents is not None:
+        print_status_line("fail", "--select cannot be combined with --agents.")
+        return 1
+    if select:
+        if not is_interactive():
+            print_status_line("fail", "--select requires an interactive terminal.")
+            return 1
+        supported_names = [target.name for target in all_targets if target.name in supported]
         agents = interactive_select(supported_names, title="Select agents to configure provider")
         if agents is None:
             print_status_line("info", "Cancelled.")
-            return 0
+            return 1
         if not agents:
             print_status_line("info", "No agents selected.")
             return 0
+        targets = [target for target in all_targets if target.name in agents]
+    else:
+        targets, unmatched = select_agent_targets(all_targets, update_specs, agents)
+        for query in unmatched:
+            print_status_line("warn", f"No agent config target matches agent '{query}'.")
 
     print_section("Agent Provider Sync (dry-run)" if dry_run else "Agent Provider Sync")
     print_status_line("hint", f"Provider: {provider}")
@@ -2031,29 +2228,33 @@ def cmd_provider_sync(
         return 1
 
     changed_paths: list[Path] = []
+    supported_targets = 0
 
     for target in targets:
         updater = supported.get(target.name)
         if updater is None or not target.default_paths:
             continue
-        if agents is not None and target.name not in agents:
-            continue
+        supported_targets += 1
         path = existing_default_path(target.default_paths) or Path(target.default_paths[0]).expanduser()
         try:
-            changed = updater(path, region, materialize_secrets, check_only)  # type: ignore[misc]
+            changed = updater(path, region, materialize_secrets, read_only)  # type: ignore[misc]
         except Exception as exc:
             print_status_line("fail", f"{target.name}: failed to update {print_path(path)}: {exc}")
             return 1
         status = "ok" if changed else "info"
-        action = "would update" if check_only and changed else "updated" if changed else "already configured"
+        action = "would update" if read_only and changed else "updated" if changed else "already configured"
         print_status_line(status, f"{target.name}: {action} {print_path(path)}")
         if changed:
             changed_paths.append(path)
 
+    if supported_targets == 0:
+        print_status_line("warn", "No supported provider targets selected (supported: Claude Code, OpenCode, Codex).")
+        return 1 if agents or select else 0
+
     print_spacer()
     print_status_line(
         "info",
-        f"Summary: {len(changed_paths)} supported provider config(s) {'would change' if check_only else 'changed'}.",
+        f"Summary: {len(changed_paths)} supported provider config(s) {'would change' if read_only else 'changed'}.",
     )
     if not materialize_secrets:
         print_status_line("hint", f"Hint: export {MINIMAX_ENV_KEY} in your local env before launching Codex.")
@@ -2071,7 +2272,12 @@ def cmd_provider_sync(
 
 
 def cmd_mcp_sync(
-    repo_root: Path, config: dict[str, Any], check_only: bool, agents: list[str] | None = None, dry_run: bool = False
+    repo_root: Path,
+    config: dict[str, Any],
+    check_only: bool,
+    servers: list[str] | None = None,
+    dry_run: bool = False,
+    select: bool = False,
 ) -> int:
     common_data = load_common_data(repo_root, config, include_local=True)
     mcp_servers = common_data.get("mcp_servers", {})
@@ -2081,26 +2287,36 @@ def cmd_mcp_sync(
         print_status_line("info", "No managed MCP servers (with 'source') configured.")
         return 0
 
-    mcp_names = sorted(managed_mcps.keys())
-    if agents is None and not check_only and is_interactive():
-        agents = interactive_select(mcp_names, title="Select MCP servers to sync")
-        if agents is None:
+    if select and servers is not None:
+        print_status_line("fail", "--select cannot be combined with --servers.")
+        return 1
+    if select:
+        if not is_interactive():
+            print_status_line("fail", "--select requires an interactive terminal.")
+            return 1
+        selected = interactive_select(sorted(managed_mcps), title="Select MCP servers to sync")
+        if selected is None:
             print_status_line("info", "Cancelled.")
-            return 0
-        if not agents:
+            return 1
+        if not selected:
             print_status_line("info", "No MCP servers selected.")
             return 0
+        servers = selected
 
-    if agents:
-        managed_mcps = {name: cfg for name, cfg in managed_mcps.items() if name in agents}
+    if servers:
+        wanted = set(servers)
+        unmatched = sorted(wanted - set(managed_mcps))
+        for server in unmatched:
+            print_status_line("warn", f"No managed MCP server named '{server}'.")
+        managed_mcps = {name: cfg for name, cfg in managed_mcps.items() if name in wanted}
         if not managed_mcps:
-            print_status_line("warn", f"No managed MCP servers match: {', '.join(agents)}")
-            return 0
+            print_status_line("warn", f"No managed MCP servers match: {', '.join(servers)}")
+            return 1
 
     print_section("MCP Sync (dry-run)" if dry_run else "MCP Sync")
     print_status_line("hint", f"Mode: {'dry-run' if dry_run else 'check' if check_only else 'sync'}")
-    if agents:
-        print_status_line("hint", f"Agents: {', '.join(agents)}")
+    if servers:
+        print_status_line("hint", f"Servers: {', '.join(servers)}")
 
     attempted = 0
     failed = 0
@@ -2190,7 +2406,7 @@ def cmd_mcp_status(repo_root: Path, config: dict[str, Any]) -> int:
             else:
                 print_status_line("missing", f"{name} (managed): {mcp_dir} NOT CLONED")
         else:
-            print_status_line("ok", f"{name} (static): {cfg.get('command')} {shlex.join(cfg.get('args', []))}")
+            print_status_line("ok", f"{name} (static): {cfg.get('command')} {shlex.join(cfg.get('args') or [])}")
 
     return 0
 
@@ -2254,20 +2470,16 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool, dry_
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    parser = build_parser()
+    args = parser.parse_args()
+
+    if args.command is None:
+        parser.print_help()
+        raise SystemExit(0)
 
     if args.command == "help":
-        import sys
-
-        sys.argv = ["oooconf", "agents", "-h"]
-        import argparse
-
-        p = argparse.ArgumentParser(
-            prog="oooconf agents", description="Detect AI agent CLIs and manage shared AGENTS.md instructions."
-        )
-        p.add_argument("--repo-root", default=None)
-        p.add_argument("--config", default=None)
-        p.parse_args()
+        topics = getattr(args, "topics", [])
+        parser.parse_args([*topics, "--help"] if topics else ["--help"])
         raise SystemExit(0)
 
     root = resolve_repo_root(args.repo_root)
@@ -2286,9 +2498,9 @@ if __name__ == "__main__":
                 root,
                 cfg,
                 check_only=args.check,
-                global_sync=args.global_sync,
                 materialize_secrets=args.materialize_secrets,
                 agents=args.agents,
+                select=args.select,
                 dry_run=args.dry_run,
             )
         )
@@ -2296,7 +2508,16 @@ if __name__ == "__main__":
         raise SystemExit(cmd_doctor(root, cfg, strict_paths=args.strict_config_paths, dry_run=args.dry_run))
     if args.command == "mcp":
         if args.subcommand == "sync":
-            raise SystemExit(cmd_mcp_sync(root, cfg, check_only=args.check, agents=args.agents, dry_run=args.dry_run))
+            raise SystemExit(
+                cmd_mcp_sync(
+                    root,
+                    cfg,
+                    check_only=args.check,
+                    servers=args.servers,
+                    select=args.select,
+                    dry_run=args.dry_run,
+                )
+            )
         if args.subcommand == "add":
             raise SystemExit(
                 cmd_mcp_add(
@@ -2325,6 +2546,7 @@ if __name__ == "__main__":
                     materialize_secrets=args.materialize_secrets,
                     region=args.region,
                     agents=args.agents,
+                    select=args.select,
                     dry_run=args.dry_run,
                 )
             )
@@ -2347,7 +2569,14 @@ if __name__ == "__main__":
     if args.command == "skills":
         if args.subcommand == "sync":
             raise SystemExit(
-                cmd_skills_sync(root, cfg, check_only=args.check, agents=args.agents, dry_run=args.dry_run)
+                cmd_skills_sync(
+                    root,
+                    cfg,
+                    check_only=args.check,
+                    agents=args.agents,
+                    select=args.select,
+                    dry_run=args.dry_run,
+                )
             )
         if args.subcommand == "view":
             raise SystemExit(cmd_skills_view(json_output=args.json, check_only=args.check))

@@ -13,6 +13,18 @@ option_value_sets = { "--profile" = "profiles" }
 "global" = "global"
 china = "china"
 
+[definitions.agent_keys]
+codex = "OpenAI Codex CLI"
+claude = "Claude Code"
+gemini = "Gemini CLI"
+aider = "Aider"
+qwen = "Qwen Code"
+cursor-agent = "Cursor Agent"
+opencode = "OpenCode"
+pi = "Pi Agent"
+omp = "Oh My Pi"
+command-code = "Command Code"
+
 [definitions.secret_shells]
 sh = "sh"
 zsh = "zsh"
@@ -196,21 +208,22 @@ description = "detect/sync/doctor/provider/update AGENTS.md workflows"
 handler_id = "oooconf.agents.detect"
 platforms = ["linux", "macos", "windows"]
 description = "detect configured agent CLIs on PATH"
-options = { "--repo-root" = "set repo root path", "--config" = "config path", "--json" = "emit JSON" }
+options = { "--repo-root" = "set repo root path", "--config" = "config path", "--json" = "emit JSON", "--dry-run" = "preview without changing files" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.sync]
 handler_id = "oooconf.agents.sync"
 platforms = ["linux", "macos", "windows"]
-description = "append or update shared AGENTS.md block"
-options = { "--repo-root" = "set repo root path", "--config" = "config path", "--check" = "check only", "--global" = "sync global config", "--materialize-secrets" = "materialize secret-backed values", "--agents" = "filter to specific agents (interactive if omitted)" }
+description = "sync managed policy and MCP entries into global agent configs"
+options = { "--repo-root" = "set repo root path", "--config" = "config path", "--check" = "check only", "--dry-run" = "preview without changing files", "--materialize-secrets" = "materialize env placeholders", "--agents" = "filter to specific agents", "--select" = "pick agents interactively" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
+option_value_sets = { "--agents" = "agent_keys" }
 
 [commands.agents.subcommands.doctor]
 handler_id = "oooconf.agents.doctor"
 platforms = ["linux", "macos", "windows"]
 description = "verify AGENTS.md shared block is current"
-options = { "--repo-root" = "set repo root path", "--config" = "config path", "--strict-config-paths" = "require strict config paths" }
+options = { "--repo-root" = "set repo root path", "--config" = "config path", "--strict-config-paths" = "require strict config paths", "--dry-run" = "preview without changing files" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.mcp]
@@ -222,7 +235,7 @@ description = "manage Model Context Protocol (MCP) servers"
 handler_id = "oooconf.agents.mcp.sync"
 platforms = ["linux", "macos", "windows"]
 description = "synchronize managed MCP servers"
-options = { "--check" = "check only", "--agents" = "filter to specific agents (interactive if omitted)" }
+options = { "--check" = "check only", "--dry-run" = "preview without changing files", "--servers" = "filter to specific MCP servers", "--select" = "pick MCP servers interactively" }
 
 [commands.agents.subcommands.mcp.subcommands.status]
 handler_id = "oooconf.agents.mcp.status"
@@ -249,7 +262,7 @@ description = "manage RTK integration across agents"
 handler_id = "oooconf.agents.rtk.init"
 platforms = ["linux", "macos", "windows"]
 description = "run 'rtk init --global' for detected agents"
-options = { "--check" = "check only" }
+options = { "--check" = "check only", "--dry-run" = "preview without executing" }
 
 [commands.agents.subcommands.provider]
 handler_id = "oooconf.agents.provider"
@@ -260,21 +273,21 @@ description = "configure model/API providers for agent CLIs"
 handler_id = "oooconf.agents.provider.sync"
 platforms = ["linux", "macos", "windows"]
 description = "sync a provider backend into supported agent configs"
-options = { "--check" = "check only", "--materialize-secrets" = "materialize secret-backed values", "--region" = "provider region", "--agents" = "filter to specific agents (interactive if omitted)" }
-option_value_sets = { "--region" = "regions" }
+options = { "--check" = "check only", "--dry-run" = "preview without changing files", "--materialize-secrets" = "materialize secret-backed values", "--region" = "provider region", "--agents" = "filter to specific agents", "--select" = "pick agents interactively" }
+option_value_sets = { "--region" = "regions", "--agents" = "agent_keys" }
 
 [commands.agents.subcommands.update]
 handler_id = "oooconf.agents.update"
 platforms = ["linux", "macos", "windows"]
 description = "update installed agent CLIs"
-options = { "--repo-root" = "set repo root path", "--config" = "config path", "--check" = "check only" }
+options = { "--repo-root" = "set repo root path", "--config" = "config path", "--check" = "check only", "--dry-run" = "preview without changing files" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 
 [commands.agents.subcommands.install]
 handler_id = "oooconf.agents.install"
 platforms = ["linux", "macos", "windows"]
 description = "install one specific agent CLI"
-options = { "--repo-root" = "set repo root path", "--config" = "config path", "--all" = "install all agents", "--missing" = "install missing agents", "--check" = "check only" }
+options = { "--repo-root" = "set repo root path", "--config" = "config path", "--all" = "install all agents", "--missing" = "install missing agents", "--check" = "check only", "--dry-run" = "preview without installing" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
 values = { "codex" = "Codex", "claude" = "Claude", "gemini" = "Gemini", "qwen" = "Qwen", "cursor-agent" = "Cursor Agent", "opencode" = "OpenCode", "aider" = "Aider", "pi" = "Pi Agent", "omp" = "Oh My Pi", "command-code" = "Command Code" }
 
@@ -292,7 +305,8 @@ description = "manage agent skills and extensions"
 handler_id = "oooconf.agents.skills.sync"
 platforms = ["linux", "macos", "windows"]
 description = "synchronize configured skill specs across agents"
-options = { "--check" = "check only", "--agents" = "filter to specific agents (interactive if omitted)" }
+options = { "--check" = "check only", "--dry-run" = "preview without installing", "--agents" = "filter to specific agents", "--select" = "pick agents interactively" }
+option_value_sets = { "--agents" = "agent_keys" }
 
 [commands.agents.subcommands.skills.subcommands.view]
 handler_id = "oooconf.agents.skills.view"

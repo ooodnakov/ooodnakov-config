@@ -140,6 +140,20 @@ _oooconf_values_regions=(
   'china:china'
 )
 
+typeset -ga _oooconf_values_agent_keys
+_oooconf_values_agent_keys=(
+  'codex:OpenAI Codex CLI'
+  'claude:Claude Code'
+  'gemini:Gemini CLI'
+  'aider:Aider'
+  'qwen:Qwen Code'
+  'cursor-agent:Cursor Agent'
+  'opencode:OpenCode'
+  'pi:Pi Agent'
+  'omp:Oh My Pi'
+  'command-code:Command Code'
+)
+
 typeset -ga _oooconf_values_secret_shells
 _oooconf_values_secret_shells=(
   'sh:sh'
@@ -594,7 +608,7 @@ _oooconf_agents() {
   local -a subcmds
   subcmds=(
     'detect:detect configured agent CLIs on PATH'
-    'sync:append or update shared AGENTS.md block'
+    'sync:sync managed policy and MCP entries into global agent configs'
     'doctor:verify AGENTS.md shared block is current'
     'mcp:manage Model Context Protocol (MCP) servers'
     'status:show status of managed MCP servers'
@@ -718,6 +732,7 @@ _oooconf_agents_detect() {
     '--repo-root[set repo root path]:value:_files -/' \
     '--config[config path]:value:_files' \
     '--json[emit JSON]' \
+    '--dry-run[preview without changing files]' \
     '*:arg:->args'
 
   case $state in
@@ -728,14 +743,15 @@ _oooconf_agents_sync() {
   local context state line
   typeset -A opt_args
   local -a opts_with_args
-  opts_with_args=(${_oooconf_global_opts_with_args[@]} --repo-root --config)
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --repo-root --config --agents)
   _arguments -C \
     '--repo-root[set repo root path]:value:_files -/' \
     '--config[config path]:value:_files' \
     '--check[check only]' \
-    '--global[sync global config]' \
-    '--materialize-secrets[materialize secret-backed values]' \
-    '--agents[filter to specific agents (interactive if omitted)]' \
+    '--dry-run[preview without changing files]' \
+    '--materialize-secrets[materialize env placeholders]' \
+    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code)' \
+    '--select[pick agents interactively]' \
     '*:arg:->args'
 
   case $state in
@@ -751,6 +767,7 @@ _oooconf_agents_doctor() {
     '--repo-root[set repo root path]:value:_files -/' \
     '--config[config path]:value:_files' \
     '--strict-config-paths[require strict config paths]' \
+    '--dry-run[preview without changing files]' \
     '*:arg:->args'
 
   case $state in
@@ -821,7 +838,9 @@ _oooconf_agents_mcp_sync() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--check[check only]' \
-    '--agents[filter to specific agents (interactive if omitted)]' \
+    '--dry-run[preview without changing files]' \
+    '--servers[filter to specific MCP servers]' \
+    '--select[pick MCP servers interactively]' \
     '*:arg:->args'
 
   case $state in
@@ -918,6 +937,7 @@ _oooconf_agents_rtk_init() {
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
     '--check[check only]' \
+    '--dry-run[preview without executing]' \
     '*:arg:->args'
 
   case $state in
@@ -969,12 +989,14 @@ _oooconf_agents_provider_sync() {
   local context state line
   typeset -A opt_args
   local -a opts_with_args
-  opts_with_args=(${_oooconf_global_opts_with_args[@]} --region)
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --region --agents)
   _arguments -C \
     '--check[check only]' \
+    '--dry-run[preview without changing files]' \
     '--materialize-secrets[materialize secret-backed values]' \
     '--region[provider region]:value:(global china)' \
-    '--agents[filter to specific agents (interactive if omitted)]' \
+    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code)' \
+    '--select[pick agents interactively]' \
     '*:arg:->args'
 
   case $state in
@@ -990,6 +1012,7 @@ _oooconf_agents_update() {
     '--repo-root[set repo root path]:value:_files -/' \
     '--config[config path]:value:_files' \
     '--check[check only]' \
+    '--dry-run[preview without changing files]' \
     '*:arg:->args'
 
   case $state in
@@ -1020,6 +1043,7 @@ _oooconf_agents_install() {
     '--all[install all agents]' \
     '--missing[install missing agents]' \
     '--check[check only]' \
+    '--dry-run[preview without installing]' \
     '1:value:->value' \
     '*:arg:->args'
 
@@ -1103,10 +1127,12 @@ _oooconf_agents_skills_sync() {
   local context state line
   typeset -A opt_args
   local -a opts_with_args
-  opts_with_args=(${_oooconf_global_opts_with_args[@]} )
+  opts_with_args=(${_oooconf_global_opts_with_args[@]} --agents)
   _arguments -C \
     '--check[check only]' \
-    '--agents[filter to specific agents (interactive if omitted)]' \
+    '--dry-run[preview without installing]' \
+    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code)' \
+    '--select[pick agents interactively]' \
     '*:arg:->args'
 
   case $state in

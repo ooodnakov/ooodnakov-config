@@ -16,7 +16,7 @@ Top 3 config settings to care about first:
 
 Why this matters for `oooconf`:
 
-- `oooconf agents sync --global` should continue to append TOML `mcp_servers` entries for Codex.
+- `oooconf agents sync` appends TOML `mcp_servers` entries for Codex (global configs are the default target).
 - Global instruction sync should continue to target `~/.codex/AGENTS.md` when present.
 
 ## Claude Code

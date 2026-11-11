@@ -489,30 +489,33 @@ Usage: oooconf agents <detect|sync|doctor|install|provider|update|mcp|rtk|skills
 Manage shared AGENTS.md instructions and validate configured agent tooling.
 Subcommands:
   detect [--json]                detect configured agent CLIs on PATH
-  sync [--check] [--materialize-secrets]
-                                  append/update shared AGENTS.md managed block
-  doctor [--strict-config-paths] verify AGENTS.md managed block and default agent config paths
+  sync [--check] [--agents A...] [--select] [--materialize-secrets]
+                                  sync managed policy/MCP blocks into global agent configs
+  doctor [--strict-config-paths] verify managed blocks and default agent config paths
   install [<agent> ...] [--all|--missing] [--check]
                                   install missing, selected, or all configured agent CLIs
   update [--check]               update installed agent CLIs (pnpm-based tools use pnpm)
-  provider sync minimax [--check] [--region global|china] [--materialize-secrets]
+  provider sync minimax [--check] [--region global|china] [--agents A...] [--select]
                                   configure MiniMax-M2.7 backends for Claude Code, OpenCode, and Codex CLI
-  mcp sync|status                synchronize or inspect managed MCP servers
-  rtk init [--check]             initialize RTK hooks for detected agents
+  mcp sync [--check] [--servers S...] [--select]
+  mcp status                     clone/pull managed MCP servers; show status
   mcp add [--name N] [--json J] [--multi] [--preview] [--sync-now]
-                                  add one MCP JSON server entry to shared config
-  skills sync [--check]          sync configured skill specs across agents
+                                  add MCP JSON entries to shared config
+  rtk init [--check]             initialize RTK hooks for detected agents
+  skills sync [--check] [--agents A...] [--select]
+                                  sync configured skill specs across agents
   skills view [--check] [--json] list global shared skills catalog via pnpm dlx
   skills add <source> [--agent gemini] [--sync-now]
                                   add one shared skill source
 Examples:
-  oooconf agents detect                 # list available agent CLIs
-  oooconf agents sync --check           # verify AGENTS.md managed sections
-  oooconf agents install --check        # preview missing agent CLI installs
-  oooconf agents install codex gemini   # install selected agent CLIs
-  oooconf agents mcp status             # show managed MCP server status
-  oooconf agents provider sync minimax   # configure MiniMax-M2.7 provider backends
-  oooconf agents skills view --json     # show shared skills catalog as JSON
+  oooconf agents detect
+  oooconf agents sync --check
+  oooconf agents sync --agents claude
+  oooconf agents install --check
+  oooconf agents install codex gemini
+  oooconf agents mcp status
+  oooconf agents provider sync minimax --agents codex
+  oooconf agents skills view --json
 "@
         }
         "secrets" {

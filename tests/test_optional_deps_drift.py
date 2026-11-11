@@ -138,9 +138,9 @@ def test_spec_driven_subcommand_options_are_emitted() -> None:
         encoding="utf-8"
     )
     assert "'agents:detect' = @{" in pwsh_content
-    assert "Options = @('--repo-root', '--config', '--json')" in pwsh_content
+    assert "Options = @('--repo-root', '--config', '--json', '--dry-run')" in pwsh_content
     assert "'agents:mcp:sync' = @{" in pwsh_content
-    assert "Options = @('--check')" in pwsh_content
+    assert "Options = @('--check', '--dry-run', '--servers', '--select')" in pwsh_content
     assert "'secrets:login' = @{" in pwsh_content
     assert "Options = @('--server', '--method', '--client-id', '--client-secret')" in pwsh_content
     assert "'--method' = @('auto', 'password', 'apikey')" in pwsh_content
@@ -171,7 +171,7 @@ def test_nested_command_metadata_is_emitted_for_zsh_and_powershell() -> None:
     assert "'agents:mcp' = @{" in pwsh_content
     assert "Subcommands = @('sync', 'status', 'add')" in pwsh_content
     assert "'agents:mcp:sync' = @{" in pwsh_content
-    assert "Options = @('--check')" in pwsh_content
+    assert "Options = @('--check', '--dry-run', '--servers', '--select')" in pwsh_content
 
 
 def _setup_bash_sources() -> str:
