@@ -6,6 +6,42 @@ HTTPS_REPO_URL="${OOODNAKOV_CONFIG_HTTPS_REPO_URL:-https://github.com/ooodnakov/
 TARGET_DIR="${OOODNAKOV_CONFIG_DIR:-$HOME/src/ooodnakov-config}"
 BRANCH="${OOODNAKOV_CONFIG_BRANCH:-main}"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
+MINIMAL=0
+PASSTHROUGH=()
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: bootstrap.sh [full|minimal] [--dry-run]
+
+  full       clone the full repository and run the standard install (default)
+  minimal    sparse checkout plus the minimal dependency set from [minimal]
+             in scripts/optional-deps.toml
+  --dry-run  preview install actions without changing the machine
+
+One command for a new machine:
+  curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal
+
+The same script can be inspected before running; never pipe it straight into a shell.
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    minimal | --minimal | -m) MINIMAL=1 ;;
+    full | install | --full) MINIMAL=0 ;;
+    --dry-run) PASSTHROUGH+=("--dry-run") ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+  shift
+done
 
 is_interactive() {
   case "$INTERACTIVE" in
@@ -160,8 +196,16 @@ fi
 
 if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ]; then
   chmod +x "$TARGET_DIR/scripts/setup/minimal-setup.sh"
-  exec "$TARGET_DIR/scripts/setup/minimal-setup.sh" --yes-optional
+  install_args=(--yes-optional)
+  if [ "${#PASSTHROUGH[@]}" -gt 0 ]; then
+    install_args+=("${PASSTHROUGH[@]}")
+  fi
+  exec "$TARGET_DIR/scripts/setup/minimal-setup.sh" "${install_args[@]}"
 else
   chmod +x "$TARGET_DIR/scripts/setup/setup.sh"
-  exec "$TARGET_DIR/scripts/setup/setup.sh" install
+  install_args=(install)
+  if [ "${#PASSTHROUGH[@]}" -gt 0 ]; then
+    install_args+=("${PASSTHROUGH[@]}")
+  fi
+  exec "$TARGET_DIR/scripts/setup/setup.sh" "${install_args[@]}"
 fi

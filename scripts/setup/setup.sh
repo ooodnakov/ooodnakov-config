@@ -107,6 +107,11 @@ if [ "${#cli_selected_optional_keys[@]}" -gt 0 ]; then
   )"
 fi
 
+if [ "$MINIMAL" -eq 1 ]; then
+  minimal_key_csv="$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')"
+  selected_optional_key_csv="${selected_optional_key_csv:+$selected_optional_key_csv,}$minimal_key_csv"
+fi
+
 if [ "$COMMAND" = "deps" ] && [ "$DEPS_LATEST" -eq 1 ]; then
   for upgrade_key in bin topgrade; do
     case ",$selected_optional_key_csv," in
@@ -125,9 +130,7 @@ doctor)
   exit $?
   ;;
 deps)
-  if [ "$MINIMAL" = 1 ]; then
-    selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')
-  elif [ "${ALL_DEPS:-0}" = 1 ]; then
+  if [ "${ALL_DEPS:-0}" = 1 ]; then
     selected_optional_key_csv=$(run_python "$OPTIONAL_DEPS_SCRIPT" "keys" | paste -sd, -)
   fi
   if [ -z "$selected_optional_key_csv" ] && is_interactive; then

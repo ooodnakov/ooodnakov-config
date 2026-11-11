@@ -103,11 +103,25 @@ less /tmp/ooodnakov-bootstrap.sh
 bash /tmp/ooodnakov-bootstrap.sh
 ```
 
-For a small terminal-only machine, use a partial checkout and minimal shell
-setup. It omits the reference snapshots, bundled fonts, editor/desktop configs,
-and optional package installs; it links the `minimal` shell profile and syncs
-only Oh My Zsh. Git, Bash, and Zsh are required; Python 3 is used by the link
-planner, with no `uv` environment or repository packages installed.
+One command for a new machine, no prior clone, using the minimal dependency set
+(`[minimal]` in `scripts/optional-deps.toml`: git, zsh, uv, oh-my-posh, gum, rg,
+fd, bat, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker, lazygit,
+oh-my-pi):
+
+```bash
+curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal
+```
+
+The `minimal` argument performs a sparse checkout, then installs that dependency
+set and links the `minimal` shell profile. Add `--dry-run` to preview it. The
+script is intentionally downloaded before execution instead of being piped into
+a shell; `OOODNAKOV_MINIMAL=1` is the equivalent environment form.
+
+For a small terminal-only machine that should not install packages at all, skip
+the dependency step with `OOODNAKOV_SKIP_DEPS=1`. The partial checkout omits the
+reference snapshots, bundled fonts, and editor/desktop configs. Git, Bash, and
+Zsh are required; Python 3 is used by the link planner, with no `uv` environment
+or repository packages installed.
 
 ```bash
 git clone --filter=blob:none --no-checkout https://github.com/ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
@@ -115,11 +129,8 @@ git -C ~/src/ooodnakov-config sparse-checkout init --cone
 git -C ~/src/ooodnakov-config sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh LICENSE
 git -C ~/src/ooodnakov-config checkout main
 cd ~/src/ooodnakov-config
-./scripts/setup/minimal-setup.sh
+OOODNAKOV_SKIP_DEPS=1 ./scripts/setup/minimal-setup.sh
 ```
-
-Or use the bootstrap shortcut with `OOODNAKOV_MINIMAL=1`; it performs the same
-partial checkout automatically.
 
 Release archives include `SHA256SUMS`. Verify an archive before extracting it;
 do not pipe a newly downloaded bootstrap script directly into a shell.
@@ -157,7 +168,7 @@ Primary commands:
 - `oooconf dry-run`: preview setup actions without changing the system
 - `oooconf doctor`: validate managed links and key tools; on Linux it also
   requires `zsh` and `docker` and hints at the minimal toolset
-  (`brew`, `node`, `pnpm`, `bun`, `bat`, `lazydocker`, `lazygit`, `oh-my-pi`)
+  (`brew`, `node`, `pnpm`, `bun`, `bat`, `eza`, `zoxide`, `lazydocker`, `lazygit`, `oh-my-pi`)
 - `oooconf plan`: build a validated, side-effect-free operation plan in text or versioned JSON
 - `oooconf apply`: transactionally apply the validated managed-link plan
 - `oooconf rollback --last`: safely reverse the latest eligible managed-link transaction
@@ -408,7 +419,7 @@ In interactive terminals, setup can also prompt to install common optional depen
 Use `oooconf deps` to install optional tools interactively or specifically:
 
 - `oooconf deps` — Interactive picker (requires `gum`).
-- `oooconf deps --minimal` — Install core minimal setup (git, zsh, uv, oh-my-posh, gum, rg, fd, bat).
+- `oooconf deps --minimal` — Install the `[minimal]` dependency set: git, zsh, uv, oh-my-posh, gum, rg, fd, bat, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker, lazygit, and oh-my-pi.
 - `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
 - `oooconf deps --latest <key...>` — Install missing selections, then run Topgrade with bounded retries; its native `bin` step updates tracked GitHub releases. `GITHUB_AUTH_TOKEN` (or `GITHUB_TOKEN`) is forwarded to GitHub release updates.
 - `oooconf deps bin topgrade` — Explicitly install the two primary dependency-management tools; they are also part of the minimal/install bootstrap flow.

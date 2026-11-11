@@ -8,11 +8,24 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 echo "=== Testing shell syntax (.sh files) ==="
-for script in scripts/setup/setup.sh scripts/setup/ooodnakov.sh scripts/setup/delete.sh scripts/setup/lib/*.sh; do
+for script in scripts/setup/setup.sh scripts/setup/ooodnakov.sh scripts/setup/delete.sh scripts/setup/lib/*.sh bootstrap.sh; do
   echo "Checking $script..."
   bash -n "$script"
 done
 echo "OK: All entrypoint and setup/lib .sh files have valid syntax."
+
+echo "=== Testing bootstrap argument parsing ==="
+if bash bootstrap.sh --help 2>&1 | grep -q "minimal"; then
+  echo "OK: bootstrap help documents the minimal mode."
+else
+  echo "FAIL: bootstrap help does not document minimal mode." >&2
+  exit 1
+fi
+if bash bootstrap.sh bogus >/dev/null 2>&1; then
+  echo "FAIL: bootstrap accepted an unknown argument." >&2
+  exit 1
+fi
+echo "OK: bootstrap rejects unknown arguments."
 
 echo "=== Testing dry-run with central TOML parser ==="
 echo "Running oooconf deps --dry-run (verifies central TOML parser, no scattered lists/overrides)..."

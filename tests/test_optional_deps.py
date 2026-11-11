@@ -232,7 +232,27 @@ def test_minimal_keys_command_and_legacy_alias(capsys):
     """Test minimal key output and the legacy alias used by older setup scripts."""
     from scripts.cli.read_optional_deps import main
 
-    expected = ["git", "zsh", "uv", "oh-my-posh", "gum", "rg", "fd", "bat", "bin", "topgrade"]
+    expected = [
+        "git",
+        "zsh",
+        "uv",
+        "oh-my-posh",
+        "gum",
+        "rg",
+        "fd",
+        "bat",
+        "bin",
+        "topgrade",
+        "brew",
+        "node",
+        "pnpm",
+        "bun",
+        "eza",
+        "zoxide",
+        "lazydocker",
+        "lazygit",
+        "oh-my-pi",
+    ]
     original_argv = sys.argv[:]
     try:
         sys.argv = ["read_optional_deps.py", "minimal"]
@@ -256,6 +276,8 @@ def test_linux_toolset_group_is_catalog_backed():
         "pnpm",
         "bun",
         "bat",
+        "eza",
+        "zoxide",
         "lazydocker",
         "lazygit",
         "oh-my-pi",

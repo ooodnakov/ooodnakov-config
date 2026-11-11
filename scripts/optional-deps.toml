@@ -43,7 +43,8 @@ bin_dir = "~/.local/bin"
 tools_dir = "~/.local/share/ooodnakov-config/tools"
 
 [minimal]
-# Core tools for basic dotfiles functionality and productivity
+# Core tools for basic dotfiles functionality and productivity. `oooconf minimal`
+# (and bootstrap.sh minimal) install exactly this list.
 keys = [
     "git",
     "zsh",
@@ -55,6 +56,15 @@ keys = [
     "bat",
     "bin",
     "topgrade",
+    "brew",
+    "node",
+    "pnpm",
+    "bun",
+    "eza",
+    "zoxide",
+    "lazydocker",
+    "lazygit",
+    "oh-my-pi",
 ]
 
 [linux]
@@ -63,7 +73,7 @@ keys = [
 # suggested: reported as an install hint when missing. Keep this list minimal —
 # it is the smallest set the managed Linux config runs on.
 required = ["zsh", "docker"]
-suggested = ["brew", "node", "pnpm", "bun", "bat", "lazydocker", "lazygit", "oh-my-pi"]
+suggested = ["brew", "node", "pnpm", "bun", "bat", "eza", "zoxide", "lazydocker", "lazygit", "oh-my-pi"]
 
 [[deps]]
 key = "bin"
