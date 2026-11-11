@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("agents_tool", ROOT / "scripts/cli/agents_tool.py")
 agents_tool = importlib.util.module_from_spec(spec)
@@ -409,3 +411,117 @@ def test_run_install_spec_post_install_catches_shlex_value_error(monkeypatch, ca
 
     result = run_install_spec(spec, check_only=False)
     assert result == (False, False)
+
+
+class _FakeWindow:
+    def __init__(self, keys):
+        self._keys = list(keys)
+        self.keypad_calls: list[bool] = []
+        self.timeout_calls: list[int] = []
+
+    def keypad(self, enabled):
+        self.keypad_calls.append(enabled)
+
+    def timeout(self, delay):
+        self.timeout_calls.append(delay)
+
+    def getch(self):
+        return self._keys.pop(0) if self._keys else -1
+
+    def clear(self):
+        pass
+
+    def border(self):
+        pass
+
+    def addstr(self, *args, **kwargs):
+        pass
+
+    def refresh(self):
+        pass
+
+
+def _fake_curses(window):
+    curses = pytest.importorskip("curses", reason="curses is unavailable on this platform")
+    real_curses = curses
+
+    class _Stub:
+        error = real_curses.error
+        LINES = 24
+        COLS = 80
+        A_REVERSE = real_curses.A_REVERSE
+        A_NORMAL = real_curses.A_NORMAL
+        A_DIM = real_curses.A_DIM
+        KEY_UP = real_curses.KEY_UP
+        KEY_DOWN = real_curses.KEY_DOWN
+        KEY_LEFT = real_curses.KEY_LEFT
+        KEY_RIGHT = real_curses.KEY_RIGHT
+
+        @staticmethod
+        def initscr():
+            return _FakeWindow([])
+
+        @staticmethod
+        def newwin(*args):
+            return window
+
+        @staticmethod
+        def noecho():
+            pass
+
+        @staticmethod
+        def echo():
+            pass
+
+        @staticmethod
+        def cbreak():
+            pass
+
+        @staticmethod
+        def nocbreak():
+            pass
+
+        @staticmethod
+        def start_color():
+            pass
+
+        @staticmethod
+        def endwin():
+            pass
+
+    return _Stub
+
+
+def test_tui_read_key_decodes_csi_and_ss3_arrows():
+    curses = pytest.importorskip("curses", reason="curses is unavailable on this platform")
+    tui = agents_tool._tui
+
+    assert tui._read_key(_FakeWindow([27, ord("["), ord("A")])) == curses.KEY_UP
+    assert tui._read_key(_FakeWindow([27, ord("["), ord("B")])) == curses.KEY_DOWN
+    assert tui._read_key(_FakeWindow([27, ord("O"), ord("C")])) == curses.KEY_RIGHT
+    assert tui._read_key(_FakeWindow([27, ord("O"), ord("D")])) == curses.KEY_LEFT
+    # A bare ESC (no sequence tail within the timeout) still cancels.
+    assert tui._read_key(_FakeWindow([27, -1])) == 27
+    assert tui._read_key(_FakeWindow([ord("a")])) == ord("a")
+
+
+def test_tui_select_enables_window_keypad_and_navigates_with_arrows(monkeypatch):
+    curses = pytest.importorskip("curses", reason="curses is unavailable on this platform")
+    tui = agents_tool._tui
+    window = _FakeWindow([curses.KEY_DOWN, ord(" "), ord("\n")])
+    monkeypatch.setattr(tui, "_CURSES_AVAILABLE", True)
+    monkeypatch.setattr(tui, "curses", _fake_curses(window))
+
+    assert tui._curses_select(["Claude Code", "Gemini CLI", "OpenCode"], "Select agents", "hint") == ["Gemini CLI"]
+    assert window.keypad_calls == [True]
+    assert 100 in window.timeout_calls
+
+
+def test_tui_select_cancels_on_escape(monkeypatch):
+    pytest.importorskip("curses", reason="curses is unavailable on this platform")
+    tui = agents_tool._tui
+    window = _FakeWindow([27, -1])
+    monkeypatch.setattr(tui, "_CURSES_AVAILABLE", True)
+    monkeypatch.setattr(tui, "curses", _fake_curses(window))
+
+    assert tui._curses_select(["Claude Code"], "Select agents", "hint") is None

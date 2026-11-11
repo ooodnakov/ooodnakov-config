@@ -37,6 +37,31 @@ def is_interactive() -> bool:
     return False
 
 
+# Terminals send arrows either as SS3 (\x1bOA) or CSI (\x1b[A) sequences.
+# ncurses' keypad decoding only knows the terminfo spellings, which leaves the
+# CSI form to arrive as a bare ESC and cancel the dialog. Decode both here.
+_ARROW_FINALS = {"A": "KEY_UP", "B": "KEY_DOWN", "C": "KEY_RIGHT", "D": "KEY_LEFT"}
+
+
+def _arrow_key(final: int) -> int | None:
+    if not _CURSES_AVAILABLE:
+        return None
+    name = _ARROW_FINALS.get(chr(final) if 0 <= final < 0x110000 else "")
+    return getattr(curses, name) if name else None
+
+
+def _read_key(win: "curses.window") -> int:
+    """Read one key, decoding CSI/SS3 arrow sequences into curses KEY_* codes."""
+    key = win.getch()
+    if key != 27:
+        return key
+    prefix = win.getch()
+    if prefix not in (ord("["), ord("O")):
+        return 27
+    arrow = _arrow_key(win.getch())
+    return 27 if arrow is None else arrow
+
+
 def interactive_select(
     items: list[str],
     title: str = "Select items",
@@ -64,7 +89,6 @@ def _curses_select(
     curses.cbreak()
     curses.start_color()
     stdscr.keypad(True)
-    stdscr.timeout(100)
 
     try:
         selected: set[int] = set()
@@ -73,6 +97,10 @@ def _curses_select(
         width = max(min(curses.COLS - 4, max(len(t) for t in items) + 10), len(instructions) + 2)
 
         win = curses.newwin(height, width, (curses.LINES - height) // 2, (curses.COLS - width) // 2)
+        # Keypad mode is per window: without this the window decodes arrow keys
+        # as a lone ESC and the picker treats it as a cancel.
+        win.keypad(True)
+        win.timeout(100)
 
         while True:
             win.clear()
@@ -100,7 +128,7 @@ def _curses_select(
             win.refresh()
 
             try:
-                key = win.getch()
+                key = _read_key(win)
             except curses.error:
                 key = -1
 
@@ -154,6 +182,8 @@ def _curses_confirm(prompt: str, default: bool) -> bool | None:
         width = max(min(curses.COLS - 4, len(prompt) + 10), 40)
         height = 7
         win = curses.newwin(height, width, (curses.LINES - height) // 2, (curses.COLS - width) // 2)
+        win.keypad(True)
+        win.timeout(100)
 
         choice = -1
         while choice == -1:
@@ -168,7 +198,7 @@ def _curses_confirm(prompt: str, default: bool) -> bool | None:
             win.refresh()
 
             try:
-                key = win.getch()
+                key = _read_key(win)
             except curses.error:
                 key = -1
 
