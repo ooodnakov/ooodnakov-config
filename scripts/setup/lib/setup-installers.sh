@@ -171,7 +171,7 @@ maybe_install_brew() {
   esac
 
   if ! prompt_yes_no "Install Homebrew package manager with the official install script?"; then
-    is_verbose && ui_error hint "skipping Homebrew"
+    is_verbose && ui_line hint "skipping Homebrew"
     DEPENDENCY_SUMMARY+=("brew: skipped")
     return 0
   fi
@@ -618,7 +618,7 @@ maybe_install_dependency() {
         DEPENDENCY_SUMMARY+=("$command_name: install attempted")
       fi
     else
-      is_verbose && ui_error hint "skipping $command_name"
+      is_verbose && ui_line hint "skipping $command_name"
       DEPENDENCY_SUMMARY+=("$command_name: skipped")
     fi
     return 0
@@ -640,7 +640,7 @@ maybe_install_dependency() {
       DEPENDENCY_SUMMARY+=("$command_name: install attempted")
     fi
   else
-    is_verbose && ui_error hint "skipping $package_name"
+    is_verbose && ui_line hint "skipping $package_name"
     DEPENDENCY_SUMMARY+=("$command_name: skipped")
   fi
 }
@@ -1497,7 +1497,7 @@ maybe_install_uv() {
   fi
 
   if ! prompt_yes_no "Install uv for Python package manager (official installer)?"; then
-    is_verbose && ui_error hint "skipping uv"
+    is_verbose && ui_line hint "skipping uv"
     DEPENDENCY_SUMMARY+=("uv: skipped")
     return 0
   fi
@@ -1551,7 +1551,7 @@ maybe_install_bw() {
   fi
 
   if ! prompt_yes_no "Install Bitwarden CLI from the official native executable archive?"; then
-    is_verbose && ui_error hint "skipping bw"
+    is_verbose && ui_line hint "skipping bw"
     DEPENDENCY_SUMMARY+=("bw: skipped")
     return 0
   fi
@@ -1634,7 +1634,7 @@ maybe_install_dua_cli() {
   fi
 
   if ! prompt_yes_no "Install dua-cli for disk usage analysis from byron/dua-cli via cargo?"; then
-    is_verbose && ui_error hint "skipping dua-cli"
+    is_verbose && ui_line hint "skipping dua-cli"
     DEPENDENCY_SUMMARY+=("dua: skipped")
     return 0
   fi
@@ -1692,7 +1692,7 @@ maybe_install_node() {
   archive_path="${TMPDIR:-/tmp}/${asset_name}"
 
   if ! prompt_yes_no "Install Node.js $node_ver with bundled npm into $install_root?"; then
-    is_verbose && ui_error hint "skipping Node.js"
+    is_verbose && ui_line hint "skipping Node.js"
     DEPENDENCY_SUMMARY+=("node: skipped")
     return 1
   fi
@@ -1758,7 +1758,7 @@ maybe_install_pnpm() {
   fi
 
   if ! prompt_yes_no "Install pnpm package manager?"; then
-    is_verbose && ui_error hint "skipping pnpm"
+    is_verbose && ui_line hint "skipping pnpm"
     DEPENDENCY_SUMMARY+=("pnpm: skipped")
     return 0
   fi
@@ -1821,7 +1821,7 @@ maybe_install_bun() {
   fi
 
   if ! prompt_yes_no "Install Bun JavaScript runtime and package manager via the official install script?"; then
-    is_verbose && ui_error hint "skipping bun"
+    is_verbose && ui_line hint "skipping bun"
     DEPENDENCY_SUMMARY+=("bun: skipped")
     return 0
   fi
@@ -1884,7 +1884,7 @@ maybe_install_cargo() {
   fi
 
   if ! prompt_yes_no "Install Rust and cargo via rustup (official installer)?"; then
-    is_verbose && ui_error hint "skipping cargo"
+    is_verbose && ui_line hint "skipping cargo"
     DEPENDENCY_SUMMARY+=("cargo: skipped")
     return 0
   fi
