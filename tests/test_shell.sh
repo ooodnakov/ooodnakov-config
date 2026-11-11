@@ -58,6 +58,9 @@ if shell_out="$(
     source scripts/setup/lib/setup-ui.sh
     source scripts/setup/lib/setup-optional-deps.sh
     source scripts/setup/lib/setup-installers.sh
+    # Host-independent zsh lookup: the helper must behave the same whether or
+    # not this machine has zsh installed.
+    command() { if [ "$1" = "-v" ] && [ "$2" = "zsh" ]; then printf "/bin/zsh\\n"; return 0; fi; builtin command "$@"; }
     ensure_zsh_default_shell 1
     printf "present-flag:[%s]" "${DEPENDENCY_SUMMARY[*]:-}"
     ensure_zsh_default_shell 0
@@ -76,7 +79,9 @@ else
 fi
 
 echo "=== Testing docker dependency installs the engine on Linux ==="
-if docker_out="$(
+if [ "$(uname -s)" != "Linux" ]; then
+  echo "SKIP: docker engine install is Linux-only (macOS/Windows use Docker Desktop)."
+elif docker_out="$(
   bash -c '
     set -uo pipefail
     REPO_ROOT="$1"

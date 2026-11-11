@@ -110,7 +110,7 @@ The current CI keeps terminal/editor checks **static and deterministic**:
 Why this shape:
 
 - Almost zero flake risk.
-- Minimal CI dependencies beyond Python, uv, and shellcheck on Unix runners.
+- Minimal CI dependencies beyond Python, uv, shellcheck, and (on Linux) zsh plus Lua for the doctor and WezTerm checks.
 - Catches accidental deletes/corruption quickly.
 - Preserves reproducibility goals while keeping CI fast.
 
