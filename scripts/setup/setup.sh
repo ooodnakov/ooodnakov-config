@@ -253,7 +253,11 @@ if [ "$COMMAND" = "completions" ]; then
   generate_autogen_completions || true
   progress_step "Generating oooconf command completions"
   generate_oooconf_completions || true
-  progress_step "Generating PowerShell completion cache"
+  if [ "$(detect_platform)" = "windows" ]; then
+    progress_step "Generating PowerShell completion cache"
+  else
+    progress_step "Skipping PowerShell completion cache (Windows only)"
+  fi
   generate_powershell_completions || true
   echo
   ui_line ok "Completion generation complete."

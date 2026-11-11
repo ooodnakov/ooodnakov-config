@@ -200,7 +200,11 @@ try {
             Generate-AutogenCompletions
             Step-Progress -Status "Generating oooconf command completions"
             Generate-OooconfCompletions
-            Step-Progress -Status "Generating PowerShell completion cache"
+            if ($IsWindows) {
+                Step-Progress -Status "Generating PowerShell completion cache"
+            } else {
+                Step-Progress -Status "Skipping PowerShell completion cache (Windows only)"
+            }
             Generate-PowerShellCompletions
             Write-Output ""
             Write-Output "Completion generation complete."

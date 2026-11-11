@@ -49,6 +49,13 @@ generate_oooconf_completions() {
 generate_powershell_completions() {
   local generator="$REPO_ROOT/scripts/generate/generate_powershell_completions.ps1"
 
+  # The cache is consumed only by the managed PowerShell profile on Windows;
+  # generating it anywhere else (Linux/macOS pwsh, WSL) is dead work.
+  if [ "$(detect_platform)" != "windows" ]; then
+    TOOL_SUMMARY+=("PowerShell completions: skipped (Windows only)")
+    return 0
+  fi
+
   if ! command -v pwsh >/dev/null 2>&1; then
     TOOL_SUMMARY+=("PowerShell completions: pwsh not found")
     return 0

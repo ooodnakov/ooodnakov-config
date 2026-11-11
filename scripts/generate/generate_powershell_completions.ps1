@@ -8,6 +8,14 @@
 
 $ErrorActionPreference = 'Stop'
 
+# Only the Windows managed profile consumes this cache; skip elsewhere so a
+# Linux/macOS pwsh run neither writes a useless cache nor trips over Windows
+# assumptions in the environment files.
+if (-not $IsWindows) {
+    Write-Output "PowerShell completions: skipped (Windows only)"
+    exit 0
+}
+
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $env:OOODNAKOV_CACHE_HOME = if ($env:OOODNAKOV_CACHE_HOME) {
     $env:OOODNAKOV_CACHE_HOME

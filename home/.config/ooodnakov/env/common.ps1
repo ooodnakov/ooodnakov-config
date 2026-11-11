@@ -11,7 +11,9 @@ $env:OOODNAKOV_SHARE_HOME = if ($env:OOODNAKOV_SHARE_HOME) { $env:OOODNAKOV_SHAR
 $env:OOODNAKOV_STATE_HOME = if ($env:OOODNAKOV_STATE_HOME) { $env:OOODNAKOV_STATE_HOME } else { Join-Path $HOME ".local/state/ooodnakov-config" }
 $env:OOODNAKOV_CACHE_HOME = if ($env:OOODNAKOV_CACHE_HOME) { $env:OOODNAKOV_CACHE_HOME } else { Join-Path $HOME ".cache/ooodnakov-config" }
 $env:YAZI_CONFIG_HOME = if ($env:YAZI_CONFIG_HOME) { $env:YAZI_CONFIG_HOME } else { Join-Path $HOME ".config/yazi" }
-if (-not $env:YAZI_FILE_ONE) {
+# Git-for-Windows ships the only file.exe yazi can use there; probing a
+# C:\ path on Linux/macOS pwsh would throw "Cannot find drive 'C'".
+if (-not $env:YAZI_FILE_ONE -and $IsWindows) {
     $programFiles = if ($env:ProgramFiles) { $env:ProgramFiles } else { "C:\Program Files" }
     $yaziFileOne = Join-Path $programFiles "Git\usr\bin\file.exe"
     if (Test-Path $yaziFileOne) { $env:YAZI_FILE_ONE = $yaziFileOne }

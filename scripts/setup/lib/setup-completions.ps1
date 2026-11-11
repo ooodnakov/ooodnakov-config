@@ -50,6 +50,12 @@ function Generate-OooconfCompletions {
 
 function Generate-PowerShellCompletions {
     $generator = Join-Path $RepoRoot "scripts/generate/generate_powershell_completions.ps1"
+
+    if (-not $IsWindows) {
+        Add-ToolSummary "PowerShell completions: skipped (Windows only)"
+        return
+    }
+
     if (-not (Test-Path -LiteralPath $generator)) {
         Add-ToolSummary "PowerShell completions: generator missing ($generator)"
         return
