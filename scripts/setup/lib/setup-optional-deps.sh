@@ -522,6 +522,20 @@ install_optional_dependency_from_catalog() {
       fi
     fi
     ;;
+  bun)
+    if optional_dependency_selected "$key"; then
+      if ! ensure_bun_available; then
+        DEPENDENCY_SUMMARY+=("$command_name: missing (bun unavailable; install bun first)")
+        return 0
+      fi
+      run_with_spinner "Installing $description via bun" bun add -g "$package_name"
+      if command -v "$command_name" >/dev/null 2>&1; then
+        DEPENDENCY_SUMMARY+=("$command_name: installed via bun")
+      else
+        DEPENDENCY_SUMMARY+=("$command_name: install attempted via bun")
+      fi
+    fi
+    ;;
   pip)
     local python_cmd
     python_cmd="python3"

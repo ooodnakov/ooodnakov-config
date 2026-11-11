@@ -246,6 +246,48 @@ def test_minimal_keys_command_and_legacy_alias(capsys):
         sys.argv = original_argv
 
 
+def test_linux_toolset_group_is_catalog_backed():
+    """The Linux prerequisite checks and oh-my-pi entry must stay catalog-backed."""
+    data = load_deps()
+    assert data["linux"]["required"] == ["zsh", "docker"]
+    assert data["linux"]["suggested"] == [
+        "brew",
+        "node",
+        "pnpm",
+        "bun",
+        "bat",
+        "lazydocker",
+        "lazygit",
+        "oh-my-pi",
+    ]
+    by_key = {dependency["key"]: dependency for dependency in data["deps"]}
+    assert set(data["linux"]["required"] + data["linux"]["suggested"]) <= set(by_key)
+    oh_my_pi = by_key["oh-my-pi"]
+    assert oh_my_pi["bin"] == "omp"
+    assert oh_my_pi["check"] == "omp --version"
+    for platform in ("linux", "macos", "windows"):
+        assert oh_my_pi[f"{platform}.manager"] == "bun"
+        assert oh_my_pi[f"{platform}.package"] == "@oh-my-pi/pi-coding-agent"
+
+
+def test_linux_toolset_command_outputs_requirement_lines(capsys):
+    """`linux-toolset` feeds the Bash and PowerShell doctor checks."""
+    from scripts.cli.read_optional_deps import main
+
+    original_argv = sys.argv[:]
+    try:
+        sys.argv = ["read_optional_deps.py", "linux-toolset"]
+        assert main() == 0
+        output = capsys.readouterr().out.splitlines()
+    finally:
+        sys.argv = original_argv
+
+    parsed = [line.split("|") for line in output]
+    assert all(len(parts) == 4 for parts in parsed)
+    assert [parts[0] for parts in parsed if parts[1] == "required"] == ["zsh", "docker"]
+    assert dict((parts[0], parts[3]) for parts in parsed)["oh-my-pi"] == "omp"
+
+
 def test_invalid_key_handling():
     """Test graceful handling of unknown keys."""
     result = subprocess.run(

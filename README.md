@@ -155,7 +155,9 @@ Primary commands:
 - `oooconf deps`: install optional dependencies only, with a multi-select picker when `gum` is available
 - `oooconf update`: fast-forward pull the repo, then rerun install; pass `--no-deps` to skip optional dependency installation
 - `oooconf dry-run`: preview setup actions without changing the system
-- `oooconf doctor`: validate managed links and key tools
+- `oooconf doctor`: validate managed links and key tools; on Linux it also
+  requires `zsh` and `docker` and hints at the minimal toolset
+  (`brew`, `node`, `pnpm`, `bun`, `bat`, `lazydocker`, `lazygit`, `oh-my-pi`)
 - `oooconf plan`: build a validated, side-effect-free operation plan in text or versioned JSON
 - `oooconf apply`: transactionally apply the validated managed-link plan
 - `oooconf rollback --last`: safely reverse the latest eligible managed-link transaction

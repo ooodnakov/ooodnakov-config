@@ -312,6 +312,15 @@ ensure_pnpm_available() {
   resolve_pnpm_command >/dev/null 2>&1
 }
 
+ensure_bun_available() {
+  if command -v bun >/dev/null 2>&1; then
+    return 0
+  fi
+
+  maybe_install_bun "custom" >/dev/null 2>&1 || true
+  command -v bun >/dev/null 2>&1
+}
+
 python_has_pip() {
   local python_cmd
   python_cmd="$1"

@@ -57,6 +57,14 @@ keys = [
     "topgrade",
 ]
 
+[linux]
+# Linux prerequisite toolset reported by `oooconf doctor` (and setup.sh doctor).
+# required: reported as an error when missing.
+# suggested: reported as an install hint when missing. Keep this list minimal —
+# it is the smallest set the managed Linux config runs on.
+required = ["zsh", "docker"]
+suggested = ["brew", "node", "pnpm", "bun", "bat", "lazydocker", "lazygit", "oh-my-pi"]
+
 [[deps]]
 key = "bin"
 display = "bin"
@@ -838,6 +846,19 @@ macos.manager = "pnpm"
 macos.package = "@earendil-works/pi-coding-agent"
 windows.manager = "pnpm"
 windows.package = "@earendil-works/pi-coding-agent"
+
+[[deps]]
+key = "oh-my-pi"
+display = "Oh My Pi"
+description = "Oh My Pi coding agent CLI (omp), installed globally with bun"
+bin = "omp"
+check = "omp --version"
+linux.manager = "bun"
+linux.package = "@oh-my-pi/pi-coding-agent"
+macos.manager = "bun"
+macos.package = "@oh-my-pi/pi-coding-agent"
+windows.manager = "bun"
+windows.package = "@oh-my-pi/pi-coding-agent"
 
 [[deps]]
 key = "agent-deck"

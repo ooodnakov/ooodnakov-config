@@ -178,7 +178,10 @@ On Windows, setup also links the tracked PowerShell profile into both `~/.config
 Phase-1 setup ergonomics are implemented with:
 
 - `dry-run` command to preview setup actions without mutation
-- `doctor` command to validate managed links and key tool presence after install
+- `doctor` command to validate managed links and key tool presence after install;
+  on Linux it reports missing `zsh`/`docker` as errors and missing members of the
+  minimal Linux toolset (from `[linux]` in `scripts/optional-deps.toml`) as hints
+  with the exact `oooconf deps <keys>` repair command
 - `deps` command to install optional dependencies separately from the full config-linking flow
 - `oooconf deps worktrunk` optionally installs Worktrunk via Homebrew on Linux/macOS or winget on Windows; managed shell profiles conditionally enable worktree switching (`wt` in Zsh, `git-wt` on Windows PowerShell).
 - `completions` command to regenerate completion files (autogen zsh + oooconf command completions + the PowerShell tool-completion cache, Windows hosts only)

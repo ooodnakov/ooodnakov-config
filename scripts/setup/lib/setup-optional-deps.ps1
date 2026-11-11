@@ -1,5 +1,9 @@
 # Dot-sourced by scripts/setup/setup.ps1; do not execute directly.
 
+# Resolve the catalog once at dot-source time: $PSScriptRoot inside a dot-sourced
+# function resolves to the caller's script, not this file.
+$script:OptionalDepsTomlPath = Join-Path (Join-Path $PSScriptRoot "../..") "optional-deps.toml"
+
 function Detect-Platform {
     if ($IsWindows) { return "windows" }
     if ($IsMacOS) { return "macos" }
@@ -29,19 +33,22 @@ function Get-OptionalDepsTomlFallbackData {
         return $script:OptionalDepsTomlFallbackData
     }
 
-    $tomlPath = Join-Path $PSScriptRoot "optional-deps.toml"
+    $tomlPath = $script:OptionalDepsTomlPath
     if (-not (Test-Path $tomlPath)) {
         $script:OptionalDepsTomlFallbackData = @{
-            Deps        = @()
-            MinimalKeys = @()
+            Deps         = @()
+            MinimalKeys  = @()
+            LinuxToolset = @()
         }
         return $script:OptionalDepsTomlFallbackData
     }
 
     $entries = @()
     $minimalKeys = @()
+    $linuxToolset = @()
     $current = @{}
     $inMinimalSection = $false
+    $inLinuxSection = $false
     foreach ($rawLine in (Get-Content -Path $tomlPath -ErrorAction SilentlyContinue)) {
         $line = $rawLine.Trim()
         if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
@@ -50,11 +57,19 @@ function Get-OptionalDepsTomlFallbackData {
 
         if ($line -eq "[minimal]") {
             $inMinimalSection = $true
+            $inLinuxSection = $false
             continue
         }
 
-        if ($line -match '^\[' -and $line -ne "[minimal]" -and $line -ne "[[deps]]") {
+        if ($line -eq "[linux]") {
+            $inLinuxSection = $true
             $inMinimalSection = $false
+            continue
+        }
+
+        if ($line -match '^\[' -and $line -ne "[minimal]" -and $line -ne "[linux]" -and $line -ne "[[deps]]") {
+            $inMinimalSection = $false
+            $inLinuxSection = $false
         }
 
         if ($inMinimalSection -and $line -match '^keys\s*=\s*\[(.*)\]\s*$') {
@@ -66,7 +81,19 @@ function Get-OptionalDepsTomlFallbackData {
             continue
         }
 
+        if ($inLinuxSection -and $line -match '^(required|suggested)\s*=\s*\[(.*)\]\s*$') {
+            $requirement = $matches[1]
+            foreach ($key in ($matches[2] -split ',')) {
+                $clean = $key.Trim().Trim('"').Trim("'")
+                if (-not [string]::IsNullOrWhiteSpace($clean)) {
+                    $linuxToolset += [pscustomobject]@{ Key = $clean; Requirement = $requirement }
+                }
+            }
+            continue
+        }
+
         if ($line -eq "[[deps]]") {
+            $inLinuxSection = $false
             if ($current.Count -gt 0) {
                 $entries += ,$current
             }
@@ -119,8 +146,9 @@ function Get-OptionalDepsTomlFallbackData {
     })
 
     $script:OptionalDepsTomlFallbackData = @{
-        Deps        = $deps
-        MinimalKeys = @($minimalKeys | Select-Object -Unique)
+        Deps         = $deps
+        MinimalKeys  = @($minimalKeys | Select-Object -Unique)
+        LinuxToolset = @($linuxToolset)
     }
     return $script:OptionalDepsTomlFallbackData
 }
@@ -456,6 +484,21 @@ function Install-OptionalDependencyFromSpec {
             $res = (Invoke-ActionWithSpinner -Description "Installing $description via pnpm" -Action {
                 param($pkg)
                 pnpm add --global $pkg | Out-Null
+            } -ArgumentList $packageName)
+            Update-SessionEnvironment
+            if ($res) { Add-NewlyAvailableCommand -CommandNames $commandNames }
+            return $res
+        }
+        "bun" {
+            if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
+                if (-not (Install-BunIfMissing)) {
+                    Add-DependencySummary "${summaryName}: missing (bun unavailable; install bun first)"
+                    return $false
+                }
+            }
+            $res = (Invoke-ActionWithSpinner -Description "Installing $description via bun" -Action {
+                param($pkg)
+                bun add --global $pkg | Out-Null
             } -ArgumentList $packageName)
             Update-SessionEnvironment
             if ($res) { Add-NewlyAvailableCommand -CommandNames $commandNames }

@@ -22,7 +22,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from scripts.cli.env_tool import write_override  # noqa: E402
 from scripts.cli.operation_plan import build_plan, selected_links  # noqa: E402
 from scripts.cli.profile_manager import ProfileError, resolve_profile  # noqa: E402
-from scripts.cli.read_optional_deps import normalized_deps  # noqa: E402
+from scripts.cli.read_optional_deps import load_deps, normalized_deps  # noqa: E402
 from scripts.cli.transaction_apply import INCOMPLETE_STATUSES, _load_journals, apply  # noqa: E402
 from scripts.link_manager import get_platform  # noqa: E402
 
@@ -171,6 +171,31 @@ def diagnostics(repo_root: Path, platform: str, profile_name: str | None, mode: 
             "Run oooconf deps <key> to install native copies inside WSL." if host_binaries else None,
         )
     )
+    if platform == "linux":
+        toolset = load_deps()["linux"]
+        for requirement, status, severity in (("required", "error", "error"), ("suggested", "warning", "warning")):
+            keys = [key for key in toolset.get(requirement, []) if key in records]
+            missing = [key for key in keys if not _dependency_available(records[key])]
+            if missing:
+                checks.append(
+                    Check(
+                        f"dependencies.{requirement}",
+                        status,
+                        severity,
+                        f"Missing {requirement} Linux tools: {', '.join(missing)}.",
+                        f"Run oooconf deps {' '.join(missing)} to install them.",
+                    )
+                )
+            else:
+                checks.append(
+                    Check(
+                        f"dependencies.{requirement}",
+                        "pass",
+                        "info",
+                        f"All {requirement} Linux tools are installed: {', '.join(keys) or 'none'}.",
+                        None,
+                    )
+                )
     incomplete = sum(data.get("status") in INCOMPLETE_STATUSES for _path, data in _load_journals())
     checks.append(
         Check(

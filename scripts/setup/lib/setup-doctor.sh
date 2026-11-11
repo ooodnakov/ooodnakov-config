@@ -53,6 +53,37 @@ doctor_check_wsl_native_tools() {
   FAILURES+=("doctor wsl host tools")
 }
 
+doctor_check_linux_toolset() {
+  # The Linux prerequisite set comes from [linux] in optional-deps.toml.
+  # Required tools fail the doctor; suggested tools are install hints only.
+  [ "$(detect_platform)" = "linux" ] || return 0
+
+  local key requirement display binary
+  local -a required_missing=() suggested_missing=()
+  while IFS='|' read -r key requirement display binary; do
+    [ -n "$key" ] || continue
+    command -v "$binary" >/dev/null 2>&1 && continue
+    if [ "$requirement" = "required" ]; then
+      ui_line missing "linux toolset: $display (required)"
+      required_missing+=("$key")
+    else
+      ui_line hint "linux toolset: $display (suggested)"
+      suggested_missing+=("$key")
+    fi
+  done < <(run_python "$OPTIONAL_DEPS_SCRIPT" linux-toolset)
+
+  local joined
+  if [ "${#required_missing[@]}" -gt 0 ]; then
+    joined="$(printf '%s ' "${required_missing[@]}")"
+    ui_line hint "          repair: oooconf deps ${joined% }"
+    FAILURES+=("doctor linux required toolset")
+  fi
+  if [ "${#suggested_missing[@]}" -gt 0 ]; then
+    joined="$(printf '%s ' "${suggested_missing[@]}")"
+    ui_line hint "          minimal install: oooconf deps ${joined% }"
+  fi
+}
+
 doctor_check_nvim() {
   local version
   if ! command -v nvim >/dev/null 2>&1; then
@@ -132,6 +163,7 @@ run_doctor() {
   doctor_check_command oooconf
   doctor_check_command o
   doctor_check_wsl_native_tools
+  doctor_check_linux_toolset
   doctor_check_managed_repo "oh-my-zsh" "$STATE_HOME/oh-my-zsh" "oh-my-zsh.sh"
   doctor_check_managed_repo "powerlevel10k" "$STATE_HOME/powerlevel10k" "powerlevel10k.zsh-theme"
   doctor_check_managed_repo "k" "$STATE_HOME/oh-my-zsh/custom/plugins/k" "k.sh"

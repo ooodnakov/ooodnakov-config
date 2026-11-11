@@ -93,6 +93,56 @@ function Test-DoctorOptionalCommand {
     Write-UiLine -Role hint -Message "command: $Name not installed"
 }
 
+function Test-DoctorLinuxToolset {
+    if (-not $IsLinux) {
+        return
+    }
+
+    $entries = @()
+    try {
+        $raw = Run-Python -ScriptPath $OptionalDepsScript -ScriptArgs @("linux-toolset") 2>$null
+        if ($raw) {
+            $entries = @($raw -split "`n" |
+                    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                    ForEach-Object {
+                        $parts = $_ -split '\|'
+                        if ($parts.Count -lt 4) { return }
+                        [pscustomobject]@{ Key = $parts[0]; Requirement = $parts[1]; Display = $parts[2]; Bin = $parts[3] }
+                    })
+        }
+    } catch {
+    }
+
+    if ($entries.Count -eq 0) {
+        $entries = @((Get-OptionalDepsTomlFallbackData).LinuxToolset |
+                ForEach-Object { [pscustomobject]@{ Key = $_.Key; Requirement = $_.Requirement; Display = $_.Key; Bin = $_.Key } })
+    }
+
+    $requiredMissing = @()
+    $suggestedMissing = @()
+    foreach ($entry in $entries) {
+        $binary = if ([string]::IsNullOrWhiteSpace($entry.Bin)) { $entry.Key } else { $entry.Bin }
+        if (Test-AnyCommand -Names @($binary)) {
+            continue
+        }
+        if ($entry.Requirement -eq "required") {
+            Write-UiLine -Role missing -Message "linux toolset: $($entry.Display) (required)"
+            $requiredMissing += $entry.Key
+        } else {
+            Write-UiLine -Role hint -Message "linux toolset: $($entry.Display) (suggested)"
+            $suggestedMissing += $entry.Key
+        }
+    }
+
+    if ($requiredMissing.Count -gt 0) {
+        Write-UiLine -Role hint -Message "repair: oooconf deps $($requiredMissing -join ' ')"
+        $script:Failures.Add("doctor linux required toolset") | Out-Null
+    }
+    if ($suggestedMissing.Count -gt 0) {
+        Write-UiLine -Role hint -Message "minimal install: oooconf deps $($suggestedMissing -join ' ')"
+    }
+}
+
 function Test-Doctor {
     Write-UiLine -Role info -Message "Running doctor checks..."
 
@@ -136,6 +186,8 @@ function Test-Doctor {
     foreach ($spec in @(Get-OptionalDependencySpecs | Sort-Object Key)) {
         Test-DoctorDependency -Spec $spec -Required:$requiredDependencyKeys.Contains($spec.Key)
     }
+
+    Test-DoctorLinuxToolset
 
     foreach ($commandName in @("komorebic", "whkd")) {
         Test-DoctorOptionalCommand -Name $commandName

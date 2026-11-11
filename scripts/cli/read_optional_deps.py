@@ -22,13 +22,29 @@ def load_deps() -> dict:
     defaults = data.get("defaults", {})
     deps = [_normalize_dep(raw) for raw in data.get("deps", [])]
     validate_deps(deps)
+    toolset = data.get("linux", {})
+    _validate_toolset(toolset, {dep.get("key", "") for dep in deps})
 
     return {
         "deps": deps,
         "managed_tools": data.get("managed-tools", {}),
         "defaults": defaults,
         "minimal": data.get("minimal", {}),
+        "linux": toolset,
     }
+
+
+def _validate_toolset(toolset: dict, keys: set[str]) -> None:
+    """Every key in the Linux prerequisite lists must exist in the catalog."""
+    if not isinstance(toolset, dict):
+        raise ValueError("[linux] must be a table with required/suggested lists")
+    for field in ("required", "suggested"):
+        values = toolset.get(field, [])
+        if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
+            raise ValueError(f"[linux] {field} must be a list of dependency keys")
+        unknown = sorted(set(values) - keys)
+        if unknown:
+            raise ValueError(f"[linux] {field} references unknown dependency keys: {', '.join(unknown)}")
 
 
 def _normalize_dep(raw: dict) -> dict:
@@ -254,6 +270,19 @@ def get_managed_tool_field(name: str, field: str) -> None:
     print("" if value is None else value)
 
 
+def output_linux_toolset() -> None:
+    """Print the Linux prerequisite toolset as key|requirement|display|bin lines."""
+    data = load_deps()
+    records = {str(dep.get("key") or ""): dep for dep in data["deps"]}
+    toolset = data["linux"]
+    for requirement in ("required", "suggested"):
+        for key in toolset.get(requirement, []):
+            record = records.get(key, {})
+            display = str(record.get("display") or key)
+            binary = str(record.get("bin") or key)
+            print(f"{key}|{requirement}|{display}|{binary}")
+
+
 def get_install_info(key: str, platform: str) -> None:
     """Print pipe-delimited install info. Now includes new rich fields."""
     data = load_deps()
@@ -311,6 +340,8 @@ def main() -> int:
         data = load_deps()
         minimal = data.get("minimal", {}).get("keys", [])
         print(" ".join(minimal))
+    elif cmd == "linux-toolset":
+        output_linux_toolset()
     elif cmd == "managed-tools":
         data = load_deps()
         print(json.dumps(data["managed_tools"], indent=2))

@@ -35,7 +35,11 @@ All decisions, categories, versions, install methods, pins, and reasons are **de
 
 The current optional dependency catalog includes:
 
-`bin`, `topgrade`, `wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `just`, `uv`, `bw`, `node`, `pnpm`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`, `agent-deck`, `croc`, `s5cmd`, `taskwarrior`, `taskwarrior-tui`, `worktrunk`
+`bin`, `topgrade`, `wget`, `git`, `wezterm`, `oh-my-posh`, `posh-git`, `psfzf`, `choco`, `brew`, `gsudo`, `rg`, `fd`, `zsh`, `direnv`, `fzf`, `bat`, `delta`, `glow`, `gum`, `zoxide`, `q`, `eza`, `yazi`, `ffmpeg`, `jq`, `p7zip`, `poppler`, `fc-cache`, `cargo`, `dua`, `nvim`, `tree-sitter`, `k`, `python3`, `lazygit`, `lazydocker`, `docker`, `impala`, `bluetui`, `just`, `uv`, `bw`, `node`, `pnpm`, `bun`, `rtk`, `imagemagick`, `ghostscript`, `luarocks`, `tectonic`, `mermaid-cli`, `zig`, `neovim-node`, `neovim-python`, `fastfetch`, `btop`, `cava`, `blackhole-2ch`, `glazewm`, `zebar`, `overline-zebar`, `pandoc`, `pi-coding-agent`, `oh-my-pi`, `agent-deck`, `croc`, `s5cmd`, `taskwarrior`, `taskwarrior-tui`, `worktrunk`
+
+The `[linux]` section defines the Linux prerequisite toolset consumed by `oooconf doctor` (structured diagnostics) and `scripts/setup/setup.sh doctor`: `required = ["zsh", "docker"]` fails the doctor when missing, while `suggested` (`brew`, `node`, `pnpm`, `bun`, `bat`, `lazydocker`, `lazygit`, `oh-my-pi`) only prints an install hint. Every listed key must exist in the catalog.
+
+`oh-my-pi` (binary `omp`) is the one catalog entry installed through the `bun` manager: `bun add -g @oh-my-pi/pi-coding-agent` on every platform, bootstrapping bun through its existing handler first. The `bun` manager joins `pnpm` and `pip` as a package-manager route handled by both setup dispatchers.
 
 Optional UI extras such as `cava` for the SketchyBar audio visualizer, plus `BlackHole 2ch` for macOS loopback capture, also live in that TOML catalog and can be installed through `oooconf deps`. The `docker` entry is intentionally a configuration helper: it does not install Docker Engine, but on systemd Linux it enables and starts existing Docker and containerd units. Window-manager and agent-adjacent optional entries now include GlazeWM, Zebar, Overline Zebar widgets, RTK, the Pi coding agent, and agent-deck (installed from the `asheshgoplani/tap` Homebrew tap on Linux and macOS, and available on Windows through WSL).
 
@@ -61,7 +65,7 @@ Run `oooconf lock` after editing the TOML.
      extraction. If an upstream publishes only a mutable installer script, add a
      narrowly explained `checksum_exception`; the generated lock makes every such
      exception visible for review.
-   - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`). The `node` and `pnpm` handlers are intentionally paired so a fresh machine with neither can bootstrap the pinned Node.js archive, npm, and pnpm in one optional dependency run.
+   - If the dependency requires specialized install logic, add `handler = "<name>"` and map that handler in setup dispatchers (`setup.sh` / `setup.ps1`). The `node` and `pnpm` handlers are intentionally paired so a fresh machine with neither can bootstrap the pinned Node.js archive, npm, and pnpm in one optional dependency run. Package-manager routes are `apt`/`brew`/`cargo`, `pnpm`, `bun`, and `pip`; `bun` bootstraps bun before `bun add -g <package>`.
 2. Add/adjust presence checks:
    - `optional_dependency_present()` in `scripts/setup/setup.sh`
    - `Get-OptionalDependencyCommandNames` / `Test-OptionalDependencyPresent` in `scripts/setup/setup.ps1`

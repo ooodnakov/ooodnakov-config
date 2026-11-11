@@ -122,6 +122,7 @@ _oooconf_values_deps_keys=(
   'overline-zebar:Third-party Zebar widget pack with system tray, widgets, and a config UI'
   'pandoc:document converter and universal markup transformer'
   'pi-coding-agent:Earendil Works coding agent for AI-assisted development'
+  'oh-my-pi:Oh My Pi coding agent CLI (omp), installed globally with bun'
   'agent-deck:terminal session manager for AI coding agents'
   'coreutils-win:Windows Core Utilities (sudo, etc.) for Windows'
   'croc:easily and securely send files between computers'

@@ -37,6 +37,8 @@ def test_diagnostics_are_versioned_stable_and_secret_free(isolated_state: Path) 
         "links.managed",
         "dependencies.available",
         "dependencies.native",
+        "dependencies.required",
+        "dependencies.suggested",
         "transactions.incomplete",
         "generated.drift",
     ]

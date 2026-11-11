@@ -394,9 +394,10 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     setup_sh = _setup_bash_sources()
     setup_ps1 = _setup_pwsh_sources()
 
-    expected_unix = {"", "apt", "brew", "cargo", "curl", "custom", "download", "github-release", "pip", "pnpm"}
+    expected_unix = {"", "apt", "brew", "bun", "cargo", "curl", "custom", "download", "github-release", "pip", "pnpm"}
     expected_windows = {
         "",
+        "bun",
         "cargo",
         "choco",
         "custom",
@@ -411,7 +412,7 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     assert unix_managers == expected_unix
     assert windows_managers == expected_windows
 
-    for pattern in ["custom | curl)", "pnpm)", "pip)", "github-release)", '"")']:
+    for pattern in ["custom | curl)", "pnpm)", "bun)", "pip)", "github-release)", '"")']:
         assert pattern in setup_sh
     for manager in ["apt", "brew", "cargo"]:
         assert f'if [ "$manager" = "{manager}" ]' in setup_sh or f"{manager})" in setup_sh
@@ -432,6 +433,7 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
         "cargo",
         "scoop",
         "pnpm",
+        "bun",
         "github-release",
         "pip",
         "gitbash-zsh",
