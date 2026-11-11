@@ -227,13 +227,15 @@ try {
                 throw (Format-PythonFailure -Context "Managed link plan validation failed" -ScriptPath $planScript)
             }
             if ($DryRun) {
-                $linkOutput -split "`n" | ForEach-Object {
-                    if ([string]::IsNullOrWhiteSpace($_)) { return }
-                    $parts = $_ -split '\|'
+                $linkPairs = @()
+                foreach ($line in ($linkOutput -split "`n")) {
+                    if ([string]::IsNullOrWhiteSpace($line)) { continue }
+                    $parts = $line -split '\|'
                     if ($parts.Count -ge 3) {
-                        Write-UiLine -Role hint -Message "[dry-run]   $($parts[2]) -> $($parts[1])"
+                        $linkPairs += "$($parts[2])`t$($parts[1])"
                     }
                 }
+                Write-UiLinkRows -Pairs $linkPairs
                 return
             }
             $applyScript = Join-Path $RepoRoot "scripts/cli/transaction_apply.py"

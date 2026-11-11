@@ -7,11 +7,11 @@ doctor_check_link() {
   local target
   target="$2"
   if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
-    ui_line ok "$target -> $source"
-  else
-    ui_line missing "$target (expected symlink to $source)"
-    FAILURES+=("doctor link $target")
+    return 0
   fi
+  ui_line missing "$(ui_path "$target") (expected symlink to $(ui_path "$source"))"
+  FAILURES+=("doctor link $target")
+  return 1
 }
 
 doctor_check_command() {
@@ -47,7 +47,7 @@ doctor_check_wsl_native_tools() {
   ui_line warn "WSL: catalog tools resolve to Windows host binaries (not installed in this distro):"
   local entry
   for entry in "${host_tools[@]}"; do
-    ui_line hint "          $entry"
+    ui_line hint "          ${entry%% -> *} -> $(ui_path "${entry#* -> }" warn)"
   done
   ui_line hint "          repair: oooconf deps <key> to install native Linux copies"
   FAILURES+=("doctor wsl host tools")
@@ -115,14 +115,14 @@ doctor_check_managed_repo() {
   local actual_ref
 
   if [ ! -d "$target/.git" ]; then
-    ui_line missing "managed repo: $name ($target)"
+    ui_line missing "managed repo: $name ($(ui_path "$target" missing))"
     ui_line hint "          repair: oooconf install"
     FAILURES+=("doctor managed repo $name")
     return 1
   fi
 
   if [ ! -f "$target/$required_file" ]; then
-    ui_line missing "managed repo file: $name/$required_file"
+    ui_line missing "managed repo file: $(ui_path "$target/$required_file" missing)"
     ui_line hint "          repair: oooconf install"
     FAILURES+=("doctor managed repo file $name")
     return 1
@@ -147,11 +147,17 @@ run_doctor() {
     FAILURES+=("doctor incomplete transaction")
   fi
   local managed_links
+  local -a link_pairs=()
   if managed_links="$(python3 "$REPO_ROOT/scripts/cli/operation_plan.py" --repo-root "$REPO_ROOT" --scope links --emit-managed-links)"; then
     while IFS='|' read -r _key source target; do
       [ -n "$target" ] || continue
-      doctor_check_link "$source" "$target"
+      if doctor_check_link "$source" "$target"; then
+        link_pairs+=("$target"$'\t'"$source")
+      fi
     done <<<"$managed_links"
+    if [ "${#link_pairs[@]}" -gt 0 ]; then
+      printf '%s\n' "${link_pairs[@]}" | ui_link_rows
+    fi
   else
     ui_line missing "unable to resolve managed profile links"
     FAILURES+=("doctor profile links")
@@ -178,9 +184,9 @@ run_doctor() {
   doctor_check_managed_repo "you-should-use" "$STATE_HOME/oh-my-zsh/custom/plugins/you-should-use" "you-should-use.plugin.zsh"
   doctor_check_managed_repo "s3cmd" "$STATE_HOME/oh-my-zsh/custom/plugins/s3cmd" "s3cmd.plugin.zsh"
   if [ -d "$FONT_TARGET_DIR" ]; then
-    ui_line ok "fonts dir: $FONT_TARGET_DIR"
+    ui_line ok "fonts dir: $(ui_path "$FONT_TARGET_DIR" ok)"
   else
-    ui_line missing "fonts dir: $FONT_TARGET_DIR"
+    ui_line missing "fonts dir: $(ui_path "$FONT_TARGET_DIR" missing)"
     FAILURES+=("doctor fonts")
   fi
 

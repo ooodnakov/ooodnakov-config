@@ -22,7 +22,7 @@ function Install-Fonts {
     Step-Progress -Status "Installing bundled fonts"
     $fontDir = Join-Path $RepoRoot "fonts/meslo"
     if (-not (Test-Path $fontDir)) {
-        Write-UiError -Role warn -Message "Font directory not found at $fontDir"
+        Write-UiError -Role warn -Message "Font directory not found at $(Format-UiPath -Path $fontDir -Role "warn")"
         return
     }
 
@@ -524,7 +524,7 @@ function Install-GitBashZshIfMissing {
     if ($DryRun) {
         Write-UiLine -Role hint -Message "[dry-run] Download $url"
         Write-UiLine -Role hint -Message "[dry-run] Extract $assetName -> staging"
-        Write-UiLine -Role hint -Message "[dry-run] Merge staged usr/etc -> $gitRoot (may require administrator approval)"
+        Write-UiLine -Role hint -Message "[dry-run] Merge staged usr/etc -> $(Format-UiPath -Path $gitRoot -Role "hint") (may require administrator approval)"
         Add-DependencySummary "zsh: install preview for Git Bash"
         return $false
     }
@@ -682,8 +682,8 @@ function Install-GitHubReleaseDependencyIfMissing {
 
     if ($DryRun) {
         Write-UiLine -Role hint -Message "[dry-run] Download $releaseUrl"
-        Write-UiLine -Role hint -Message "[dry-run] Extract $archivePath -> $installRoot"
-        Write-UiLine -Role hint -Message "[dry-run] Copy $binaryFile -> $targetBinary"
+        Write-UiLine -Role hint -Message "[dry-run] Extract $(Format-UiPath -Path $archivePath -Role "hint") -> $(Format-UiPath -Path $installRoot -Role "hint")"
+        Write-UiLine -Role hint -Message "[dry-run] Copy $(Format-UiPath -Path $binaryFile -Role "hint") -> $(Format-UiPath -Path $targetBinary -Role "hint")"
         Add-DependencySummary "${SummaryName}: install preview via GitHub release"
         return $false
     }
@@ -1026,8 +1026,8 @@ function Install-RtkIfMissing {
 
     if ($DryRun) {
         Write-UiLine -Role hint -Message "[dry-run] Download $releaseUrl"
-        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $archivePath -> $installRoot"
-        Write-UiLine -Role hint -Message "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $(Format-UiPath -Path $archivePath -Role "hint") -> $(Format-UiPath -Path $installRoot -Role "hint")"
+        Write-UiLine -Role hint -Message "[dry-run] Copy $(Format-UiPath -Path $sourceBinary -Role "hint") -> $(Format-UiPath -Path $targetBinary -Role "hint")"
         Add-DependencySummary "rtk: install preview via official archive"
         return $false
     }
@@ -1108,8 +1108,8 @@ function Install-NeovimIfMissing {
 
     if ($DryRun) {
         Write-UiLine -Role hint -Message "[dry-run] Download $releaseUrl"
-        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $archivePath -> $installRoot"
-        Write-UiLine -Role hint -Message "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $(Format-UiPath -Path $archivePath -Role "hint") -> $(Format-UiPath -Path $installRoot -Role "hint")"
+        Write-UiLine -Role hint -Message "[dry-run] Copy $(Format-UiPath -Path $sourceBinary -Role "hint") -> $(Format-UiPath -Path $targetBinary -Role "hint")"
         Add-DependencySummary "nvim: install preview via official GitHub release"
         return $false
     }
@@ -1202,8 +1202,8 @@ function Install-BitwardenCliIfMissing {
 
     if ($DryRun) {
         Write-UiLine -Role hint -Message "[dry-run] Download $releaseUrl"
-        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $archivePath -> $installRoot"
-        Write-UiLine -Role hint -Message "[dry-run] Copy $sourceBinary -> $targetBinary"
+        Write-UiLine -Role hint -Message "[dry-run] Expand-Archive $(Format-UiPath -Path $archivePath -Role "hint") -> $(Format-UiPath -Path $installRoot -Role "hint")"
+        Write-UiLine -Role hint -Message "[dry-run] Copy $(Format-UiPath -Path $sourceBinary -Role "hint") -> $(Format-UiPath -Path $targetBinary -Role "hint")"
         Add-DependencySummary "bw: install preview via official archive"
         return $false
     }

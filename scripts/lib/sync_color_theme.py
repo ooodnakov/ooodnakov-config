@@ -14,6 +14,7 @@ SCRIPTS_CLI_DIR = Path(__file__).resolve().parents[1] / "cli"
 if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
 
+from cli_ui import path as ui_path  # noqa: E402
 from cli_ui import status  # noqa: E402
 
 CSS_MANAGED_BEGIN = "/* oooconf color:start */"
@@ -1238,13 +1239,15 @@ def current_status() -> list[str]:
             f"yazi: dark={dark.group(1) if dark else 'unknown'}, light={light.group(1) if light else 'unknown'}"
         )
     wez = config_home() / "ooodnakov" / "local" / "wezterm.lua"
-    lines.append(f"wezterm local override: {'present' if wez.exists() else 'missing'} ({wez})")
+    lines.append(f"wezterm local override: {'present' if wez.exists() else 'missing'} ({ui_path(wez)})")
     ghostty = config_home() / "ooodnakov" / "local" / "ghostty.conf"
     if ghostty.exists():
         match = re.search(r"(?m)^theme\s*=\s*(.+)$", ghostty.read_text(encoding="utf-8"))
-        lines.append(f"ghostty local override: theme={match.group(1).strip() if match else 'unknown'} ({ghostty})")
+        lines.append(
+            f"ghostty local override: theme={match.group(1).strip() if match else 'unknown'} ({ui_path(ghostty)})"
+        )
     else:
-        lines.append(f"ghostty local override: missing ({ghostty})")
+        lines.append(f"ghostty local override: missing ({ui_path(ghostty)})")
     wezterm_main = config_home() / "wezterm" / "wezterm.lua"
     if wezterm_main.exists():
         raw = wezterm_main.read_text(encoding="utf-8")
@@ -1263,22 +1266,22 @@ def current_status() -> list[str]:
         if match:
             lines.append(f"nvim: colorscheme={match.group(1)}")
     oh_my_posh = config_home() / "ohmyposh" / "ooodnakov.omp.json"
-    lines.append(f"oh-my-posh config: {'present' if oh_my_posh.exists() else 'missing'} ({oh_my_posh})")
+    lines.append(f"oh-my-posh config: {'present' if oh_my_posh.exists() else 'missing'} ({ui_path(oh_my_posh)})")
     oh_my_posh_local = config_home() / "ooodnakov" / "local" / "ohmyposh"
     lines.append(
-        f"oh-my-posh local themes: {'present' if oh_my_posh_local.exists() else 'missing'} ({oh_my_posh_local})"
+        f"oh-my-posh local themes: {'present' if oh_my_posh_local.exists() else 'missing'} ({ui_path(oh_my_posh_local)})"
     )
     sketchybar_local = config_home() / "ooodnakov" / "local" / "sketchybar" / "colors.lua"
     lines.append(
-        f"sketchybar local override: {'present' if sketchybar_local.exists() else 'missing'} ({sketchybar_local})"
+        f"sketchybar local override: {'present' if sketchybar_local.exists() else 'missing'} ({ui_path(sketchybar_local)})"
     )
     zebar_local = Path.home() / ".glzr" / "zebar" / "ooodnakov" / "theme-overrides.css"
-    lines.append(f"zebar theme override: {'present' if zebar_local.exists() else 'missing'} ({zebar_local})")
+    lines.append(f"zebar theme override: {'present' if zebar_local.exists() else 'missing'} ({ui_path(zebar_local)})")
     overline_targets = sorted((Path.home() / ".glzr" / "zebar").glob("overline-zebar*/packages/ui/src/theme.css"))
     lines.append(
         "overline-zebar theme override targets: "
         f"{len(overline_targets)} found"
-        + (f" ({', '.join(str(path) for path in overline_targets)})" if overline_targets else "")
+        + (f" ({', '.join(ui_path(target) for target in overline_targets)})" if overline_targets else "")
     )
     return lines
 

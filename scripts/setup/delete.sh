@@ -23,8 +23,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+__DELETE_UI_TTY=0
+if [ -t 1 ]; then
+  __DELETE_UI_TTY=1
+fi
+
 ui_is_interactive() {
-  [ -t 1 ]
+  [ "$__DELETE_UI_TTY" = "1" ]
 }
 
 ui_use_nerd_font() {
@@ -78,8 +83,25 @@ ui_colorize() {
     ok) printf '\033[1;38;5;78m%s\033[0m' "$text" ;;
     info) printf '\033[1;38;5;117m%s\033[0m' "$text" ;;
     section) printf '\033[1;38;5;111m%s\033[0m' "$text" ;;
+    hint) printf '\033[38;5;245m%s\033[0m' "$text" ;;
+    muted) printf '\033[38;5;245m%s\033[0m' "$text" ;;
     *) printf '\033[1;38;5;203m%s\033[0m' "$text" ;;
   esac
+}
+
+ui_path() {
+  local value="$1" role="${2:-info}" leaf dir home_marker='~'
+  case "$value" in
+    "$HOME_DIR") value="$home_marker" ;;
+    "$HOME_DIR"/*) printf -v value '%s/%s' "$home_marker" "${value#"$HOME_DIR"/}" ;;
+  esac
+  leaf="${value##*/}"
+  dir="${value%"$leaf"}"
+  if [ -z "$leaf" ] || [ -z "$dir" ]; then
+    ui_colorize "$role" "$value"
+    return 0
+  fi
+  printf '%s%s' "$(ui_colorize muted "$dir")" "$(ui_colorize "$role" "$leaf")"
 }
 
 ui_line() {
@@ -97,11 +119,11 @@ remove_managed_link() {
     current="$(readlink "$target")"
     if [ "$current" = "$source" ]; then
       if [ "$DRY_RUN" = "1" ]; then
-        ui_line info "[dry-run] Would remove $target"
+        ui_line info "[dry-run] Would remove $(ui_path "$target" hint)"
         return 0
       fi
       rm -f "$target"
-      ui_line ok "removed $target"
+      ui_line ok "removed $(ui_path "$target" ok)"
     fi
   fi
 }
@@ -129,19 +151,23 @@ restore_backup() {
   backup="$(latest_backup_for "$target" || true)"
   if [ -n "$backup" ] && [ ! -e "$target" ] && [ ! -L "$target" ]; then
     if [ "$DRY_RUN" = "1" ]; then
-      ui_line info "[dry-run] Would restore $target from $backup"
+      ui_line info "[dry-run] Would restore $(ui_path "$target" hint) from $(ui_path "$backup" hint)"
       return 0
     fi
     mv "$backup" "$target"
-    ui_line ok "restored $target"
+    ui_line ok "restored $(ui_path "$target" ok)"
   fi
 }
 
 remove_font_dir() {
   local font_dir="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
   if [ -d "$font_dir" ]; then
+    if [ "$DRY_RUN" = "1" ]; then
+      ui_line info "[dry-run] Would remove $(ui_path "$font_dir" hint)"
+      return 0
+    fi
     rm -rf "$font_dir"
-    ui_line ok "removed $font_dir"
+    ui_line ok "removed $(ui_path "$font_dir" ok)"
   fi
 }
 
@@ -207,4 +233,4 @@ fi
 
 echo
 ui_line ok "Managed config removed."
-ui_line info "Repo checkout was left in place at $REPO_ROOT."
+ui_line info "Repo checkout was left in place at $(ui_path "$REPO_ROOT" info)."

@@ -9,12 +9,12 @@ function Test-DoctorLink {
     )
 
     if (Test-LinkMatches -Source $Source -Target $Target) {
-        Write-UiLine -Role ok -Message "$Target -> $Source"
-        return
+        return $true
     }
 
-    Write-UiLine -Role missing -Message "$Target (expected symlink to $Source)"
+    Write-UiLine -Role missing -Message "$(Format-UiPath -Path $Target -Role "missing") (expected symlink to $(Format-UiPath -Path $Source -Role "missing"))"
     $script:Failures.Add("doctor link $Target") | Out-Null
+    return $false
 }
 
 function Test-DoctorCommand {
@@ -160,15 +160,18 @@ function Test-Doctor {
     # Resolve the same profile-filtered link set used by transactional apply.
     $linkOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/cli/operation_plan.py") -ScriptArgs @("--repo-root", "$RepoRoot", "--scope", "links", "--emit-managed-links") 2>$null
     if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($linkOutput)) {
-        $linkOutput -split "`n" | ForEach-Object {
-            if ([string]::IsNullOrWhiteSpace($_)) { return }
-            $parts = $_ -split '\|'
-            if ($parts.Count -lt 3) { return }
-            $key = $parts[0]
+        $linkPairs = @()
+        foreach ($line in ($linkOutput -split "`n")) {
+            if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            $parts = $line -split '\|'
+            if ($parts.Count -lt 3) { continue }
             $source = $parts[1]
             $target = $parts[2]
-            Test-DoctorLink -Source $source -Target $target
+            if (Test-DoctorLink -Source $source -Target $target) {
+                $linkPairs += "$target`t$source"
+            }
         }
+        Write-UiLinkRows -Pairs $linkPairs
     } else {
         Write-UiLine -Role missing -Message "unable to resolve managed profile links"
         $script:Failures.Add("doctor profile links") | Out-Null
@@ -200,9 +203,9 @@ function Test-Doctor {
     $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
     $userPathParts = @($userPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
     if ($userPathParts -contains $LocalBinDir) {
-        Write-UiLine -Role ok -Message "user PATH contains $LocalBinDir"
+        Write-UiLine -Role ok -Message "user PATH contains $(Format-UiPath -Path $LocalBinDir -Role "ok")"
     } else {
-        Write-UiLine -Role missing -Message "user PATH entry: $LocalBinDir"
+        Write-UiLine -Role missing -Message "user PATH entry: $(Format-UiPath -Path $LocalBinDir -Role "missing")"
         $script:Failures.Add("doctor user PATH") | Out-Null
     }
 

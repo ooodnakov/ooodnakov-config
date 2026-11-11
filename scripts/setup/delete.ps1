@@ -43,6 +43,44 @@ function Get-UiIcon {
     return $ascii
 }
 
+function Format-UiPath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [string]$Role = "info"
+    )
+
+    $text = [string]$Path
+    if ($HomeDir -and $text -eq $HomeDir) {
+        $text = "~"
+    } elseif ($HomeDir) {
+        foreach ($separator in @([IO.Path]::DirectorySeparatorChar, '/', '\')) {
+            if ($text.StartsWith($HomeDir + $separator)) {
+                $text = "~/" + $text.Substring(($HomeDir + $separator).Length)
+                break
+            }
+        }
+    }
+
+    $trimmed = $text.TrimEnd('\', '/')
+    $index = [Math]::Max($trimmed.LastIndexOf('/'), $trimmed.LastIndexOf('\'))
+    if ($index -lt 0) { return $trimmed }
+    $directory = $trimmed.Substring(0, $index + 1)
+    $leaf = $trimmed.Substring($index + 1)
+
+    if (-not [Environment]::UserInteractive -or $env:NO_COLOR) {
+        return "$directory$leaf"
+    }
+
+    $leafColor = switch ($Role) {
+        "ok" { "1;38;5;78" }
+        "info" { "1;38;5;117" }
+        "section" { "1;38;5;111" }
+        default { "38;5;245" }
+    }
+    return "`e[38;5;245m$directory`e[0m`e[$($leafColor)m$leaf`e[0m"
+}
+
 function Write-UiLine {
     param(
         [Parameter(Mandatory = $true)]
@@ -94,7 +132,7 @@ function Remove-ManagedLink {
             # Compare paths taking into account directory separators
             if (($currentTarget -replace '\\', '/') -eq ($Source -replace '\\', '/')) {
                 Remove-Item -Path $Target -Force
-                Write-UiLine -Role ok -Message "removed $Target"
+                Write-UiLine -Role ok -Message "removed $(Format-UiPath -Path $Target -Role "ok")"
             }
         }
     }
@@ -137,7 +175,7 @@ function Restore-Backup {
     $backup = Get-LatestBackup -Target $Target
     if ($backup -and -not (Test-Path -Path $Target)) {
         Move-Item -Path $backup -Destination $Target
-        Write-UiLine -Role ok -Message "restored $Target"
+        Write-UiLine -Role ok -Message "restored $(Format-UiPath -Path $Target -Role "ok")"
     }
 }
 
@@ -146,7 +184,7 @@ function Remove-FontDir {
     $fontDir = Join-Path (Join-Path $dataHome "fonts") "ooodnakov"
     if (Test-Path -Path $fontDir) {
         Remove-Item -Path $fontDir -Recurse -Force
-        Write-UiLine -Role ok -Message "removed $fontDir"
+        Write-UiLine -Role ok -Message "removed $(Format-UiPath -Path $fontDir -Role "ok")"
     }
 }
 
@@ -235,4 +273,4 @@ if ($Mode -eq "restore") {
 
 Write-Output ""
 Write-UiLine -Role ok -Message "Managed config removed."
-Write-UiLine -Role info -Message "Repo checkout was left in place at $RepoRoot."
+Write-UiLine -Role info -Message "Repo checkout was left in place at $(Format-UiPath -Path $RepoRoot -Role "info")."

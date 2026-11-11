@@ -35,6 +35,7 @@ interactive_select = _tui.interactive_select
 
 from cli_ui import bullet as print_bullet  # noqa: E402
 from cli_ui import error as print_error_line  # noqa: E402
+from cli_ui import path as print_path  # noqa: E402
 from cli_ui import section as print_section  # noqa: E402
 from cli_ui import spacer as print_spacer  # noqa: E402
 from cli_ui import status as print_status_line  # noqa: E402
@@ -911,7 +912,7 @@ def cmd_detect(config: dict[str, Any], json_output: bool, dry_run: bool = False)
             status = "ok" if row["installed"] else "missing"
             location = row["path"] or "-"
             print_status_line(status, f"{row['name']} ({row['command']})")
-            print_status_line("hint", f"  path: {location}")
+            print_status_line("hint", f"  path: {print_path(location)}")
         print_spacer()
         print_status_line("info", f"Summary: would detect {installed}/{len(rows)} configured agent CLIs.")
         return 0
@@ -924,7 +925,7 @@ def cmd_detect(config: dict[str, Any], json_output: bool, dry_run: bool = False)
             status = "ok" if row["installed"] else "missing"
             location = row["path"] or "-"
             print_status_line(status, f"{row['name']} ({row['command']})")
-            print_status_line("hint", f"  path: {location}")
+            print_status_line("hint", f"  path: {print_path(location)}")
         print_spacer()
         print_status_line("info", f"Summary: detected {installed}/{len(rows)} configured agent CLIs.")
     return 0
@@ -1064,23 +1065,25 @@ def cmd_doctor(repo_root: Path, config: dict[str, Any], strict_paths: bool, dry_
             continue
 
         if result.parse_error:
-            print_status_line("fail", f"{target.name}: failed parsing {result.existing_path}")
+            print_status_line("fail", f"{target.name}: failed parsing {print_path(result.existing_path)}")
             print_status_line("hint", f"  error: {result.parse_error}")
             continue
 
         if result.missing_mcp or result.missing_skills:
-            print_status_line("fail", f"{target.name}: missing required markers in {result.existing_path}")
+            print_status_line("fail", f"{target.name}: missing required markers in {print_path(result.existing_path)}")
             if result.missing_mcp:
                 print_status_line("hint", f"  missing MCPs: {', '.join(result.missing_mcp)}")
             if result.missing_skills:
                 print_status_line("hint", f"  missing skills: {', '.join(result.missing_skills)}")
             continue
         if result.shape_issues:
-            print_status_line("fail", f"{target.name}: config shape mismatch in {result.existing_path}")
+            print_status_line("fail", f"{target.name}: config shape mismatch in {print_path(result.existing_path)}")
             print_status_line("hint", f"  issues: {', '.join(result.shape_issues)}")
             continue
 
-        print_status_line("ok", f"{target.name}: required MCP/skills markers found in {result.existing_path}")
+        print_status_line(
+            "ok", f"{target.name}: required MCP/skills markers found in {print_path(result.existing_path)}"
+        )
 
     print_spacer()
     print_section("Agent CLIs")
@@ -1122,7 +1125,7 @@ def cmd_install_scripts_build(repo_root: Path, config: dict[str, Any]) -> int:
     install_dir.mkdir(parents=True, exist_ok=True)
 
     print_section("Building Agent Install Scripts")
-    print_status_line("hint", f"Target: {install_dir}")
+    print_status_line("hint", f"Target: {print_path(install_dir)}")
 
     count = 0
     for spec in specs:
@@ -1457,11 +1460,11 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
                             "hint",
                             f"  Note: active binary '{installed_path}' is SHADOWING the {runner} version.",
                         )
-                        print_status_line("hint", f"  Expected in: {runner_bin_dir}")
+                        print_status_line("hint", f"  Expected in: {print_path(runner_bin_dir)}")
                 else:
                     if is_shadowed:
                         print_status_line("warn", f"{spec.name} is up to date in {runner}, but SHADOWED on PATH.")
-                        print_status_line("hint", f"  Active: {installed_path}")
+                        print_status_line("hint", f"  Active: {print_path(installed_path)}")
                         print_status_line("hint", f"  Try: pnpm remove -g {spec.package} (if installed via pnpm)")
                     else:
                         print_status_line("ok", f"{spec.name} is already up to date ({version_after})")
@@ -1469,7 +1472,7 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
                 if is_shadowed:
                     print_status_line("warn", f"{spec.name} updated, but still SHADOWED on PATH.")
                     print_status_line("hint", f"  Active version: {version_after}")
-                    print_status_line("hint", f"  Active path: {installed_path}")
+                    print_status_line("hint", f"  Active path: {print_path(installed_path)}")
                 else:
                     print_status_line(
                         "ok", f"{spec.name} updated: {version_before or 'unknown'} -> {version_after or 'unknown'}"
@@ -2039,11 +2042,11 @@ def cmd_provider_sync(
         try:
             changed = updater(path, region, materialize_secrets, check_only)  # type: ignore[misc]
         except Exception as exc:
-            print_status_line("fail", f"{target.name}: failed to update {path}: {exc}")
+            print_status_line("fail", f"{target.name}: failed to update {print_path(path)}: {exc}")
             return 1
         status = "ok" if changed else "info"
         action = "would update" if check_only and changed else "updated" if changed else "already configured"
-        print_status_line(status, f"{target.name}: {action} {path}")
+        print_status_line(status, f"{target.name}: {action} {print_path(path)}")
         if changed:
             changed_paths.append(path)
 
@@ -2113,9 +2116,9 @@ def cmd_mcp_sync(
 
         if dry_run:
             if not mcp_dir.exists():
-                print_status_line("hint", f"  Would clone into {mcp_dir}")
+                print_status_line("hint", f"  Would clone into {print_path(mcp_dir)}")
             else:
-                print_status_line("hint", f"  Would pull latest changes in {mcp_dir}")
+                print_status_line("hint", f"  Would pull latest changes in {print_path(mcp_dir)}")
             if install_cmd:
                 print_status_line("hint", f"  Would run install: {install_cmd}")
             else:
@@ -2127,7 +2130,7 @@ def cmd_mcp_sync(
                 mcp_dir.parent.mkdir(parents=True, exist_ok=True)
 
         if not mcp_dir.exists():
-            print_status_line("hint", f"  Cloning into {mcp_dir}...")
+            print_status_line("hint", f"  Cloning into {print_path(mcp_dir)}...")
             if check_only:
                 synced += 1
                 continue
@@ -2138,7 +2141,7 @@ def cmd_mcp_sync(
                 failed += 1
                 continue
         else:
-            print_status_line("hint", f"  Pulling latest changes in {mcp_dir}...")
+            print_status_line("hint", f"  Pulling latest changes in {print_path(mcp_dir)}...")
             if not check_only:
                 try:
                     subprocess.run(["git", "-C", str(mcp_dir), "pull", "--ff-only"], check=True)

@@ -20,6 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.cli.cli_ui import colorize, icon, status  # noqa: E402
+from scripts.cli.cli_ui import path as ui_path  # noqa: E402
 from scripts.cli.env_tool import write_override  # noqa: E402
 from scripts.cli.operation_plan import build_plan, selected_links  # noqa: E402
 from scripts.cli.profile_manager import ProfileError, resolve_profile  # noqa: E402
@@ -398,7 +399,7 @@ def cli(argv: list[str] | None = None) -> int:
         if args.snapshot_command == "export":
             document = _snapshot_document(args.repo_root, platform, args.profile)
             _atomic_text(args.output, render_snapshot(document))
-            status("ok", f"Exported portable snapshot to {args.output}")
+            status("ok", f"Exported portable snapshot to {ui_path(args.output)}")
             return 0
         document = load_snapshot(args.file, args.repo_root, platform)
         if args.snapshot_command == "inspect":

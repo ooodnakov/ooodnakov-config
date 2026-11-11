@@ -154,7 +154,7 @@ function Backup-Target {
 
     return (Invoke-Action -Description "Backup $Target to $backupPath" -Action {
         Move-Item -LiteralPath $Target -Destination $backupPath -Force
-        Write-UiLine -Role ok -Message "backed up $Target -> $backupPath"
+        Write-UiLine -Role ok -Message "backed up $(Format-UiPath -Path $Target -Role "ok") -> $(Format-UiPath -Path $backupPath -Role "hint")"
     })
 }
 
@@ -176,7 +176,7 @@ function New-Symlink {
 
     if (Test-LinkMatches -Source $Source -Target $Target) {
         if (Test-VerboseMode) {
-            Write-UiLine -Role ok -Message "linked $Target"
+            Write-UiLine -Role ok -Message "linked $(Format-UiPath -Path $Target -Role "ok")"
         }
         return $true
     }
@@ -184,7 +184,7 @@ function New-Symlink {
     return (Invoke-Action -Description "Link $Target" -Action {
         New-Item -ItemType SymbolicLink -Path $Target -Target $Source -Force | Out-Null
         if (Test-VerboseMode) {
-            Write-UiLine -Role ok -Message "linked $Target"
+            Write-UiLine -Role ok -Message "linked $(Format-UiPath -Path $Target -Role "ok")"
         }
     })
 }
@@ -242,7 +242,7 @@ function Ensure-UserPathContains {
 
     $updated = Invoke-Action -Description "Add $PathEntry to user PATH" -Action {
         [Environment]::SetEnvironmentVariable("Path", $updatedUserPath, "User")
-        Write-UiLine -Role ok -Message "updated user PATH with $PathEntry"
+        Write-UiLine -Role ok -Message "updated user PATH with $(Format-UiPath -Path $PathEntry -Role "ok")"
     }
 
     if (($env:PATH -split [IO.Path]::PathSeparator | Where-Object { $_ }) -notcontains $PathEntry) {

@@ -902,8 +902,8 @@ maybe_install_github_release() {
 
   if [ "$DRY_RUN" -eq 1 ]; then
     ui_line hint "[dry-run] Download $release_url"
-    ui_line hint "[dry-run] Extract $archive_path -> $install_root"
-    ui_line hint "[dry-run] Link $target_binary"
+    ui_line hint "[dry-run] Extract $(ui_path "$archive_path" hint) -> $(ui_path "$install_root" hint)"
+    ui_line hint "[dry-run] Link $(ui_path "$target_binary" hint)"
     DEPENDENCY_SUMMARY+=("$command_name: install preview via GitHub release")
     return 0
   fi
@@ -1020,8 +1020,8 @@ install_pinned_neovim_unix() {
 
   if [ "$DRY_RUN" -eq 1 ]; then
     ui_line hint "[dry-run] Download $release_url"
-    ui_line hint "[dry-run] Extract $archive_path -> $install_root"
-    ui_line hint "[dry-run] Link $bin_dir/nvim"
+    ui_line hint "[dry-run] Extract $(ui_path "$archive_path" hint) -> $(ui_path "$install_root" hint)"
+    ui_line hint "[dry-run] Link $(ui_path "$bin_dir/nvim" hint)"
     return 0
   fi
 
@@ -1138,7 +1138,7 @@ maybe_install_rtk() {
   if [ "$DRY_RUN" -eq 1 ]; then
     ui_line hint "[dry-run] Download $target_url"
     ui_line hint "[dry-run] Extract ${target_url##*/}"
-    ui_line hint "[dry-run] Copy rtk -> $HOME_DIR/.local/bin/rtk"
+    ui_line hint "[dry-run] Copy rtk -> $(ui_path "$HOME_DIR/.local/bin/rtk" hint)"
     DEPENDENCY_SUMMARY+=("rtk: install preview via official archive")
     return 0
   fi
@@ -1583,8 +1583,8 @@ maybe_install_bw() {
 
   if [ "$DRY_RUN" -eq 1 ]; then
     ui_line hint "[dry-run] Download $release_url"
-    ui_line hint "[dry-run] Extract $archive_path -> $install_root"
-    ui_line hint "[dry-run] Link $target_binary"
+    ui_line hint "[dry-run] Extract $(ui_path "$archive_path" hint) -> $(ui_path "$install_root" hint)"
+    ui_line hint "[dry-run] Link $(ui_path "$target_binary" hint)"
     DEPENDENCY_SUMMARY+=("bw: install preview via official archive")
     return 0
   fi
@@ -1699,8 +1699,8 @@ maybe_install_node() {
 
   if [ "$DRY_RUN" -eq 1 ]; then
     ui_line hint "[dry-run] Download $node_url"
-    ui_line hint "[dry-run] Extract $asset_name -> $install_root"
-    ui_line hint "[dry-run] Link node, npm, npx, corepack into $bin_dir"
+    ui_line hint "[dry-run] Extract $(ui_path "$asset_name" hint) -> $(ui_path "$install_root" hint)"
+    ui_line hint "[dry-run] Link node, npm, npx, corepack into $(ui_path "$bin_dir" hint)"
     DEPENDENCY_SUMMARY+=("node: install preview via official archive")
     return 0
   fi

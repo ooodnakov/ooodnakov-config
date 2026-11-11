@@ -133,6 +133,124 @@ function Write-UiError {
     [Console]::Error.WriteLine("$icon $Message")
 }
 
+function Get-UiHomeDirectory {
+    $homeDir = [Environment]::GetFolderPath("UserProfile")
+    if (-not $homeDir) { $homeDir = $HOME }
+    return [string]$homeDir
+}
+
+function ConvertTo-UiPathRel {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $homeDir = Get-UiHomeDirectory
+    if ($homeDir) {
+        if ($Path -eq $homeDir) { return "~" }
+        foreach ($separator in @([IO.Path]::DirectorySeparatorChar, '/', '\')) {
+            $prefix = $homeDir + $separator
+            if ($Path.StartsWith($prefix)) {
+                return "~/" + $Path.Substring($prefix.Length)
+            }
+        }
+    }
+    return $Path
+}
+
+function Format-UiPath {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [string]$Role = "info"
+    )
+    $text = ConvertTo-UiPathRel -Path $Path
+    $trimmed = $text.TrimEnd('\', '/')
+    $index = [Math]::Max($trimmed.LastIndexOf('/'), $trimmed.LastIndexOf('\'))
+    if ($index -lt 0) {
+        return Format-UiText -Text $trimmed -Role $Role -Bold
+    }
+    $directory = $trimmed.Substring(0, $index + 1)
+    $leaf = $trimmed.Substring($index + 1)
+    return ((Format-UiText -Text $directory -Role "muted") + (Format-UiText -Text $leaf -Role $Role -Bold))
+}
+
+function Get-UiPathRoot {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $text = (ConvertTo-UiPathRel -Path $Path).TrimEnd('\', '/')
+    if ($text.StartsWith("~/")) {
+        $rest = $text.Substring(2)
+        $parts = @($rest -split '[\\/]')
+        if ($parts.Count -gt 1 -and $parts[0] -eq ".local") {
+            return "~/.local/$($parts[1])"
+        }
+        return "~/$($parts[0])"
+    }
+    if ($text.StartsWith("/")) {
+        return "/" + (@($text.Substring(1) -split '[\\/]')[0])
+    }
+    return @($text -split '[\\/]')[0]
+}
+
+function Write-UiLinkRow {
+    param(
+        [Parameter(Mandatory = $true)][string]$Target,
+        [Parameter(Mandatory = $true)][string]$Source
+    )
+    $arrow = Format-UiText -Text ([char]0x25B6) -Role "hint"
+    Write-Output ("  {0} {1} {2}" -f (Format-UiPath -Path $Target -Role "info"), $arrow, (Format-UiPath -Path $Source -Role "ok"))
+}
+
+function Write-UiLinkRows {
+    param([string[]]$Pairs)
+    $rows = @($Pairs | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($rows.Count -eq 0) { return }
+
+    $parsed = @($rows | ForEach-Object {
+            $parts = $_ -split "`t", 2
+            if ($parts.Count -lt 2) { return }
+            [pscustomobject]@{ Target = $parts[0]; Source = $parts[1]; Root = (Get-UiPathRoot -Path $parts[0]) }
+        })
+
+    if ($parsed.Count -le 4) {
+        foreach ($row in $parsed) {
+            Write-UiLinkRow -Target $row.Target -Source $row.Source
+        }
+        return
+    }
+
+    $lastRoot = ""
+    $relativeSources = @($parsed | ForEach-Object { ConvertTo-UiPathRel -Path $_.Source })
+    $prefix = $relativeSources[0]
+    foreach ($candidate in $relativeSources) {
+        while ($prefix -and -not $candidate.StartsWith($prefix)) {
+            $prefix = $prefix.Substring(0, $prefix.Length - 1)
+        }
+    }
+    $prefixSlash = [Math]::Max($prefix.LastIndexOf('/'), $prefix.LastIndexOf('\'))
+    $prefix = if ($prefixSlash -lt 0) {
+        ""
+    } elseif ($prefixSlash -eq $prefix.Length - 1) {
+        $prefix
+    } else {
+        $prefix.Substring(0, $prefixSlash + 1)
+    }
+
+    foreach ($row in ($parsed | Sort-Object Root, Target)) {
+        if ($row.Root -ne $lastRoot) {
+            if ($lastRoot) { Write-Output "" }
+            $icon = Format-UiText -Text (Get-UiIcon "section") -Role "section" -Bold
+            Write-Output ("{0} {1}" -f $icon, (Format-UiText -Text $row.Root -Role "section"))
+            $lastRoot = $row.Root
+        }
+        $connector = Format-UiText -Text ([char]0x251C + [char]0x2500) -Role "muted"
+        $arrow = Format-UiText -Text ([char]0x25B6) -Role "hint"
+        $leaf = Format-UiText -Text (Split-Path -Leaf $row.Target) -Role "info"
+        $relativeSource = ConvertTo-UiPathRel -Path $row.Source
+        if ($prefix -and $relativeSource.StartsWith($prefix)) {
+            $source = (Format-UiText -Text "…/" -Role "muted") + (Format-UiPath -Path $relativeSource.Substring($prefix.Length) -Role "ok")
+        } else {
+            $source = Format-UiPath -Path $relativeSource -Role "ok"
+        }
+        Write-Output ("  {0} {1} {2} {3}" -f $connector, $leaf, $arrow, $source)
+    }
+}
+
 function Write-UiSection {
     param([Parameter(Mandatory = $true)][string]$Title)
     $icon = Format-UiText -Text (Get-UiIcon "section") -Role "section" -Bold

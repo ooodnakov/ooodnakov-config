@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 ASCII_ICONS = {
     "section": "==",
@@ -277,6 +278,21 @@ def status(role: str, message: str) -> None:
 
 def error(role: str, message: str) -> None:
     print(f"{colorize(icon(role), role, bold=True)} {message}", file=sys.stderr)
+
+
+def path(value: object, role: str = "info") -> str:
+    """Home-relative path with muted directories and a role-colored leaf."""
+    text = str(value)
+    home = str(Path.home())
+    if text == home:
+        text = "~"
+    elif text.startswith(home + os.sep) or text.startswith(home + "/"):
+        text = "~" + text[len(home) :]
+    trimmed = text.rstrip("/\\") or text
+    index = max(trimmed.rfind("/"), trimmed.rfind("\\"))
+    if index < 0:
+        return colorize(trimmed, role, bold=True)
+    return f"{colorize(trimmed[: index + 1], 'muted')}{colorize(trimmed[index + 1 :], role, bold=True)}"
 
 
 def bullet(message: str) -> None:

@@ -19,6 +19,7 @@ if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
 
 from cli_ui import error, status  # noqa: E402
+from cli_ui import path as ui_path  # noqa: E402
 
 START = "# --- LOCAL OVERRIDES START ---"
 END = "# --- LOCAL OVERRIDES END ---"
@@ -147,7 +148,7 @@ def main() -> int:
         write_override(local / "env.zsh", key, f"export {key}={shlex.quote(value)}")
         ps_value = value.replace("'", "''")
         write_override(local / "env.ps1", key, f"$env:{key} = '{ps_value}'")
-        status("ok", f"Updated {key} in {local / 'env.zsh'} and {local / 'env.ps1'}")
+        status("ok", f"Updated {key} in {ui_path(local / 'env.zsh')} and {ui_path(local / 'env.ps1')}")
         if upload:
             item_id = upload_to_bitwarden(key, value)
             status("ok", f"Uploaded {key} to Bitwarden item {item_id}")

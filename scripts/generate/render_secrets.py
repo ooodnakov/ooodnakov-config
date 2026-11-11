@@ -17,6 +17,7 @@ if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
 
 from cli_ui import bullet, section, spacer, status  # noqa: E402
+from cli_ui import path as ui_path  # noqa: E402
 
 DEFAULT_TEMPLATE_RELATIVE_PATH = Path("home/.config/ooodnakov/secrets/env.template")
 DEFAULT_CONFIG_RELATIVE_PATH = Path(".config/ooodnakov")
@@ -687,7 +688,7 @@ def write_file(path: Path, content: str, force: bool) -> str:
 def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
     template_path = resolve_template_path(repo_root, args.template)
     if not template_path.is_file():
-        status("fail", f"Template not found: {template_path}")
+        status("fail", f"Template not found: {ui_path(template_path)}")
         return 1
 
     entries = parse_template(template_path)
@@ -697,9 +698,9 @@ def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
     ps1_path = local_root / "env.ps1"
 
     section("Secrets Sync")
-    status("info", f"Template: {template_path}")
+    status("info", f"Template: {ui_path(template_path)}")
     status("info", f"Backend: {args.backend}")
-    status("info", f"Targets: {zsh_path}, {ps1_path}")
+    status("info", f"Targets: {ui_path(zsh_path)}, {ui_path(ps1_path)}")
 
     resolved_entries = resolve_entries_for_sync(entries, args.backend)
     zsh_content = render_zsh(resolved_entries, args.backend, template_path)
@@ -707,17 +708,17 @@ def sync_command(args: argparse.Namespace, repo_root: Path) -> int:
 
     if args.dry_run:
         bullet(f"Backend: {args.backend}")
-        bullet(f"Template: {template_path}")
-        bullet(f"Would render: {zsh_path}")
-        bullet(f"Would render: {ps1_path}")
+        bullet(f"Template: {ui_path(template_path)}")
+        bullet(f"Would render: {ui_path(zsh_path)}")
+        bullet(f"Would render: {ui_path(ps1_path)}")
         status("ok", "Dry run complete.")
         return 0
 
     ensure_private_directory(local_root)
     zsh_status = write_file(zsh_path, zsh_content, args.force)
     ps1_status = write_file(ps1_path, ps1_content, args.force)
-    status("ok", f"{zsh_status}: {zsh_path}")
-    status("ok", f"{ps1_status}: {ps1_path}")
+    status("ok", f"{zsh_status}: {ui_path(zsh_path)}")
+    status("ok", f"{ps1_status}: {ui_path(ps1_path)}")
     status("ok", "Secrets sync complete.")
     return 0
 
@@ -755,7 +756,7 @@ def doctor_command(args: argparse.Namespace, repo_root: Path) -> int:
 
     section("Secrets Doctor")
     status("ok", "Secrets doctor passed.")
-    status("info", f"Template: {template_path}")
+    status("info", f"Template: {ui_path(template_path)}")
     status("info", f"Backend: {args.backend}")
     return 0
 
@@ -935,7 +936,7 @@ def check_bw_status() -> list[str]:
 def list_command(args: argparse.Namespace, repo_root: Path) -> int:
     template_path = resolve_template_path(repo_root, args.template)
     if not template_path.is_file():
-        status("fail", f"Template not found: {template_path}")
+        status("fail", f"Template not found: {ui_path(template_path)}")
         return 1
 
     entries = parse_template(template_path)
@@ -944,7 +945,7 @@ def list_command(args: argparse.Namespace, repo_root: Path) -> int:
         return 0
 
     section("Secrets List")
-    status("info", f"Template: {template_path}")
+    status("info", f"Template: {ui_path(template_path)}")
     spacer()
 
     for entry in entries:
@@ -972,28 +973,28 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
     ps1_path = local_root / "env.ps1"
 
     if not template_path.is_file():
-        status("fail", f"Template not found: {template_path}")
+        status("fail", f"Template not found: {ui_path(template_path)}")
         return 1
 
     template_mtime = template_path.stat().st_mtime
     problems: list[str] = []
 
     section("Secrets Status")
-    status("info", f"Template: {template_path}")
+    status("info", f"Template: {ui_path(template_path)}")
     status("info", f"Backend: {os.environ.get('OOODNAKOV_SECRETS_BACKEND', 'bw')}")
     spacer()
 
     for local_path in (zsh_path, ps1_path):
         if not local_path.exists():
-            status("fail", f"{local_path}: missing")
+            status("fail", f"{ui_path(local_path)}: missing")
             problems.append(f"{local_path.name} is not synced")
         else:
             local_mtime = local_path.stat().st_mtime
             if local_mtime < template_mtime:
-                status("warn", f"{local_path}: stale (template updated after last sync)")
+                status("warn", f"{ui_path(local_path)}: stale (template updated after last sync)")
                 problems.append(f"{local_path.name} is stale")
             else:
-                status("ok", f"{local_path}: up to date")
+                status("ok", f"{ui_path(local_path)}: up to date")
 
     session_available = bool(os.environ.get("BW_SESSION") or read_persisted_bw_session())
     if session_available:
@@ -1048,7 +1049,7 @@ def add_command(args: argparse.Namespace, repo_root: Path) -> int:
 
     template_path = resolve_template_path(repo_root, args.template)
     if not template_path.is_file():
-        status("fail", f"Template not found: {template_path}")
+        status("fail", f"Template not found: {ui_path(template_path)}")
         return 1
 
     lines = template_path.read_text(encoding="utf-8").splitlines()
@@ -1073,14 +1074,14 @@ def add_command(args: argparse.Namespace, repo_root: Path) -> int:
     lines.insert(insert_at, f"{args.key}={args.value}")
     template_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     status("ok", f"Added {args.key}={args.value}")
-    status("info", f"Template: {template_path}")
+    status("info", f"Template: {ui_path(template_path)}")
     return 0
 
 
 def remove_command(args: argparse.Namespace, repo_root: Path) -> int:
     template_path = resolve_template_path(repo_root, args.template)
     if not template_path.is_file():
-        status("fail", f"Template not found: {template_path}")
+        status("fail", f"Template not found: {ui_path(template_path)}")
         return 1
 
     lines = template_path.read_text(encoding="utf-8").splitlines()
@@ -1099,7 +1100,7 @@ def remove_command(args: argparse.Namespace, repo_root: Path) -> int:
 
     template_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
     status("ok", f"Removed {args.key}")
-    status("info", f"Template: {template_path}")
+    status("info", f"Template: {ui_path(template_path)}")
     return 0
 
 

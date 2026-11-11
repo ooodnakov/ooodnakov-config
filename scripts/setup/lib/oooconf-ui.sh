@@ -280,6 +280,127 @@ ui_error() {
   printf '%s %s\n' "$(ui_colorize "$role" "$(ui_icon "$role")")" "$*" >&2
 }
 
+# Plain $HOME abbreviation, safe for comparisons and grouping keys.
+ui_path_rel() {
+  local path="$1"
+  case "$path" in
+    "$HOME") printf '~' ;;
+    "$HOME"/*) printf '~/%s' "${path#"$HOME"/}" ;;
+    *) printf '%s' "$path" ;;
+  esac
+}
+
+# Home-relative path with muted directories and a role-colored leaf.
+ui_path() {
+  local value role="${2:-info}" leaf dir
+  value="$(ui_path_rel "$1")"
+  leaf="${value##*/}"
+  dir="${value%"$leaf"}"
+  if [ -z "$leaf" ] || [ -z "$dir" ]; then
+    ui_colorize "$role" "$value"
+    return 0
+  fi
+  printf '%s%s' "$(ui_colorize muted "$dir")" "$(ui_colorize "$role" "$leaf")"
+}
+
+ui_path_root() {
+  local path first rest
+  path="$(ui_path_rel "$1")"
+  path="${path%/}"
+  case "$path" in
+    "~/"*)
+      rest="${path#\~/}"
+      first="${rest%%/*}"
+      if [ "$first" = ".local" ] && [ "$rest" != "$first" ]; then
+        rest="${rest#*/}"
+        printf '~/.local/%s\n' "${rest%%/*}"
+      else
+        printf '~/%s\n' "$first"
+      fi
+      ;;
+    /*)
+      rest="${path#/}"
+      printf '/%s\n' "${rest%%/*}"
+      ;;
+    *) printf '%s\n' "${path%%/*}" ;;
+  esac
+}
+
+ui_link_row() {
+  printf '  %s %s %s\n' \
+    "$(ui_path "$1" info)" \
+    "$(ui_colorize hint '──▶')" \
+    "$(ui_path "$2" ok)"
+}
+
+ui_common_dir_prefix() {
+  local prefix="$1" value
+  shift
+  for value in "$@"; do
+    while [ -n "$prefix" ] && [ "${value#"$prefix"}" = "$value" ]; do
+      prefix="${prefix%?}"
+    done
+    [ -n "$prefix" ] || break
+  done
+  prefix="${prefix%/*}/"
+  if [ "$prefix" = "/" ] || [ "$prefix" = "./" ]; then
+    prefix=""
+  fi
+  printf '%s' "$prefix"
+}
+
+ui_link_tree() {
+  local pair root target source last_root="" prefix display
+  local -a sorted=() sources=()
+  for pair in "$@"; do
+    target="${pair%%$'\t'*}"
+    sources+=("${pair#*$'\t'}")
+    sorted+=("$(ui_path_root "$target")"$'\t'"$pair")
+  done
+  local -a rel_sources=()
+  for source in "${sources[@]}"; do
+    rel_sources+=("$(ui_path_rel "$source")")
+  done
+  prefix="$(ui_common_dir_prefix "${rel_sources[0]}" "${rel_sources[@]}")"
+  while IFS=$'\t' read -r root pair; do
+    [ -n "$pair" ] || continue
+    target="${pair%%$'\t'*}"
+    source="$(ui_path_rel "${pair#*$'\t'}")"
+    display="$(ui_path "$source" ok)"
+    if [ -n "$prefix" ] && [ "$source" != "${source#"$prefix"}" ]; then
+      display="$(ui_colorize muted '…/')$(ui_path "${source#"$prefix"}" ok)"
+    fi
+    if [ "$root" != "$last_root" ]; then
+      [ -z "$last_root" ] || printf '\n'
+      printf '%s %s\n' "$(ui_colorize section "$(ui_icon section)")" "$(ui_colorize section "$root")"
+      last_root="$root"
+    fi
+    printf '  %s %s %s %s\n' \
+      "$(ui_colorize muted '├─')" \
+      "$(ui_colorize info "${target##*/}")" \
+      "$(ui_colorize hint '──▶')" \
+      "$display"
+  done < <(printf '%s\n' "${sorted[@]}" | LC_ALL=C sort)
+}
+
+# stdin rows: target<TAB>source. Flat chain for a few rows, grouped tree for many.
+ui_link_rows() {
+  local line target source
+  local -a pairs=()
+  while IFS=$'\t' read -r target source; do
+    [ -n "$target" ] || continue
+    pairs+=("$target"$'\t'"$source")
+  done
+  [ "${#pairs[@]}" -gt 0 ] || return 0
+  if [ "${#pairs[@]}" -le 4 ]; then
+    for line in "${pairs[@]}"; do
+      ui_link_row "${line%%$'\t'*}" "${line#*$'\t'}"
+    done
+    return 0
+  fi
+  ui_link_tree "${pairs[@]}"
+}
+
 ui_repeat_char() {
   local char="$1"
   local count="$2"

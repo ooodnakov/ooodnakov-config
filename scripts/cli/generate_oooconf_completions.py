@@ -11,6 +11,7 @@ SCRIPTS_CLI_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
 
+from cli_ui import path as ui_path  # noqa: E402
 from cli_ui import status  # noqa: E402
 from oooconf_cli_spec import CliSpec, Command, load_cli_spec, shell_safe_name  # noqa: E402
 from read_optional_deps import load_deps  # noqa: E402
@@ -510,8 +511,8 @@ def main() -> int:
     ZSH_OUTPUT.write_text(render_zsh(commands, spec), encoding="utf-8", newline="\n")
     POWERSHELL_OUTPUT.write_text(render_powershell(commands, spec), encoding="utf-8", newline="\n")
 
-    status("ok", f"updated: {ZSH_OUTPUT.relative_to(REPO_ROOT)}")
-    status("ok", f"updated: {POWERSHELL_OUTPUT.relative_to(REPO_ROOT)}")
+    status("ok", f"updated: {ui_path(ZSH_OUTPUT.relative_to(REPO_ROOT))}")
+    status("ok", f"updated: {ui_path(POWERSHELL_OUTPUT.relative_to(REPO_ROOT))}")
     return 0
 
 

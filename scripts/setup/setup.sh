@@ -209,10 +209,14 @@ link)
   if [ "$DRY_RUN" -eq 1 ]; then
     ui_line hint "[dry-run] would link:"
     link_output="$(python3 "$OPERATION_PLAN" --repo-root "$REPO_ROOT" --scope links --emit-links)" || exit 1
+    link_pairs=()
     while IFS='|' read -r key source target; do
       [ -n "$source" ] || continue
-      ui_line hint "  $target -> $source"
+      link_pairs+=("$target"$'\t'"$source")
     done <<<"$link_output"
+    if [ "${#link_pairs[@]}" -gt 0 ]; then
+      printf '%s\n' "${link_pairs[@]}" | ui_link_rows
+    fi
     exit 0
   fi
   python3 "$TRANSACTION_APPLY" --repo-root "$REPO_ROOT" apply
