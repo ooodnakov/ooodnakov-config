@@ -96,7 +96,7 @@ _oooconf_values_deps_keys=(
   'python3:Python runtime and helper scripts'
   'lazygit:simple terminal UI for git commands'
   'lazydocker:terminal UI for managing containers and images (s=stop, r=start/restart, ?=help)'
-  'docker:Docker CLI and daemon; enables Docker and containerd systemd units on Linux'
+  'docker:Docker CLI and daemon: installs Docker Engine with the distribution'\''s official procedure on Linux, then enables Docker and containerd units'
   'impala:TUI for managing Wi-Fi networks (tab sections, space select, enter connect)'
   'bluetui:TUI for managing Bluetooth connections'
   'just:cross-platform command runner for project automation'
