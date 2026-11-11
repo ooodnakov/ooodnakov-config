@@ -36,15 +36,17 @@ function Get-OptionalDepsTomlFallbackData {
     $tomlPath = $script:OptionalDepsTomlPath
     if (-not (Test-Path $tomlPath)) {
         $script:OptionalDepsTomlFallbackData = @{
-            Deps         = @()
-            MinimalKeys  = @()
-            LinuxToolset = @()
+            Deps               = @()
+            MinimalKeys        = @()
+            WindowsMinimalKeys = @()
+            LinuxToolset       = @()
         }
         return $script:OptionalDepsTomlFallbackData
     }
 
     $entries = @()
     $minimalKeys = @()
+    $windowsMinimalKeys = @()
     $linuxToolset = @()
     $current = @{}
     $inMinimalSection = $false
@@ -70,6 +72,15 @@ function Get-OptionalDepsTomlFallbackData {
         if ($line -match '^\[' -and $line -ne "[minimal]" -and $line -ne "[linux]" -and $line -ne "[[deps]]") {
             $inMinimalSection = $false
             $inLinuxSection = $false
+        }
+
+        if ($inMinimalSection -and $line -match '^windows\.keys\s*=\s*\[(.*)\]\s*$') {
+            $windowsMinimalKeys = @(
+                $matches[1] -split ',' |
+                    ForEach-Object { $_.Trim().Trim('"').Trim("'") } |
+                    Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            )
+            continue
         }
 
         if ($inMinimalSection -and $line -match '^keys\s*=\s*\[(.*)\]\s*$') {
@@ -146,9 +157,10 @@ function Get-OptionalDepsTomlFallbackData {
     })
 
     $script:OptionalDepsTomlFallbackData = @{
-        Deps         = $deps
-        MinimalKeys  = @($minimalKeys | Select-Object -Unique)
-        LinuxToolset = @($linuxToolset)
+        Deps              = $deps
+        MinimalKeys       = @($minimalKeys | Select-Object -Unique)
+        WindowsMinimalKeys = @($windowsMinimalKeys | Select-Object -Unique)
+        LinuxToolset      = @($linuxToolset)
     }
     return $script:OptionalDepsTomlFallbackData
 }

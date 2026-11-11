@@ -84,6 +84,7 @@ _oooconf_values_deps_keys=(
   'yazi:terminal file manager'
   'ffmpeg:media preview backend for yazi'
   'jq:JSON parsing helper for yazi plugins'
+  'unzip:zip archive extraction for release downloads and tooling'
   'p7zip:archive preview and extraction for yazi'
   'poppler:PDF preview support for yazi'
   'fc-cache:refreshing installed font caches'
@@ -231,6 +232,8 @@ _oooconf_install() {
     '--yes-optional[auto-confirm optional dependency installs]' \
     '--skip-deps[skip dependency installation]' \
     '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
+    '--minimal[minimal profile links for sparse checkouts]' \
+    '--min-dep[install only the minimal dependency set]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -255,6 +258,8 @@ _oooconf_deps() {
     '--yes-optional[auto-confirm optional dependency installs]' \
     '--all[select all dependency keys at once]' \
     '--latest[check for and install latest manager-backed versions]' \
+    '--min-dep[install only the minimal dependency set]' \
+    '--minimal[alias for --min-dep]' \
     '-h[show help]' \
     '--help[show help]' \
     '1:value:->value' \
@@ -277,6 +282,7 @@ _oooconf_update() {
     '--yes-optional[auto-confirm optional dependency installs]' \
     '--no-deps[skip optional dependency installation]' \
     '--profile[select portable capability profile]:value:(minimal terminal workstation developer)' \
+    '--min-dep[install only the minimal dependency set]' \
     '-h[show help]' \
     '--help[show help]' \
     '*:arg:->args'
@@ -1802,6 +1808,10 @@ _oooconf_minimal() {
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )
   _arguments -C \
+    '--min-dep[install only the minimal dependency set]' \
+    '--dry-run[preview actions without changing files]' \
+    '-h[show help]' \
+    '--help[show help]' \
     '*:arg:->args'
 
   case $state in

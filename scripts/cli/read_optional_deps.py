@@ -22,16 +22,28 @@ def load_deps() -> dict:
     defaults = data.get("defaults", {})
     deps = [_normalize_dep(raw) for raw in data.get("deps", [])]
     validate_deps(deps)
+    catalog_keys = {dep.get("key", "") for dep in deps}
     toolset = data.get("linux", {})
-    _validate_toolset(toolset, {dep.get("key", "") for dep in deps})
+    _validate_toolset(toolset, catalog_keys)
+    minimal = data.get("minimal", {})
+    _validate_minimal(minimal, catalog_keys)
 
     return {
         "deps": deps,
         "managed_tools": data.get("managed-tools", {}),
         "defaults": defaults,
-        "minimal": data.get("minimal", {}),
+        "minimal": minimal,
         "linux": toolset,
     }
+
+
+def _validate_keys(values: object, keys: set[str], label: str) -> None:
+    """A dependency key list must be a list of strings that exist in the catalog."""
+    if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
+        raise ValueError(f"{label} must be a list of dependency keys")
+    unknown = sorted(set(values) - keys)
+    if unknown:
+        raise ValueError(f"{label} references unknown dependency keys: {', '.join(unknown)}")
 
 
 def _validate_toolset(toolset: dict, keys: set[str]) -> None:
@@ -39,12 +51,34 @@ def _validate_toolset(toolset: dict, keys: set[str]) -> None:
     if not isinstance(toolset, dict):
         raise ValueError("[linux] must be a table with required/suggested lists")
     for field in ("required", "suggested"):
-        values = toolset.get(field, [])
-        if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
-            raise ValueError(f"[linux] {field} must be a list of dependency keys")
-        unknown = sorted(set(values) - keys)
-        if unknown:
-            raise ValueError(f"[linux] {field} references unknown dependency keys: {', '.join(unknown)}")
+        _validate_keys(toolset.get(field, []), keys, f"[linux] {field}")
+
+
+def _validate_minimal(minimal: dict, keys: set[str]) -> None:
+    """The minimal set and its per-platform extras must exist in the catalog."""
+    if not isinstance(minimal, dict):
+        raise ValueError("[minimal] must be a table with a keys list")
+    _validate_keys(minimal.get("keys", []), keys, "[minimal] keys")
+    for platform in ("linux", "macos", "windows"):
+        extra = minimal.get(platform, {})
+        if not isinstance(extra, dict):
+            raise ValueError(f"[minimal] {platform} must be a table with a keys list")
+        _validate_keys(extra.get("keys", []), keys, f"[minimal] {platform}.keys")
+
+
+def minimal_keys(platform: str | None = None) -> list[str]:
+    """Return the minimal dependency keys, plus extras for one platform."""
+    minimal = load_deps()["minimal"]
+    keys = list(minimal.get("keys", []))
+    if platform:
+        keys.extend(minimal.get(platform, {}).get("keys", []))
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for key in keys:
+        if key not in seen:
+            seen.add(key)
+            ordered.append(key)
+    return ordered
 
 
 def _normalize_dep(raw: dict) -> dict:
@@ -337,9 +371,8 @@ def main() -> int:
         for d in data["deps"]:
             print(d.get("key", ""))
     elif cmd in {"minimal", "minimal-keys"}:
-        data = load_deps()
-        minimal = data.get("minimal", {}).get("keys", [])
-        print(" ".join(minimal))
+        platform = sys.argv[2] if len(sys.argv) >= 3 else None
+        print(" ".join(minimal_keys(platform)))
     elif cmd == "linux-toolset":
         output_linux_toolset()
     elif cmd == "managed-tools":

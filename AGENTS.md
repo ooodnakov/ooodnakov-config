@@ -153,6 +153,7 @@ When structure or setup behavior changes, update the relevant docs:
 - `README.md`
 - `docs/reproducibility.md`
 - `docs/imports/upstream-audit.md`
+- `docs/docker-install.md`
 - `docs/troubleshooting.md`
 - `docs/dependency-decisions.md`
 - `docs/architecture.md`

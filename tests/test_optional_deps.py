@@ -229,18 +229,19 @@ def test_defaults_loading():
 
 
 def test_minimal_keys_command_and_legacy_alias(capsys):
-    """Test minimal key output and the legacy alias used by older setup scripts."""
+    """Minimal keys are platform-aware; the legacy alias stays supported."""
     from scripts.cli.read_optional_deps import main
 
-    expected = [
+    shared = [
         "git",
         "zsh",
         "uv",
-        "oh-my-posh",
         "gum",
         "rg",
         "fd",
         "bat",
+        "jq",
+        "unzip",
         "bin",
         "topgrade",
         "brew",
@@ -257,13 +258,29 @@ def test_minimal_keys_command_and_legacy_alias(capsys):
     try:
         sys.argv = ["read_optional_deps.py", "minimal"]
         assert main() == 0
-        assert capsys.readouterr().out.split() == expected
+        assert capsys.readouterr().out.split() == shared
 
         sys.argv = ["read_optional_deps.py", "minimal-keys"]
         assert main() == 0
-        assert capsys.readouterr().out.split() == expected
+        assert capsys.readouterr().out.split() == shared
+
+        sys.argv = ["read_optional_deps.py", "minimal", "linux"]
+        assert main() == 0
+        assert capsys.readouterr().out.split() == shared
+
+        sys.argv = ["read_optional_deps.py", "minimal", "windows"]
+        assert main() == 0
+        assert capsys.readouterr().out.split() == shared + ["oh-my-posh"]
     finally:
         sys.argv = original_argv
+
+
+def test_minimal_windows_extras_stay_catalog_backed():
+    """oh-my-posh is Windows-only in the minimal set and must stay catalog-backed."""
+    data = load_deps()
+    assert data["minimal"]["windows"]["keys"] == ["oh-my-posh"]
+    assert "oh-my-posh" not in data["minimal"]["keys"]
+    assert {dependency["key"] for dependency in data["deps"]} >= {"oh-my-posh", "unzip", "jq"}
 
 
 def test_linux_toolset_group_is_catalog_backed():

@@ -16,6 +16,7 @@ FONT_TARGET_DIR="${XDG_DATA_HOME:-$HOME_DIR/.local/share}/fonts/ooodnakov"
 COMMAND="${1:-install}"
 DRY_RUN=0
 MINIMAL=0
+MIN_DEP=0
 BACKUP_ROOT="${OOODNAKOV_BACKUP_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/backups}"
 LOG_ROOT="${OOODNAKOV_LOG_ROOT:-$HOME_DIR/.local/state/ooodnakov-config/logs}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
@@ -74,6 +75,7 @@ while [ "$#" -gt 0 ]; do
   --dry-run) DRY_RUN=1 ;;
   --yes-optional) INSTALL_OPTIONAL=always ;;
   --minimal) MINIMAL=1 ;;
+  --min-dep) MIN_DEP=1 ;;
   --all) ALL_DEPS=1 ;;
   --latest) DEPS_LATEST=1 ;;
   -h | --help)
@@ -108,7 +110,17 @@ if [ "${#cli_selected_optional_keys[@]}" -gt 0 ]; then
 fi
 
 if [ "$MINIMAL" -eq 1 ]; then
-  minimal_key_csv="$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" | tr ' ' ',')"
+  # Minimal install: sparse checkouts omit desktop/editor trees, so the link
+  # plan must be filtered to the minimal profile instead of validating every
+  # manifest source.
+  export OOODNAKOV_MINIMAL=1
+  if [ -z "${OOODNAKOV_PROFILE:-}" ]; then
+    export OOODNAKOV_PROFILE=minimal
+  fi
+fi
+
+if [ "$MIN_DEP" -eq 1 ] || { [ "$MINIMAL" -eq 1 ] && [ "$COMMAND" = "deps" ]; }; then
+  minimal_key_csv="$(run_python "$OPTIONAL_DEPS_SCRIPT" "minimal" "$(detect_platform)" | tr ' ' ',')"
   selected_optional_key_csv="${selected_optional_key_csv:+$selected_optional_key_csv,}$minimal_key_csv"
 fi
 
@@ -300,8 +312,12 @@ if [ "$COMMAND" = "update" ]; then
 fi
 progress_step "Prepared local state directories"
 
+zsh_was_present=0
+command -v zsh >/dev/null 2>&1 && zsh_was_present=1
+
 progress_step "Checking/installing optional dependencies"
 install_optional_dependencies
+ensure_zsh_default_shell "$zsh_was_present" || true
 
 progress_step "Syncing shell framework repositories"
 install_managed_tools

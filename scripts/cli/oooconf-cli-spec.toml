@@ -60,7 +60,7 @@ description = "clone or update the repo, then run install"
 handler_id = "oooconf.install"
 platforms = ["linux", "macos", "windows"]
 description = "apply managed config"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--skip-deps" = "skip dependency installation", "--profile" = "select portable capability profile", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--skip-deps" = "skip dependency installation", "--profile" = "select portable capability profile", "--minimal" = "minimal profile links for sparse checkouts", "--min-dep" = "install only the minimal dependency set", "-h" = "show help", "--help" = "show help" }
 option_value_sets = { "--profile" = "profiles" }
 value_set = "deps_keys"
 
@@ -68,14 +68,14 @@ value_set = "deps_keys"
 handler_id = "oooconf.deps"
 platforms = ["linux", "macos", "windows"]
 description = "install optional dependencies only"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--all" = "select all dependency keys at once", "--latest" = "check for and install latest manager-backed versions", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--all" = "select all dependency keys at once", "--latest" = "check for and install latest manager-backed versions", "--min-dep" = "install only the minimal dependency set", "--minimal" = "alias for --min-dep", "-h" = "show help", "--help" = "show help" }
 value_set = "deps_keys"
 
 [commands.update]
 handler_id = "oooconf.update"
 platforms = ["linux", "macos", "windows"]
 description = "update the repo, then re-run install"
-options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--no-deps" = "skip optional dependency installation", "--profile" = "select portable capability profile", "-h" = "show help", "--help" = "show help" }
+options = { "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "--no-deps" = "skip optional dependency installation", "--profile" = "select portable capability profile", "--min-dep" = "install only the minimal dependency set", "-h" = "show help", "--help" = "show help" }
 option_value_sets = { "--profile" = "profiles" }
 
 [commands.delta]
@@ -499,6 +499,7 @@ alias_for = "update"
 handler_id = "oooconf.minimal"
 platforms = ["linux", "macos"]
 description = "run minimal setup"
+options = { "--min-dep" = "install only the minimal dependency set", "--dry-run" = "preview actions without changing files", "-h" = "show help", "--help" = "show help" }
 
 [commands.komorebi]
 handler_id = "oooconf.komorebi"

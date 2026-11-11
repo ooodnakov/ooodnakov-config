@@ -87,7 +87,7 @@ try {
 
     # Handle --minimal flag
     if ($requestedDependencyKeys -contains "--minimal") {
-        $minimalKeys = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("minimal")
+        $minimalKeys = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("minimal", (Detect-Platform))
         $requestedDependencyKeys = @($minimalKeys -split ' ' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
         Write-Information "Installing minimal setup: $($requestedDependencyKeys -join ', ')" -InformationAction Continue
     } elseif ($Command -eq "deps" -and $requestedDependencyKeys -contains "--all") {

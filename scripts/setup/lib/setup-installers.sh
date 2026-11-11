@@ -464,6 +464,50 @@ check_dependency_status() {
   return 1
 }
 
+ensure_zsh_default_shell() {
+  # Only act when setup just installed zsh: an existing shell choice is the
+  # user's decision. Set SHELL inside this process only; chsh owns login shell.
+  local zsh_was_present
+  zsh_was_present="${1:-0}"
+  [ "$zsh_was_present" -eq 0 ] || return 0
+
+  local zsh_path current_shell
+  zsh_path="$(command -v zsh 2>/dev/null || true)"
+  [ -n "$zsh_path" ] || return 0
+  zsh_path="$(readlink -f "$zsh_path" 2>/dev/null || printf '%s\n' "$zsh_path")"
+
+  current_shell="${SHELL:-}"
+  if [ "$(basename "${current_shell:-none}")" = "zsh" ]; then
+    return 0
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ui_line hint "[dry-run] chsh -s $zsh_path"
+    return 0
+  fi
+
+  if [ -r /etc/shells ] && ! grep -qx "$zsh_path" /etc/shells; then
+    DEPENDENCY_SUMMARY+=("zsh default shell: skipped ($zsh_path not in /etc/shells; add it with: echo '$zsh_path' | sudo tee -a /etc/shells)")
+    return 0
+  fi
+
+  if ! is_interactive; then
+    DEPENDENCY_SUMMARY+=("zsh default shell: skipped (non-interactive; run: chsh -s $zsh_path)")
+    return 0
+  fi
+
+  if ! prompt_yes_no "Set zsh as your default login shell (chsh -s $zsh_path)?"; then
+    DEPENDENCY_SUMMARY+=("zsh default shell: skipped (run: chsh -s $zsh_path)")
+    return 0
+  fi
+
+  if command -v chsh >/dev/null 2>&1 && chsh -s "$zsh_path" </dev/tty; then
+    DEPENDENCY_SUMMARY+=("zsh default shell: set ($zsh_path)")
+  else
+    DEPENDENCY_SUMMARY+=("zsh default shell: failed (run manually: chsh -s $zsh_path)")
+  fi
+}
+
 maybe_install_dependency() {
   local manager
   manager="$1"

@@ -31,9 +31,9 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | Command | Description | Platforms | Handler ID | Options |
 |---|---|---|---|---|
 | `oooconf bootstrap` | clone or update the repo, then run install | linux, macos | `oooconf.bootstrap` | — |
-| `oooconf install` | apply managed config | linux, macos, windows | `oooconf.install` | `--dry-run`, `--yes-optional`, `--skip-deps`, `--profile`, `-h`, `--help` |
-| `oooconf deps` | install optional dependencies only | linux, macos, windows | `oooconf.deps` | `--dry-run`, `--yes-optional`, `--all`, `--latest`, `-h`, `--help` |
-| `oooconf update` | update the repo, then re-run install | linux, macos, windows | `oooconf.update` | `--dry-run`, `--yes-optional`, `--no-deps`, `--profile`, `-h`, `--help` |
+| `oooconf install` | apply managed config | linux, macos, windows | `oooconf.install` | `--dry-run`, `--yes-optional`, `--skip-deps`, `--profile`, `--minimal`, `--min-dep`, `-h`, `--help` |
+| `oooconf deps` | install optional dependencies only | linux, macos, windows | `oooconf.deps` | `--dry-run`, `--yes-optional`, `--all`, `--latest`, `--min-dep`, `--minimal`, `-h`, `--help` |
+| `oooconf update` | update the repo, then re-run install | linux, macos, windows | `oooconf.update` | `--dry-run`, `--yes-optional`, `--no-deps`, `--profile`, `--min-dep`, `-h`, `--help` |
 | `oooconf delta` | inject or manage git-delta gitconfig | linux, macos, windows | `oooconf.delta` | — |
 | `oooconf doctor` | run structured health checks | linux, macos, windows | `oooconf.doctor` | `--format`, `--platform`, `--profile` |
 | `oooconf status` | summarize managed configuration state | linux, macos, windows | `oooconf.status` | `--format`, `--platform`, `--profile` |
@@ -101,7 +101,7 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | `oooconf check` | alias for doctor | linux, macos, windows | `oooconf.check` | — |
 | `oooconf preview` | alias for dry-run | linux, macos, windows | `oooconf.preview` | — |
 | `oooconf upgrade` | alias for update | linux, macos, windows | `oooconf.upgrade` | — |
-| `oooconf minimal` | run minimal setup | linux, macos | `oooconf.minimal` | — |
+| `oooconf minimal` | run minimal setup | linux, macos | `oooconf.minimal` | `--min-dep`, `--dry-run`, `-h`, `--help` |
 | `oooconf komorebi` | manage Komorebi window manager | linux, macos | `oooconf.komorebi` | — |
 | `oooconf wm` | switch or manage window managers | linux, macos, windows | `oooconf.wm` | — |
 | `oooconf wm status` | show window manager status | linux, macos, windows | `oooconf.wm.status` | — |

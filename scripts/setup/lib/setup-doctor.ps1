@@ -39,7 +39,7 @@ function Get-MinimalDependencyKeys {
 
     $keys = @()
     try {
-        $raw = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("minimal") 2>$null
+        $raw = Run-Python (Join-Path $RepoRoot "scripts/cli/read_optional_deps.py") @("minimal", (Detect-Platform)) 2>$null
         if ($raw) {
             $keys = @($raw -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
         }
@@ -47,7 +47,11 @@ function Get-MinimalDependencyKeys {
     }
 
     if ($keys.Count -eq 0) {
-        $keys = @((Get-OptionalDepsTomlFallbackData).MinimalKeys)
+        $fallbackData = Get-OptionalDepsTomlFallbackData
+        $keys = @($fallbackData.MinimalKeys)
+        if ($IsWindows -and $fallbackData.WindowsMinimalKeys) {
+            $keys = @($keys + @($fallbackData.WindowsMinimalKeys))
+        }
     }
 
     $script:MinimalDependencyKeysCache = @($keys | Select-Object -Unique)

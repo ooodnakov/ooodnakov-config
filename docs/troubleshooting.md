@@ -73,7 +73,7 @@ oooconf doctor
 oooconf install
 ```
 
-`oooconf doctor` validates that the pinned Oh My Zsh, Powerlevel10k, and zsh plugin checkouts exist under `~/.local/share/ooodnakov-config/` and contain the files sourced by the managed profile. On Linux it also fails when `zsh` or `docker` is missing and prints the minimal toolset hint (`brew`, `node`, `pnpm`, `bun`, `bat`, `eza`, `zoxide`, `lazydocker`, `lazygit`, `oh-my-pi`) with the exact `oooconf deps <keys>` command for whatever is absent. `oooconf install` retries failed git syncs, including an HTTP/1.1 fallback for transient GitHub TLS/HTTP failures.
+`oooconf doctor` validates that the pinned Oh My Zsh, Powerlevel10k, and zsh plugin checkouts exist under `~/.local/share/ooodnakov-config/` and contain the files sourced by the managed profile. On Linux it also fails when `zsh` or `docker` is missing and prints the minimal toolset hint (`brew`, `node`, `pnpm`, `bun`, `bat`, `eza`, `zoxide`, `lazydocker`, `lazygit`, `oh-my-pi`) with the exact `oooconf deps <keys>` command for whatever is absent. Docker Engine itself is not installed by the catalog: follow [`docs/docker-install.md`](docker-install.md) for Ubuntu and Arch, then run `oooconf deps docker` to enable the units. `oooconf install` retries failed git syncs, including an HTTP/1.1 fallback for transient GitHub TLS/HTTP failures.
 
 To switch only zsh between Powerlevel10k and Oh My Posh, run `oooconf shell prompt p10k` or `oooconf shell prompt ohmyposh` and open a new zsh session. To reduce prompt verbosity across managed prompt engines, run `oooconf shell prompt-style concise`; restore the full layout with `oooconf shell prompt-style verbose`.
 

@@ -7,19 +7,22 @@ TARGET_DIR="${OOODNAKOV_CONFIG_DIR:-$HOME/src/ooodnakov-config}"
 BRANCH="${OOODNAKOV_CONFIG_BRANCH:-main}"
 INTERACTIVE="${OOODNAKOV_INTERACTIVE:-auto}"
 MINIMAL=0
+MIN_DEP=0
 PASSTHROUGH=()
 
 usage() {
   cat >&2 <<'EOF'
-Usage: bootstrap.sh [full|minimal] [--dry-run]
+Usage: bootstrap.sh [full|minimal] [--min-dep] [--dry-run]
 
   full       clone the full repository and run the standard install (default)
-  minimal    sparse checkout plus the minimal dependency set from [minimal]
-             in scripts/optional-deps.toml
+  minimal    sparse checkout plus the minimal shell profile (no dependencies)
+  --min-dep  install only the minimal dependency set from [minimal] in
+             scripts/optional-deps.toml; combine it with minimal for a quick
+             new-machine setup, or use it alone for dependencies only
   --dry-run  preview install actions without changing the machine
 
 One command for a new machine:
-  curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal
+  curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal --min-dep
 
 The same script can be inspected before running; never pipe it straight into a shell.
 EOF
@@ -29,6 +32,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     minimal | --minimal | -m) MINIMAL=1 ;;
     full | install | --full) MINIMAL=0 ;;
+    --min-dep) MIN_DEP=1 ;;
     --dry-run) PASSTHROUGH+=("--dry-run") ;;
     -h | --help)
       usage
@@ -172,7 +176,7 @@ mkdir -p "$(dirname "$TARGET_DIR")"
 
 if [ ! -d "$TARGET_DIR/.git" ]; then
   if git ls-remote "$REPO_URL" >/dev/null 2>&1; then
-    if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ]; then
+    if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ] || [ "$MIN_DEP" -eq 1 ]; then
       git clone --filter=blob:none --no-checkout --depth 1 "$REPO_URL" "$TARGET_DIR"
       git -C "$TARGET_DIR" sparse-checkout init --cone
       git -C "$TARGET_DIR" sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh LICENSE
@@ -181,7 +185,7 @@ if [ ! -d "$TARGET_DIR/.git" ]; then
     git clone --branch "$BRANCH" "$REPO_URL" "$TARGET_DIR"
     fi
   else
-    if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ]; then
+    if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ] || [ "$MIN_DEP" -eq 1 ]; then
       git clone --filter=blob:none --no-checkout --depth 1 "$HTTPS_REPO_URL" "$TARGET_DIR"
       git -C "$TARGET_DIR" sparse-checkout init --cone
       git -C "$TARGET_DIR" sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh LICENSE
@@ -197,10 +201,21 @@ fi
 if [ "${MINIMAL:-0}" = "1" ] || [ "${OOODNAKOV_MINIMAL:-0}" = "1" ]; then
   chmod +x "$TARGET_DIR/scripts/setup/minimal-setup.sh"
   install_args=(--yes-optional)
+  if [ "$MIN_DEP" -eq 1 ]; then
+    install_args+=(--min-dep)
+  fi
   if [ "${#PASSTHROUGH[@]}" -gt 0 ]; then
     install_args+=("${PASSTHROUGH[@]}")
   fi
   exec "$TARGET_DIR/scripts/setup/minimal-setup.sh" "${install_args[@]}"
+elif [ "$MIN_DEP" -eq 1 ]; then
+  # Minimal dependency install only: never touches managed config links.
+  chmod +x "$TARGET_DIR/scripts/setup/setup.sh"
+  install_args=(deps --min-dep --yes-optional)
+  if [ "${#PASSTHROUGH[@]}" -gt 0 ]; then
+    install_args+=("${PASSTHROUGH[@]}")
+  fi
+  exec "$TARGET_DIR/scripts/setup/setup.sh" "${install_args[@]}"
 else
   chmod +x "$TARGET_DIR/scripts/setup/setup.sh"
   install_args=(install)

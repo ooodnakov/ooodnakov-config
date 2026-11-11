@@ -286,7 +286,7 @@ EOF
       ;;
     install)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps] [--profile NAME]
+Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps] [--profile NAME] [--minimal] [--min-dep]
 
 Apply managed config and optional dependency installation.
 Creates symlinks from tracked config in home/ to their target locations,
@@ -297,12 +297,14 @@ Examples:
   oooconf install --yes-optional       # auto-accept all optional installs
   oooconf install --skip-deps          # apply config without dependency installs
   oooconf install --profile terminal   # apply only terminal-profile managed links
+  oooconf install --minimal            # minimal profile links (sparse checkout safe)
+  oooconf install --minimal --min-dep  # minimal links plus minimal dependencies
   oooconf install --dry-run            # preview without making changes
 EOF
       ;;
     deps)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf deps [--dry-run] [--all] [--latest] [dependency-key...]
+Usage: oooconf deps [--dry-run] [--all] [--latest] [--min-dep] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
 gum-based multi-select picker is used when available.
@@ -316,6 +318,7 @@ Examples:
   oooconf deps <key...>                # specific tools (see optional-deps.toml for keys)
   oooconf deps --dry-run               # preview installation
   oooconf deps --all                   # install all dependency keys
+  oooconf deps --min-dep               # install only the [minimal] dependency set
   oooconf deps --latest <key...>       # update manager-backed tools to latest
 EOF
       ;;
@@ -572,11 +575,13 @@ EOF
       ;;
     minimal)
       cat <<'EOF' | ui_render_help_block
-Usage: oooconf minimal [--dry-run]
+Usage: oooconf minimal [--min-dep] [--dry-run]
 
-Install minimal required dependencies for managed config.
+Link the minimal shell profile (sparse-checkout friendly). Dependencies are
+installed only with --min-dep, which installs the [minimal] key set.
 Examples:
-  oooconf minimal                       # install minimal deps
+  oooconf minimal                      # minimal config, no dependency installs
+  oooconf minimal --min-dep            # minimal config plus minimal dependencies
   oooconf minimal --dry-run            # preview without making changes
 EOF
       ;;

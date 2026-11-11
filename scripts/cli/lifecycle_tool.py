@@ -177,13 +177,19 @@ def diagnostics(repo_root: Path, platform: str, profile_name: str | None, mode: 
             keys = [key for key in toolset.get(requirement, []) if key in records]
             missing = [key for key in keys if not _dependency_available(records[key])]
             if missing:
+                remediation = f"Run oooconf deps {' '.join(missing)} to install them."
+                if "docker" in missing:
+                    remediation = (
+                        "Install Docker Engine from docs/docker-install.md (Ubuntu/Arch), then run "
+                        f"oooconf deps {' '.join(missing)}."
+                    )
                 checks.append(
                     Check(
                         f"dependencies.{requirement}",
                         status,
                         severity,
                         f"Missing {requirement} Linux tools: {', '.join(missing)}.",
-                        f"Run oooconf deps {' '.join(missing)} to install them.",
+                        remediation,
                     )
                 )
             else:

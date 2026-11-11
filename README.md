@@ -103,25 +103,29 @@ less /tmp/ooodnakov-bootstrap.sh
 bash /tmp/ooodnakov-bootstrap.sh
 ```
 
-One command for a new machine, no prior clone, using the minimal dependency set
-(`[minimal]` in `scripts/optional-deps.toml`: git, zsh, uv, oh-my-posh, gum, rg,
-fd, bat, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker, lazygit,
-oh-my-pi):
+One command for a new machine, no prior clone: sparse checkout plus the minimal
+shell profile and the minimal dependency set
+(`[minimal]` in `scripts/optional-deps.toml`: git, zsh, uv, gum, rg, fd, bat,
+jq, unzip, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker,
+lazygit, oh-my-pi; `oh-my-posh` is added on Windows only):
 
 ```bash
-curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal
+curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal --min-dep
 ```
 
-The `minimal` argument performs a sparse checkout, then installs that dependency
-set and links the `minimal` shell profile. Add `--dry-run` to preview it. The
-script is intentionally downloaded before execution instead of being piped into
-a shell; `OOODNAKOV_MINIMAL=1` is the equivalent environment form.
+`minimal` performs the sparse checkout and links the minimal shell profile;
+`--min-dep` is an independent flag that installs only the minimal dependency
+set. Use `minimal` alone for config without packages, or `--min-dep` alone to
+install dependencies without touching managed links. Add `--dry-run` to preview.
+The script is intentionally downloaded before execution instead of being piped
+into a shell; `OOODNAKOV_MINIMAL=1` is the equivalent environment form for the
+minimal install.
 
-For a small terminal-only machine that should not install packages at all, skip
-the dependency step with `OOODNAKOV_SKIP_DEPS=1`. The partial checkout omits the
-reference snapshots, bundled fonts, and editor/desktop configs. Git, Bash, and
-Zsh are required; Python 3 is used by the link planner, with no `uv` environment
-or repository packages installed.
+`minimal` alone installs no packages; `OOODNAKOV_SKIP_DEPS=1` is the explicit
+environment form of that behavior for direct `setup.sh` runs. The partial
+checkout omits the reference snapshots, bundled fonts, and editor/desktop
+configs. Git, Bash, and Zsh are required; Python 3 is used by the link planner,
+with no `uv` environment or repository packages installed.
 
 ```bash
 git clone --filter=blob:none --no-checkout https://github.com/ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
@@ -129,7 +133,7 @@ git -C ~/src/ooodnakov-config sparse-checkout init --cone
 git -C ~/src/ooodnakov-config sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh LICENSE
 git -C ~/src/ooodnakov-config checkout main
 cd ~/src/ooodnakov-config
-OOODNAKOV_SKIP_DEPS=1 ./scripts/setup/minimal-setup.sh
+./scripts/setup/minimal-setup.sh
 ```
 
 Release archives include `SHA256SUMS`. Verify an archive before extracting it;
@@ -419,7 +423,7 @@ In interactive terminals, setup can also prompt to install common optional depen
 Use `oooconf deps` to install optional tools interactively or specifically:
 
 - `oooconf deps` — Interactive picker (requires `gum`).
-- `oooconf deps --minimal` — Install the `[minimal]` dependency set: git, zsh, uv, oh-my-posh, gum, rg, fd, bat, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker, lazygit, and oh-my-pi.
+- `oooconf deps --min-dep` — Install only the `[minimal]` dependency set (git, zsh, uv, gum, rg, fd, bat, jq, unzip, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker, lazygit, oh-my-pi; `oh-my-posh` on Windows only). `--minimal` remains accepted as an alias for this command.
 - `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
 - `oooconf deps --latest <key...>` — Install missing selections, then run Topgrade with bounded retries; its native `bin` step updates tracked GitHub releases. `GITHUB_AUTH_TOKEN` (or `GITHUB_TOKEN`) is forwarded to GitHub release updates.
 - `oooconf deps bin topgrade` — Explicitly install the two primary dependency-management tools; they are also part of the minimal/install bootstrap flow.
@@ -625,6 +629,7 @@ Reference docs:
 - contributing workflow: [`docs/contributing.md`](docs/contributing.md)
 - reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
 - dependency decisions: [`docs/dependency-decisions.md`](docs/dependency-decisions.md)
+- Docker Engine install (Ubuntu, Arch): [`docs/docker-install.md`](docs/docker-install.md)
 - troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)
 - Fleet automation: [`docs/fleet-automation.md`](docs/fleet-automation.md)
 - import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)

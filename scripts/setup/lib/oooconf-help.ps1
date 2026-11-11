@@ -273,7 +273,7 @@ function Show-CommandUsage {
     switch ($command) {
         "install" {
             Write-UiHelpBlock @"
-Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps] [--profile NAME]
+Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps] [--profile NAME] [--minimal] [--min-dep]
 
 Apply managed config and optional dependency installation.
 Creates symlinks from tracked config in home/ to their target locations,
@@ -284,12 +284,14 @@ Examples:
   oooconf install --yes-optional       # auto-accept all optional installs
   oooconf install --skip-deps          # apply config without dependency installs
   oooconf install --profile terminal   # apply only terminal-profile managed links
+  oooconf install --minimal            # minimal profile links (sparse checkout safe)
+  oooconf install --minimal --min-dep  # minimal links plus minimal dependencies
   oooconf install --dry-run            # preview without making changes
 "@
         }
         "deps" {
             Write-UiHelpBlock @"
-Usage: oooconf deps [--dry-run] [--all] [--latest] [dependency-key...]
+Usage: oooconf deps [--dry-run] [--all] [--latest] [--min-dep] [dependency-key...]
 
 Install optional dependencies only. Without dependency keys, an interactive
 picker is shown (using gum if available).

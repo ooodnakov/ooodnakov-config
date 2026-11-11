@@ -27,6 +27,54 @@ if bash bootstrap.sh bogus >/dev/null 2>&1; then
 fi
 echo "OK: bootstrap rejects unknown arguments."
 
+if bash bootstrap.sh --help 2>&1 | grep -q -- "--min-dep"; then
+  echo "OK: bootstrap help documents --min-dep."
+else
+  echo "FAIL: bootstrap help does not document --min-dep." >&2
+  exit 1
+fi
+
+echo "=== Testing default-shell safety ==="
+if shell_out="$(
+  bash -c '
+    set -uo pipefail
+    REPO_ROOT="$1"
+    HOME_DIR="$HOME"
+    STATE_HOME="$HOME/.local/share/ooodnakov-config"
+    DRY_RUN=0
+    INSTALL_OPTIONAL=never
+    INTERACTIVE=never
+    VERBOSE=0
+    SHELL=/bin/bash
+    DEPENDENCY_SUMMARY=()
+    APT_UPDATED=0
+    OPTIONAL_DEPS_PLATFORM_CATALOG_CACHE=""
+    OPTIONAL_DEPS_CHECK_COMMAND_CACHE=""
+    OPTIONAL_DEPS_HANDLER_CACHE=""
+    OPTIONAL_DEPS_INSTALL_INFO_CACHE=""
+    source scripts/lib/python.sh
+    OOODNAKOV_OOSCRIPT=1 source scripts/setup/ooodnakov.sh
+    OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/cli/read_optional_deps.py"
+    source scripts/setup/lib/setup-ui.sh
+    source scripts/setup/lib/setup-optional-deps.sh
+    source scripts/setup/lib/setup-installers.sh
+    ensure_zsh_default_shell 1
+    printf "present-flag:[%s]" "${DEPENDENCY_SUMMARY[*]:-}"
+    ensure_zsh_default_shell 0
+    printf " new-install:[%s]" "${DEPENDENCY_SUMMARY[*]:-}"
+  ' _ "$REPO_ROOT" 2>&1
+)"; then
+  if printf "%s" "$shell_out" | grep -q "present-flag:\[\] new-install:\[zsh default shell:"; then
+    echo "OK: default-shell changes only run for a fresh zsh install and skip non-interactively."
+  else
+    echo "FAIL: unexpected default-shell output: $shell_out" >&2
+    exit 1
+  fi
+else
+  echo "FAIL: default-shell helper invocation failed: $shell_out" >&2
+  exit 1
+fi
+
 echo "=== Testing dry-run with central TOML parser ==="
 echo "Running oooconf deps --dry-run (verifies central TOML parser, no scattered lists/overrides)..."
 output=$(./scripts/setup/ooodnakov.sh deps --dry-run rtk bw pnpm nvim 2>&1)
