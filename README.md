@@ -427,6 +427,7 @@ Use `oooconf deps` to install optional tools interactively or specifically:
 - `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
 - `oooconf deps --latest <key...>` — Install missing selections, then run Topgrade with bounded retries; its native `bin` step updates tracked GitHub releases. `GITHUB_AUTH_TOKEN` (or `GITHUB_TOKEN`) is forwarded to GitHub release updates.
 - `oooconf deps bin topgrade` — Explicitly install the two primary dependency-management tools; they are also part of the minimal/install bootstrap flow.
+- `oooconf deps docker` — Install Docker Engine on Linux with the distribution's official procedure (apt repo on Ubuntu/Debian, pacman on Arch, dnf repo on Fedora), then enable the Docker/containerd units. macOS/Windows need Docker Desktop; manual steps and fallbacks live in [`docs/docker-install.md`](docs/docker-install.md).
 - `oooconf deps brew` — Install Homebrew on macOS or Linux with Homebrew's official installer.
 - `oooconf deps taskwarrior` — Install Taskwarrior through Homebrew (`task`) on Linux and macOS; Linux apt packages are intentionally avoided. Install Homebrew first if needed.
 - `oooconf deps worktrunk` — Install Worktrunk for parallel Git worktrees (Homebrew on Linux/macOS, winget on Windows). Managed Zsh and PowerShell profiles enable its shell integration when installed; use `git-wt` on Windows to avoid Windows Terminal's `wt` alias.

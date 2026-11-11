@@ -75,6 +75,48 @@ else
   exit 1
 fi
 
+echo "=== Testing docker dependency installs the engine on Linux ==="
+if docker_out="$(
+  bash -c '
+    set -uo pipefail
+    REPO_ROOT="$1"
+    HOME_DIR="$HOME"
+    STATE_HOME="$HOME/.local/share/ooodnakov-config"
+    DRY_RUN=1
+    INSTALL_OPTIONAL=always
+    INTERACTIVE=never
+    VERBOSE=0
+    DEPENDENCY_SUMMARY=()
+    APT_UPDATED=0
+    OPTIONAL_DEPS_PLATFORM_CATALOG_CACHE=""
+    OPTIONAL_DEPS_CHECK_COMMAND_CACHE=""
+    OPTIONAL_DEPS_HANDLER_CACHE=""
+    OPTIONAL_DEPS_INSTALL_INFO_CACHE=""
+    source scripts/lib/python.sh
+    OOODNAKOV_OOSCRIPT=1 source scripts/setup/ooodnakov.sh
+    OPTIONAL_DEPS_SCRIPT="$REPO_ROOT/scripts/cli/read_optional_deps.py"
+    source scripts/setup/lib/setup-ui.sh
+    source scripts/setup/lib/setup-optional-deps.sh
+    source scripts/setup/lib/setup-installers.sh
+    command() { if [ "$1" = "-v" ] && [ "$2" = "docker" ]; then return 1; fi; builtin command "$@"; }
+    detect_package_manager() { printf pacman; }
+    install_packages() { printf "install_packages:%s\\n" "$*"; }
+    maybe_install_docker pacman
+    printf "SUMMARY:%s" "${DEPENDENCY_SUMMARY[*]}"
+  ' _ "$REPO_ROOT" 2>&1
+)"; then
+  if printf "%s" "$docker_out" | grep -q "install_packages:pacman docker docker-compose" &&
+     printf "%s" "$docker_out" | grep -q "docker: install attempted"; then
+    echo "OK: docker dependency installs the engine through the package manager."
+  else
+    echo "FAIL: docker dependency did not dispatch an engine install: $docker_out" >&2
+    exit 1
+  fi
+else
+  echo "FAIL: docker dependency harness failed: $docker_out" >&2
+  exit 1
+fi
+
 echo "=== Testing dry-run with central TOML parser ==="
 echo "Running oooconf deps --dry-run (verifies central TOML parser, no scattered lists/overrides)..."
 output=$(./scripts/setup/ooodnakov.sh deps --dry-run rtk bw pnpm nvim 2>&1)

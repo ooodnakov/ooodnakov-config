@@ -1,10 +1,14 @@
 # Docker Engine install guide (Ubuntu and Arch)
 
-`oooconf deps docker` does not install Docker Engine. The catalog entry is a
-configuration helper: on systemd Linux it enables and starts existing
-`docker.service` and `containerd.service` units. `oooconf doctor` reports
-`docker` as a required Linux tool, so install the engine first with the official
-procedure for your distribution, then let the catalog enable the units.
+`oooconf deps docker` installs Docker Engine on Linux using the distribution's
+official procedure — apt repository on Ubuntu/Debian, `pacman` on Arch, dnf
+repository on Fedora — then enables and starts `docker.service` and
+`containerd.service`. macOS and Windows still require Docker Desktop manually.
+
+This page is the manual reference and the fallback when automatic installation
+cannot run (unsupported apt derivative, missing distro codename, no systemd, or
+a failed package-manager transaction). `oooconf doctor` reports `docker` as a
+required Linux tool and points here when installation failed.
 
 Official references:
 

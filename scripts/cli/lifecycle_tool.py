@@ -180,8 +180,9 @@ def diagnostics(repo_root: Path, platform: str, profile_name: str | None, mode: 
                 remediation = f"Run oooconf deps {' '.join(missing)} to install them."
                 if "docker" in missing:
                     remediation = (
-                        "Install Docker Engine from docs/docker-install.md (Ubuntu/Arch), then run "
-                        f"oooconf deps {' '.join(missing)}."
+                        f"Run oooconf deps {' '.join(missing)} to install them on Linux "
+                        "(Docker Engine uses the official distro procedure). "
+                        "macOS/Windows and manual fallbacks: docs/docker-install.md."
                     )
                 checks.append(
                     Check(

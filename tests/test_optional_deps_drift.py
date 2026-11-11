@@ -439,7 +439,8 @@ def test_catalog_managers_are_handled_by_setup_dispatchers() -> None:
     for manager in ["apt", "brew", "cargo"]:
         assert f'if [ "$manager" = "{manager}" ]' in setup_sh or f"{manager})" in setup_sh
     assert "maybe_install_bw()" in setup_sh  # download manager is handled by the bw handler.
-    assert "docker daemon: no docker, continuing" in setup_sh
+    assert "install_docker_engine()" in setup_sh
+    assert "docs/docker-install.md" in setup_sh
     assert "python3 unavailable for pip" in setup_sh
     assert 'pnpm_cmd="$(ensure_pnpm_available)' not in setup_sh
     assert "pip unavailable for $python_cmd" in setup_sh

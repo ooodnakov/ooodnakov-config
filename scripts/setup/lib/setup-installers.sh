@@ -257,18 +257,72 @@ enable_docker_systemd_unit() {
   return 1
 }
 
+install_docker_engine() {
+  # Install Docker Engine from the distribution's official procedure.
+  # Manual/unsupported cases are documented in docs/docker-install.md.
+  local manager
+  manager="$(detect_package_manager)"
+
+  case "$manager" in
+  apt)
+    local repo_id codename arch
+    repo_id="$(. /etc/os-release && printf '%s' "${ID:-ubuntu}")"
+    codename="$(. /etc/os-release && printf '%s' "${VERSION_CODENAME:-${UBUNTU_CODENAME:-}}")"
+    arch="$(dpkg --print-architecture 2>/dev/null || printf 'amd64')"
+    case "$repo_id" in
+    ubuntu | debian | raspbian) ;;
+    *)
+      ui_line hint "docker: no automatic installer for apt distribution '$repo_id'; follow docs/docker-install.md"
+      return 1
+      ;;
+    esac
+    if [ -z "$codename" ]; then
+      ui_line hint "docker: cannot detect the $repo_id codename; follow docs/docker-install.md"
+      return 1
+    fi
+    run_with_spinner "Installing Docker apt prerequisites" sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl
+    run_with_spinner "Adding Docker apt key" sudo sh -c "install -m 0755 -d /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/${repo_id}/gpg -o /etc/apt/keyrings/docker.asc && chmod a+r /etc/apt/keyrings/docker.asc"
+    run_with_spinner "Adding Docker apt repository" sudo sh -c "printf '%s\\n' 'deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${repo_id} ${codename} stable' > /etc/apt/sources.list.d/docker.list"
+    APT_UPDATED=0
+    install_packages apt docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    ;;
+  pacman)
+    install_packages pacman docker docker-compose
+    ;;
+  dnf)
+    install_packages dnf dnf-plugins-core || return 1
+    run_with_spinner "Adding Docker dnf repository" sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    install_packages dnf docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    ;;
+  *)
+    ui_line hint "docker: no automatic installer for package manager '$manager'; follow docs/docker-install.md"
+    return 1
+    ;;
+  esac
+}
+
 maybe_install_docker() {
   local _manager
   _manager="$1"
 
   if [ "$(detect_platform)" != "linux" ]; then
-    DEPENDENCY_SUMMARY+=("docker: skipped (Docker daemon auto-start is managed here only on systemd Linux)")
+    DEPENDENCY_SUMMARY+=("docker: skipped (install Docker Desktop manually on macOS/Windows)")
     return 0
   fi
 
   if ! command -v docker >/dev/null 2>&1; then
-    ui_line hint "docker daemon: no docker, continuing"
-    DEPENDENCY_SUMMARY+=("docker: no docker, continuing")
+    if [ "$DRY_RUN" -ne 1 ] && ! prompt_yes_no "Install Docker Engine from the official distribution repository?"; then
+      DEPENDENCY_SUMMARY+=("docker: skipped (install manually: docs/docker-install.md)")
+      return 0
+    fi
+    if ! install_docker_engine; then
+      DEPENDENCY_SUMMARY+=("docker: install failed (see docs/docker-install.md)")
+      return 0
+    fi
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    DEPENDENCY_SUMMARY+=("docker: install attempted (verify with docker info; see docs/docker-install.md)")
     return 0
   fi
 
@@ -281,6 +335,10 @@ maybe_install_docker() {
 
   enable_docker_systemd_unit docker.service || true
   enable_docker_systemd_unit containerd.service || true
+
+  if [ "$(id -u)" -ne 0 ] && ! id -nG "${USER:-$(id -un)}" 2>/dev/null | tr ' ' '\n' | grep -qx docker; then
+    DEPENDENCY_SUMMARY+=("docker group: run 'sudo usermod -aG docker ${USER:-$(id -un)}' then re-login")
+  fi
 }
 
 resolve_pnpm_command() {

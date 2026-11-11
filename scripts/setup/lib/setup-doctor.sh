@@ -65,7 +65,7 @@ doctor_check_linux_toolset() {
     command -v "$binary" >/dev/null 2>&1 && continue
     if [ "$requirement" = "required" ]; then
       ui_line missing "linux toolset: $display (required)"
-      [ "$key" = "docker" ] && ui_line hint "          docker: install guide (Ubuntu/Arch) in docs/docker-install.md"
+      [ "$key" = "docker" ] && ui_line hint "          docker: oooconf deps docker installs the engine (manual: docs/docker-install.md)"
       required_missing+=("$key")
     else
       ui_line hint "linux toolset: $display (suggested)"
