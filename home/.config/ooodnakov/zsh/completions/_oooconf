@@ -1147,7 +1147,7 @@ _oooconf_secrets() {
   typeset -A opt_args
   local -a subcmds
   subcmds=(
-    'login:log in to Bitwarden/Vaultwarden'
+    'login:log in to Bitwarden/Vaultwarden and unlock the vault'
     'unlock:unlock and print session exports'
     'sync:render local secret files from template'
     'doctor:check secrets prerequisites and health'

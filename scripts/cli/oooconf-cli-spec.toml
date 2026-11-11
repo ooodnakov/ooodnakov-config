@@ -320,7 +320,7 @@ options = { "--secrets" = "also upload value to Bitwarden", "-h" = "show help", 
 [commands.secrets.subcommands.login]
 handler_id = "oooconf.secrets.login"
 platforms = ["linux", "macos", "windows"]
-description = "log in to Bitwarden/Vaultwarden"
+description = "log in to Bitwarden/Vaultwarden and unlock the vault"
 options = { "--server" = "server URL", "--method" = "login method", "--client-id" = "API client ID", "--client-secret" = "API client secret" }
 option_value_sets = { "--method" = "secret_methods" }
 

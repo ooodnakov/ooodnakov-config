@@ -761,6 +761,48 @@ def doctor_command(args: argparse.Namespace, repo_root: Path) -> int:
     return 0
 
 
+def unlock_with_password(password: str) -> tuple[str | None, str]:
+    env = os.environ.copy()
+    env["BW_PASSWORD"] = password
+    try:
+        result = subprocess.run(
+            ["bw", "unlock", "--raw", "--passwordenv", "BW_PASSWORD"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+            timeout=BWH_CLI_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return None, f"`bw unlock` timed out after {BWH_CLI_TIMEOUT_SECONDS}s."
+    if result.returncode != 0:
+        return None, result.stderr.strip() or "`bw unlock` failed."
+    token = result.stdout.strip()
+    if not token:
+        return None, "`bw unlock --raw` returned an empty session token."
+    return token, ""
+
+
+def unlock_after_login() -> bool:
+    """Logging in leaves the vault locked; prompt once and persist the session."""
+    try:
+        password = getpass.getpass("Bitwarden master password (unlock vault): ")
+    except (EOFError, KeyboardInterrupt):
+        print("", file=sys.stderr)
+        status("warn", "Vault unlock skipped. Run `oooconf secrets unlock` when ready.")
+        return False
+
+    token, error = unlock_with_password(password)
+    if token is None:
+        status("fail", error)
+        status("hint", "Login succeeded, but the vault stays locked. Run `oooconf secrets unlock`.")
+        return False
+
+    path = write_persisted_bw_session(token)
+    status("ok", f"Vault unlocked; BW_SESSION saved to {ui_path(path)}")
+    return True
+
+
 def login_command(args: argparse.Namespace) -> int:
     if shutil_which("bw") is None:
         status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
@@ -809,7 +851,14 @@ def login_command(args: argparse.Namespace) -> int:
         status("info", "Attempting Bitwarden email/password login...")
         login_result = subprocess.run(["bw", "login"], text=True)
 
-    return login_result.returncode
+    if login_result.returncode != 0:
+        return login_result.returncode
+
+    if interactive:
+        unlock_after_login()
+    else:
+        status("hint", "Vault is locked after login. Run `oooconf secrets unlock` in an interactive shell.")
+    return 0
 
 
 def prompt_login_method(default_method: str) -> str:
@@ -850,7 +899,6 @@ def unlock_command(args: argparse.Namespace) -> int:
         status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
         return 1
 
-    env = os.environ.copy()
     should_persist = bool(args.password) or (not args.explicit_shell and not args.explicit_raw)
     if should_persist:
         password = args.password
@@ -860,18 +908,20 @@ def unlock_command(args: argparse.Namespace) -> int:
             except (EOFError, KeyboardInterrupt):
                 status("warn", "Unlock cancelled.")
                 return 1
-        env["BW_PASSWORD"] = password
-        command = ["bw", "unlock", "--raw", "--passwordenv", "BW_PASSWORD"]
-    else:
-        command = ["bw", "unlock", "--raw"]
+        token, error = unlock_with_password(password)
+        if token is None:
+            status("fail", error)
+            return 1
+        path = write_persisted_bw_session(token)
+        status("ok", f"Saved BW_SESSION to {ui_path(path)}")
+        return 0
 
     try:
         result = subprocess.run(
-            command,
+            ["bw", "unlock", "--raw"],
             capture_output=True,
             text=True,
             encoding="utf-8",
-            env=env,
             timeout=BWH_CLI_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired:
@@ -887,11 +937,6 @@ def unlock_command(args: argparse.Namespace) -> int:
     if not token:
         status("fail", "`bw unlock --raw` returned an empty session token.")
         return 1
-
-    if should_persist:
-        path = write_persisted_bw_session(token)
-        status("ok", f"Saved BW_SESSION to {path}")
-        return 0
 
     if args.raw:
         print(token)

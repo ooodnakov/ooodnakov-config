@@ -72,7 +72,7 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | `oooconf agents skills view` | list global shared skills catalog via pnpm dlx | linux, macos, windows | `oooconf.agents.skills.view` | `--check`, `--json` |
 | `oooconf agents skills add` | add one shared skill source and optionally sync | linux, macos, windows | `oooconf.agents.skills.add` | `--agent`, `--sync-now`, `--check` |
 | `oooconf secrets` | sync or validate local secret env files | linux, macos, windows | `oooconf.secrets` | — |
-| `oooconf secrets login` | log in to Bitwarden/Vaultwarden | linux, macos, windows | `oooconf.secrets.login` | `--server`, `--method`, `--client-id`, `--client-secret` |
+| `oooconf secrets login` | log in to Bitwarden/Vaultwarden and unlock the vault | linux, macos, windows | `oooconf.secrets.login` | `--server`, `--method`, `--client-id`, `--client-secret` |
 | `oooconf secrets unlock` | unlock and print session exports | linux, macos, windows | `oooconf.secrets.unlock` | `--shell`, `--raw` |
 | `oooconf secrets sync` | render local secret files from template | linux, macos, windows | `oooconf.secrets.sync` | `--backend`, `--template`, `--dry-run`, `--force` |
 | `oooconf secrets doctor` | check secrets prerequisites and health | linux, macos, windows | `oooconf.secrets.doctor` | `--backend`, `--template` |

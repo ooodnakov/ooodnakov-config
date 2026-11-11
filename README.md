@@ -210,7 +210,7 @@ Secrets commands:
 - `oooconf env KEY VALUE`: safely add or update a machine-local value in the preserved blocks of both `env.zsh` and `env.ps1`
 - `oooconf env`: prompt for a variable name and hidden value, then offer an optional Bitwarden upload (default: no)
 - `oooconf env KEY VALUE --secrets`: update both local files and upload the value to a Bitwarden secure note
-- `oooconf secrets login`: configure Bitwarden/Vaultwarden server, choose login method, and start login
+- `oooconf secrets login`: configure Bitwarden/Vaultwarden server, choose login method, start login, then prompt for the master password to unlock the vault and save the session
 - `oooconf secrets unlock --shell zsh`: print shell code to export `BW_SESSION`
 - `oooconf secrets sync`: render local secret env files from the tracked template, creating missing `env.zsh`/`env.ps1`
 - `oooconf secrets sync --dry-run`: preview rendered files without writing
