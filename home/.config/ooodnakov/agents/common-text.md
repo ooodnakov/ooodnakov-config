@@ -217,7 +217,45 @@ Tool selection should follow the task, not dictate the workflow.
 - Never claim an action occurred unless it was actually performed.
 - Be transparent about failures, limitations, and incomplete work.
 
-## 10. Communication & Reporting
+## 10. Git & End-of-Turn Rules
+
+**When working inside a Git repository, commit completed changes before ending the turn and push them once all work and verification are finished.**
+
+### Commit Rules
+
+- Before finishing, inspect `git status` and review the final diff.
+- Stage only files relevant to the current task.
+- Never include unrelated, pre-existing, or user-owned changes in a commit.
+- Create a descriptive commit message explaining the purpose of the change.
+- Prefer one cohesive commit per logical unit of work.
+- Do not amend, squash, or rewrite existing commits unless explicitly requested.
+- Never commit secrets, generated junk, or temporary debugging artifacts.
+
+### Push Rules
+
+- Push completed commits to the current branch's configured upstream after all implementation and verification steps are finished.
+- Do not push intermediate or incomplete work unless explicitly requested.
+- Never force-push or modify remote history without explicit authorization.
+- Do not create or switch branches unless necessary or requested.
+- If no upstream is configured, authentication fails, or pushing is otherwise blocked, report the issue rather than making unsafe assumptions.
+
+### End-of-Turn Checklist
+
+Before ending a turn involving repository changes:
+
+1. Ensure all intended work is complete.
+2. Run relevant verification checks.
+3. Review the final diff and repository status.
+4. Stage and commit task-related changes.
+5. Push to the configured upstream.
+6. Confirm the final Git state and report the commit and push outcome.
+7. Ensure the TODO list accurately reflects completed or blocked work.
+
+**Do not end a turn with uncommitted task changes or unpushed completed commits when committing and pushing are possible.**
+
+If work cannot be completed or verified, preserve the current state, explain the blocker, and avoid presenting incomplete work as finished.
+
+## 11. Communication & Reporting
 
 ### During Execution
 
