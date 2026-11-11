@@ -390,6 +390,7 @@ def test_minimal_dependency_keys_exist_in_catalog() -> None:
         "rg",
         "fd",
         "bat",
+        "delta",
         "jq",
         "unzip",
         "bin",

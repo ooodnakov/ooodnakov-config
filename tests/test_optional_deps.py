@@ -240,6 +240,7 @@ def test_minimal_keys_command_and_legacy_alias(capsys):
         "rg",
         "fd",
         "bat",
+        "delta",
         "jq",
         "unzip",
         "bin",

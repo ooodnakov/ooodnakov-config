@@ -106,7 +106,7 @@ bash /tmp/ooodnakov-bootstrap.sh
 One command for a new machine, no prior clone: sparse checkout plus the minimal
 shell profile and the minimal dependency set
 (`[minimal]` in `scripts/optional-deps.toml`: git, zsh, uv, gum, rg, fd, bat,
-jq, unzip, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker,
+delta, jq, unzip, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker,
 lazygit, oh-my-pi; `oh-my-posh` is added on Windows only):
 
 ```bash
@@ -423,7 +423,7 @@ In interactive terminals, setup can also prompt to install common optional depen
 Use `oooconf deps` to install optional tools interactively or specifically:
 
 - `oooconf deps` — Interactive picker (requires `gum`).
-- `oooconf deps --min-dep` — Install only the `[minimal]` dependency set (git, zsh, uv, gum, rg, fd, bat, jq, unzip, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker, lazygit, oh-my-pi; `oh-my-posh` on Windows only). `--minimal` remains accepted as an alias for this command.
+- `oooconf deps --min-dep` — Install only the `[minimal]` dependency set (git, zsh, uv, gum, rg, fd, bat, delta, jq, unzip, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker, lazygit, oh-my-pi; `oh-my-posh` on Windows only). `--minimal` remains accepted as an alias for this command.
 - `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
 - `oooconf deps --latest <key...>` — Install missing selections, then run Topgrade with bounded retries; its native `bin` step updates tracked GitHub releases. `GITHUB_AUTH_TOKEN` (or `GITHUB_TOKEN`) is forwarded to GitHub release updates.
 - `oooconf deps bin topgrade` — Explicitly install the two primary dependency-management tools; they are also part of the minimal/install bootstrap flow.

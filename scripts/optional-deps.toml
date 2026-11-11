@@ -54,6 +54,7 @@ keys = [
     "rg",
     "fd",
     "bat",
+    "delta",
     "jq",
     "unzip",
     "bin",

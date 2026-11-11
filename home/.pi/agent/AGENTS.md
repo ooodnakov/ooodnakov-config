@@ -1,3 +1,5 @@
+
+
 <!-- oooconf:agents-common:start -->
 ## oooconf shared agent policy
 
@@ -49,5 +51,17 @@ Use Context7 MCP to fetch current documentation whenever the user asks about a l
 - Prefer editing the managed home/ tree over third_party/.
 - When working with this config repo, follow the rules in the root AGENTS.md.
 
+## Common MCP servers
+<!-- oooconf:mcp-servers:start -->
+- `context7`: documentation search and code examples for thousands of libraries
+- `github`: GitHub API access (repositories, issues, PRs)
+- `playwright`: headless browser automation and web testing
+- `ssh-mcp-openwrt`: No description
+- `ssh-mcp-orange`: No description
+<!-- oooconf:mcp-servers:end -->
 
+## Common Skills
+<!-- oooconf:skills:start -->
+- context7 (gemini)
+<!-- oooconf:skills:end -->
 <!-- oooconf:agents-common:end -->
