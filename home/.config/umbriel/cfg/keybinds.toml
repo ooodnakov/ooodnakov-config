@@ -151,3 +151,8 @@
 "Mod+Shift+P" = "dpms-off"
 "Mod+O" = { action = "overview-toggle", repeat = false }
 "Mod+M" = { action = "spawn:$HOME/.config/umbriel/scripts/mirror.sh", repeat = false }
+
+[hot_corners.top_right]
+enabled = true
+delay_ms = 500
+action = "overview-open"

@@ -38,7 +38,7 @@ show_cheatsheet = false
 # clicks keep working. Enable this again, or per app with a
 # `[[window_rule]] focus_on_activate = true` rule, to let activation move
 # focus.
-focus_on_activate = false
+focus_on_activate = true
 
 [environment]
 ELECTRON_OZONE_PLATFORM_HINT = "auto"
