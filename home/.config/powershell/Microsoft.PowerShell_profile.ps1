@@ -51,6 +51,15 @@ if ((Test-Path $WinGetLinks) -and (($env:PATH -split [IO.Path]::PathSeparator) -
     $env:PATH = "$WinGetLinks$([IO.Path]::PathSeparator)$env:PATH"
 }
 
+# Scoop keeps every app shim, scoop.cmd included, in ~/scoop/shims. The scoop
+# installer adds that directory to the user PATH, but anything that rewrites
+# the user PATH drops it again (this machine's lost it), so restore it for the
+# session whenever the install is present.
+$ScoopShims = Join-Path $HOME "scoop\shims"
+if ((Test-Path $ScoopShims) -and (($env:PATH -split [IO.Path]::PathSeparator) -notcontains $ScoopShims)) {
+    $env:PATH = "$ScoopShims$([IO.Path]::PathSeparator)$env:PATH"
+}
+
 # Git's POSIX tools (sh, gzip, ...) are used by Yazi previewers. Append them
 # so Windows binaries with the same name keep precedence.
 $gitUsrBin = Join-Path $env:ProgramFiles "Git\usr\bin"
