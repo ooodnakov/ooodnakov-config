@@ -11,7 +11,7 @@ This note captures how the main agent CLIs used by `oooconf` structure configura
 Top 3 config settings to care about first:
 
 1. `model` / provider defaults in `~/.codex/config.toml`.
-2. `mcp_servers.<name>` blocks (command, args, env).
+2. `mcp_servers.<name>` blocks (stdio `command`/`args`/`env`, or remote `type`/`url` with `http_headers`).
 3. Instruction file discovery via repo/global `AGENTS.md`.
 
 Why this matters for `oooconf`:
@@ -50,13 +50,14 @@ Why this matters for `oooconf`:
 Top 3 config settings to care about first:
 
 1. Global config file at `~/.config/opencode/opencode.json` (or project `opencode.json` override).
-2. Top-level `mcp` object keyed by server name (not `mcpServers`), each with `type`, `command`, and optional `environment`/`headers`.
+2. Top-level `mcp` object keyed by server name (not `mcpServers`), each with `type` (`local` or `remote`), plus `command`/`environment` for stdio or `url`/`headers` for remote HTTP.
 3. Tool gating via `tools` (global/per-agent enable/disable patterns).
 
 Why this matters for `oooconf`:
 
 - OpenCode MCP sync must write to `mcp.<server>` with OpenCode's schema shape.
 - For local MCP servers, generated entries should be `{\"type\":\"local\",\"command\":[...],\"environment\":{...}}`.
+- For remote HTTP servers, generated entries should be `{\"type\":\"remote\",\"url\":\"https://...\",\"headers\":{...},\"enabled\":true}`.
 
 ## Strengthening decisions applied in this repo
 
@@ -65,6 +66,7 @@ Why this matters for `oooconf`:
 3. Fixed OpenCode global sync to use `mcp` object format instead of generic `mcpServers`.
 4. Added MCP add workflow safeguards (`--multi`, `--preview`, validation, command normalization) before writing shared data.
 5. Extended generated completions/spec so new agent subcommands/options are discoverable in shell completion.
+6. Added remote MCP support (`type`/`url`/`headers`) to `common-data.json` entries and per-agent rendering: Codex `http_headers` tables, Gemini `httpUrl`, OpenCode `type: "remote"`, Pi `url` with `${VAR}` interpolation, Claude/Oh My Pi `type` + `url`.
 
 ## Reference docs (official)
 

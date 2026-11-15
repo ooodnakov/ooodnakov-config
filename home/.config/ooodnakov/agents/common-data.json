@@ -1,17 +1,17 @@
 {
   "mcp_servers": {
     "context7": {
-      "args": [
-        "dlx",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "{CONTEXT7_API_KEY}"
-      ],
-      "command": "pnpm",
       "description": "documentation search and code examples for thousands of libraries",
-      "env_vars": [
-        "CONTEXT7_API_KEY"
-      ]
+      "headers": {
+        "Authorization": "Bearer {CONTEXT7_API_KEY}"
+      },
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "dynadot": {
+      "description": "Dynadot domain management (availability, registration, DNS, transfers) via OAuth",
+      "type": "http",
+      "url": "https://mcp.dynadot.com/mcp"
     },
     "github": {
       "args": [

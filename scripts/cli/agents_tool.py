@@ -450,6 +450,14 @@ def normalize_mcp_command(config: dict[str, Any]) -> dict[str, Any]:
     return updated
 
 
+def is_remote_mcp(config: dict[str, Any]) -> bool:
+    return bool(str(config.get("url", "")).strip())
+
+
+def is_valid_mcp_definition(config: dict[str, Any]) -> bool:
+    return is_remote_mcp(config) or bool(str(config.get("command", "")).strip())
+
+
 def _strip_trailing_commas(text: str) -> str:
     return _JSON_TRAILING_COMMA_PATTERN.sub(r"\1", text).rstrip().removesuffix(",")
 
@@ -498,8 +506,8 @@ def parse_mcp_json_input(payload: str) -> tuple[str, dict[str, Any]]:
     name, cfg = next(iter(obj.items()))
     if not isinstance(cfg, dict):
         raise ValueError("MCP server config must be a JSON object.")
-    if "command" not in cfg:
-        raise ValueError("MCP server config must include 'command'.")
+    if not is_valid_mcp_definition(cfg):
+        raise ValueError("MCP server config must include 'command' (stdio) or 'url' (remote HTTP).")
     return str(name), cfg
 
 
@@ -512,15 +520,28 @@ def parse_mcp_json_inputs(payload: str, *, allow_multi: bool = False) -> dict[st
     for key, value in obj.items():
         if not isinstance(value, dict):
             raise ValueError(f"MCP entry '{key}' must be an object.")
-        if "command" not in value:
-            raise ValueError(f"MCP entry '{key}' must include 'command'.")
+        if not is_valid_mcp_definition(value):
+            raise ValueError(f"MCP entry '{key}' must include 'command' (stdio) or 'url' (remote HTTP).")
         normalized[str(key)] = value
     return normalized
 
 
 def validate_mcp_entry(name: str, entry: dict[str, Any]) -> None:
-    if not isinstance(entry.get("command"), str) or not entry["command"].strip():
-        raise ValueError(f"MCP entry '{name}' has invalid command.")
+    remote = is_remote_mcp(entry)
+    if remote:
+        url = str(entry["url"]).strip()
+        if not url.startswith(("http://", "https://")):
+            raise ValueError(f"MCP entry '{name}' url must be an http(s) URL.")
+        transport = entry.get("type", "http")
+        if not isinstance(transport, str) or transport not in {"http", "sse", "remote"}:
+            raise ValueError(f"MCP entry '{name}' type must be 'http' or 'sse'.")
+        headers = entry.get("headers", {})
+        if headers is not None and not isinstance(headers, dict):
+            raise ValueError(f"MCP entry '{name}' headers must be an object.")
+        if "command" in entry:
+            raise ValueError(f"MCP entry '{name}' cannot combine 'url' with 'command'.")
+    elif not isinstance(entry.get("command"), str) or not entry["command"].strip():
+        raise ValueError(f"MCP entry '{name}' must include 'command' (stdio) or 'url' (remote HTTP).")
     args = entry.get("args", [])
     if args is not None and not isinstance(args, list):
         raise ValueError(f"MCP entry '{name}' args must be a list.")
@@ -867,7 +888,7 @@ def sync_global_configs(
                     needs_update = False
                     for name, config in mcp_servers.items():
                         if name not in mcp_data[mcp_key]:
-                            if "command" not in config:
+                            if not is_valid_mcp_definition(config):
                                 continue
                             mcp_data[mcp_key][name] = render_mcp_server_entry(
                                 target, name, config, repo_root, materialize_secrets=materialize_secrets
@@ -916,7 +937,7 @@ def sync_global_configs(
                     table = f"mcp_servers.{toml_key(name)}"
                     if toml_table_exists(updated, table):
                         continue
-                    if "command" not in config:
+                    if not is_valid_mcp_definition(config):
                         continue
 
                     entry = render_mcp_server_entry(
@@ -924,13 +945,27 @@ def sync_global_configs(
                     )
 
                     # Basic TOML injection (appending to end of file)
-                    block = (
-                        f"\n[{table}]\ncommand = {json.dumps(entry['command'])}\nargs = {json.dumps(entry['args'])}\n"
-                    )
-                    if "env" in entry:
-                        block += f"[{table}.env]\n"
-                        for key, value in entry["env"].items():
-                            block += f"{toml_key(key)} = {json.dumps(value)}\n"
+                    if "url" in entry:
+                        block = (
+                            f"\n[{table}]\n"
+                            f"type = {json.dumps(entry.get('type', 'http'))}\n"
+                            f"url = {json.dumps(entry['url'])}\n"
+                        )
+                        headers = entry.get("headers")
+                        if isinstance(headers, dict) and headers:
+                            block += f"\n[{table}.http_headers]\n"
+                            for key, value in headers.items():
+                                block += f"{toml_key(key)} = {json.dumps(value)}\n"
+                    else:
+                        block = (
+                            f"\n[{table}]\n"
+                            f"command = {json.dumps(entry['command'])}\n"
+                            f"args = {json.dumps(entry['args'])}\n"
+                        )
+                        if "env" in entry:
+                            block += f"[{table}.env]\n"
+                            for key, value in entry["env"].items():
+                                block += f"{toml_key(key)} = {json.dumps(value)}\n"
 
                     updated += block
                     needs_update = True
@@ -958,7 +993,7 @@ def sync_global_configs(
 
                 for name, config in mcp_servers.items():
                     if name not in data["mcpServers"]:
-                        if "command" not in config:
+                        if not is_valid_mcp_definition(config):
                             continue
 
                         data["mcpServers"][name] = render_mcp_server_entry(
@@ -974,7 +1009,7 @@ def sync_global_configs(
 
                 for name, config in mcp_servers.items():
                     if name not in data["mcp"]:
-                        if "command" not in config:
+                        if not is_valid_mcp_definition(config):
                             continue
                         data["mcp"][name] = render_opencode_mcp_entry(
                             target, name, config, repo_root, materialize_secrets=materialize_secrets
@@ -1821,7 +1856,7 @@ def cmd_mcp_add(
     if not allow_multi and name:
         try:
             parsed_payload = json.loads(payload)
-            if isinstance(parsed_payload, dict) and "command" in parsed_payload:
+            if isinstance(parsed_payload, dict) and is_valid_mcp_definition(parsed_payload):
                 single_named_payload = json.dumps({name: parsed_payload})
         except json.JSONDecodeError:
             pass
@@ -1962,14 +1997,70 @@ def build_mcp_env(
     return env
 
 
-def render_mcp_server_entry(
-    _target: AgentConfigTarget,
+def render_mcp_headers(
+    config: dict[str, Any], *, mcp_dir: Path, repo_root: Path, materialize_secrets: bool = False
+) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+    for key, value in (config.get("headers") or {}).items():
+        headers[str(key)] = (
+            render_mcp_value(value, mcp_dir=mcp_dir, repo_root=repo_root, materialize_secrets=materialize_secrets)
+            if isinstance(value, str)
+            else value
+        )
+    return headers
+
+
+def render_remote_mcp_entry(
+    target: AgentConfigTarget,
     name: str,
     config: dict[str, Any],
     repo_root: Path,
     *,
     materialize_secrets: bool = False,
 ) -> dict[str, Any]:
+    mcp_dir = resolve_mcp_path(repo_root, name)
+    url = render_mcp_value(
+        str(config["url"]), mcp_dir=mcp_dir, repo_root=repo_root, materialize_secrets=materialize_secrets
+    )
+    transport = str(config.get("type") or "http").strip() or "http"
+    if transport == "remote":
+        transport = "http"
+    headers = render_mcp_headers(config, mcp_dir=mcp_dir, repo_root=repo_root, materialize_secrets=materialize_secrets)
+
+    if target.name == "Pi Agent":
+        # Pi expands ${VAR} at runtime; keep unresolved placeholders expandable there.
+        headers = {
+            key: ENV_PLACEHOLDER_PATTERN.sub(lambda m: "${" + m.group(1) + "}", value)
+            if isinstance(value, str)
+            else value
+            for key, value in headers.items()
+        }
+
+    if target.name == "Gemini CLI":
+        # Gemini distinguishes streamable HTTP (httpUrl) from legacy SSE (url).
+        entry: dict[str, Any] = {"httpUrl": url} if transport == "http" else {"url": url}
+    elif target.name == "Pi Agent":
+        # Pi infers the remote transport from url; it has no separate type field.
+        entry = {"url": url}
+    else:
+        entry = {"type": transport, "url": url}
+
+    if headers:
+        entry["headers"] = headers
+    return entry
+
+
+def render_mcp_server_entry(
+    target: AgentConfigTarget,
+    name: str,
+    config: dict[str, Any],
+    repo_root: Path,
+    *,
+    materialize_secrets: bool = False,
+) -> dict[str, Any]:
+    if is_remote_mcp(config):
+        return render_remote_mcp_entry(target, name, config, repo_root, materialize_secrets=materialize_secrets)
+
     mcp_dir = resolve_mcp_path(repo_root, name)
     entry = {
         "command": render_mcp_value(
@@ -2000,7 +2091,17 @@ def render_opencode_mcp_entry(
     materialize_secrets: bool = False,
 ) -> dict[str, Any]:
     entry = render_mcp_server_entry(target, name, config, repo_root, materialize_secrets=materialize_secrets)
-    mapped: dict[str, Any] = {
+    if is_remote_mcp(config):
+        mapped: dict[str, Any] = {
+            "type": "remote",
+            "url": entry["url"],
+            "enabled": True,
+        }
+        if "headers" in entry:
+            mapped["headers"] = entry["headers"]
+        return mapped
+
+    mapped = {
         "type": "local",
         "command": [entry["command"], *entry.get("args", [])],
         "enabled": True,
@@ -2406,7 +2507,10 @@ def cmd_mcp_status(repo_root: Path, config: dict[str, Any]) -> int:
             else:
                 print_status_line("missing", f"{name} (managed): {mcp_dir} NOT CLONED")
         else:
-            print_status_line("ok", f"{name} (static): {cfg.get('command')} {shlex.join(cfg.get('args') or [])}")
+            if is_remote_mcp(cfg):
+                print_status_line("ok", f"{name} (static): {cfg.get('type', 'http')} {cfg.get('url')}")
+            else:
+                print_status_line("ok", f"{name} (static): {cfg.get('command')} {shlex.join(cfg.get('args') or [])}")
 
     return 0
 

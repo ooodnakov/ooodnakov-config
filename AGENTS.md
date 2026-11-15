@@ -205,6 +205,7 @@ Follow this policy when finishing a requested task:
 ## Common MCP servers
 <!-- oooconf:mcp-servers:start -->
 - `context7`: documentation search and code examples for thousands of libraries
+- `dynadot`: Dynadot domain management (availability, registration, DNS, transfers) via OAuth
 - `filesystem`: local repository and home config trees
 - `git`: commit history, diff summaries, and branch status
 - `github`: GitHub API access (repositories, issues, PRs)

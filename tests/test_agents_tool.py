@@ -3,6 +3,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -111,6 +112,126 @@ def test_parse_mcp_json_inputs_multi():
     payload = '{"one":{"command":"pnpm","args":["dlx","a"]},"two":{"command":"pnpm","args":["dlx","b"]}}'
     result = agents_tool.parse_mcp_json_inputs(payload, allow_multi=True)
     assert set(result.keys()) == {"one", "two"}
+
+
+def test_parse_and_validate_url_mcp_entry():
+    name, cfg = agents_tool.parse_mcp_json_input('{"dynadot":{"type":"http","url":"https://mcp.dynadot.com/mcp"}}')
+    assert name == "dynadot"
+    agents_tool.validate_mcp_entry(name, cfg)
+
+    with pytest.raises(ValueError):
+        agents_tool.validate_mcp_entry("bad", {"url": "ftp://example.com"})
+    with pytest.raises(ValueError):
+        agents_tool.validate_mcp_entry("bad", {"url": "https://example.com", "command": "x"})
+
+
+def test_render_remote_mcp_entries_use_native_shapes(monkeypatch):
+    monkeypatch.setenv("CTX_KEY", "secret-123")
+    cfg = {
+        "type": "http",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {"Authorization": "Bearer {CTX_KEY}"},
+    }
+    repo = Path("/tmp/repo")
+
+    claude = agents_tool.render_mcp_server_entry(
+        agents_tool.AgentConfigTarget("Claude Code", "json", [], ""),
+        "context7",
+        cfg,
+        repo,
+        materialize_secrets=True,
+    )
+    assert claude == {
+        "type": "http",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {"Authorization": "Bearer secret-123"},
+    }
+
+    verbatim = agents_tool.render_mcp_server_entry(
+        agents_tool.AgentConfigTarget("Claude Code", "json", [], ""), "context7", cfg, repo
+    )
+    assert verbatim["headers"]["Authorization"] == "Bearer {CTX_KEY}"
+
+    gemini = agents_tool.render_mcp_server_entry(
+        agents_tool.AgentConfigTarget("Gemini CLI", "json", [], ""), "context7", cfg, repo
+    )
+    assert gemini["httpUrl"] == "https://mcp.context7.com/mcp"
+    assert "url" not in gemini
+
+    pi = agents_tool.render_mcp_server_entry(
+        agents_tool.AgentConfigTarget("Pi Agent", "json", [], ""), "context7", cfg, repo
+    )
+    assert pi == {"url": "https://mcp.context7.com/mcp", "headers": {"Authorization": "Bearer ${CTX_KEY}"}}
+
+    opencode = agents_tool.render_opencode_mcp_entry(
+        agents_tool.AgentConfigTarget("OpenCode", "json", [], ""),
+        "dynadot",
+        {"type": "http", "url": "https://mcp.dynadot.com/mcp"},
+        repo,
+    )
+    assert opencode == {"type": "remote", "url": "https://mcp.dynadot.com/mcp", "enabled": True}
+
+
+def test_render_remote_mcp_pi_keeps_runtime_interpolation(monkeypatch):
+    monkeypatch.delenv("CTX_KEY", raising=False)
+    pi = agents_tool.render_mcp_server_entry(
+        agents_tool.AgentConfigTarget("Pi Agent", "json", [], ""),
+        "context7",
+        {
+            "type": "http",
+            "url": "https://mcp.context7.com/mcp",
+            "headers": {"Authorization": "Bearer {CTX_KEY}"},
+        },
+        Path("/tmp/repo"),
+    )
+    assert pi["headers"]["Authorization"] == "Bearer ${CTX_KEY}"
+
+
+def test_sync_global_configs_writes_remote_mcp_entries(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    (home / ".codex").mkdir(parents=True)
+    codex_path = home / ".codex/config.toml"
+    codex_path.write_text('[projects."/x"]\ntrust_level = "trusted"\n', encoding="utf-8")
+    (home / ".gemini").mkdir()
+    gemini_path = home / ".gemini/settings.json"
+    gemini_path.write_text('{"mcpServers": {}}', encoding="utf-8")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
+    config = {
+        "agent_configs": [
+            {"name": "OpenAI Codex CLI", "format": "toml", "default_paths": ["~/.codex/config.toml"]},
+            {"name": "Gemini CLI", "format": "json", "default_paths": ["~/.gemini/settings.json"]},
+        ]
+    }
+    targets = agents_tool.parse_agent_targets(config["agent_configs"])
+    common_data = {
+        "mcp_servers": {
+            "context7": {
+                "type": "http",
+                "url": "https://mcp.context7.com/mcp",
+                "headers": {"Authorization": "Bearer {CTX_KEY}"},
+            },
+            "dynadot": {"type": "http", "url": "https://mcp.dynadot.com/mcp"},
+        },
+        "skills": [],
+    }
+
+    changed, _ = agents_tool.sync_global_configs(tmp_path, targets, common_data, "", check_only=False)
+    assert changed
+
+    codex = codex_path.read_text(encoding="utf-8")
+    parsed = tomllib.loads(codex)
+    context7 = parsed["mcp_servers"]["context7"]
+    assert context7["type"] == "http"
+    assert context7["url"] == "https://mcp.context7.com/mcp"
+    assert context7["http_headers"]["Authorization"] == "Bearer {CTX_KEY}"
+    assert parsed["mcp_servers"]["dynadot"]["url"] == "https://mcp.dynadot.com/mcp"
+    assert "command" not in context7
+
+    gemini = json.loads(gemini_path.read_text(encoding="utf-8"))
+    assert gemini["mcpServers"]["context7"]["httpUrl"] == "https://mcp.context7.com/mcp"
+    assert gemini["mcpServers"]["dynadot"]["httpUrl"] == "https://mcp.dynadot.com/mcp"
 
 
 def test_canonicalize_skill_source():
