@@ -1674,6 +1674,42 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
     return 1 if failed else 0
 
 
+def skills_cli_agent_targets(config: dict[str, Any]) -> list[str]:
+    mapping = {
+        "claude": "claude-code",
+        "codex": "codex",
+        "gemini": "gemini-cli",
+        "pi": "pi",
+        "opencode": "opencode",
+        "cursor-agent": "cursor",
+        "command-code": "command-code",
+        "qwen": "qwen-code",
+    }
+    targets: list[str] = []
+    for cli in parse_agent_clis(config["agent_clis"]):
+        mapped = mapping.get(cli.command)
+        if mapped and mapped not in targets and shutil.which(cli.command):
+            targets.append(mapped)
+    return targets
+
+
+def build_skills_cli_command(spec: dict[str, Any], config: dict[str, Any]) -> list[str]:
+    command = [
+        "pnpm",
+        "dlx",
+        "skills",
+        "add",
+        str(spec["source"]),
+        "--skill",
+        str(spec["name"]),
+        "-g",
+        "-y",
+    ]
+    for target in skills_cli_agent_targets(config):
+        command.extend(["-a", target])
+    return command
+
+
 def cmd_skills_sync(
     repo_root: Path,
     config: dict[str, Any],
@@ -1688,8 +1724,11 @@ def cmd_skills_sync(
         print_error_line("fail", "No skill_specs configured.")
         return 0
 
+    cli_specs = [s for s in skill_specs if str(s.get("installer", "")).lower() == "skills"]
+    agent_specs = [s for s in skill_specs if s not in cli_specs]
+
     # Get unique agent keys from skill specs
-    spec_agents = sorted(set(str(s.get("agent", "")).lower() for s in skill_specs if s.get("agent")))
+    spec_agents = sorted(set(str(s.get("agent", "")).lower() for s in agent_specs if s.get("agent")))
     if select and agents is not None:
         print_status_line("fail", "--select cannot be combined with --agents.")
         return 1
@@ -1710,8 +1749,8 @@ def cmd_skills_sync(
         unmatched = sorted(wanted - set(spec_agents))
         for agent in unmatched:
             print_status_line("warn", f"No skill specs configured for agent '{agent}'.")
-        skill_specs = [s for s in skill_specs if str(s.get("agent", "")).lower() in wanted]
-        if not skill_specs:
+        agent_specs = [s for s in agent_specs if str(s.get("agent", "")).lower() in wanted]
+        if not agent_specs and not cli_specs:
             print_status_line("warn", f"No skill specs match agents: {', '.join(agents)}")
             return 1
 
@@ -1725,7 +1764,7 @@ def cmd_skills_sync(
     skipped = 0
     synced = 0
 
-    for spec in skill_specs:
+    for spec in agent_specs:
         name = spec.get("name", "unknown")
         agent_key = spec.get("agent", "").lower()
         source = spec.get("source", "")
@@ -1774,6 +1813,37 @@ def cmd_skills_sync(
             continue
 
         print_status_line("ok", f"Syncing {name} for {agent_cli.name}...")
+        print_status_line("hint", f"  command: {command_display}")
+        try:
+            subprocess.run(command, check=True)
+            print_status_line("ok", f"Successfully synced {name}")
+            synced += 1
+        except subprocess.CalledProcessError as exc:
+            print_status_line("fail", f"Failed to sync {name}: {exc}")
+            failed += 1
+
+    for spec in cli_specs:
+        name = str(spec.get("name", "unknown"))
+        source = str(spec.get("source", "")).strip()
+        if not source:
+            print_status_line("fail", f"Invalid skill spec: {name} (missing source)")
+            failed += 1
+            continue
+
+        attempted += 1
+        if not shutil.which("pnpm"):
+            print_status_line("missing", f"pnpm not found; skipping skill {name}.")
+            skipped += 1
+            continue
+
+        command = build_skills_cli_command(spec, config)
+        command_display = shlex.join(command)
+        if check_only or dry_run:
+            print_status_line("ok", f"Plan: {name} via skills CLI")
+            print_status_line("hint", f"  command: {command_display}")
+            continue
+
+        print_status_line("ok", f"Syncing {name} via skills CLI...")
         print_status_line("hint", f"  command: {command_display}")
         try:
             subprocess.run(command, check=True)

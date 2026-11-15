@@ -62,9 +62,17 @@
       "description": "Added via oooconf agents skills add (context7)",
       "name": "context7",
       "source": "https://github.com/context7"
+    },
+    {
+      "description": "Worktrunk (wt) git worktree guidance",
+      "installer": "skills",
+      "name": "worktrunk",
+      "source": "https://github.com/max-sixty/worktrunk"
     }
   ],
   "skills": [
-    "context7 (gemini)"
+    "context7 (gemini)",
+    "graphify",
+    "worktrunk"
   ]
 }

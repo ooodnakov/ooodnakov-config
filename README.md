@@ -196,7 +196,7 @@ Primary commands:
 - `oooconf agents mcp add`: add one or many MCP JSON entries to shared common-data (`--multi`), with optional `--preview`, and normalize `npx -y` to `pnpm dlx`
 - `oooconf agents rtk init`: run RTK global init for detected agents
 - `oooconf agents provider sync minimax`: configure MiniMax-M2.7 provider backends for Claude Code, OpenCode, and Codex CLI (`--agents`/`--select` narrow the set)
-- `oooconf agents skills sync`: synchronize configured agent skill specs (`--agents`/`--select` narrow the set)
+- `oooconf agents skills sync`: synchronize configured agent skill specs (`--agents`/`--select` narrow the per-agent set; specs with `installer: "skills"` install through `pnpm dlx skills add -g` for every detected supported agent)
 - `oooconf agents skills view`: list the global shared skills catalog via `pnpm dlx skills ls -g` (add `--json` for machine output)
 - `oooconf agents skills add <source>`: add one shared skill source (e.g. `vercel-labs/agent-skills`) and optionally sync
 - `oooconf agents update`: update installed agent CLIs using their preferred package manager (pnpm-based tools are updated via `pnpm`)

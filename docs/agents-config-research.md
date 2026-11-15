@@ -67,6 +67,7 @@ Why this matters for `oooconf`:
 4. Added MCP add workflow safeguards (`--multi`, `--preview`, validation, command normalization) before writing shared data.
 5. Extended generated completions/spec so new agent subcommands/options are discoverable in shell completion.
 6. Added remote MCP support (`type`/`url`/`headers`) to `common-data.json` entries and per-agent rendering: Codex `http_headers` tables, Gemini `httpUrl`, OpenCode `type: "remote"`, Pi `url` with `${VAR}` interpolation, Claude/Oh My Pi `type` + `url`.
+7. Moved the graphify skill out of the OMP-only tree into the shared `~/.agents/skills` registry (the skills CLI / Agent Skills location read by OMP, Claude Code, Codex, Gemini, and Pi) and added Worktrunk as a managed skill installed via `pnpm dlx skills add -g` (`installer: "skills"` specs).
 
 ## Reference docs (official)
 

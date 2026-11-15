@@ -222,5 +222,7 @@ Follow this policy when finishing a requested task:
 - Manual approval flow orchestration (safety-first review policy)
 - Secrets hygiene review (template references vs local plaintext files)
 - Shell bootstrap audit (idempotency and dry-run behavior)
+- Graphify knowledge graphs from code, docs, and media (`/graphify`)
+- Worktrunk (`wt`) git worktree workflows and per-agent integrations
 <!-- oooconf:skills:end -->
 <!-- oooconf:agents-common:end -->

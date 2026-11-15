@@ -99,6 +99,67 @@ def test_skills_add_check_mode(tmp_path):
     assert "vercel-labs/agent-skills" not in data
 
 
+def test_skills_sync_installs_skills_cli_specs(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "common.json").write_text(
+        json.dumps(
+            {
+                "skills": [],
+                "skill_specs": [
+                    {
+                        "installer": "skills",
+                        "name": "worktrunk",
+                        "source": "https://github.com/max-sixty/worktrunk",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
+    config = {
+        "common_data_file": "common.json",
+        "agent_clis": [
+            {"name": "Claude Code", "command": "claude"},
+            {"name": "OpenAI Codex CLI", "command": "codex"},
+        ],
+    }
+    calls: list[list[str]] = []
+
+    def fake_which(command: str) -> str | None:
+        return f"/usr/bin/{command}" if command in {"claude", "codex", "pnpm"} else None
+
+    def fake_run(command: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(agents_tool.shutil, "which", fake_which)
+    monkeypatch.setattr(agents_tool.subprocess, "run", fake_run)
+
+    rc = agents_tool.cmd_skills_sync(repo, config, check_only=False)
+
+    assert rc == 0
+    assert calls == [
+        [
+            "pnpm",
+            "dlx",
+            "skills",
+            "add",
+            "https://github.com/max-sixty/worktrunk",
+            "--skill",
+            "worktrunk",
+            "-g",
+            "-y",
+            "-a",
+            "claude-code",
+            "-a",
+            "codex",
+        ]
+    ]
+
+
 def test_skills_view_check_mode_uses_global_ls(capsys):
     rc = agents_tool.cmd_skills_view(json_output=True, check_only=True)
 
