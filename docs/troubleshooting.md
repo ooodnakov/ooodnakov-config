@@ -244,6 +244,7 @@ Check the template entry at `home/.config/ooodnakov/secrets/env.template`. The `
 | `BW_SESSION is not set`                | Vault not unlocked in this shell | Run `oooconf secrets unlock` and eval/source the output |
 | `Bitwarden CLI (bw) is not installed`  | `bw` missing from PATH           | Run `oooconf deps bw` or install manually               |
 | `failed to resolve KEY from Bitwarden` | Item ID invalid or vault locked  | Verify the item ID in the template, then unlock         |
+| `mac failed.` printed per item         | `bw` CLI older than 2024 (key format mismatch); it cannot decrypt any item even with a correct master password | Run `oooconf deps bw` to install the pinned CLI (`bw --version`), then `oooconf secrets unlock` |
 | `Template not found`                   | Repo root resolved incorrectly   | Pass `--repo-root /path/to/repo` explicitly             |
 
 Run `oooconf secrets doctor` for a full prerequisite check.

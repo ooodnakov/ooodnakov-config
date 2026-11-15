@@ -2,7 +2,7 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-11-06T12:33:30+00:00`
+Generated at (UTC): `2026-11-15T12:11:23+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
@@ -49,8 +49,8 @@ Generated at (UTC): `2026-11-06T12:33:30+00:00`
 | `nvim` | `0.12.2` | `nvim-macos-x86_64.tar.gz` | `728321db960a9b6af6c03881892a6abfd743bf759bc62d233f52fa1be64ace3c` |
 | `nvim` | `0.12.2` | `nvim-win-arm64.zip` | `ed3e2844708878221325b6f0fd07bbca06c01700d4c4f72f4a100b026e84dfd2` |
 | `nvim` | `0.12.2` | `nvim-win64.zip` | `23fe150edbcc976eabe55092e1e9d2e5e237afde69553d170e936f776b405d53` |
-| `bw` | `1.22.1` | `bw-linux-1.22.1.zip` | `0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db911b2279dae5c674b116aa0e` |
-| `bw` | `1.22.1` | `bw-windows-1.22.1.zip` | `0902a867d82c96fb93d087eefaaa78867f6ecc48d2ce249f1de231f5f3efad1d` |
+| `bw` | `2026.10.1` | `bw-linux-2026.10.1.zip` | `eb09c3715291c21cf744819b873a255c1247b1b8b45bae138621a644ec7ad8f5` |
+| `bw` | `2026.10.1` | `bw-windows-2026.10.1.zip` | `5043129ffbad5fa494b387ccd5e14e19ec9411b3dfc7f75c276aadc9f070e7f1` |
 | `node` | `24.15.0` | `node-v24.15.0-darwin-arm64.tar.xz` | `af5cfaeafe603aaf7599f287fd9d100bb41f16794f49788fa59dd3f25546930f` |
 | `node` | `24.15.0` | `node-v24.15.0-darwin-x64.tar.xz` | `5d627245b9f53cb2512cc21b7aa6aad693106affadd91e0c8f42d600fb7ba444` |
 | `node` | `24.15.0` | `node-v24.15.0-linux-arm64.tar.xz` | `f3d5a797b5d210ce8e2cb265544c8e482eaedcb8aa409a8b46da7e8595d0dda0` |

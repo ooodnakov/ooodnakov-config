@@ -1543,7 +1543,7 @@ maybe_install_bw() {
   local archive_path release_url install_root bin_dir extracted_binary target_binary bw_ver
 
   bw_ver="$(get_dep_field bw ver 2>/dev/null || true)"
-  [ -z "$bw_ver" ] && bw_ver="1.22.1"
+  [ -z "$bw_ver" ] && bw_ver="2026.10.1"
 
   if command -v bw >/dev/null 2>&1 || [ -x "$STATE_HOME/bin/bw" ]; then
     DEPENDENCY_SUMMARY+=("bw: present")
@@ -1574,7 +1574,7 @@ maybe_install_bw() {
     fi
   fi
 
-  release_url="https://github.com/bitwarden/cli/releases/download/v${bw_ver}/bw-linux-${bw_ver}.zip"
+  release_url="https://github.com/bitwarden/clients/releases/download/cli-v${bw_ver}/bw-linux-${bw_ver}.zip"
   archive_path="${TMPDIR:-/tmp}/bw-linux-${bw_ver}.zip"
   install_root="$STATE_HOME/tools/bitwarden-cli/v${bw_ver}"
   bin_dir="$STATE_HOME/bin"
@@ -1613,7 +1613,7 @@ maybe_install_bw() {
     return 1
   }
 
-  track_bin_managed "bw" "bitwarden/cli" "$bw_ver" "bw-linux-${bw_ver}.zip" "bw" "$extracted_binary"
+  track_bin_managed "bw" "bitwarden/clients" "$bw_ver" "bw-linux-${bw_ver}.zip" "bw" "$extracted_binary"
 
   if command -v bw >/dev/null 2>&1 || [ -x "$target_binary" ]; then
     DEPENDENCY_SUMMARY+=("bw: installed official v${bw_ver}")

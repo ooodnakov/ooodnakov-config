@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-11-06T12:33:30+00:00",
+  "generated_at_utc": "2026-11-15T12:11:23+00:00",
   "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
@@ -219,15 +219,15 @@
     },
     {
       "dependency": "bw",
-      "version": "1.22.1",
-      "asset": "bw-linux-1.22.1.zip",
-      "sha256": "0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db911b2279dae5c674b116aa0e"
+      "version": "2026.10.1",
+      "asset": "bw-linux-2026.10.1.zip",
+      "sha256": "eb09c3715291c21cf744819b873a255c1247b1b8b45bae138621a644ec7ad8f5"
     },
     {
       "dependency": "bw",
-      "version": "1.22.1",
-      "asset": "bw-windows-1.22.1.zip",
-      "sha256": "0902a867d82c96fb93d087eefaaa78867f6ecc48d2ce249f1de231f5f3efad1d"
+      "version": "2026.10.1",
+      "asset": "bw-windows-2026.10.1.zip",
+      "sha256": "5043129ffbad5fa494b387ccd5e14e19ec9411b3dfc7f75c276aadc9f070e7f1"
     },
     {
       "dependency": "node",

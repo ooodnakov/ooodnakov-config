@@ -1192,11 +1192,11 @@ function Install-BitwardenCliIfMissing {
     }
 
     $bwInfo = Get-DepInfo "bw"
-    $bwVer = if ($bwInfo.ver) { $bwInfo.ver } else { "1.22.1" }
+    $bwVer = if ($bwInfo.ver) { $bwInfo.ver } else { "2026.10.1" }
     $installRoot = Join-Path $ShareHome "tools/bitwarden-cli/v$bwVer"
     $assetName = "bw-windows-$bwVer.zip"
     $archivePath = Join-Path ([System.IO.Path]::GetTempPath()) $assetName
-    $releaseUrl = "https://github.com/bitwarden/cli/releases/download/v$bwVer/$assetName"
+    $releaseUrl = "https://github.com/bitwarden/clients/releases/download/cli-v$bwVer/$assetName"
     $sourceBinary = Join-Path $installRoot "bw.exe"
     $targetBinary = Join-Path $LocalBinDir "bw.exe"
 

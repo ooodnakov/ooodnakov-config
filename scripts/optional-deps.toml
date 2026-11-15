@@ -609,17 +609,17 @@ key = "bw"
 display = "bw"
 description = "Bitwarden CLI via official native archive"
 handler = "bw"
-ver = "1.22.1"
-url = "https://github.com/bitwarden/cli/releases/download/v${ver}/bw-"
+ver = "2026.10.1"
+url = "https://github.com/bitwarden/clients/releases/download/cli-v${ver}/bw-"
 bin = "bw"
 check = "bw --version"
 linux.manager = "download"
-linux.url = "https://github.com/bitwarden/cli/releases/download/v${ver}/bw-linux-${ver}.zip"
+linux.url = "https://github.com/bitwarden/clients/releases/download/cli-v${ver}/bw-linux-${ver}.zip"
 macos.manager = "brew"
 macos.package = "bitwarden-cli"
 windows.manager = "download"
-windows.url = "https://github.com/bitwarden/cli/releases/download/v${ver}/bw-windows-${ver}.zip"
-integrity = { "bw-linux-${ver}.zip" = "0a6cc87a163463c25eed5d5bdf1ef6b77d2a67db911b2279dae5c674b116aa0e", "bw-windows-${ver}.zip" = "0902a867d82c96fb93d087eefaaa78867f6ecc48d2ce249f1de231f5f3efad1d" }
+windows.url = "https://github.com/bitwarden/clients/releases/download/cli-v${ver}/bw-windows-${ver}.zip"
+integrity = { "bw-linux-${ver}.zip" = "eb09c3715291c21cf744819b873a255c1247b1b8b45bae138621a644ec7ad8f5", "bw-windows-${ver}.zip" = "5043129ffbad5fa494b387ccd5e14e19ec9411b3dfc7f75c276aadc9f070e7f1" }
 
 [[deps]]
 key = "node"
