@@ -11,6 +11,7 @@ import { randomBytes } from "crypto";
 const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
 const DEFAULT_ROOT = `${home()}/.local/share/ooodnakov/herdr`;
 const REMOTE_ROOT = 'if [ -r "$HOME/.config/ooodnakov/herdr-data" ]; then cat "$HOME/.config/ooodnakov/herdr-data"; else printf "%s" "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov/herdr"; fi';
+const CLI = `${home()}/.local/bin/herdr-task`;
 const ROOTS = new Map();
 const PROBES = new Map();
 const ORDER = ["blocked", "doing", "todo", "done"];
@@ -137,6 +138,8 @@ export default class Tasks extends View {
     this.outputFor = null;
     this.outputError = null;
     this.error = null;
+    this.warning = null;
+    this.warningFor = null;
     this.loading = false;
     this.token = null;
     this.watch = null;
@@ -211,6 +214,11 @@ export default class Tasks extends View {
     this.error = null;
     select(null);
     this.missing = null;
+    // A delete fallback reports from the folder it happened in, not the next one.
+    if (this.warningFor !== key) {
+      this.warning = null;
+      this.warningFor = null;
+    }
     if (!at.folder) {
       this.error = "No folder";
       return;
@@ -272,19 +280,19 @@ export default class Tasks extends View {
     }
   }
 
-  // Delete from the panel: the same file the CLI writes, replaced only if nothing
-  // else touched it first. On a remote machine the command does it under its own lock.
+  // Delete from the panel through the command, which takes the list's lock, so a
+  // click and an agent's edit cannot race. The CAS rewrite below only runs where
+  // the command cannot start, and then says why.
   async remove(task, cx) {
     const path = `${this.root}/tasks/${this.slug}.json`;
     try {
       if (this.on) {
         const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-task", "rm", task.id, "--folder", this.folder]);
         if (result.code !== 0) throw new Error(result.stderr || `herdr-task rm failed (${result.code})`);
+        this.warning = null;
+        this.warningFor = null;
       } else {
-        const text = await readTextFile(path);
-        const data = text ? JSON.parse(text) : { tasks: [] };
-        data.tasks = (data.tasks ?? []).filter((item) => item.id !== task.id);
-        await writeTextFile(path, textOf(data), text);
+        await this.removeLocal(task, path);
       }
       this.selected = null;
       this.confirm = null;
@@ -452,6 +460,35 @@ export default class Tasks extends View {
     cx.notify();
   }
 
+  async removeLocal(task, path) {
+    const argv = ["rm", task.id, "--folder", this.folder];
+    const failures = [];
+    let result = null;
+    try {
+      result = await exec(CLI, argv);
+    } catch (error) {
+      failures.push(String(error));
+      // An extensionless script cannot start directly on Windows: hand it to python.
+      try {
+        result = await exec("python3", [CLI, ...argv]);
+      } catch (error) {
+        failures.push(String(error));
+      }
+    }
+    if (result) {
+      if (result.code !== 0) throw new Error(result.stderr.trim() || `herdr-task rm failed (${result.code})`);
+      this.warning = null;
+      this.warningFor = null;
+      return;
+    }
+    const text = await readTextFile(path);
+    const data = text ? JSON.parse(text) : { tasks: [] };
+    data.tasks = (data.tasks ?? []).filter((item) => item.id !== task.id);
+    await writeTextFile(path, `${JSON.stringify(data, null, 2)}\n`, text);
+    this.warningFor = this.focus;
+    this.warning = `herdr-task could not run (${failures.join("; ")}); removed the file directly`;
+  }
+
   rows(tasks, t, all) {
     const out = [];
     for (const status of ORDER) {
@@ -580,7 +617,8 @@ export default class Tasks extends View {
             .child(this.loading ? "Loading…" : "No tasks")
             .child(div().text_size(11).child('Agents add them with herdr-task add "…"'))))
           .when(Boolean(this.missing), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.missing)))
-          .when(Boolean(this.error), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.error))))
+          .when(Boolean(this.error), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.error)))
+          .when(Boolean(this.warning), (el) => el.child(div().px(12).py(6).text_size(11).text_color(t.dim).child(this.warning))))
         .child(h_flex().h(26).flex_none().px(14).gap(10).items_center().border_t(1).border_color(t.border)
           .children(counts.map((count) => div().text_size(11).text_color(t.dim).child(count)))))
       .when(Boolean(selected), (el) => el.child(this.detail(selected, t, agentFor(selected, this.slug, all), cx)));
