@@ -145,6 +145,7 @@ are linked:
 | Key | Managed source | Target |
 |-----|----------------|--------|
 | `herdr-settings` | `home/.config/herdr-app/settings.json` | `~/.config/herdr-app/settings.json` |
+| `herdr-keys` | `home/.config/herdr-app/keys.json` | `~/.config/herdr-app/keys.json` |
 | `herdr-theme-gruvbox-dark` | `home/.config/herdr-app/themes/gruvbox-dark.json` | `~/.config/herdr-app/themes/gruvbox-dark.json` |
 | `herdr-theme-gruvbox-light` | `home/.config/herdr-app/themes/gruvbox-light.json` | `~/.config/herdr-app/themes/gruvbox-light.json` |
 | `herdr-mod-oo-tasks` | `home/.config/herdr-app/mods/oo-tasks/` | `~/.config/herdr-app/mods/oo-tasks` |
@@ -162,6 +163,18 @@ Any `themes/<name>.json` Herdr finds becomes selectable in Settings → Look;
 for layouts that set none (Herdr's `main` layout does), and the theme picker
 stores a per-layout choice in `layouts/.state/`, which is app-written and never
 tracked. Add another managed theme as a new file plus a `[[links]]` entry.
+
+`keys.json` is the live key map copied into the repo, plus two global bindings:
+`alt-shift-t` sends `tabs-panels.tasks` and `alt-shift-a` sends
+`tabs-panels.artifacts`. One key runs one command and opening a panel takes two
+(`layout.select {stack: "panel-body", child}` then `layout.show {id: "panel"}`),
+so the tab-bar mod's `nextCommand()` loop does both, exactly like its Tasks and
+Artifacts buttons. The keys work in a layout that shows that bar
+(`main-panels`); Herdr's own `main` has no `panel-body`, so they do nothing
+there. Herdr keeps any edited keys file as yours and never merges later shipped
+defaults, so add new defaults by hand. On macOS these two chords are
+Option+Shift+T/A, which type a character in apps that do not take them; rebind
+them in `keys.json` if that matters.
 
 The `tasks` layout places the two repo-owned mods side by side; `main-panels` is a
 clone of Herdr's `main` whose panel stack (`panel-body`) adds them after Files and
