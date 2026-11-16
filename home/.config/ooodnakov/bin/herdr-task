@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -95,6 +96,16 @@ def task_set(args: argparse.Namespace) -> None:
         task["status"] = args.status
         task["updated"] = now()
     emit(args, task, f"{task['id']}  {previous} -> {task['status']}")
+
+
+def terminal_name(text: str, fallback: str) -> str:
+    """hc's names: 1-32 of a-z 0-9 - _ . starting with a letter or digit."""
+    def shaped(value: str) -> str:
+        name = re.sub(r"[^a-z0-9._-]+", "-", str(value).lower())
+        name = re.sub(r"^[^a-z0-9]+", "", name)
+        return name.rstrip("-._")[:32].rstrip("-._")
+
+    return shaped(text) or shaped(fallback) or "task"
 
 
 def waiting_on(task: dict, tasks: list[dict]) -> list[str]:
@@ -321,7 +332,7 @@ def task_spawn(args: argparse.Namespace) -> None:
         "--cwd", args.cwd or worktree or folder,
     ]
     if args.name:
-        command += ["--name", args.name]
+        command += ["--name", terminal_name(args.name, task["id"])]
     command += ["--", *argv]
     if args.dry_run:
         for git_command in git_commands:

@@ -379,3 +379,19 @@ def test_task_dependencies_gate_ready_and_spawn(tmp_path: Path, tools, capsys: p
     capsys.readouterr()
     assert task.main(["show", "--json", second, "--folder", folder]) == 0
     assert json.loads(capsys.readouterr().out)["deps"] == []
+
+
+def test_spawn_sanitises_the_terminal_name(tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]) -> None:
+    task, _ = tools
+    folder = str(tmp_path / "repo")
+    assert task.main(["add", "Reply hi", "--folder", folder]) == 0
+    task_id = capsys.readouterr().out.split()[0]
+
+    argv = ["spawn", task_id, "--folder", folder, "--name", "Reply hi!", "--dry-run", "--", "omp", "go"]
+    assert task.main(argv) == 0
+    assert "--name reply-hi" in capsys.readouterr().out
+
+    # hc rejects names that start with punctuation; fall back to the id, also shaped.
+    argv = ["spawn", task_id, "--folder", folder, "--name", "!!!", "--dry-run", "--", "omp", "go"]
+    assert task.main(argv) == 0
+    assert f"--name {task_id}" in capsys.readouterr().out
