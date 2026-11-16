@@ -257,8 +257,11 @@ def make_repo(path: Path) -> Path:
     return path
 
 
-def test_spawn_worktree_dry_run_prints_git_then_hc(tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]) -> None:
+def test_spawn_worktree_dry_run_prints_git_then_hc(
+    tmp_path: Path, tools, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     task, _ = tools
+    monkeypatch.setattr(task, "worktrunk", lambda: None)
     repo = make_repo(tmp_path / "repo")
     assert task.main(["add", "Worktree work", "--folder", str(repo)]) == 0
     task_id = capsys.readouterr().out.split()[0]
@@ -276,6 +279,27 @@ def test_spawn_worktree_dry_run_prints_git_then_hc(tmp_path: Path, tools, capsys
     assert task.main(["show", "--json", task_id, "--folder", str(repo)]) == 0
     shown = json.loads(capsys.readouterr().out)
     assert shown.get("worktree") is None and shown.get("branch") is None
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is needed to resolve the repo")
+def test_spawn_worktree_prefers_worktrunk(
+    tmp_path: Path, tools, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    task, _ = tools
+    repo = make_repo(tmp_path / "repo")
+    assert task.main(["add", "Worktrunk work", "--folder", str(repo)]) == 0
+    task_id = capsys.readouterr().out.split()[0]
+
+    # git-wt is worktrunk's Windows name; it wins over the raw git fallback.
+    monkeypatch.setattr(task, "worktrunk", lambda: "/fake/git-wt")
+    argv = ["spawn", task_id, "--folder", str(repo), "--worktree", "--dry-run", "--", "claude"]
+    assert task.main(argv) == 0
+    worktree = task.normalize(str(repo.parent / "repo-wt" / task_id))
+    wt_line, hc_line = capsys.readouterr().out.splitlines()
+    assert wt_line == f"/fake/git-wt -C {repo.as_posix()} switch --no-cd --path {worktree} --create herdr/{task_id}"
+    assert "worktree add" not in wt_line
+    assert hc_line.startswith("hc run --keep --bg --json")
+    assert f"--cwd {worktree}" in hc_line
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git is needed to create a worktree")
@@ -297,7 +321,9 @@ def test_spawn_worktree_creates_it_and_records_branch(
         return real_run(command, **kwargs)
 
     monkeypatch.setattr(task.subprocess, "run", fake_run)
-    monkeypatch.setattr(task.shutil, "which", lambda name: f"/fake/{name}")
+    monkeypatch.setattr(task, "worktrunk", lambda: None)
+    real_which = shutil.which
+    monkeypatch.setattr(task.shutil, "which", lambda name: "/fake/hc" if name == "hc" else real_which(name))
 
     assert task.main(["spawn", task_id, "--folder", str(repo), "--worktree", "--", "claude"]) == 0
     capsys.readouterr()

@@ -190,10 +190,12 @@ herdr-core for remote spaces), falling back to `~/.local/share/ooodnakov/herdr`.
 A task may carry an agent: `herdr-task spawn` starts it with
 `hc run --label herdr.task=<slug>#<id>` and stores `terminal` on the task.
 `--keep-open` runs the program through `sh -c '<command>; exec "${SHELL:-sh}"'`
-so the terminal survives the program exiting, and `--worktree [PATH]` first runs
-`git worktree add -b herdr/<id> [PATH]` (default `<repo>-wt/<id>` beside the
-repo), spawns there and records `branch` and `worktree` on the task; `--dry-run`
-prints those git and hc commands without running them. The
+so the terminal survives the program exiting, and `--worktree [PATH]` first makes
+`herdr/<id>` in its own worktree (default `<repo>-wt/<id>` beside the repo) —
+through worktrunk (`git-wt` on Windows, `wt` elsewhere) when installed, else
+`git worktree add -b` — spawns there and records `branch`, `worktree` and
+`worktree_tool` on the task; `--dry-run` prints those commands without running
+them. The
 mod matches that label (or the stored address) in `terminals()`, counts the
 sub-agents whose `parent` is that terminal, and its detail shows the terminal in
 the panel (`agent.focus`), keeps it as a pane (`terminal.keep`), peeks when it

@@ -98,7 +98,8 @@ def task_show(args: argparse.Namespace) -> None:
     if task.get("terminal"):
         lines.append(f"agent {task['terminal']}")
     if task.get("worktree"):
-        lines.append(f"worktree {task['worktree']} ({task.get('branch', '')})")
+        tool = f", {task['worktree_tool']}" if task.get("worktree_tool") else ""
+        lines.append(f"worktree {task['worktree']} ({task.get('branch', '')}{tool})")
     if task.get("note"):
         lines += ["", task["note"]]
     lines += ["", f"updated {task.get('updated', '')}"]
@@ -171,8 +172,28 @@ def registered_worktrees(repo: str) -> dict[str, str | None]:
     return found
 
 
-def worktree_plan(folder: str, task_id: str, path_arg: str | None) -> tuple[str, str, list[list[str]]]:
-    """The worktree's path, its branch, and the git commands still needed."""
+def worktrunk() -> str | None:
+    """Worktrunk's executable, when installed. On Windows it is `git-wt` (`wt` is Windows Terminal)."""
+    for name in ("git-wt", "worktrunk"):
+        found = shutil.which(name)
+        if found:
+            return found
+    if os.name == "nt":
+        return None
+    found = shutil.which("wt")
+    if not found:
+        return None
+    try:
+        result = subprocess.run([found, "--version"], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return found if "worktrunk" in f"{result.stdout}{result.stderr}".lower() else None
+
+
+def worktree_plan(
+    folder: str, task_id: str, path_arg: str | None
+) -> tuple[str, str, list[list[str]], str]:
+    """The worktree's path, its branch, the commands still needed, and the tool that makes it."""
     repo = repo_root(folder)
     branch = f"herdr/{task_id}"
     path = normalize(path_arg) if path_arg else normalize(
@@ -180,10 +201,16 @@ def worktree_plan(folder: str, task_id: str, path_arg: str | None) -> tuple[str,
     )
     existing = registered_worktrees(repo)
     if path in existing:
-        return path, existing[path] or branch, []
-    if git(repo, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}").returncode == 0:
-        return path, branch, [["git", "-C", repo, "worktree", "add", path, branch]]
-    return path, branch, [["git", "-C", repo, "worktree", "add", "-b", branch, path]]
+        return path, existing[path] or branch, [], "existing"
+    exists = git(repo, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}").returncode == 0
+    wt = worktrunk()
+    if wt:
+        command = [wt, "-C", repo, "switch", "--no-cd", "--path", path]
+        command += [branch] if exists else ["--create", branch]
+        return path, branch, [command], "worktrunk"
+    if exists:
+        return path, branch, [["git", "-C", repo, "worktree", "add", path, branch]], "git"
+    return path, branch, [["git", "-C", repo, "worktree", "add", "-b", branch, path]], "git"
 
 
 def spawn_argv(args: argparse.Namespace, argv: list[str]) -> list[str]:
@@ -204,10 +231,10 @@ def task_spawn(args: argparse.Namespace) -> None:
         raise Fail("spawn needs a program: herdr-task spawn <id> -- <program> [args…]")
     argv = spawn_argv(args, argv)
 
-    worktree = branch = None
+    worktree = branch = tool = None
     git_commands: list[list[str]] = []
     if args.worktree is not None:
-        worktree, branch, git_commands = worktree_plan(folder, task["id"], args.worktree or None)
+        worktree, branch, git_commands, tool = worktree_plan(folder, task["id"], args.worktree or None)
 
     command = [
         "hc", "run", "--keep", "--bg", "--json",
@@ -225,7 +252,7 @@ def task_spawn(args: argparse.Namespace) -> None:
     for git_command in git_commands:
         result = subprocess.run(git_command, capture_output=True, text=True)
         if result.returncode != 0:
-            raise Fail(result.stderr.strip() or f"git worktree add failed ({result.returncode})")
+            raise Fail(result.stderr.strip() or f"{git_command[0]} failed ({result.returncode})")
     if not shutil.which("hc"):
         raise Fail("hc (herdr-core) is not on PATH")
     if args.keep_open and not shutil.which("sh"):
@@ -246,6 +273,8 @@ def task_spawn(args: argparse.Namespace) -> None:
         if worktree:
             task["worktree"] = worktree
             task["branch"] = branch
+            if tool and tool != "existing":
+                task["worktree_tool"] = tool
         if task.get("status", "todo") == "todo":
             task["status"] = "doing"
         task["updated"] = now()
@@ -329,7 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="?",
         const="",
         metavar="PATH",
-        help="git worktree add -b herdr/<id> PATH and spawn there (default: <repo>-wt/<id> beside the repo)",
+        help="make a worktree for the task and spawn there: worktrunk (`git-wt` on Windows, `wt` elsewhere) when installed, else git worktree add -b herdr/<id> (default path: <repo>-wt/<id> beside the repo)",
     )
     spawn.add_argument("--dry-run", action="store_true", help="print the git and hc commands instead of running them")
     spawn.add_argument("argv", nargs="*", help="-- <program> [args…]")
