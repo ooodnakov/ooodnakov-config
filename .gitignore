@@ -109,6 +109,8 @@ home/.pi/agent/run-history.jsonl
 # Herdr rewrites these into every mod folder on start
 home/.config/herdr-app/mods/*/gpui-kit.d.ts
 home/.config/herdr-app/mods/*/jsconfig.json
+# Machine-local: herdr-task records its data root here
+home/.config/ooodnakov/herdr-data
 
 # Python coverage artifacts
 .coverage
