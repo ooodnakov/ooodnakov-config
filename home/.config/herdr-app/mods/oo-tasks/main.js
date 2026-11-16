@@ -4,7 +4,7 @@
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, settings, home, checking } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, home, checking } from "herdr";
 
 const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
 const ROOTS = new Map();
@@ -254,6 +254,17 @@ export default class Tasks extends View {
   detail(task, t, agent, cx) {
     const note = (task.note || "").trim();
     const address = agent?.root.address ?? task.terminal ?? null;
+    const outputBlock = address
+      ? v_flex().gap(4)
+        .child(h_flex().gap(8).items_center()
+          .child(div().text_size(11).font_semibold().text_color(t.dim).child("OUTPUT"))
+          .when(Boolean(this.outputError), (row) => row.child(div().text_size(11).text_color(t.blocked).child(this.outputError)))
+          .child(div().flex_1())
+          .child(chip("Read", () => { this.outputFor = null; this.output = null; cx.notify(); }, t)))
+        .child(div().rounded(8).bg(t.surface).p(8).text_size(12).text_color(t.muted)
+          .when(Boolean(this.output), (el) => el.child(TextView.markdown("oo-task-output", this.output).selectable(true)))
+          .when(!this.output, (el) => el.child(div().text_size(11).child(this.outputError ? "" : "Reading…"))))
+      : null;
     if (address) this.loadOutput(address, cx);
     return v_flex().size_full().min_h(0)
       .child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
@@ -289,14 +300,7 @@ export default class Tasks extends View {
               }, t))
               .child(chip("Pane", () => run("terminal.keep", { terminal: agent.root.address }), t))
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
-        .when(Boolean(address), (el) => el.child(v_flex().gap(4)
-          .child(h_flex().gap(8).items_center()
-            .child(div().text_size(11).font_semibold().text_color(t.dim).child("OUTPUT"))
-            .when(Boolean(this.outputError), (row) => row.child(div().text_size(11).text_color(t.blocked).child(this.outputError)))
-            .child(div().flex_1())
-            .child(chip("Read", () => { this.outputFor = null; this.output = null; cx.notify(); }, t)))
-          .child(div().rounded(8).bg(t.surface).p(8).text_size(11).font_family(settings().font ?? "monospace")
-            .text_color(t.muted).child(this.output ?? (this.outputError ? "" : "Reading…")))))
+        .when(Boolean(outputBlock), (el) => el.child(outputBlock))
         .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`))
         .child(h_flex().gap(6).items_center()
           .when(this.confirm !== task.id, (row) => row

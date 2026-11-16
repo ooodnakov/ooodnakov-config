@@ -636,7 +636,7 @@ A task can carry an agent: the Tasks panel finds it by its `herdr.task` label (o
 - **Stop** — `terminal.kill`.
 - **Delete** — asks first, then removes the task; a running agent is left alone (Stop it separately).
 
-Below the agent block, **OUTPUT** shows the tail of that terminal's screen — `hc read <terminal>`, last 120 lines — read once when you open the task and again with the **Read** chip. It works after the agent exits too: a finished terminal stays readable until the core drops it, which is how a finished task shows what its agent ended with. Text is read-only and never written to the task file.
+Below the agent block, **OUTPUT** shows the tail of that terminal's screen — `hc read <terminal>`, last 120 lines, rendered as Markdown — read once when you open the task and again with the **Read** chip. It works after the agent exits too: a finished terminal stays readable until the core drops it, which is how a finished task shows what its agent ended with. Text is read-only and never written to the task file.
 
 The spawned terminal is an ordinary herdr-core terminal, so `hc read/send/keys/wait <terminal>` work on it too. [`home/.omp/agent/skills/herdr-tasks/SKILL.md`](home/.omp/agent/skills/herdr-tasks/SKILL.md) teaches agents to delegate this way.
 
