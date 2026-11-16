@@ -449,6 +449,20 @@ export default class Tasks extends View {
       try {
         const result = await exec(this.on ? "herdr-task" : CLI, args, { on: this.on });
         if (result.code !== 0) throw new Error(result.stderr.trim() || `herdr-task spawn failed (${result.code})`);
+        // The agent runs as a sub-agent; give it a real pane so you type in its own TUI.
+        const address = result.stdout.trim().split(/\s+/)[1];
+        // The terminal reaches the window a beat after hc starts it; keep until it exists.
+        if (address) {
+          let tries = 0;
+          const attach = () => {
+            if (tries++ > 12 || terminals().some((terminal) => terminal.address === address)) {
+              run("terminal.keep", { terminal: address, place: "tab" });
+              return;
+            }
+            cx.timer.after(250, (cx) => { attach(); cx.notify(); });
+          };
+          attach();
+        }
         this.error = null;
         this.focus = null;
         this.data = null;
