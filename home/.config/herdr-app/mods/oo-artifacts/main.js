@@ -10,6 +10,7 @@ const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
 const DEFAULT_ROOT = `${home()}/.local/share/ooodnakov/herdr`;
 const REMOTE_ROOT = 'if [ -r "$HOME/.config/ooodnakov/herdr-data" ]; then cat "$HOME/.config/ooodnakov/herdr-data"; else printf "%s" "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov/herdr"; fi';
 const ROOTS = new Map();
+const PROBES = new Map();
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
 const pointed = (text) => norm(String(text ?? "").trim());
 
@@ -32,6 +33,19 @@ function here() {
   const f = focused();
   const pane = f?.pane ? panes().find((p) => p.pane === f.pane) : null;
   return { folder: pane?.cwd || f?.cwd || space?.folder, on: space?.machine ?? null };
+}
+
+// A remote machine needs the command and its store before the list means anything;
+// one shell per machine answers both, and the local path never probes.
+async function probeFor(on) {
+  if (!on) return "ok";
+  if (!PROBES.has(on)) {
+    const result = await exec("sh", ["-c", "command -v herdr-task >/dev/null && ls -d ~/.local/share/ooodnakov/herdr"], { on }).catch(() => null);
+    if (!result) return "unknown";
+    // `command -v` fails silently; a missing store fails in `ls`, which writes to stderr.
+    PROBES.set(on, result.code === 0 ? "ok" : String(result.stderr ?? "").trim() ? "store" : "task");
+  }
+  return PROBES.get(on);
 }
 
 function age(iso) {
@@ -68,6 +82,7 @@ export default class Artifacts extends View {
     this.selected = null;
     this.content = null;
     this.error = null;
+    this.missing = null;
     if (!at.folder) {
       this.error = "No folder";
       return;
@@ -80,11 +95,15 @@ export default class Artifacts extends View {
         cx.notify();
         return;
       }
-      const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd: at.folder, on: at.on }).catch(() => null);
+      const [probe, top] = await Promise.all([
+        probeFor(at.on),
+        exec("git", ["rev-parse", "--show-toplevel"], { cwd: at.folder, on: at.on }).catch(() => null),
+      ]);
       const folder = norm(top?.code === 0 && top.stdout.trim() ? top.stdout.trim() : at.folder);
       if (this.focus !== key) return;
       this.root = root;
       this.folder = folder;
+      this.missing = probe === "task" ? `herdr-task missing on ${at.on}` : probe === "store" ? "no store yet" : null;
       await this.read(key, cx);
       this.loading = false;
       cx.notify();
@@ -104,6 +123,8 @@ export default class Artifacts extends View {
   }
 
   async read(key, cx) {
+    // Without the command or its store the list would only look empty, so the panel says why.
+    if (this.missing) return;
     try {
       const on = this.on;
       const index = JSON.parse((await readTextFile(`${this.root}/index.json`, { on })) || "{}");
@@ -174,9 +195,10 @@ export default class Artifacts extends View {
           .child(div().text_size(11).text_color(t.dim).child(this.folder?.split("/").pop() ?? "")))
         .child(v_flex().id("oo-artifacts-list").flex_1().min_h(0).overflow_y_scrollbar().py(4)
           .children(this.rows(artifacts, t))
-          .when(!artifacts.length && !this.error, (el) => el.child(div().p(12).gap(4).text_size(12).text_color(t.dim)
+          .when(!artifacts.length && !this.error && !this.missing, (el) => el.child(div().p(12).gap(4).text_size(12).text_color(t.dim)
             .child(this.loading ? "Loading…" : "No artifacts")
             .child(div().text_size(11).child('Agents add them with herdr-artifact add "…" --from report.md'))))
+          .when(Boolean(this.missing), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.missing)))
           .when(Boolean(this.error), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.error)))))
       .when(Boolean(selected), (el) => el.child(this.detail(selected, t)));
   }
