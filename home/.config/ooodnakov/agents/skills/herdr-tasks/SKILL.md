@@ -22,7 +22,7 @@ herdr-task spawn t-20261024-ab12cd -- <your own agent CLI and prompt>
 # prints: t-20261024-ab12cd  t12  Review the retry logic
 ```
 
-**Spawn the harness you are running in.** Codex runs Codex (`codex exec "…"`), omp runs omp (`omp -p "…"`), Claude Code runs Claude Code (`claude -p "…"`); never assume a different one is installed, and do not mix harnesses unless the user asks. The task's agent is then an ordinary herdr-core terminal, labelled `herdr.task=<slug>#<id>`:
+**Spawn the harness you are running in, interactive.** Codex runs Codex (`codex "…"`), omp runs omp (`omp "…"`), Claude Code runs Claude Code (`claude "…"`) — the agent's real TUI, in a pane the human can watch and type into; never assume a different one is installed, and do not mix harnesses unless the user asks. Use the print modes (`omp -p`, `codex exec`, `claude -p`) only when the human asked for a machine-only run: those leave no interactive pane. The task's agent is then an ordinary herdr-core terminal, labelled `herdr.task=<slug>#<id>`:
 
 ```sh
 hc wait t12                  # until it stops working (or --output "…")

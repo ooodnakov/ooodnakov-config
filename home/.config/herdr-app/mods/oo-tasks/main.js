@@ -759,20 +759,9 @@ export default class Tasks extends View {
               .child(`+${agent.children} sub-agent${agent.children === 1 ? "" : "s"}`)))
             .child(div().flex_1())
             .when(agent.root.state === "live", (row) => row
-              .child(chip("Panel", () => {
-                select(task);
-                if (!agent.root.status) {
-                  // No status report: the agent block can't show it, so peek instead.
-                  run("terminal.peek", { terminal: agent.root.address });
-                  return;
-                }
-                // Show the block first: a stack child starts the first time it shows.
-                run("layout.select", { stack: "panel-body", child: "oo-agent" });
-                run("layout.show", { id: "panel" });
-                run("agent.focus", { terminal: agent.root.address });
-              }, t))
-              .child(chip("Pane", () => run("terminal.keep", { terminal: agent.root.address }), t))
-              .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
+              .child(chip("Terminal", () => run("terminal.keep", { terminal: agent.root.address, place: "tab" }), t, false, false, "oo-agent-terminal"))
+              .child(chip("Split", () => run("terminal.keep", { terminal: agent.root.address, place: "right" }), t, false, false, "oo-agent-split"))
+              .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t, false, false, "oo-agent-stop"))))))
         .when(Boolean(depsBlock), (el) => el.child(depsBlock))
         .when(Boolean(outputBlock), (el) => el.child(outputBlock))
         .when(live && Boolean(address), (el) => el.child(v_flex().gap(4)
