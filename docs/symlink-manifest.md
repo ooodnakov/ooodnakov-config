@@ -149,7 +149,7 @@ are linked:
 | `herdr-theme-gruvbox-light` | `home/.config/herdr-app/themes/gruvbox-light.json` | `~/.config/herdr-app/themes/gruvbox-light.json` |
 | `herdr-mod-oo-tasks` | `home/.config/herdr-app/mods/oo-tasks/` | `~/.config/herdr-app/mods/oo-tasks` |
 | `herdr-mod-oo-artifacts` | `home/.config/herdr-app/mods/oo-artifacts/` | `~/.config/herdr-app/mods/oo-artifacts` |
-| `herdr-mod-panel-tabs` | `home/.config/herdr-app/mods/panel-tabs/` | `~/.config/herdr-app/mods/panel-tabs` |
+| `herdr-mod-tabs-panels` | `home/.config/herdr-app/mods/tabs-panels/` | `~/.config/herdr-app/mods/tabs-panels` |
 | `herdr-layout-tasks` | `home/.config/herdr-app/layouts/tasks.json` | `~/.config/herdr-app/layouts/tasks.json` |
 | `herdr-layout-tasks-preview` | `home/.config/herdr-app/layouts/tasks.svg` | `~/.config/herdr-app/layouts/tasks.svg` |
 | `herdr-layout-main-panels` | `home/.config/herdr-app/layouts/main-panels.json` | `~/.config/herdr-app/layouts/main-panels.json` |
@@ -165,12 +165,15 @@ tracked. Add another managed theme as a new file plus a `[[links]]` entry.
 
 The `tasks` layout places the two repo-owned mods side by side; `main-panels` is a
 clone of Herdr's `main` whose panel stack (`panel-body`) adds them after Files and
-Changes, with the repo-owned `panel-tabs` mod as the stack's `header` strip. The
-panels read the per-folder lists under `~/.local/share/ooodnakov/herdr/` that
-`herdr-task` and `herdr-artifact` write (on the space's own machine, over
-herdr-core for remote spaces). Those two commands import
-`home/.config/ooodnakov/bin/_herdr_store.py` by resolving their own symlink, so
-only the commands themselves are linked, not the module.
+Changes. Reaching them from the top-right tab bar needs buttons there, so
+`tabs-panels` is a clone of the shipped `tabs` mod with two `panelButton` calls
+added (Tasks, Artifacts) and the `workspace.panels` merge in its `init` that keeps
+the tab bar's per-space panel restore aware of the new ids. The panels read the
+per-folder lists under `~/.local/share/ooodnakov/herdr/` that `herdr-task` and
+`herdr-artifact` write (on the space's own machine, over herdr-core for remote
+spaces). Those two commands import `home/.config/ooodnakov/bin/_herdr_store.py`
+by resolving their own symlink, so only the commands themselves are linked, not
+the module.
 
 ## Platform Tags
 

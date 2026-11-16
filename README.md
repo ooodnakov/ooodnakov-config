@@ -615,11 +615,11 @@ The [Herdr app](https://herdr.dev) keeps its whole interface as files in `~/.con
 - `home/.config/herdr-app/themes/gruvbox-{dark,light}.json` — the palettes, selectable in Settings → Look
 - `home/.config/herdr-app/mods/oo-tasks/` — the Tasks panel
 - `home/.config/herdr-app/mods/oo-artifacts/` — the Artifacts panel
-- `home/.config/herdr-app/mods/panel-tabs/` — the strip above the docked panels
-- `home/.config/herdr-app/layouts/main-panels.json` (with `main-panels.svg`) — a clone of Herdr's `main` whose right-hand panel stack holds Files, Changes, Tasks and Artifacts; the strip switches between them, and the tab bar's Files / Changes buttons still toggle the whole panel
+- `home/.config/herdr-app/mods/tabs-panels/` — a clone of Herdr's tab bar with Tasks and Artifacts buttons beside Files and Changes, top right
+- `home/.config/herdr-app/layouts/main-panels.json` (with `main-panels.svg`) — a clone of Herdr's `main` whose right-hand panel stack holds Files, Changes, Tasks and Artifacts; the top-right buttons switch between them and toggle the panel
 - `home/.config/herdr-app/layouts/tasks.json` (with `tasks.svg`) — a focused layout with only Tasks beside Artifacts; `Ctrl+Shift+L` cycles layouts
 
-`main-panels` is a clone: Herdr never updates clones, so when Herdr's own `main` gains something, duplicate it again (`layout.clone`) and re-apply the panel-stack edit — the strip mod and the added children are the only differences.
+Both are clones: Herdr never updates clones, so after a Herdr update that changes `main` or the tab bar, duplicate the shipped file again (`layout.clone`, `mod.clone`), re-apply the two edits (the extra `panel-body` children; the two `panelButton` lines and the `workspace.panels` merge in the tab bar's `init`), and copy the result back into the repo.
 
 Panels never write: they read the per-folder JSON lists that two commands write, both linked into `~/.local/bin` beside `oooconf`:
 

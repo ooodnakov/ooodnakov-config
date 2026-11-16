@@ -96,9 +96,9 @@ source = "home/.config/herdr-app/mods/oo-artifacts"
 target = "{CONFIG_HOME}/herdr-app/mods/oo-artifacts"
 
 [[links]]
-key = "herdr-mod-panel-tabs"
-source = "home/.config/herdr-app/mods/panel-tabs"
-target = "{CONFIG_HOME}/herdr-app/mods/panel-tabs"
+key = "herdr-mod-tabs-panels"
+source = "home/.config/herdr-app/mods/tabs-panels"
+target = "{CONFIG_HOME}/herdr-app/mods/tabs-panels"
 
 [[links]]
 key = "herdr-layout-tasks"
@@ -110,8 +110,8 @@ key = "herdr-layout-tasks-preview"
 source = "home/.config/herdr-app/layouts/tasks.svg"
 target = "{CONFIG_HOME}/herdr-app/layouts/tasks.svg"
 
-# A clone of Herdr's `main` with Tasks and Artifacts added to its panel stack,
-# opened from the panel strip (mod `panel-tabs`).
+# A clone of Herdr's `main` with Tasks and Artifacts added to its panel stack;
+# its tab bar is the repo-owned tabs-panels clone, whose buttons open them.
 [[links]]
 key = "herdr-layout-main-panels"
 source = "home/.config/herdr-app/layouts/main-panels.json"

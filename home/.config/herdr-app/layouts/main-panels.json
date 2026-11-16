@@ -79,7 +79,7 @@
           "id": "tabs",
           "type": "block",
           "content": {
-            "mod": "tabs"
+            "mod": "tabs-panels"
           },
           "size": {
             "px": 42
@@ -126,12 +126,6 @@
                 {
                   "id": "panel-body",
                   "type": "stack",
-                  "header": {
-                    "content": {
-                      "mod": "panel-tabs"
-                    },
-                    "height": 32
-                  },
                   "children": [
                     {
                       "id": "files",
