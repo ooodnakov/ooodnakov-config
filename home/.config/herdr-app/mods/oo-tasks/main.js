@@ -4,7 +4,7 @@
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, home, checking } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, settings, home, checking } from "herdr";
 
 const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
 const ROOTS = new Map();
@@ -77,6 +77,9 @@ export default class Tasks extends View {
     this.data = null;
     this.selected = null;
     this.confirm = null;
+    this.output = null;
+    this.outputFor = null;
+    this.outputError = null;
     this.error = null;
     this.loading = false;
     if (checking()) return;
@@ -95,6 +98,9 @@ export default class Tasks extends View {
     this.data = null;
     this.selected = null;
     this.confirm = null;
+    this.output = null;
+    this.outputFor = null;
+    this.outputError = null;
     this.error = null;
     if (!at.folder) {
       this.error = "No folder";
@@ -171,6 +177,48 @@ export default class Tasks extends View {
     cx.notify();
   }
 
+  // The task's agent screen, live or after it ended: `hc read` prints the terminal's
+  // text (a finished terminal stays readable until the core drops it). Read once per
+  // selection; the Read chip forces another.
+  loadOutput(address, cx) {
+    if (!address || this.outputFor === address) return;
+    this.outputFor = address;
+    this.output = null;
+    this.outputError = null;
+    const candidates = [
+      "hc",
+      `${home()}/.local/bin/hc`,
+      "/opt/homebrew/bin/hc",
+      "/usr/local/bin/hc",
+      `${home()}/AppData/Local/Programs/herdr-core/hc.exe`,
+    ];
+    cx.spawn(async (cx) => {
+      let result = null, failure = null;
+      for (const hc of candidates) {
+        try {
+          result = await exec(hc, ["read", address]);
+          break;
+        } catch (error) {
+          failure = String(error);
+        }
+      }
+      if (this.outputFor !== address) return;
+      if (!result || (result.code !== 0 && !result.stdout.trim())) {
+        this.outputError = (result?.stderr || failure || "the terminal is gone").trim().split("\n").pop();
+        cx.notify();
+        return;
+      }
+      const text = result.stdout
+        .replace(/\u001b\[[0-9;?]*[a-zA-Z]/g, "")
+        .replace(/\r/g, "")
+        .split("\n")
+        .map((line) => (line.length > 400 ? `${line.slice(0, 400)}…` : line));
+      while (text.length && !text[text.length - 1].trim()) text.pop();
+      this.output = text.slice(-120).join("\n");
+      cx.notify();
+    });
+  }
+
   rows(tasks, t, all) {
     const out = [];
     for (const status of ORDER) {
@@ -188,7 +236,11 @@ export default class Tasks extends View {
           : t[DOTS[status]];
         out.push(h_flex().id(`oo-task-${task.id}`).h(30).flex_none().mx(6).px(6).gap(8).items_center().rounded(7)
           .cursor_pointer().hover((s) => s.bg(t.hover))
-          .on_click((_event, cx) => { this.selected = task.id; this.confirm = null; cx.notify(); })
+          .on_click((_event, cx) => {
+            this.selected = task.id; this.confirm = null;
+            this.output = null; this.outputFor = null; this.outputError = null;
+            cx.notify();
+          })
           .child(div().w(7).h(7).flex_none().rounded(4).bg(color))
           .child(div().flex_1().min_w(0).truncate().text_color(status === "done" ? t.muted : t.foreground).child(task.title ?? ""))
           .when(Boolean(agent?.children), (el) => el.child(div().text_size(11).text_color(t.dim).child(`+${agent.children}`)))
@@ -201,10 +253,16 @@ export default class Tasks extends View {
 
   detail(task, t, agent, cx) {
     const note = (task.note || "").trim();
+    const address = agent?.root.address ?? task.terminal ?? null;
+    if (address) this.loadOutput(address, cx);
     return v_flex().size_full().min_h(0)
       .child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().id("oo-task-back").w(20).cursor_pointer().text_color(t.muted)
-          .on_click((_event, cx) => { this.selected = null; this.confirm = null; cx.notify(); }).child("←"))
+          .on_click((_event, cx) => {
+            this.selected = null; this.confirm = null;
+            this.output = null; this.outputFor = null; this.outputError = null;
+            cx.notify();
+          }).child("←"))
         .child(div().flex_1().min_w(0).truncate().font_semibold().child(task.title ?? ""))
         .child(div().text_size(11).text_color(t.dim).child(task.status ?? "todo")))
       .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar().p(12).gap(10)
@@ -231,6 +289,14 @@ export default class Tasks extends View {
               }, t))
               .child(chip("Pane", () => run("terminal.keep", { terminal: agent.root.address }), t))
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
+        .when(Boolean(address), (el) => el.child(v_flex().gap(4)
+          .child(h_flex().gap(8).items_center()
+            .child(div().text_size(11).font_semibold().text_color(t.dim).child("OUTPUT"))
+            .when(Boolean(this.outputError), (row) => row.child(div().text_size(11).text_color(t.blocked).child(this.outputError)))
+            .child(div().flex_1())
+            .child(chip("Read", () => { this.outputFor = null; this.output = null; cx.notify(); }, t)))
+          .child(div().rounded(8).bg(t.surface).p(8).text_size(11).font_family(settings().font ?? "monospace")
+            .text_color(t.muted).child(this.output ?? (this.outputError ? "" : "Reading…")))))
         .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`))
         .child(h_flex().gap(6).items_center()
           .when(this.confirm !== task.id, (row) => row
