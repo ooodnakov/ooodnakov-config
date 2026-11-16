@@ -36,7 +36,7 @@ The shared AGENTS policy snippets are configured in:
 - `home/.config/ooodnakov/agents/extras/<agent>.md` (per-agent inserts, referenced by `extra_text_file`)
 - `docs/agents-config-research.md` (cross-agent config model comparison and rationale)
 
-An `agent_configs` entry may set `extra_text_file`, a repo-relative Markdown file whose contents are appended inside that target's managed block under `## Agent-specific instructions`. Extras stay inside the `oooconf:agents-common` markers, so they are replaced on every sync and never accumulate; targets without the key render the shared block unchanged. Currently only the Oh My Pi global instructions target carries an extra (`extras/omp.md`: batch independent tool calls, collapse repeated `tool.*` calls into one `eval` cell).
+An `agent_configs` entry may set `extra_text_file`, a repo-relative Markdown file whose contents are appended inside that target's managed block under `## Agent-specific instructions`. Extras stay inside the `oooconf:agents-common` markers, so they are replaced on every sync and never accumulate; targets without the key render the shared block unchanged. Currently only the Oh My Pi global instructions target carries an extra (`extras/omp.md`: independent batching, scoped delegation, native tooling, evidence-based recovery, asynchronous execution, persistent state, and focused output).
 
 ## Sync behavior
 
