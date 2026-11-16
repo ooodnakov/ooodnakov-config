@@ -23,7 +23,7 @@ elseif platform.is_linux then
 elseif platform.is_win then
 	workspace_switcher.zoxide_path = "C:\\Users\\coolk\\AppData\\Local\\UniGetUI\\Chocolatey\\bin\\zoxide.exe"
 end
-local smart_splits = safe_plugin("https://github.com/mrjones2014/smart-splits.nvim")
+local smart_splits = safe_plugin("https://github.com/smart-splits-nvim/backend-wezterm")
 local function env(name)
 	local value = os.getenv(name)
 	if value == "" then
@@ -343,7 +343,8 @@ function M.apply_to_config(config)
 			move = mod.SUPER,
 			resize = mod.SUPER_REV,
 		},
-		default_amount = 3,
+		-- v2 default; resize amount now comes from Neovim's `resize.amount`.
+		at_edge = "wrap",
 		log_level = "warn",
 	})
 
