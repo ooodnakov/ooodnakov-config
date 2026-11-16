@@ -1172,7 +1172,7 @@ def test_apply_fixes_reports_spawn_streams_agent_output_and_waits(monkeypatch) -
     monkeypatch.setattr(
         fleet_sync.subprocess,
         "Popen",
-        fake_popen(calls, output=b"agent says hi\nsecond line\n", returncode=0),
+        fake_popen(calls, output=b"# Fix report\n\n- fixed a.txt\n", returncode=0),
     )
     options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
     results = fleet_sync.sync_hosts(["alpha", "beta"], options, transport, jobs=1)
@@ -1187,9 +1187,11 @@ def test_apply_fixes_reports_spawn_streams_agent_output_and_waits(monkeypatch) -
     )
 
     assert any("spawning one local omp agent for 2 host(s)" in line for line in lines)
-    assert "agent says hi" in lines
-    assert "second line" in lines
+    joined = "\n".join(lines)
+    assert "Fix report" in joined
+    assert "# Fix report" not in joined  # rendered, not raw markdown
+    assert "fixed a.txt" in joined
     assert any("omp agent finished (exit 0)" in line for line in lines)
     # The agent is waited on and its exit status is recorded before completion runs.
-    assert calls[0]["process"].stdout.tell() == len(b"agent says hi\nsecond line\n")
+    assert calls[0]["process"].stdout.tell() == len(b"# Fix report\n\n- fixed a.txt\n")
     assert [result.status for result in results] == [fleet_sync.STATUS_OK] * 2

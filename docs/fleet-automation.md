@@ -170,8 +170,11 @@ waits up to 5 seconds, then kills a shell that refuses to exit.
 4. duplicate aliases are reported as `skipped` with `reason=duplicate of <alias>` after
    the fan-out, before the summary;
 5. when `--resolve` spawns an agent, a `spawning …` line, the agent's own output
-   streamed line by line, and `omp agent finished (exit N)`; the command waits for
-   the agent to exit before it continues;
+   streamed line by line and rendered as Markdown (headings, lists, quotes, rules,
+   fenced code with a gutter, tables, and inline emphasis drawn from the shared
+   icon/color helpers; lines the agent already styled are passed through), and
+   `omp agent finished (exit N)`; the command waits for the agent to exit before
+   it continues;
 6. a separator, then exactly one summary line with the
    `ok`/`conflict`/`failed`/`skipped`/`dry-run` counts, plus the
    `re-run with --resolve` hint when a conflict remains.

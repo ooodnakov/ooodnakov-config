@@ -578,7 +578,8 @@ Safety:
   fixes conflicts; the sync then restores the stash, pushes host-only commits,
   and re-runs the links.
   --dry-run performs no fetch, stash, pull, push, or link refresh.
-  A spawned omp agent is announced, its output is streamed, and the command
+  A spawned omp agent is announced, its output is streamed and rendered as
+  Markdown (headings, lists, tables, fenced code, emphasis), and the command
   waits for it to finish before continuing.
 Exit codes:
   0 ok, dry-run, and skipped hosts       2 at least one conflict       1 failure

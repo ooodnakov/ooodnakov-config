@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -341,3 +342,160 @@ def path(value: object, role: str = "info") -> str:
 
 def bullet(message: str) -> None:
     print(f"{colorize(icon('bullet'), 'hint')} {message}")
+
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+_INLINE_CODE = "\033[38;5;117m"
+_BOLD = "\033[1m"
+_ITALIC = "\033[3m"
+_STRIKE = "\033[9m"
+_RESET = "\033[0m"
+
+
+def _gutter() -> str:
+    return "│" if supports_nerd_font_output() else "|"
+
+
+def _wrap(text: str, start: str) -> str:
+    if not text or not supports_color_output():
+        return text
+    return f"{start}{text}{_RESET}"
+
+
+def _link(match: re.Match[str]) -> str:
+    label = _wrap(match.group(1), _INLINE_CODE)
+    target = colorize(f"({match.group(2)})", "muted")
+    return f"{label} {target}"
+
+
+def _inline_markup(text: str) -> str:
+    if not text:
+        return text
+    text = re.sub(r"\*\*(.+?)\*\*", lambda match: _wrap(match.group(1), _BOLD), text)
+    text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", lambda match: _wrap(match.group(1), _ITALIC), text)
+    text = re.sub(r"~~(.+?)~~", lambda match: _wrap(match.group(1), _STRIKE), text)
+    return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _link, text)
+
+
+def _inline(text: str) -> str:
+    """Format one Markdown line: code spans, bold, italics, strikethrough, links."""
+    if not text:
+        return text
+    pieces = re.split(r"(`[^`\n]+`)", text)
+    rendered: list[str] = []
+    for piece in pieces:
+        if len(piece) > 1 and piece.startswith("`") and piece.endswith("`"):
+            rendered.append(_wrap(piece[1:-1], _INLINE_CODE))
+        else:
+            rendered.append(_inline_markup(piece))
+    return "".join(rendered)
+
+
+class MarkdownStream:
+    """Render agent Markdown line by line, so streamed output stays readable.
+
+    Headings, lists, quotes, rules, fenced code, tables, and inline emphasis are
+    formatted with the shared icon/color helpers; lines that already carry ANSI
+    styling (an agent with its own theme) are passed through untouched.
+    """
+
+    def __init__(self) -> None:
+        self._fence: str | None = None
+        self._table: list[str] = []
+        self._blank = False
+
+    def feed(self, line: str) -> str:
+        text = line.rstrip("\r\n")
+        if _ANSI_RE.search(text):
+            return text
+        stripped = text.strip()
+        if self._fence is not None:
+            if stripped.startswith(self._fence):
+                self._fence = None
+            else:
+                return f"{colorize(_gutter(), 'muted')} {text}"
+            return ""
+        prefix = ""
+        if self._table:
+            if stripped.startswith("|"):
+                self._table.append(text)
+                return ""
+            prefix = self._render_table() + "\n"
+            self._table = []
+        if not stripped:
+            if self._blank:
+                return prefix
+            self._blank = True
+            return prefix + "\n"
+        self._blank = False
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            self._fence = stripped[:3]
+            return prefix
+        if stripped.startswith("|") and stripped.endswith("|") and len(stripped) > 1:
+            self._table.append(text)
+            return prefix
+        return prefix + self._render_line(text)
+
+    def flush(self) -> str:
+        rendered = self._render_table() if self._table else ""
+        self._table = []
+        self._fence = None
+        self._blank = False
+        return rendered
+
+    def _render_line(self, line: str) -> str:
+        stripped = line.strip()
+        if not stripped:
+            return ""
+        indent = line[: len(line) - len(line.lstrip())].replace("\t", "  ")
+        heading = re.match(r"^(#{1,6})\s+(.*)$", stripped)
+        if heading:
+            level = len(heading.group(1))
+            role = "section" if level <= 2 else "info"
+            marker = icon("section") if level <= 2 else icon("bullet")
+            return f"{indent}{colorize(marker, role)} {colorize(_inline(heading.group(2)), role, bold=True)}"
+        if re.fullmatch(r"([-*_])\1{2,}", stripped):
+            char = "─" if supports_nerd_font_output() else "-"
+            return colorize(char * 40, "muted")
+        quote = re.match(r"^>\s?(.*)$", stripped)
+        if quote:
+            return f"{indent}{colorize(_gutter(), 'muted')} {colorize(_inline(quote.group(1)), 'muted')}"
+        bullet = re.match(r"^[-*+]\s+(.*)$", stripped)
+        if bullet:
+            return f"{indent}{colorize(icon('bullet'), 'hint')} {_inline(bullet.group(1))}"
+        numbered = re.match(r"^(\d+[.)])\s+(.*)$", stripped)
+        if numbered:
+            return f"{indent}{colorize(numbered.group(1), 'muted')} {_inline(numbered.group(2))}"
+        return f"{indent}{_inline(stripped)}"
+
+    def _render_table(self) -> str:
+        rows = [self._split_row(row) for row in self._table]
+        rows = [row for row in rows if row]
+        body = [row for row in rows if not all(re.fullmatch(r":?-{3,}:?", cell) for cell in row)]
+        if not body:
+            return ""
+        columns = max(len(row) for row in body)
+        widths = [
+            max((len(_ANSI_RE.sub("", row[column])) if column < len(row) else 0) for row in body)
+            for column in range(columns)
+        ]
+        rendered: list[str] = []
+        for index, row in enumerate(body):
+            cells: list[str] = []
+            for column in range(columns):
+                cell = row[column] if column < len(row) else ""
+                pad = " " * max(0, widths[column] - len(cell))
+                role = "info" if index == 0 else "muted"
+                cells.append(colorize(_inline(cell), role, bold=index == 0) + pad)
+            gutter = colorize(_gutter(), "muted")
+            rendered.append(f"{gutter} " + f" {gutter} ".join(cells) + f" {gutter}")
+        return "\n".join(rendered)
+
+    @staticmethod
+    def _split_row(row: str) -> list[str]:
+        stripped = row.strip()
+        if stripped.startswith("|"):
+            stripped = stripped[1:]
+        if stripped.endswith("|"):
+            stripped = stripped[:-1]
+        return [cell.strip() for cell in stripped.split("|")]

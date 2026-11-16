@@ -703,23 +703,33 @@ def apply_fixes(
         return results
 
     write = line or _write
+    markdown = cli_ui.MarkdownStream()
+
+    def agent_line(text: str) -> None:
+        rendered = markdown.feed(text)
+        if rendered:
+            write(rendered)
+
     mode = "remote-agent" if len(pending) == 1 else "local-agent"
     if mode == "remote-agent":
         write(
             f"{cli_ui.colorize(cli_ui.icon('hint'), 'hint')} spawning omp agent on {pending[0].host} (default settings)"
         )
-        outcome = _run_remote_agent(pending[0], options, transport, on_line=write)
+        outcome = _run_remote_agent(pending[0], options, transport, on_line=agent_line)
     else:
         write(
             f"{cli_ui.colorize(cli_ui.icon('hint'), 'hint')} spawning one local omp agent for "
             f"{len(pending)} host(s) (default settings)"
         )
-        outcome = _run_local_agent(pending, options, repo_root, on_line=write)
+        outcome = _run_local_agent(pending, options, repo_root, on_line=agent_line)
         detail = _compact(outcome.stderr or outcome.stdout)
         for result in pending:
             result.log.append(
                 f"local fix agent exit={outcome.returncode}" + (f": {detail}" if detail and outcome.returncode else "")
             )
+    tail = markdown.flush()
+    if tail:
+        write(tail)
     write(f"{cli_ui.colorize(cli_ui.icon('info'), 'info')} omp agent finished (exit {outcome.returncode})")
     for result in pending:
         result.fix = mode
@@ -1045,7 +1055,7 @@ class ProgressReporter:
         """Print one complete line without letting the spinner overwrite it."""
         with self._lock:
             self._clear_locked()
-            self._write(text + "\n")
+            self._write(text if text.endswith("\n") else text + "\n")
 
     def finish(self, result: HostResult) -> None:
         with self._lock:
