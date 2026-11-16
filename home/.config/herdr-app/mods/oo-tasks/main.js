@@ -686,10 +686,12 @@ export default class Tasks extends View {
   detail(task, t, agent, cx) {
     const note = (task.note || "").trim();
     const address = agent?.root.address ?? task.terminal ?? null;
+    const live = Boolean(agent && agent.root.state === "live");
     const outputBlock = address
       ? v_flex().gap(4)
         .child(h_flex().gap(8).items_center()
           .child(div().text_size(11).font_semibold().text_color(t.dim).child("OUTPUT"))
+          .when(!live, (row) => row.child(div().text_size(11).text_color(t.dim).child("last screen, terminal ended")))
           .when(Boolean(this.outputError), (row) => row.child(div().text_size(11).text_color(t.blocked).child(this.outputError)))
           .child(div().flex_1())
           .child(chip("Read", (cx) => { this.outputFor = null; this.output = null; cx.notify(); }, t)))
@@ -718,7 +720,7 @@ export default class Tasks extends View {
       : null;
     this.chatAddress = address;
     if (address) this.loadOutput(address, cx);
-    if (!address && this.harnesses === null && !this.harnessError) this.loadHarnesses(cx);
+    if (!live && this.harnesses === null && !this.harnessError) this.loadHarnesses(cx);
     return v_flex().size_full().min_h(0)
       .child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().id("oo-task-back").w(20).cursor_pointer().text_color(t.muted)
@@ -757,7 +759,7 @@ export default class Tasks extends View {
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
         .when(Boolean(depsBlock), (el) => el.child(depsBlock))
         .when(Boolean(outputBlock), (el) => el.child(outputBlock))
-        .when(Boolean(address), (el) => el.child(v_flex().gap(4)
+        .when(live && Boolean(address), (el) => el.child(v_flex().gap(4)
           .child(h_flex().gap(6).items_center()
             .child(div().flex_1().min_w(0).h(28).px(8).flex().items_center().rounded(7).border_1().border_color(t.border).bg(t.surface)
               .on_mouse_down("left", (_event, cx) => cx.stop_propagation())
@@ -769,10 +771,12 @@ export default class Tasks extends View {
         .child(h_flex().gap(6).items_center().flex_wrap()
           .child(div().text_size(11).font_semibold().text_color(t.dim).child("STATUS"))
           .children(STATUSES.map((status) => chip(TITLES[status], (cx) => this.setStatus(task, status, cx), t, false, (task.status || "todo") === status))))
-        .when(!address && Boolean(this.harnesses?.length), (el) => el.child(h_flex().gap(6).items_center().flex_wrap()
+        .when(!live && Boolean(address), (el) => el.child(div().text_size(11).text_color(t.dim)
+          .child(`${address} ended — START opens a new terminal`)))
+        .when(!live && Boolean(this.harnesses?.length), (el) => el.child(h_flex().gap(6).items_center().flex_wrap()
           .child(div().text_size(11).font_semibold().text_color(t.dim).child("START"))
           .children(this.harnesses.map((program, index) => chip(program.name, (cx) => this.start(task, program, cx), t, false, false, `oo-start-${index}`)))))
-        .when(!address && Boolean(this.harnessError), (el) => el.child(div().text_size(11).text_color(t.muted).child(this.harnessError)))
+        .when(!live && Boolean(this.harnessError), (el) => el.child(div().text_size(11).text_color(t.muted).child(this.harnessError)))
         .child(h_flex().gap(6).items_center()
           .when(finished(task, agent), (row) => row
             .child(chip("Mark done", (cx) => this.markDone(task, cx), t)))
