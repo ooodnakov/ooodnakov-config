@@ -25,8 +25,7 @@ require("lazy").setup({
   },
   install = { colorscheme = { "tokyonight", "habamax" } },
   checker = { enabled = false },
-  rocks = {
-    enabled = true,
-    hererocks = true,
-  },
+  -- No plugin in this config requires luarocks; keeping it enabled only
+  -- produced a `:checkhealth lazy` error for the missing Hermes Lua 5.1 toolchain.
+  rocks = { enabled = false },
 })
