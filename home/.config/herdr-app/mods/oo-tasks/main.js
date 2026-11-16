@@ -152,14 +152,19 @@ export default class Tasks extends View {
         .child(div().text_size(11).text_color(t.dim).child(String(group.length))));
       for (const task of group) {
         const agent = agentFor(task, this.slug, all);
-        const live = agent ? agent.root.status && AGENT_COLORS[agent.root.status] ? t[AGENT_COLORS[agent.root.status]] : t.accent : null;
+        const color = agent
+          ? AGENT_COLORS[agent.root.status]
+            ? t[AGENT_COLORS[agent.root.status]]
+            : agent.root.state === "live" ? t.accent : t.dim
+          : t[DOTS[status]];
         out.push(h_flex().id(`oo-task-${task.id}`).h(30).flex_none().mx(6).px(6).gap(8).items_center().rounded(7)
           .cursor_pointer().hover((s) => s.bg(t.hover))
           .on_click((_event, cx) => { this.selected = task.id; cx.notify(); })
-          .child(div().w(7).h(7).flex_none().rounded(4).bg(live ?? t[DOTS[status]]))
+          .child(div().w(7).h(7).flex_none().rounded(4).bg(color))
           .child(div().flex_1().min_w(0).truncate().text_color(status === "done" ? t.muted : t.foreground).child(task.title ?? ""))
           .when(Boolean(agent?.children), (el) => el.child(div().text_size(11).text_color(t.dim).child(`+${agent.children}`)))
-          .child(div().text_size(11).text_color(live ?? t.dim).child(agent ? agent.root.status ?? "live" : age(task.updated))));
+          .child(div().text_size(11).text_color(agent ? color : t.dim)
+            .child(agent ? agent.root.status ?? agent.root.state ?? "live" : age(task.updated))));
       }
     }
     return out;
