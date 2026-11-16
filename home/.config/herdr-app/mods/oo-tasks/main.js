@@ -156,6 +156,10 @@ export default class Tasks extends View {
     this.quiet = new Set();
     this.input = InputState.new({ placeholder: "New task" });
     this.input.on("submit", (_event, cx) => this.create(cx));
+    this.message = InputState.new({ placeholder: "Message the agent" });
+    this.message.on("submit", (_event, cx) => this.sendMessage(cx));
+    this.chatAddress = null;
+    this.chatError = null;
     if (checking()) return;
     select(null);
   }
@@ -455,6 +459,28 @@ export default class Tasks extends View {
     });
   }
 
+  // Type into the task's agent without leaving the list: `hc send` pastes the
+  // text and presses Enter; the screen is re-read once the agent has had a beat.
+  async sendMessage(cx) {
+    const address = this.chatAddress;
+    const text = this.message.value().trim();
+    if (!address || !text) return;
+    this.message.set_value("");
+    this.chatError = null;
+    try {
+      const result = await exec("hc", ["send", address, text]);
+      if (result.code !== 0) throw new Error(result.stderr.trim() || `hc send failed (${result.code})`);
+      cx.timer.after(1500, (cx) => {
+        this.outputFor = null;
+        this.output = null;
+        cx.notify();
+      });
+    } catch (error) {
+      this.chatError = String(error);
+    }
+    cx.notify();
+  }
+
   // Only a click lands here: the agent's report is a suggestion. Same compare-and-set
   // rewrite as Delete; a remote machine writes its own list under its own lock.
   async markDone(task, cx) {
@@ -676,6 +702,7 @@ export default class Tasks extends View {
           .child(div().flex_1().min_w(0).truncate().text_size(12).child(dep.title ?? ""))
           .child(div().text_size(11).text_color(dep.status === "done" ? t.dim : t.muted).child(dep.status ?? "todo"))))
       : null;
+    this.chatAddress = address;
     if (address) this.loadOutput(address, cx);
     if (!address && this.harnesses === null && !this.harnessError) this.loadHarnesses(cx);
     return v_flex().size_full().min_h(0)
@@ -716,6 +743,13 @@ export default class Tasks extends View {
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
         .when(Boolean(depsBlock), (el) => el.child(depsBlock))
         .when(Boolean(outputBlock), (el) => el.child(outputBlock))
+        .when(Boolean(address), (el) => el.child(v_flex().gap(4)
+          .child(h_flex().gap(6).items_center()
+            .child(div().flex_1().min_w(0).h(28).px(8).flex().items_center().rounded(7).border_1().border_color(t.border).bg(t.surface)
+              .on_mouse_down("left", (_event, cx) => cx.stop_propagation())
+              .child(Input.new(this.message).h_full().text_size(12).text_color(t.foreground)))
+            .child(chip("Send", (cx) => this.sendMessage(cx), t, false, false, "oo-task-send")))
+          .when(Boolean(this.chatError), (row) => row.child(div().text_size(11).text_color(t.blocked).child(this.chatError)))))
         .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`))
         .when(Boolean(this.error), (el) => el.child(div().text_size(11).text_color(t.muted).child(this.error)))
         .child(h_flex().gap(6).items_center().flex_wrap()
