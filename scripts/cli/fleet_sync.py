@@ -658,6 +658,7 @@ def apply_fixes(
     transport: object,
     repo_root: Path,
     on_result: object | None = None,
+    on_event: object | None = None,
 ) -> list[HostResult]:
     """Spawn one omp agent on the single broken host, or one local agent for several, then finish them."""
     pending = needs_fix(results)
@@ -666,8 +667,11 @@ def apply_fixes(
 
     mode = "remote-agent" if len(pending) == 1 else "local-agent"
     if mode == "remote-agent":
+        _notify(on_event, pending[0].host, "handing the host to omp on that machine")
         _run_remote_agent(pending[0], options, transport)
     else:
+        for result in pending:
+            _notify(on_event, result.host, "one local omp agent is repairing this host")
         outcome = _run_local_agent(pending, options, repo_root)
         detail = _compact(outcome.stderr or outcome.stdout)
         for result in pending:
@@ -678,6 +682,7 @@ def apply_fixes(
         result.fix = mode
 
     for result in pending:
+        _notify(on_event, result.host, "finishing after the agent")
         _complete_after_fix(result, options, transport)
         if result.status == STATUS_OK:
             result.resolved = True
@@ -723,13 +728,25 @@ def _resolve_repo(host: str, options: SyncOptions, transport: object, result: Ho
     return DEFAULT_REPO_PATH
 
 
-def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
+def sync_host(
+    host: str,
+    options: SyncOptions,
+    transport: object,
+    on_event: object | None = None,
+) -> HostResult:
+    def step(message: str) -> None:
+        _notify(on_event, message)
+
     result = HostResult(host=host, status=STATUS_OK)
+    step("checking ssh, user and checkout")
     if not _preflight(host, options, transport, result):
         return result
+    step("preflight ok")
+    step("resolving repo path")
     repo = _resolve_repo(host, options, transport, result)
     result.repo = repo
 
+    step("reading branch and working tree")
     check = _run(transport, host, _script(_git(repo, "rev-parse", "--git-dir")))
     if check.returncode != 0:
         return _fail(result, "git rev-parse --git-dir", check)
@@ -750,6 +767,7 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
     remote_range = shlex.quote(f"origin/{branch}...HEAD")
 
     if options.dry_run:
+        step("reading ahead/behind")
         counts = _run(transport, host, _script(_git(repo, "rev-list", "--left-right", "--count", remote_range)))
         if counts.returncode == 0:
             result.behind, result.ahead = _parse_counts(counts.stdout)
@@ -757,6 +775,7 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
         result.log.append("dry-run: no fetch, stash, pull, push, or update issued")
         return result
 
+    step(f"fetching origin/{branch}")
     fetch = _run(transport, host, _script(_git(repo, "fetch", "--prune", "origin", shlex.quote(branch))))
     if fetch.returncode != 0:
         return _fail(result, "git fetch --prune", fetch)
@@ -766,6 +785,7 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
         result.behind, result.ahead = _parse_counts(before.stdout)
 
     if result.dirty:
+        step("stashing local changes")
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         message = shlex.quote(f"{STASH_PREFIX}{stamp} {host}")
         stash = _run(transport, host, _script(_git(repo, "stash", "push", "-u", "-m", message)))
@@ -779,6 +799,7 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
             result.stash_pending = True
             result.log.append("stashed local changes")
 
+    step(f"pulling --rebase origin/{branch}")
     pull = _run(transport, host, _script(_git(repo, "pull", "--rebase", "origin", shlex.quote(branch))))
     if pull.returncode != 0:
         files = _unmerged_files(host, repo, transport)
@@ -792,6 +813,7 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
         return result
 
     if result.stashed:
+        step("restoring stash")
         pop = _run(transport, host, _script(_git(repo, "stash", "pop")))
         already_popped = "No stash entries" in (pop.stdout + pop.stderr)
         if pop.returncode != 0 and not already_popped:
@@ -808,6 +830,7 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
     if after.returncode == 0:
         result.behind, result.ahead = _parse_counts(after.stdout)
     if result.ahead > 0 and options.push:
+        step(f"pushing {result.ahead} commit(s)")
         push = _run(transport, host, _script(_git(repo, "push", "origin", shlex.quote(branch))))
         if push.returncode != 0:
             return _fail(result, "git push origin", push)
@@ -816,6 +839,7 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
     elif result.ahead > 0:
         result.log.append(f"{result.ahead} commit(s) left unpushed (--no-push)")
 
+    step("running oooconf update --no-deps")
     link = _run(transport, host, _script(f"cd {_quote_repo(repo)} && oooconf update --no-deps"))
     if link.returncode != 0:
         link = _run(transport, host, _script(f"cd {_quote_repo(repo)} && {LINK_FALLBACK}"))
@@ -832,6 +856,7 @@ def sync_hosts(
     transport: object,
     jobs: int = DEFAULT_JOBS,
     on_result: object | None = None,
+    on_event: object | None = None,
 ) -> list[HostResult]:
     """Sync hosts in parallel, reporting each as it finishes; the returned list keeps input order."""
     if not hosts:
@@ -840,7 +865,12 @@ def sync_hosts(
     results: dict[int, HostResult] = {}
 
     def report(index: int, host: str) -> None:
-        results[index] = sync_host(host, options, transport)
+        results[index] = sync_host(
+            host,
+            options,
+            transport,
+            on_event=(lambda message: on_event(host, message)) if on_event is not None else None,  # type: ignore[operator]
+        )
         if on_result is not None:
             on_result(results[index])  # type: ignore[operator]
 
@@ -901,6 +931,95 @@ def emit_result(result: HostResult) -> None:
     cli_ui.status(_STATUS_ROLES.get(result.status, "info"), host_line(result))
     if result.error:
         cli_ui.status("fail", f"  error: {result.error}")
+
+
+SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+ASCII_SPINNER_FRAMES = ("|", "/", "-", "\\")
+
+
+def _notify(on_event: object | None, *event: object) -> None:
+    if on_event is not None:
+        on_event(*event)  # type: ignore[operator]
+
+
+class ProgressReporter:
+    """Per-step activity while hosts run: an animated spinner on a TTY, plain step lines otherwise."""
+
+    def __init__(self, stream: object | None = None) -> None:
+        self.stream = stream or sys.stdout
+        self._interactive = bool(getattr(self.stream, "isatty", lambda: False)())
+        self._frames = SPINNER_FRAMES if cli_ui.can_encode(SPINNER_FRAMES[0]) else ASCII_SPINNER_FRAMES
+        self._lock = threading.Lock()
+        self._active: dict[str, str] = {}
+        self._last: tuple[str, str] | None = None
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._frame = 0
+        self._line_open = False
+
+    @property
+    def interactive(self) -> bool:
+        return self._interactive
+
+    def start(self) -> None:
+        if not self._interactive or self._thread is not None:
+            return
+        self._thread = threading.Thread(target=self._spin, name="fleet-sync-spinner", daemon=True)
+        self._thread.start()
+
+    def event(self, host: str, step: str) -> None:
+        if self._interactive:
+            with self._lock:
+                self._active[host] = step
+                self._last = (host, step)
+            return
+        self._write(f"{cli_ui.icon('hint')} {host}: {step}\n")
+
+    def finish(self, result: HostResult) -> None:
+        with self._lock:
+            self._active.pop(result.host, None)
+            if self._last is not None and self._last[0] == result.host:
+                self._last = None
+            self._clear_locked()
+        emit_result(result)
+
+    def close(self) -> None:
+        self._stop.set()
+        thread, self._thread = self._thread, None
+        if thread is not None:
+            thread.join(timeout=1)
+        with self._lock:
+            self._clear_locked()
+
+    def _spin(self) -> None:
+        while not self._stop.wait(0.1):
+            with self._lock:
+                self._render_locked()
+
+    def _render_locked(self) -> None:
+        entry = self._last if self._last is not None else next(iter(self._active.items()), None)
+        if entry is None or entry[0] not in self._active:
+            self._clear_locked()
+            return
+        host, step = entry
+        frame = self._frames[self._frame % len(self._frames)]
+        self._frame += 1
+        text = (
+            f"{cli_ui.colorize(frame, 'hint')} "
+            f"{cli_ui.colorize(host, 'info', bold=True)} "
+            f"{cli_ui.colorize(step, 'muted')}"
+        )
+        self._write(f"\r{text}\x1b[K")
+        self._line_open = True
+
+    def _clear_locked(self) -> None:
+        if self._line_open:
+            self._write("\r\x1b[K")
+            self._line_open = False
+
+    def _write(self, text: str) -> None:
+        self.stream.write(text)
+        self.stream.flush()
 
 
 def summary_line(results: list[HostResult], options: SyncOptions) -> str:
@@ -1037,22 +1156,51 @@ def main(argv: list[str] | None = None) -> int:
     live, duplicates = dedupe_hosts(requested)
     transport = build_transport(options)
     stream = args.format != "json"
-    progress = emit_result if stream else None
     repo_root = Path(args.repo_root).expanduser() if args.repo_root else Path.cwd()
+    reporter = ProgressReporter() if stream else None
+
+    def handle_event(host: str, step: str) -> None:
+        if reporter is not None:
+            reporter.event(host, step)
+
+    def handle_result(result: HostResult) -> None:
+        if reporter is not None:
+            reporter.finish(result)
+        elif stream:
+            emit_result(result)
+
+    if reporter is not None:
+        reporter.start()
     try:
         if stream:
             mode = " (dry-run)" if options.dry_run else ""
             workers = max(1, min(args.jobs, len(live)))
             cli_ui.status("info", f"fleet sync: {len(live)} host(s), jobs={workers}{mode}")
-        results = sync_hosts(live, options, transport, jobs=args.jobs, on_result=progress)
+        results = sync_hosts(
+            live,
+            options,
+            transport,
+            jobs=args.jobs,
+            on_result=handle_result,
+            on_event=handle_event,
+        )
         pending = needs_fix(results)
         if pending and options.resolve and not options.dry_run:
             if stream:
                 agent = "a remote omp agent" if len(pending) == 1 else "one local omp agent"
                 cli_ui.status("hint", f"fixing {len(pending)} host(s) with {agent}")
-            results = apply_fixes(results, options, transport, repo_root, on_result=progress)
+            results = apply_fixes(
+                results,
+                options,
+                transport,
+                repo_root,
+                on_result=handle_result,
+                on_event=handle_event,
+            )
     finally:
         transport.close()
+        if reporter is not None:
+            reporter.close()
     by_host = {result.host: result for result in results}
     ordered: list[HostResult] = []
     for host in requested:
@@ -1060,7 +1208,7 @@ def main(argv: list[str] | None = None) -> int:
             placeholder = HostResult(host=host, status=STATUS_SKIPPED, skip_reason=f"duplicate of {duplicates[host]}")
             ordered.append(placeholder)
             if stream:
-                emit_result(placeholder)
+                handle_result(placeholder)
         else:
             ordered.append(by_host[host])
 

@@ -563,9 +563,10 @@ Options:
   --format text|json     output format (default: text)
   --dry-run              inspect repo/branch/dirty/ahead/behind only
 Output:
-  one line per host as it finishes, with oooconf status icons (Nerd Font when
-  the terminal supports it); the summary prints last. --format json prints
-  only the JSON document.
+  the current step of each working host (an in-place spinner on a terminal,
+  one line per step when piped), then one line per host as it finishes with
+  oooconf status icons (Nerd Font when the terminal supports it); the summary
+  prints last. --format json prints only the JSON document.
 Transport:
   one persistent ssh session per host (sh -l), so every step shares a single
   connection; a transient connection error is retried once per call.

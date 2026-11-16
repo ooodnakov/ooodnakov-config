@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -1050,3 +1051,96 @@ def test_main_json_output_streams_no_progress(monkeypatch, capsys) -> None:
     assert "fleet sync:" not in out
     assert "[ok]" not in out
     assert document["summary"]["ok"] == 1
+
+
+# --- per-step progress --------------------------------------------------------------
+
+
+class _Stream:
+    def __init__(self, tty: bool) -> None:
+        self.chunks: list[str] = []
+        self._tty = tty
+
+    def isatty(self) -> bool:
+        return self._tty
+
+    def write(self, text: str) -> None:
+        self.chunks.append(text)
+
+    def flush(self) -> None:
+        return None
+
+    def text(self) -> str:
+        return "".join(self.chunks)
+
+
+def test_sync_host_reports_each_step_in_order() -> None:
+    transport = FakeTransport(handler_for([("status --porcelain", _result(0, f" M {CONFLICT_FILE}\n"))]))
+    events: list[str] = []
+
+    fleet_sync.sync_host(
+        "alpha",
+        fleet_sync.SyncOptions(repo_path=REMOTE_REPO),
+        transport,
+        on_event=events.append,
+    )
+
+    expected = [
+        "checking ssh, user and checkout",
+        "preflight ok",
+        "resolving repo path",
+        "reading branch and working tree",
+        "fetching origin/main",
+        "stashing local changes",
+        "pulling --rebase origin/main",
+        "restoring stash",
+        "running oooconf update --no-deps",
+    ]
+    assert events == expected
+
+
+def test_reporter_prints_plain_step_lines_when_piped(monkeypatch) -> None:
+    stream = _Stream(tty=False)
+    reporter = fleet_sync.ProgressReporter(stream)
+    reporter.start()
+    reporter.event("alpha", "fetching origin/main")
+    reporter.close()
+
+    text = stream.text()
+    assert "alpha: fetching origin/main" in text
+    assert "\r" not in text
+    assert "\x1b[K" not in text
+
+
+def test_reporter_spins_in_place_on_a_tty(capsys) -> None:
+    stream = _Stream(tty=True)
+    reporter = fleet_sync.ProgressReporter(stream)
+    reporter.start()
+    reporter.event("alpha", "fetching origin/main")
+    time.sleep(0.15)
+    reporter.event("beta", "pulling --rebase origin/main")
+    time.sleep(0.15)
+    reporter.finish(fleet_sync.HostResult(host="alpha", status=fleet_sync.STATUS_OK))
+    reporter.close()
+
+    assert reporter.interactive is True
+    spinner = stream.text()
+    assert "\r" in spinner
+    assert "\x1b[K" in spinner
+    assert "fetching origin/main" in spinner
+    assert any(frame in spinner for frame in fleet_sync.SPINNER_FRAMES + fleet_sync.ASCII_SPINNER_FRAMES)
+    assert "alpha" in capsys.readouterr().out
+
+
+def test_main_streams_step_lines_before_results(monkeypatch, capsys) -> None:
+    transport = FakeTransport(handler_for())
+    monkeypatch.setattr(fleet_sync, "SshTransport", lambda *args, **kwargs: transport)
+    monkeypatch.setattr(fleet_sync, "parse_ssh_targets", lambda home=None: [])
+
+    code = fleet_sync.main(["--repo-root", str(REPO_ROOT), "sync", "alpha", "--repo-path", REMOTE_REPO])
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "alpha: preflight ok" in out
+    assert out.index("alpha: preflight ok") < out.index("branch=main")
+    assert "fleet sync:" in out

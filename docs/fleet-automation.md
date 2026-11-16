@@ -156,17 +156,26 @@ waits up to 5 seconds, then kills a shell that refuses to exit.
 `--format text` reports while it works instead of printing a table at the end:
 
 1. a header line, `fleet sync: <n> host(s), jobs=<n>` (plus `(dry-run)` when requested);
-2. one status line per host as soon as that host finishes — completion order under
+2. the current step of every working host (`checking ssh, user and checkout`,
+   `preflight ok`, `resolving repo path`, `reading branch and working tree`,
+   `fetching origin/<branch>`, `stashing local changes`, `pulling --rebase origin/<branch>`,
+   `restoring stash`, `pushing <n> commit(s)`, `running oooconf update --no-deps`): on a
+   terminal these animate as one in-place spinner line that is cleared before that host's
+   status line, so a slow `git pull` or link refresh never looks frozen; when the output is
+   piped each step is printed as its own line so CI logs keep the activity;
+3. one status line per host as soon as that host finishes — completion order under
    `--jobs > 1`, input order at `--jobs 1` — carrying host, status, branch, repo, the
    dirty/stashed/behind/ahead/pushed/linked flags, conflicts, `resolved`, and `fix`;
    a failing host also gets an indented `error:` line;
-3. duplicate aliases are reported as `skipped` with `reason=duplicate of <alias>` after
+4. duplicate aliases are reported as `skipped` with `reason=duplicate of <alias>` after
    the fan-out, before the summary;
-4. a separator, then exactly one summary line with the
+5. a separator, then exactly one summary line with the
    `ok`/`conflict`/`failed`/`skipped`/`dry-run` counts, plus the
    `re-run with --resolve` hint when a conflict remains.
 
-Each status line starts with the shared Nerd Font icon for its role (`ok`, `warn`, `fail`,
+Spinner frames are braille glyphs on a capable terminal and `|/-\\` sequences otherwise;
+a non-terminal stream gets no carriage returns at all. Each status line starts with the
+shared Nerd Font icon for its role (`ok`, `warn`, `fail`,
 `missing`, `info`), or the ASCII fallback (`[ok]`, `[warn]`, `[fail]`, ...) when the
 terminal or `OOOCONF_ASCII=1` cannot render Nerd Font glyphs. The per-host table is never
 reprinted after the summary. A host repaired by `--resolve` is reported twice: once with
