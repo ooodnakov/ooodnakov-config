@@ -171,9 +171,13 @@ added (Tasks, Artifacts) and the `workspace.panels` merge in its `init` that kee
 the tab bar's per-space panel restore aware of the new ids. The panels read the
 per-folder lists under `~/.local/share/ooodnakov/herdr/` that `herdr-task` and
 `herdr-artifact` write (on the space's own machine, over herdr-core for remote
-spaces). Those two commands import `home/.config/ooodnakov/bin/_herdr_store.py`
-by resolving their own symlink, so only the commands themselves are linked, not
-the module.
+spaces). A task may carry an agent: `herdr-task spawn` starts it with
+`hc run --label herdr.task=<slug>#<id>` and stores `terminal` on the task; the
+mod matches that label (or the stored address) in `terminals()`, counts the
+sub-agents whose `parent` is that terminal, and its detail opens the terminal
+(`terminal.keep`) or stops it (`terminal.kill`). Those two commands import
+`home/.config/ooodnakov/bin/_herdr_store.py` by resolving their own symlink, so
+only the commands themselves are linked, not the module.
 
 ## Platform Tags
 

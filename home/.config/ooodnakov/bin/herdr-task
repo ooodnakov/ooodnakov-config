@@ -16,6 +16,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
+import shutil
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
@@ -23,12 +26,14 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 from _herdr_store import (  # noqa: E402
     TASK_STATUSES,
     Fail,
+    data_root,
     edit_list,
     find,
     folder_for,
     new_id,
     now,
     read_list,
+    slug_for,
 )
 
 
@@ -88,6 +93,8 @@ def task_show(args: argparse.Namespace) -> None:
     _, data = read_list("tasks", "tasks", folder)
     task = find(data["tasks"], args.id)
     lines = [f"{task['id']}  {task.get('status', 'todo')}", task.get("title", "")]
+    if task.get("terminal"):
+        lines.append(f"agent {task['terminal']}")
     if task.get("note"):
         lines += ["", task["note"]]
     lines += ["", f"updated {task.get('updated', '')}"]
@@ -105,6 +112,85 @@ def task_rm(args: argparse.Namespace) -> None:
 def task_path(args: argparse.Namespace) -> None:
     path, _ = read_list("tasks", "tasks", folder_for(args.folder))
     print(path)
+
+
+def task_key(folder: str, task_id: str) -> str:
+    """What a task's agent terminal carries, so the panel can find it again."""
+    return f"{slug_for(data_root(), folder)}#{task_id}"
+
+
+def task_label(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    _, data = read_list("tasks", "tasks", folder)
+    task = find(data["tasks"], args.id)
+    label = f"herdr.task={task_key(folder, task['id'])}"
+    emit(args, {"label": label}, label)
+
+
+def task_bind(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    with edit_list("tasks", "tasks", folder) as data:
+        task = find(data["tasks"], args.id)
+        task["terminal"] = args.terminal
+        task["updated"] = now()
+    emit(args, task, f"{task['id']}  {args.terminal or 'unbound'}")
+
+
+def task_spawn(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    _, data = read_list("tasks", "tasks", folder)
+    task = find(data["tasks"], args.id)
+    argv = list(args.argv)
+    while argv and argv[0] == "--":
+        argv.pop(0)
+    if not argv:
+        raise Fail("spawn needs a program: herdr-task spawn <id> -- <program> [args…]")
+    command = [
+        "hc", "run", "--keep", "--bg", "--json",
+        "--label", f"herdr.task={task_key(folder, task['id'])}",
+        "--cwd", args.cwd or folder,
+    ]
+    if args.name:
+        command += ["--name", args.name]
+    command += ["--", *argv]
+    if args.dry_run:
+        print(shlex.join(command))
+        return
+    if not shutil.which("hc"):
+        raise Fail("hc (herdr-core) is not on PATH")
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Fail(result.stderr.strip() or f"hc run failed ({result.returncode})")
+    try:
+        started = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise Fail(f"hc run printed no JSON: {result.stdout.strip()}") from error
+    address = started.get("address")
+    if not address:
+        raise Fail("hc run printed no terminal address")
+    with edit_list("tasks", "tasks", folder) as data:
+        task = find(data["tasks"], args.id)
+        task["terminal"] = address
+        if task.get("status", "todo") == "todo":
+            task["status"] = "doing"
+        task["updated"] = now()
+    emit(args, task, f"{task['id']}  {address}  {task['title']}")
+
+
+def task_kill(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    _, data = read_list("tasks", "tasks", folder)
+    task = find(data["tasks"], args.id)
+    address = task.get("terminal")
+    if not address:
+        raise Fail(f"{task['id']} has no terminal to stop")
+    if shutil.which("hc"):
+        subprocess.run(["hc", "kill", address], capture_output=True, text=True)
+    with edit_list("tasks", "tasks", folder) as data:
+        task = find(data["tasks"], args.id)
+        task["terminal"] = None
+        task["updated"] = now()
+    emit(args, task, f"stopped {address}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -140,6 +226,31 @@ def build_parser() -> argparse.ArgumentParser:
     remove = commands.add_parser("rm", parents=[common], help="remove a task")
     remove.add_argument("id")
     remove.set_defaults(handler=task_rm)
+
+    label = commands.add_parser("label", parents=[common], help="print the herdr.task label a terminal carries for this task")
+    label.add_argument("id")
+    label.set_defaults(handler=task_label)
+
+    bind = commands.add_parser("bind", parents=[common], help="attach a task to a terminal started elsewhere (omit the address to detach)")
+    bind.add_argument("id")
+    bind.add_argument("terminal", nargs="?")
+    bind.set_defaults(handler=task_bind)
+
+    spawn = commands.add_parser(
+        "spawn",
+        parents=[common],
+        help="start an agent for a task in a herdr terminal (hc run --keep --bg), labelled so the panel finds it",
+    )
+    spawn.add_argument("id")
+    spawn.add_argument("--cwd", help="where the agent starts (default: the task's folder)")
+    spawn.add_argument("--name", help="the terminal's name (default: hc's)")
+    spawn.add_argument("--dry-run", action="store_true", help="print the hc command instead of running it")
+    spawn.add_argument("argv", nargs="*", help="-- <program> [args…]")
+    spawn.set_defaults(handler=task_spawn)
+
+    kill = commands.add_parser("kill", parents=[common], help="end the task's agent terminal")
+    kill.add_argument("id")
+    kill.set_defaults(handler=task_kill)
 
     where = commands.add_parser("path", parents=[common], help="print the folder's list path")
     where.set_defaults(handler=task_path)

@@ -113,3 +113,43 @@ def test_json_flag_before_the_command(tmp_path: Path, tools, capsys: pytest.Capt
     folder = str(tmp_path / "repo")
     assert task.main(["--json", "add", "Hello", "--folder", folder]) == 0
     assert json.loads(capsys.readouterr().out)["title"] == "Hello"
+
+
+def test_task_label_bind_and_unbind(tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]) -> None:
+    task, _ = tools
+    folder = str(tmp_path / "repo")
+    assert task.main(["add", "Delegated review", "--folder", folder]) == 0
+    task_id = capsys.readouterr().out.split()[0]
+
+    # The label is what an agent's terminal carries so the panel finds it again.
+    assert task.main(["label", task_id, "--folder", folder]) == 0
+    assert capsys.readouterr().out.strip() == f"herdr.task=repo#{task_id}"
+
+    assert task.main(["bind", task_id, "t7", "--folder", folder]) == 0
+    assert "t7" in capsys.readouterr().out
+    assert task.main(["show", "--json", task_id, "--folder", folder]) == 0
+    assert json.loads(capsys.readouterr().out)["terminal"] == "t7"
+
+    assert task.main(["bind", task_id, "--folder", folder]) == 0
+    assert "unbound" in capsys.readouterr().out
+    assert task.main(["show", "--json", task_id, "--folder", folder]) == 0
+    assert json.loads(capsys.readouterr().out)["terminal"] is None
+
+
+def test_spawn_dry_run_prints_the_hc_command(tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]) -> None:
+    task, _ = tools
+    folder = str(tmp_path / "repo")
+    assert task.main(["add", "Run a review", "--folder", folder]) == 0
+    task_id = capsys.readouterr().out.split()[0]
+
+    assert task.main(["spawn", task_id, "--folder", folder, "--dry-run", "--", "claude", "-p", "review"]) == 0
+    command = capsys.readouterr().out.strip()
+    assert command.startswith("hc run --keep --bg --json")
+    assert f"herdr.task=repo#{task_id}" in command
+    assert command.endswith("-- claude -p review")
+    # A dry run changes nothing.
+    assert task.main(["show", "--json", task_id, "--folder", folder]) == 0
+    assert json.loads(capsys.readouterr().out).get("terminal") is None
+
+    assert task.main(["spawn", task_id, "--folder", folder, "--dry-run"]) == 1
+    assert "spawn needs a program" in capsys.readouterr().err
