@@ -8,6 +8,7 @@ import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, r
 
 const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
 const ROOTS = new Map();
+const PROBES = new Map();
 const ORDER = ["blocked", "doing", "todo", "done"];
 const TITLES = { blocked: "Blocked", doing: "Doing", todo: "To do", done: "Done" };
 const DOTS = { blocked: "blocked", doing: "working", todo: "muted", done: "done" };
@@ -31,6 +32,19 @@ function here() {
   const f = focused();
   const pane = f?.pane ? panes().find((p) => p.pane === f.pane) : null;
   return { folder: pane?.cwd || f?.cwd || space?.folder, on: space?.machine ?? null, name: space?.name };
+}
+
+// A remote machine needs the command and its store before the list means anything;
+// one shell per machine answers both, and the local path never probes.
+async function probeFor(on) {
+  if (!on) return "ok";
+  if (!PROBES.has(on)) {
+    const result = await exec("sh", ["-c", "command -v herdr-task >/dev/null && ls -d ~/.local/share/ooodnakov/herdr"], { on }).catch(() => null);
+    if (!result) return "unknown";
+    // `command -v` fails silently; a missing store fails in `ls`, which writes to stderr.
+    PROBES.set(on, result.code === 0 ? "ok" : String(result.stderr ?? "").trim() ? "store" : "task");
+  }
+  return PROBES.get(on);
 }
 
 function age(iso) {
@@ -96,6 +110,7 @@ export default class Tasks extends View {
     this.selected = null;
     this.confirm = null;
     this.error = null;
+    this.missing = null;
     if (!at.folder) {
       this.error = "No folder";
       return;
@@ -108,11 +123,15 @@ export default class Tasks extends View {
         cx.notify();
         return;
       }
-      const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd: at.folder, on: at.on }).catch(() => null);
+      const [probe, top] = await Promise.all([
+        probeFor(at.on),
+        exec("git", ["rev-parse", "--show-toplevel"], { cwd: at.folder, on: at.on }).catch(() => null),
+      ]);
       const folder = norm(top?.code === 0 && top.stdout.trim() ? top.stdout.trim() : at.folder);
       if (this.focus !== key) return;
       this.root = root;
       this.folder = folder;
+      this.missing = probe === "task" ? `herdr-task missing on ${at.on}` : probe === "store" ? "no store yet" : null;
       await this.read(key, cx);
       this.loading = false;
       cx.notify();
@@ -132,6 +151,8 @@ export default class Tasks extends View {
   }
 
   async read(key, cx) {
+    // Without the command or its store the list would only look empty, so the panel says why.
+    if (this.missing) return;
     try {
       const on = this.on;
       const index = JSON.parse((await readTextFile(`${this.root}/index.json`, { on })) || "{}");
@@ -257,9 +278,10 @@ export default class Tasks extends View {
           .child(div().text_size(11).text_color(t.dim).child(this.folder?.split("/").pop() ?? "")))
         .child(v_flex().id("oo-tasks-list").flex_1().min_h(0).overflow_y_scrollbar().py(4)
           .children(this.rows(tasks, t, all))
-          .when(!tasks.length && !this.error, (el) => el.child(div().p(12).gap(4).text_size(12).text_color(t.dim)
+          .when(!tasks.length && !this.error && !this.missing, (el) => el.child(div().p(12).gap(4).text_size(12).text_color(t.dim)
             .child(this.loading ? "Loading…" : "No tasks")
             .child(div().text_size(11).child('Agents add them with herdr-task add "…"'))))
+          .when(Boolean(this.missing), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.missing)))
           .when(Boolean(this.error), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.error))))
         .child(h_flex().h(26).flex_none().px(14).gap(10).items_center().border_t(1).border_color(t.border)
           .children(counts.map((count) => div().text_size(11).text_color(t.dim).child(count)))))
