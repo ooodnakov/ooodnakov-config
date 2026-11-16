@@ -368,7 +368,10 @@ The shared AGENTS policy snippets are configured in:
 - `home/.config/ooodnakov/agents/config.json`
 - `home/.config/ooodnakov/agents/common-text.md`
 - `home/.config/ooodnakov/agents/common-data.json` (structured MCP + skills data)
+- `home/.config/ooodnakov/agents/extras/<agent>.md` (per-agent inserts, referenced by `extra_text_file`)
 - `docs/agents-config-research.md` (cross-agent config model comparison and rationale)
+
+An `agent_configs` entry may set `extra_text_file`, a repo-relative Markdown file whose contents are appended inside that target's managed block under `## Agent-specific instructions`. Extras stay inside the `oooconf:agents-common` markers, so they are replaced on every sync and never accumulate; targets without the key render the shared block unchanged. Currently only the Oh My Pi global instructions target carries an extra (`extras/omp.md`: batch independent tool calls, collapse repeated `tool.*` calls into one `eval` cell).
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
 `oooconf agents sync` targets every configured global agent config by default and is idempotent. Pass agent keys such as `--agents claude codex` to narrow it, or `--select` to choose interactively. `--check` exits non-zero when any target is stale; `--dry-run` prints the same plan without writing.
