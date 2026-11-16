@@ -4,11 +4,18 @@
  import { View, div, svg, image } from "gpui-kit";
  import { h_flex, ScrollHandle } from "gpui-base";
 -import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings } from "herdr";
-+import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings, checking } from "herdr";
++import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings, checking, nextCommand } from "herdr";
  
  function find(node, id) {
    if (node?.id === id) return node;
-@@ -34,6 +34,12 @@
+@@ -28,12 +28,38 @@
+ }
+ 
+ export default class Tabs extends View {
+-  init() {
++  init(_props, cx) {
+     this.pressed = null;
+     this.scroll = ScrollHandle.new();
      try { this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}"); } catch { this.panels = {}; }
      if (!this.panels || typeof this.panels !== "object" || Array.isArray(this.panels)) this.panels = {};
      this.swipe = { acc: 0, steps: 0, at: 0, last: 0 };
@@ -18,10 +25,30 @@
 +      const merged = [...new Set([...enabled, "oo-tasks", "oo-artifacts", "oo-agent"])];
 +      if (merged.length !== enabled.length) setShared("workspace.panels", merged);
 +    }
++    // One key per panel: keys.json binds "tabs-panels.tasks" and
++    // "tabs-panels.artifacts" because opening a panel takes two commands
++    // (select the stack's child, then show the stack).
++    cx.spawn(async (cx) => {
++      for (;;) {
++        const name = (await nextCommand()).split(/[.:]/).pop();
++        const child = name === "tasks" ? "oo-tasks" : name === "artifacts" ? "oo-artifacts" : null;
++        if (child) this.showPanel(child);
++        cx.notify();
++      }
++    });
++  }
++
++  // The key equivalent of a panel button: select the stack's child, then show
++  // the stack. A layout without the panel (Herdr's `main`) has nothing to open.
++  showPanel(child) {
++    const root = layout();
++    if (!find(root, "panel-body") || !find(root, "panel")) return;
++    run("layout.select", { stack: "panel-body", child });
++    run("layout.show", { id: "panel" });
    }
  
    // One tab per wheel notch. A touchpad or smooth-scrolling mouse sends many
-@@ -150,8 +156,10 @@
+@@ -150,8 +176,10 @@
        .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
        .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
        .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
