@@ -104,5 +104,5 @@ dev: null
 update:
   auto: false
   autoqaConsent: denied
-hideThinkingBlock: false
+hideThinkingBlock: true
 defaultThinkingLevel: high
