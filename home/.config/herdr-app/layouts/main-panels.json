@@ -154,6 +154,13 @@
                       "content": {
                         "mod": "oo-artifacts"
                       }
+                    },
+                    {
+                      "id": "oo-agent",
+                      "type": "block",
+                      "content": {
+                        "agent": "focused"
+                      }
                     }
                   ],
                   "active": "files"

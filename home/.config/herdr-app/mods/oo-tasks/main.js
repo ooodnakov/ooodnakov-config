@@ -189,7 +189,18 @@ export default class Tasks extends View {
               .child(`+${agent.children} sub-agent${agent.children === 1 ? "" : "s"}`)))
             .child(div().flex_1())
             .when(agent.root.state === "live", (row) => row
-              .child(chip("Open", () => run("terminal.keep", { terminal: agent.root.address }), t))
+              .child(chip("Panel", () => {
+                if (!agent.root.status) {
+                  // No status report: the agent block can't show it, so peek instead.
+                  run("terminal.peek", { terminal: agent.root.address });
+                  return;
+                }
+                // Show the block first: a stack child starts the first time it shows.
+                run("layout.select", { stack: "panel-body", child: "oo-agent" });
+                run("layout.show", { id: "panel" });
+                run("agent.focus", { terminal: agent.root.address });
+              }, t))
+              .child(chip("Pane", () => run("terminal.keep", { terminal: agent.root.address }), t))
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
         .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`)));
   }

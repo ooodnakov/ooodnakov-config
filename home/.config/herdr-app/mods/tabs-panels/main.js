@@ -37,7 +37,7 @@ export default class Tabs extends View {
     // The tab bar restores a space's panel only when its id is in this list.
     if (!checking()) {
       const enabled = shared("workspace.panels") ?? ["files", "changes"];
-      const merged = [...new Set([...enabled, "oo-tasks", "oo-artifacts"])];
+      const merged = [...new Set([...enabled, "oo-tasks", "oo-artifacts", "oo-agent"])];
       if (merged.length !== enabled.length) setShared("workspace.panels", merged);
     }
   }

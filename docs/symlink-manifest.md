@@ -165,7 +165,9 @@ tracked. Add another managed theme as a new file plus a `[[links]]` entry.
 
 The `tasks` layout places the two repo-owned mods side by side; `main-panels` is a
 clone of Herdr's `main` whose panel stack (`panel-body`) adds them after Files and
-Changes. Reaching them from the top-right tab bar needs buttons there, so
+Changes, plus an `oo-agent` block (`{ "agent": "focused" }`) that shows the agent
+chosen with `agent.focus`, so a task's terminal can fill the panel. Reaching the
+panels from the top-right tab bar needs buttons there, so
 `tabs-panels` is a clone of the shipped `tabs` mod with two `panelButton` calls
 added (Tasks, Artifacts) and the `workspace.panels` merge in its `init` that keeps
 the tab bar's per-space panel restore aware of the new ids. The panels read the
@@ -174,10 +176,11 @@ per-folder lists under `~/.local/share/ooodnakov/herdr/` that `herdr-task` and
 spaces). A task may carry an agent: `herdr-task spawn` starts it with
 `hc run --label herdr.task=<slug>#<id>` and stores `terminal` on the task; the
 mod matches that label (or the stored address) in `terminals()`, counts the
-sub-agents whose `parent` is that terminal, and its detail opens the terminal
-(`terminal.keep`) or stops it (`terminal.kill`). Those two commands import
-`home/.config/ooodnakov/bin/_herdr_store.py` by resolving their own symlink, so
-only the commands themselves are linked, not the module.
+sub-agents whose `parent` is that terminal, and its detail shows the terminal in
+the panel (`agent.focus`), keeps it as a pane (`terminal.keep`), peeks when it
+reports no status (`terminal.peek`), or stops it (`terminal.kill`). Those two
+commands import `home/.config/ooodnakov/bin/_herdr_store.py` by resolving their
+own symlink, so only the commands themselves are linked, not the module.
 
 ## Platform Tags
 
