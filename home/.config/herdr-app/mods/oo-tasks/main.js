@@ -5,7 +5,7 @@
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView, Input, InputState } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, writeTextFile, watchFolder, terminals, run, theme, home, checking, setShared, notify, playSound } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, writeTextFile, watchFolder, terminals, run, theme, home, checking, setShared, notify, playSound, knownAgents } from "herdr";
 import { randomBytes } from "crypto";
 
 const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
@@ -93,11 +93,13 @@ function age(iso) {
   return `${Math.round(minutes / (60 * 24))}d`;
 }
 
-function chip(label, action, t, danger = false, active = false) {
-  return h_flex().h(22).px(8).rounded(6).flex_none().cursor_pointer().text_size(11).bg(t.chrome)
+function chip(label, action, t, danger = false, active = false, id = null) {
+  const element = h_flex().id(id ?? `oo-chip-${String(label).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`)
+    .h(22).px(8).rounded(6).flex_none().cursor_pointer().text_size(11).bg(t.chrome)
     .text_color(danger ? t.blocked : active ? t.accent : t.muted)
     .hover((s) => s.bg(t.hover).text_color(danger ? t.blocked : t.foreground))
-    .on_click(action).child(label);
+    .on_click((_event, cx) => action(cx)).child(label);
+  return element;
 }
 
 // The terminal a task's agent runs in: the one carrying the task's
@@ -141,6 +143,9 @@ export default class Tasks extends View {
     this.error = null;
     this.warning = null;
     this.warningFor = null;
+    // The agents people can start here, loaded once per machine for the START chips.
+    this.harnesses = null;
+    this.harnessError = null;
     this.loading = false;
     this.token = null;
     this.watch = null;
@@ -417,6 +422,39 @@ export default class Tasks extends View {
     });
   }
 
+  // Which harnesses exist on this task's machine; the START chips offer only those.
+  loadHarnesses(cx) {
+    this.harnesses = [];
+    cx.spawn(async (cx) => {
+      try {
+        const list = await knownAgents({ on: this.on });
+        this.harnesses = list.filter((program) => program.installed && program.key !== "shell");
+      } catch (error) {
+        this.harnessError = String(error);
+      }
+      cx.notify();
+    });
+  }
+
+  // Start a task by hand: the harness opens in a new herdr-core terminal, labelled
+  // like `herdr-task spawn` does, so this panel finds it and the status turns doing.
+  start(task, program, cx) {
+    const prompt = [task.title, (task.note || "").trim()].filter(Boolean).join("\n\n");
+    const args = ["spawn", task.id, "--folder", this.folder, "--name", task.title || task.id, "--", ...program.run, prompt];
+    cx.spawn(async (cx) => {
+      try {
+        const result = await exec(this.on ? "herdr-task" : CLI, args, { on: this.on });
+        if (result.code !== 0) throw new Error(result.stderr.trim() || `herdr-task spawn failed (${result.code})`);
+        this.error = null;
+        this.focus = null;
+        this.data = null;
+      } catch (error) {
+        this.error = String(error);
+      }
+      cx.notify();
+    });
+  }
+
   // Only a click lands here: the agent's report is a suggestion. Same compare-and-set
   // rewrite as Delete; a remote machine writes its own list under its own lock.
   async markDone(task, cx) {
@@ -573,11 +611,11 @@ export default class Tasks extends View {
         .when(status === "done", (row) => row
           .child(div().flex_1())
           .when(!this.confirmClear, (r) => r
-            .child(chip("Clear done", () => { this.confirmClear = true; cx.notify(); }, t)))
+            .child(chip("Clear done", (cx) => { this.confirmClear = true; cx.notify(); }, t, false, false, "oo-done-clear")))
           .when(this.confirmClear, (r) => r
             .child(div().text_size(11).text_color(t.dim).child(`Delete ${group.length}?`))
-            .child(chip("Delete", () => this.clearDone(cx), t, true))
-            .child(chip("Cancel", () => { this.confirmClear = false; cx.notify(); }, t)))));
+            .child(chip("Delete", (cx) => this.clearDone(cx), t, true, false, "oo-done-delete"))
+            .child(chip("Cancel", (cx) => { this.confirmClear = false; cx.notify(); }, t, false, false, "oo-done-cancel")))));
       for (const task of group) {
         const agent = agentFor(task, this.slug, all);
         const waiting = (task.deps ?? []).filter((id) => (tasks.find((entry) => entry.id === id)?.status || "todo") !== "done").length;
@@ -614,7 +652,7 @@ export default class Tasks extends View {
           .child(div().text_size(11).font_semibold().text_color(t.dim).child("OUTPUT"))
           .when(Boolean(this.outputError), (row) => row.child(div().text_size(11).text_color(t.blocked).child(this.outputError)))
           .child(div().flex_1())
-          .child(chip("Read", () => { this.outputFor = null; this.output = null; cx.notify(); }, t)))
+          .child(chip("Read", (cx) => { this.outputFor = null; this.output = null; cx.notify(); }, t)))
         .child(div().rounded(8).bg(t.surface).p(8).text_size(12).text_color(t.muted)
           .when(Boolean(this.output), (el) => el.child(TextView.markdown("oo-task-output", this.output).selectable(true)))
           .when(!this.output, (el) => el.child(div().text_size(11).child(this.outputError ? "" : "Reading…"))))
@@ -639,6 +677,7 @@ export default class Tasks extends View {
           .child(div().text_size(11).text_color(dep.status === "done" ? t.dim : t.muted).child(dep.status ?? "todo"))))
       : null;
     if (address) this.loadOutput(address, cx);
+    if (!address && this.harnesses === null && !this.harnessError) this.loadHarnesses(cx);
     return v_flex().size_full().min_h(0)
       .child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().id("oo-task-back").w(20).cursor_pointer().text_color(t.muted)
@@ -681,16 +720,20 @@ export default class Tasks extends View {
         .when(Boolean(this.error), (el) => el.child(div().text_size(11).text_color(t.muted).child(this.error)))
         .child(h_flex().gap(6).items_center().flex_wrap()
           .child(div().text_size(11).font_semibold().text_color(t.dim).child("STATUS"))
-          .children(STATUSES.map((status) => chip(TITLES[status], () => this.setStatus(task, status, cx), t, false, (task.status || "todo") === status))))
+          .children(STATUSES.map((status) => chip(TITLES[status], (cx) => this.setStatus(task, status, cx), t, false, (task.status || "todo") === status))))
+        .when(!address && Boolean(this.harnesses?.length), (el) => el.child(h_flex().gap(6).items_center().flex_wrap()
+          .child(div().text_size(11).font_semibold().text_color(t.dim).child("START"))
+          .children(this.harnesses.map((program, index) => chip(program.name, (cx) => this.start(task, program, cx), t, false, false, `oo-start-${index}`)))))
+        .when(!address && Boolean(this.harnessError), (el) => el.child(div().text_size(11).text_color(t.muted).child(this.harnessError)))
         .child(h_flex().gap(6).items_center()
           .when(finished(task, agent), (row) => row
-            .child(chip("Mark done", () => this.markDone(task, cx), t)))
+            .child(chip("Mark done", (cx) => this.markDone(task, cx), t)))
           .when(this.confirm !== task.id, (row) => row
-            .child(chip("Delete", () => { this.confirm = task.id; cx.notify(); }, t)))
+            .child(chip("Delete", (cx) => { this.confirm = task.id; cx.notify(); }, t)))
           .when(this.confirm === task.id, (row) => row
             .child(div().text_size(11).text_color(t.dim).child("Delete this task?"))
-            .child(chip("Delete", () => this.remove(task, cx), t, true))
-            .child(chip("Cancel", () => { this.confirm = null; cx.notify(); }, t)))
+            .child(chip("Delete", (cx) => this.remove(task, cx), t, true))
+            .child(chip("Cancel", (cx) => { this.confirm = null; cx.notify(); }, t)))
           .when(Boolean(this.error), (row) => row
             .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.blocked).child(this.error)))));
   }
@@ -713,7 +756,7 @@ export default class Tasks extends View {
           .child(div().flex_1().min_w(0).h(26).px(8).flex().items_center().rounded(7).border_1().border_color(t.border)
             .bg(t.background).cursor_text().on_mouse_down("left", (_event, cx) => cx.stop_propagation())
             .child(Input.new(this.input).h_full().text_size(12).text_color(t.foreground)))
-          .child(chip("Add", () => this.create(cx), t)))
+          .child(chip("Add", (cx) => this.create(cx), t)))
         .child(v_flex().id("oo-tasks-list").flex_1().min_h(0).overflow_y_scrollbar().py(4)
           .children(this.rows(tasks, t, all, cx))
           .when(!tasks.length && !this.error && !this.missing, (el) => el.child(div().p(12).gap(4).text_size(12).text_color(t.dim)
