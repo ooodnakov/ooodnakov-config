@@ -1,11 +1,12 @@
 // Tasks: the folder's task list, written by the `herdr-task` command.
 // A task is a title, an optional note and a status; agents add and move them,
-// this panel only reads <root>/tasks/<slug>.json, where the root is named by
-// ~/.config/ooodnakov/herdr-data (or ~/.local/share/ooodnakov/herdr before that).
+// this panel adds one from its header, and rewrites statuses and deletes with
+// the command's compare-and-set (the command itself on a remote machine).
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
-import { v_flex, h_flex, TextView } from "gpui-base";
+import { v_flex, h_flex, TextView, Input, InputState } from "gpui-base";
 import { spaces, panes, focused, exec, readTextFile, writeTextFile, watchFolder, terminals, run, theme, home, checking, setShared } from "herdr";
+import { randomBytes } from "crypto";
 
 const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
 const DEFAULT_ROOT = `${home()}/.local/share/ooodnakov/herdr`;
@@ -13,6 +14,7 @@ const REMOTE_ROOT = 'if [ -r "$HOME/.config/ooodnakov/herdr-data" ]; then cat "$
 const ROOTS = new Map();
 const PROBES = new Map();
 const ORDER = ["blocked", "doing", "todo", "done"];
+const STATUSES = ["todo", "doing", "blocked", "done"];
 const TITLES = { blocked: "Blocked", doing: "Doing", todo: "To do", done: "Done" };
 const DOTS = { blocked: "blocked", doing: "working", todo: "muted", done: "done" };
 const AGENT_COLORS = { working: "working", blocked: "blocked", done: "done", idle: "idle" };
@@ -22,10 +24,29 @@ const FINISHED = new Set(["done", "idle"]);
 
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
 const pointed = (text) => norm(String(text ?? "").trim());
+const textOf = (data) => `${JSON.stringify(data, null, 2)}\n`;
 
 // The agent panel's header reads this: the task whose terminal it can show.
 function select(task) {
   setShared("oo-tasks.selected", task ? { id: task.id, title: task.title ?? "" } : null);
+}
+
+// The CLI's task ids and stamps: t-<local YYYYMMDD>-<6 hex>, seconds-precision UTC.
+function isoNow() {
+  return `${new Date().toISOString().slice(0, 19)}Z`;
+}
+
+function newId() {
+  const now = new Date();
+  const day = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  return `t-${day}-${randomBytes(3).toString("hex")}`;
+}
+
+// _herdr_store.slug_for's name rule, for a folder the index does not know yet.
+function slugBase(folder) {
+  const name = String(folder).split("/").filter(Boolean).pop() ?? "";
+  const base = name.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^[-.]+/, "").replace(/[-.]+$/, "").toLowerCase();
+  return (base || "root").slice(0, 60);
 }
 
 // Each machine keeps its own lists; a space on another machine reads them there.
@@ -71,9 +92,9 @@ function age(iso) {
   return `${Math.round(minutes / (60 * 24))}d`;
 }
 
-function chip(label, action, t, danger = false) {
+function chip(label, action, t, danger = false, active = false) {
   return h_flex().h(22).px(8).rounded(6).flex_none().cursor_pointer().text_size(11).bg(t.chrome)
-    .text_color(danger ? t.blocked : t.muted)
+    .text_color(danger ? t.blocked : active ? t.accent : t.muted)
     .hover((s) => s.bg(t.hover).text_color(danger ? t.blocked : t.foreground))
     .on_click(action).child(label);
 }
@@ -120,6 +141,8 @@ export default class Tasks extends View {
     this.token = null;
     this.watch = null;
     this.timer = null;
+    this.input = InputState.new({ placeholder: "New task" });
+    this.input.on("submit", (_event, cx) => this.create(cx));
     if (checking()) return;
     select(null);
   }
@@ -261,7 +284,7 @@ export default class Tasks extends View {
         const text = await readTextFile(path);
         const data = text ? JSON.parse(text) : { tasks: [] };
         data.tasks = (data.tasks ?? []).filter((item) => item.id !== task.id);
-        await writeTextFile(path, `${JSON.stringify(data, null, 2)}\n`, text);
+        await writeTextFile(path, textOf(data), text);
       }
       this.selected = null;
       this.confirm = null;
@@ -335,7 +358,91 @@ export default class Tasks extends View {
         if (!item) throw new Error(`${task.id} is no longer in the list`);
         item.status = "done";
         item.updated = stamp;
-        await writeTextFile(path, `${JSON.stringify(data, null, 2)}\n`, text);
+        await writeTextFile(path, textOf(data), text);
+        this.data = data;
+      }
+      this.error = null;
+    } catch (error) {
+      this.error = String(error);
+    }
+    cx.notify();
+  }
+
+  // A list exists only after its first write: the CLI's index names the folder's slug.
+  async assignSlug() {
+    const path = `${this.root}/index.json`;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const text = await readTextFile(path);
+      const index = text ? JSON.parse(text) : {};
+      const folders = index && typeof index.folders === "object" && index.folders ? index.folders : {};
+      const known = folders[this.folder];
+      if (typeof known === "string" && known) return known;
+      const taken = new Set(Object.values(folders).filter((value) => typeof value === "string"));
+      const base = slugBase(this.folder);
+      let slug = base;
+      let number = 1;
+      while (taken.has(slug)) {
+        number += 1;
+        slug = `${base}-${number}`;
+      }
+      folders[this.folder] = slug;
+      try {
+        await writeTextFile(path, textOf({ format: 1, folders }), text);
+        return slug;
+      } catch (error) {
+        if (attempt === 2) throw error;
+      }
+    }
+    return null;
+  }
+
+  // New task from the header row: the same shape `herdr-task add` writes.
+  async create(cx) {
+    const title = this.input.value().trim();
+    if (!title || !this.root || !this.folder) return;
+    const stamp = isoNow();
+    const task = { id: newId(), title, note: "", status: "todo", created: stamp, updated: stamp };
+    try {
+      if (this.on) {
+        const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-task", "add", title, "--folder", this.folder]);
+        if (result.code !== 0) throw new Error(result.stderr || `herdr-task add failed (${result.code})`);
+      } else {
+        const slug = this.slug ?? (await this.assignSlug());
+        if (!slug) throw new Error("cannot name this folder's list");
+        this.slug = slug;
+        const path = `${this.root}/tasks/${slug}.json`;
+        const text = await readTextFile(path);
+        const data = text ? JSON.parse(text) : { format: 1, folder: this.folder, tasks: [] };
+        data.tasks = [...(data.tasks ?? []), task];
+        await writeTextFile(path, textOf(data), text);
+        this.data = data;
+      }
+      this.input.set_value("");
+      this.error = null;
+      if (this.on) this.reload(cx);
+    } catch (error) {
+      this.error = String(error);
+    }
+    cx.notify();
+  }
+
+  // Status chips: the same compare-and-set as Delete, or `herdr-task set` under its lock.
+  async setStatus(task, status, cx) {
+    if ((task.status || "todo") === status) return;
+    const path = `${this.root}/tasks/${this.slug}.json`;
+    try {
+      if (this.on) {
+        const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-task", "set", task.id, status, "--folder", this.folder]);
+        if (result.code !== 0) throw new Error(result.stderr || `herdr-task set failed (${result.code})`);
+        this.reload(cx);
+      } else {
+        const text = await readTextFile(path);
+        const data = text ? JSON.parse(text) : null;
+        const item = data?.tasks?.find((entry) => entry.id === task.id);
+        if (!item) throw new Error(`${path} no longer has ${task.id}`);
+        item.status = status;
+        item.updated = isoNow();
+        await writeTextFile(path, textOf(data), text);
         this.data = data;
       }
       this.error = null;
@@ -431,6 +538,10 @@ export default class Tasks extends View {
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
         .when(Boolean(outputBlock), (el) => el.child(outputBlock))
         .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`))
+        .when(Boolean(this.error), (el) => el.child(div().text_size(11).text_color(t.muted).child(this.error)))
+        .child(h_flex().gap(6).items_center().flex_wrap()
+          .child(div().text_size(11).font_semibold().text_color(t.dim).child("STATUS"))
+          .children(STATUSES.map((status) => chip(TITLES[status], () => this.setStatus(task, status, cx), t, false, (task.status || "todo") === status))))
         .child(h_flex().gap(6).items_center()
           .when(finished(task, agent), (row) => row
             .child(chip("Mark done", () => this.markDone(task, cx), t)))
@@ -458,6 +569,11 @@ export default class Tasks extends View {
           .child(div().font_semibold().child("Tasks"))
           .child(div().flex_1())
           .child(div().text_size(11).text_color(t.dim).child(this.folder?.split("/").pop() ?? "")))
+        .child(h_flex().h(34).flex_none().px(10).gap(6).items_center().border_b(1).border_color(t.border)
+          .child(div().flex_1().min_w(0).h(26).px(8).flex().items_center().rounded(7).border_1().border_color(t.border)
+            .bg(t.background).cursor_text().on_mouse_down("left", (_event, cx) => cx.stop_propagation())
+            .child(Input.new(this.input).h_full().text_size(12).text_color(t.foreground)))
+          .child(chip("Add", () => this.create(cx), t)))
         .child(v_flex().id("oo-tasks-list").flex_1().min_h(0).overflow_y_scrollbar().py(4)
           .children(this.rows(tasks, t, all))
           .when(!tasks.length && !this.error && !this.missing, (el) => el.child(div().p(12).gap(4).text_size(12).text_color(t.dim)
