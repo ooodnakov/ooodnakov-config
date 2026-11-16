@@ -7,7 +7,9 @@ same list. Lists live in tasks/<slug>.json under the root recorded in
 ~/.config/ooodnakov/herdr-data (default ~/.local/share/ooodnakov/herdr).
 
     herdr-task add "Split the importer" --note "Then run the tests"
-    herdr-task list
+    herdr-task add "Run the tests" --after t-20260101-a1b2c3
+    herdr-task list --ready
+    herdr-task dep t-20260101-a1b2c3 t-20260101-d4e5f6
     herdr-task set t-20260101-a1b2c3 doing
     herdr-task show t-20260101-a1b2c3
 """
@@ -47,12 +49,16 @@ def task_list(args: argparse.Namespace) -> None:
     folder = folder_for(args.folder)
     _, data = read_list("tasks", "tasks", folder)
     tasks = [task for task in data["tasks"] if not args.status or task.get("status") == args.status]
+    if args.ready:
+        tasks = [task for task in tasks if not waiting_on(task, data["tasks"])]
     tasks.sort(key=lambda task: task.get("created", ""))
     if args.json:
         print(json.dumps({"format": data.get("format"), "folder": folder, "tasks": tasks}, indent=2, ensure_ascii=False))
         return
     for task in tasks:
-        print(f"{task['id']}\t{task.get('status', 'todo')}\t{task.get('title', '')}")
+        open_deps = len(waiting_on(task, data["tasks"]))
+        suffix = f"\tafter {open_deps}" if open_deps else ""
+        print(f"{task['id']}\t{task.get('status', 'todo')}\t{task.get('title', '')}{suffix}")
     if not tasks:
         print("no tasks", file=sys.stderr)
 
@@ -74,6 +80,7 @@ def task_add(args: argparse.Namespace) -> None:
         "updated": stamp,
     }
     with edit_list("tasks", "tasks", folder) as data:
+        task["deps"] = resolve_deps(data["tasks"], args.after or [], task["id"])
         data["tasks"].append(task)
     emit(args, task, f"{task['id']}  {task['status']}  {task['title']}")
 
@@ -90,6 +97,66 @@ def task_set(args: argparse.Namespace) -> None:
     emit(args, task, f"{task['id']}  {previous} -> {task['status']}")
 
 
+def waiting_on(task: dict, tasks: list[dict]) -> list[str]:
+    """The task's dependencies that are not done yet: what keeps it from starting."""
+    status = {item.get("id"): item.get("status", "todo") for item in tasks}
+    return [dep for dep in task.get("deps") or [] if status.get(dep) != "done"]
+
+
+def resolve_deps(tasks: list[dict], refs: list[str], own_id: str | None = None) -> list[str]:
+    """Canonical ids for the `--after`/`dep` arguments, refusing unknown and self references."""
+    resolved: list[str] = []
+    for ref in refs:
+        for part in str(ref).split(","):
+            part = part.strip()
+            if not part:
+                continue
+            dep = find(tasks, part)
+            if own_id and dep["id"] == own_id:
+                raise Fail("a task cannot depend on itself")
+            if dep["id"] not in resolved:
+                resolved.append(dep["id"])
+    return resolved
+
+
+def reaches(tasks: list[dict], start: str, target: str) -> bool:
+    """Whether following `start`'s dependencies ever arrives at `target` (a cycle)."""
+    deps = {item.get("id"): item.get("deps") or [] for item in tasks}
+    stack, seen = [start], set()
+    while stack:
+        current = stack.pop()
+        if current == target:
+            return True
+        if current in seen:
+            continue
+        seen.add(current)
+        stack.extend(deps.get(current) or [])
+    return False
+
+
+def task_depend(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    with edit_list("tasks", "tasks", folder) as data:
+        task = find(data["tasks"], args.id)
+        blockers = resolve_deps(data["tasks"], args.ids, task["id"])
+        for blocker in blockers:
+            if reaches(data["tasks"], blocker, task["id"]):
+                raise Fail(f"{blocker} already waits on {task['id']}; that would be a cycle")
+        task["deps"] = list(dict.fromkeys((task.get("deps") or []) + blockers))
+        task["updated"] = now()
+    emit(args, task, f"{task['id']}  after {', '.join(task['deps'])}")
+
+
+def task_undepend(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    with edit_list("tasks", "tasks", folder) as data:
+        task = find(data["tasks"], args.id)
+        drop = set(resolve_deps(data["tasks"], args.ids))
+        task["deps"] = [dep for dep in (task.get("deps") or []) if dep not in drop]
+        task["updated"] = now()
+    emit(args, task, f"{task['id']}  after {', '.join(task['deps']) or 'nothing'}")
+
+
 def task_show(args: argparse.Namespace) -> None:
     folder = folder_for(args.folder)
     _, data = read_list("tasks", "tasks", folder)
@@ -97,6 +164,12 @@ def task_show(args: argparse.Namespace) -> None:
     lines = [f"{task['id']}  {task.get('status', 'todo')}", task.get("title", "")]
     if task.get("terminal"):
         lines.append(f"agent {task['terminal']}")
+    if task.get("deps"):
+        by_id = {item.get("id"): item for item in data["tasks"]}
+        lines.append("after")
+        for dep in task["deps"]:
+            item = by_id.get(dep) or {}
+            lines.append(f"  {dep}  {item.get('status', 'gone')}  {item.get('title', '')}")
     if task.get("worktree"):
         tool = f", {task['worktree_tool']}" if task.get("worktree_tool") else ""
         lines.append(f"worktree {task['worktree']} ({task.get('branch', '')}{tool})")
@@ -111,6 +184,9 @@ def task_rm(args: argparse.Namespace) -> None:
     with edit_list("tasks", "tasks", folder) as data:
         task = find(data["tasks"], args.id)
         data["tasks"] = [item for item in data["tasks"] if item is not task]
+        for item in data["tasks"]:
+            if task["id"] in (item.get("deps") or []):
+                item["deps"] = [dep for dep in item["deps"] if dep != task["id"]]
     emit(args, task, f"removed {task['id']}")
 
 
@@ -224,6 +300,9 @@ def task_spawn(args: argparse.Namespace) -> None:
     folder = folder_for(args.folder)
     _, data = read_list("tasks", "tasks", folder)
     task = find(data["tasks"], args.id)
+    open_deps = waiting_on(task, data["tasks"])
+    if open_deps and not args.force:
+        raise Fail(f"{task['id']} waits on {', '.join(open_deps)}; finish them first, or pass --force")
     argv = list(args.argv)
     while argv and argv[0] == "--":
         argv.pop(0)
@@ -310,12 +389,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     listing = commands.add_parser("list", parents=[common], help="list tasks")
     listing.add_argument("--status", choices=TASK_STATUSES, help="only this status")
+    listing.add_argument("--ready", action="store_true", help="only tasks whose dependencies are all done")
     listing.set_defaults(handler=task_list)
 
     add = commands.add_parser("add", parents=[common], help="add a task")
     add.add_argument("title", nargs="+", help="what needs doing")
     add.add_argument("-n", "--note", help="details for whoever picks it up")
     add.add_argument("-s", "--status", default="todo", choices=TASK_STATUSES)
+    add.add_argument("-a", "--after", action="append", metavar="ID", help="a task that must be done first (repeatable)")
     add.set_defaults(handler=task_add)
 
     change = commands.add_parser("set", parents=[common], help="change a task's status")
@@ -330,6 +411,16 @@ def build_parser() -> argparse.ArgumentParser:
     remove = commands.add_parser("rm", parents=[common], help="remove a task")
     remove.add_argument("id")
     remove.set_defaults(handler=task_rm)
+
+    depend = commands.add_parser("dep", parents=[common], help="make a task wait for other tasks")
+    depend.add_argument("id")
+    depend.add_argument("ids", nargs="+", help="tasks that must be done first")
+    depend.set_defaults(handler=task_depend)
+
+    undepend = commands.add_parser("undep", parents=[common], help="drop a task's dependency on other tasks")
+    undepend.add_argument("id")
+    undepend.add_argument("ids", nargs="+")
+    undepend.set_defaults(handler=task_undepend)
 
     label = commands.add_parser("label", parents=[common], help="print the herdr.task label a terminal carries for this task")
     label.add_argument("id")
@@ -361,6 +452,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="make a worktree for the task and spawn there: worktrunk (`git-wt` on Windows, `wt` elsewhere) when installed, else git worktree add -b herdr/<id> (default path: <repo>-wt/<id> beside the repo)",
     )
     spawn.add_argument("--dry-run", action="store_true", help="print the git and hc commands instead of running them")
+    spawn.add_argument("--force", action="store_true", help="start even while dependencies are not done")
     spawn.add_argument("argv", nargs="*", help="-- <program> [args…]")
     spawn.set_defaults(handler=task_spawn)
 

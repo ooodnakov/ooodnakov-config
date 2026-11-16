@@ -340,3 +340,42 @@ def test_spawn_worktree_creates_it_and_records_branch(
     assert shown["worktree"] == task.normalize(str(worktree))
     assert shown["branch"] == f"herdr/{task_id}"
     assert shown["terminal"] == "t7"
+
+
+def test_task_dependencies_gate_ready_and_spawn(tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]) -> None:
+    task, _ = tools
+    folder = str(tmp_path / "repo")
+
+    assert task.main(["add", "Plan", "--folder", folder]) == 0
+    first = capsys.readouterr().out.split()[0]
+    assert task.main(["add", "Build", "--after", first, "--folder", folder]) == 0
+    second = capsys.readouterr().out.split()[0]
+
+    assert task.main(["list", "--json", "--folder", folder]) == 0
+    listing = {row["id"]: row for row in json.loads(capsys.readouterr().out)["tasks"]}
+    assert listing[second]["deps"] == [first]
+
+    # Only the unblocked task is ready, and spawn refuses the waiting one.
+    assert task.main(["list", "--ready", "--folder", folder]) == 0
+    assert [line.split("\t")[0] for line in capsys.readouterr().out.splitlines()] == [first]
+    assert task.main(["spawn", second, "--folder", folder, "--dry-run", "--", "omp", "go"]) == 1
+    assert "waits on" in capsys.readouterr().err
+
+    # Cycles and self references are refused.
+    assert task.main(["dep", first, second, "--folder", folder]) == 1
+    assert "cycle" in capsys.readouterr().err
+    assert task.main(["dep", first, first, "--folder", folder]) == 1
+    assert "itself" in capsys.readouterr().err
+
+    assert task.main(["set", first, "done", "--folder", folder]) == 0
+    capsys.readouterr()
+    assert task.main(["list", "--ready", "--folder", folder]) == 0
+    assert second in capsys.readouterr().out
+    assert task.main(["spawn", second, "--folder", folder, "--dry-run", "--", "omp", "go"]) == 0
+    assert capsys.readouterr().out.startswith("hc run")
+
+    # Removing a dependency leaves no dangling ids behind.
+    assert task.main(["rm", first, "--folder", folder]) == 0
+    capsys.readouterr()
+    assert task.main(["show", "--json", second, "--folder", folder]) == 0
+    assert json.loads(capsys.readouterr().out)["deps"] == []

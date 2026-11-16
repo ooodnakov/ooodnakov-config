@@ -33,6 +33,18 @@ herdr-task set t-20261024-ab12cd blocked   # when it needs the human
 
 For repo work add `--worktree` (worktrunk when installed, else `git worktree add`), so parallel tasks never share a checkout; `--keep-open` keeps the terminal readable after the program exits. If you started the terminal yourself, pass `--label "$(herdr-task label <id>)"` to `hc run` and then `herdr-task bind <id> <terminal>`.
 
+## Order work with dependencies
+
+When one task must wait for another, say so instead of remembering it:
+
+```sh
+herdr-task add "Run the migration" --after t-20261024-ab12cd   # waits for that id
+herdr-task dep t-20261024-ef34gh t-20261024-ab12cd             # add a blocker later
+herdr-task list --ready                                        # only tasks you may start
+```
+
+A task whose blockers are not `done` shows `after N` in the panel and a DEPENDS ON block in its detail; `spawn` refuses it until they finish (`--force` overrides), and the CLI rejects cycles. Do not start a waiting task: finish its blockers first, then `list --ready` again.
+
 ## Publish the result: every task ends in an artifact
 
 A task is not finished until its result is an artifact — the panel's OUTPUT is only the agent's last screen; the artifact is what the human keeps and can re-read:

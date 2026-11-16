@@ -5,7 +5,7 @@
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView, Input, InputState } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, writeTextFile, watchFolder, terminals, run, theme, home, checking, setShared } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, writeTextFile, watchFolder, terminals, run, theme, home, checking, setShared, notify, playSound } from "herdr";
 import { randomBytes } from "crypto";
 
 const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
@@ -134,6 +134,7 @@ export default class Tasks extends View {
     this.data = null;
     this.selected = null;
     this.confirm = null;
+    this.confirmClear = false;
     this.output = null;
     this.outputFor = null;
     this.outputError = null;
@@ -144,6 +145,10 @@ export default class Tasks extends View {
     this.token = null;
     this.watch = null;
     this.timer = null;
+    // Last status seen per task, so a transition the panel wasn't looking at still notifies.
+    this.notified = new Map();
+    // Ids this copy changed itself: no toast/sound for your own click.
+    this.quiet = new Set();
     this.input = InputState.new({ placeholder: "New task" });
     this.input.on("submit", (_event, cx) => this.create(cx));
     if (checking()) return;
@@ -208,6 +213,7 @@ export default class Tasks extends View {
     this.data = null;
     this.selected = null;
     this.confirm = null;
+    this.confirmClear = false;
     this.output = null;
     this.outputFor = null;
     this.outputError = null;
@@ -259,6 +265,28 @@ export default class Tasks extends View {
     });
   }
 
+  // Tell the person when a status change lands while they are elsewhere in the
+  // window: the toast names the task, the sound matches the state. Seeding the
+  // first read is silent, and this copy's own clicks never ring.
+  announce(tasks) {
+    const next = new Map(tasks.map((task) => [task.id, task.status || "todo"]));
+    for (const [id, status] of next) {
+      const was = this.notified.get(id);
+      if (!was || was === status) continue;
+      const mine = this.quiet.delete(id);
+      if (mine || (status !== "done" && status !== "blocked")) continue;
+      const task = tasks.find((entry) => entry.id === id);
+      notify({
+        title: status === "done" ? "Task done" : "Task blocked",
+        body: task?.title ?? id,
+        level: status === "done" ? "info" : "warn",
+        timeout: 6000,
+      });
+      playSound(status);
+    }
+    this.notified = next;
+  }
+
   async read(key, cx) {
     // Without the command or its store the list would only look empty, so the panel says why.
     if (this.missing) return;
@@ -269,7 +297,9 @@ export default class Tasks extends View {
       const text = slug ? await readTextFile(`${this.root}/tasks/${slug}.json`, { on }) : null;
       if (this.focus !== key) return;
       this.slug = slug ?? null;
-      this.data = text ? JSON.parse(text) : { tasks: [] };
+      const next = text ? JSON.parse(text) : { tasks: [] };
+      this.announce(next.tasks ?? []);
+      this.data = next;
       if (this.selected && !(this.data.tasks ?? []).some((task) => task.id === this.selected)) {
         this.selected = null;
         select(null);
@@ -278,6 +308,45 @@ export default class Tasks extends View {
     } catch (error) {
       if (this.focus === key) this.error = String(error);
     }
+  }
+
+  // Finished tasks pile up; one click clears the group instead of opening each.
+  // Confirmed once (the header chip asks), then one write locally or one `rm`
+  // per id on the task's machine, where the command takes its own lock.
+  async clearDone(cx) {
+    const done = (this.data?.tasks ?? []).filter((task) => (task.status || "todo") === "done");
+    const ids = new Set(done.map((task) => task.id));
+    this.confirmClear = false;
+    if (!ids.size) {
+      cx.notify();
+      return;
+    }
+    try {
+      if (this.on) {
+        for (const id of ids) {
+          const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-task", "rm", id, "--folder", this.folder]);
+          if (result.code !== 0) throw new Error(result.stderr || `herdr-task rm failed (${result.code})`);
+        }
+      } else {
+        const path = `${this.root}/tasks/${this.slug}.json`;
+        const text = await readTextFile(path);
+        const data = text ? JSON.parse(text) : { tasks: [] };
+        data.tasks = (data.tasks ?? []).filter((task) => !ids.has(task.id));
+        for (const task of data.tasks) {
+          if (task.deps?.some((dep) => ids.has(dep))) task.deps = task.deps.filter((dep) => !ids.has(dep));
+        }
+        await writeTextFile(path, `${JSON.stringify(data, null, 2)}\n`, text);
+      }
+      if (ids.has(this.selected)) {
+        this.selected = null;
+        select(null);
+      }
+      this.error = null;
+    } catch (error) {
+      this.error = String(error);
+    }
+    this.confirm = null;
+    cx.notify();
   }
 
   // Delete from the panel through the command, which takes the list's lock, so a
@@ -353,6 +422,7 @@ export default class Tasks extends View {
   async markDone(task, cx) {
     const path = `${this.root}/tasks/${this.slug}.json`;
     const stamp = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+    this.quiet.add(task.id);
     try {
       if (this.on) {
         const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-task", "set", task.id, "done", "--folder", this.folder]);
@@ -484,21 +554,33 @@ export default class Tasks extends View {
     const text = await readTextFile(path);
     const data = text ? JSON.parse(text) : { tasks: [] };
     data.tasks = (data.tasks ?? []).filter((item) => item.id !== task.id);
+    for (const item of data.tasks) {
+      if (item.deps?.includes(task.id)) item.deps = item.deps.filter((dep) => dep !== task.id);
+    }
     await writeTextFile(path, `${JSON.stringify(data, null, 2)}\n`, text);
     this.warningFor = this.focus;
     this.warning = `herdr-task could not run (${failures.join("; ")}); removed the file directly`;
   }
 
-  rows(tasks, t, all) {
+  rows(tasks, t, all, cx) {
     const out = [];
     for (const status of ORDER) {
       const group = tasks.filter((task) => (task.status || "todo") === status);
       if (!group.length) continue;
       out.push(h_flex().id(`oo-tasks-group-${status}`).h(26).flex_none().px(12).items_center().gap(7)
         .child(div().text_size(11).font_semibold().text_color(t.dim).child(TITLES[status].toUpperCase()))
-        .child(div().text_size(11).text_color(t.dim).child(String(group.length))));
+        .child(div().text_size(11).text_color(t.dim).child(String(group.length)))
+        .when(status === "done", (row) => row
+          .child(div().flex_1())
+          .when(!this.confirmClear, (r) => r
+            .child(chip("Clear done", () => { this.confirmClear = true; cx.notify(); }, t)))
+          .when(this.confirmClear, (r) => r
+            .child(div().text_size(11).text_color(t.dim).child(`Delete ${group.length}?`))
+            .child(chip("Delete", () => this.clearDone(cx), t, true))
+            .child(chip("Cancel", () => { this.confirmClear = false; cx.notify(); }, t)))));
       for (const task of group) {
         const agent = agentFor(task, this.slug, all);
+        const waiting = (task.deps ?? []).filter((id) => (tasks.find((entry) => entry.id === id)?.status || "todo") !== "done").length;
         const color = agent
           ? AGENT_COLORS[agent.root.status]
             ? t[AGENT_COLORS[agent.root.status]]
@@ -514,6 +596,7 @@ export default class Tasks extends View {
           })
           .child(div().w(7).h(7).flex_none().rounded(4).bg(color))
           .child(div().flex_1().min_w(0).truncate().text_color(status === "done" ? t.muted : t.foreground).child(task.title ?? ""))
+          .when(waiting > 0, (el) => el.child(div().text_size(11).text_color(t.blocked).child(`after ${waiting}`)))
           .when(Boolean(agent?.children), (el) => el.child(div().text_size(11).text_color(t.dim).child(`+${agent.children}`)))
           .child(div().text_size(11).text_color(agent ? color : t.dim)
             .child(agent ? agent.root.status ?? agent.root.state ?? "live" : age(task.updated))));
@@ -535,6 +618,25 @@ export default class Tasks extends View {
         .child(div().rounded(8).bg(t.surface).p(8).text_size(12).text_color(t.muted)
           .when(Boolean(this.output), (el) => el.child(TextView.markdown("oo-task-output", this.output).selectable(true)))
           .when(!this.output, (el) => el.child(div().text_size(11).child(this.outputError ? "" : "Reading…"))))
+      : null;
+    const deps = (task.deps ?? [])
+      .map((id) => (this.data?.tasks ?? []).find((entry) => entry.id === id))
+      .filter(Boolean);
+    const depsBlock = deps.length
+      ? v_flex().gap(6).rounded(8).p(8).bg(t.raised)
+        .child(div().text_size(11).font_semibold().text_color(t.dim).child("DEPENDS ON"))
+        .children(deps.map((dep) => h_flex().id(`oo-task-dep-${dep.id}`).gap(8).items_center().cursor_pointer()
+          .hover((s) => s.bg(t.hover))
+          .on_click((_event, cx) => {
+            this.selected = dep.id;
+            this.confirm = null;
+            this.output = null; this.outputFor = null; this.outputError = null;
+            select(dep);
+            cx.notify();
+          })
+          .child(div().w(7).h(7).flex_none().rounded(4).bg(t[DOTS[dep.status || "todo"]]))
+          .child(div().flex_1().min_w(0).truncate().text_size(12).child(dep.title ?? ""))
+          .child(div().text_size(11).text_color(dep.status === "done" ? t.dim : t.muted).child(dep.status ?? "todo"))))
       : null;
     if (address) this.loadOutput(address, cx);
     return v_flex().size_full().min_h(0)
@@ -573,6 +675,7 @@ export default class Tasks extends View {
               }, t))
               .child(chip("Pane", () => run("terminal.keep", { terminal: agent.root.address }), t))
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
+        .when(Boolean(depsBlock), (el) => el.child(depsBlock))
         .when(Boolean(outputBlock), (el) => el.child(outputBlock))
         .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`))
         .when(Boolean(this.error), (el) => el.child(div().text_size(11).text_color(t.muted).child(this.error)))
@@ -612,7 +715,7 @@ export default class Tasks extends View {
             .child(Input.new(this.input).h_full().text_size(12).text_color(t.foreground)))
           .child(chip("Add", () => this.create(cx), t)))
         .child(v_flex().id("oo-tasks-list").flex_1().min_h(0).overflow_y_scrollbar().py(4)
-          .children(this.rows(tasks, t, all))
+          .children(this.rows(tasks, t, all, cx))
           .when(!tasks.length && !this.error && !this.missing, (el) => el.child(div().p(12).gap(4).text_size(12).text_color(t.dim)
             .child(this.loading ? "Loading…" : "No tasks")
             .child(div().text_size(11).child('Agents add them with herdr-task add "…"'))))
