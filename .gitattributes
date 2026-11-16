@@ -1,0 +1,11 @@
+# Normalize text to LF in the index and in every working tree, Windows included.
+# The managed .sh/.ps1/.py files are executed directly by Git Bash, PowerShell,
+# and uv, so a CRLF checkout breaks shebangs and `set -o pipefail` parsing.
+* text=auto eol=lf
+
+# cmd.exe is unreliable with LF batch files (labels, goto, call targets).
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Vendored reference snapshots keep the upstream bytes, including CRLF files.
+third_party/local-snapshots/** -text
