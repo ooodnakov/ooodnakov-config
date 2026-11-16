@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""herdr-artifact: reports and notes an agent wants to show, one list per folder.
+
+An artifact is a title and versioned content (Markdown by default), kept in
+~/.local/share/ooodnakov/herdr/artifacts/ and shown by the `oo-artifacts`
+panel beside the chat. Each version's content stays on disk (the last 20).
+
+    herdr-artifact add "Flaky tests" --from report.md
+    herdr-artifact add "Plan" --text "# Plan\\n- ship it"
+    herdr-artifact update a-20260101-a1b2c3 --from report.md
+    herdr-artifact list
+    herdr-artifact show a-20260101-a1b2c3
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+
+from _herdr_store import (  # noqa: E402
+    Fail,
+    data_root,
+    edit_list,
+    find,
+    folder_for,
+    kind_for,
+    new_id,
+    now,
+    read_list,
+)
+
+KEEP_VERSIONS = 20
+SUFFIX_BY_KIND = {"markdown": "md", "html": "html", "text": "txt"}
+
+
+def content_for(args: argparse.Namespace) -> tuple[str, str]:
+    """The content to store and its kind, from exactly one of --from or --text."""
+    if bool(args.source) == bool(args.text):
+        raise Fail("give one of --from FILE (or -) or --text TEXT")
+    if args.text is not None:
+        return args.text, "markdown"
+    if args.source == "-":
+        return sys.stdin.read(), "markdown"
+    path = Path(args.source).expanduser()
+    try:
+        return path.read_text(encoding="utf-8"), kind_for(path.name)
+    except OSError as error:
+        raise Fail(f"cannot read {path}: {error}") from error
+
+
+def write_version(root: Path, artifact: dict, kind: str, content: str) -> dict:
+    """Add this content as the artifact's next version, dropping the oldest past KEEP_VERSIONS."""
+    versions = artifact.setdefault("versions", [])
+    number = (versions[-1]["n"] if versions else 0) + 1
+    relative = f"artifacts/files/{artifact['id']}/v{number}.{SUFFIX_BY_KIND.get(kind, 'txt')}"
+    target = root / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    handle, temp = tempfile.mkstemp(dir=str(target.parent), prefix=f"{target.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8", newline="") as stream:
+            stream.write(content)
+        os.replace(temp, target)
+    except BaseException:
+        try:
+            os.unlink(temp)
+        except OSError:
+            pass
+        raise
+    versions.append({"n": number, "path": relative, "at": now()})
+    dropped = versions[:-KEEP_VERSIONS]
+    del versions[: len(dropped)]
+    for old in dropped:
+        try:
+            (root / old["path"]).unlink()
+        except OSError:
+            pass
+    return versions[-1]
+
+
+def latest(artifact: dict) -> dict:
+    if not artifact.get("versions"):
+        raise Fail(f"{artifact.get('id')} has no content")
+    return artifact["versions"][-1]
+
+
+def read_content(root: Path, artifact: dict) -> str:
+    path = root / latest(artifact)["path"]
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise Fail(f"cannot read {path}: {error}") from error
+
+
+def artifact_add(args: argparse.Namespace) -> None:
+    title = " ".join(args.title).strip()
+    if not title:
+        raise Fail("an artifact needs a title")
+    content, kind = content_for(args)
+    folder = folder_for(args.folder)
+    artifact = {"id": new_id("a"), "title": title, "kind": kind, "created": now(), "updated": now(), "versions": []}
+    root = data_root()
+    with edit_list("artifacts", "artifacts", folder) as data:
+        version = write_version(root, artifact, kind, content)
+        artifact["versions"] = [version]
+        data["artifacts"].append(artifact)
+    artifact["updated"] = version["at"]
+    print(json.dumps(artifact, indent=2, ensure_ascii=False) if args.json else f"{artifact['id']}  v{version['n']}  {artifact['title']}")
+
+
+def artifact_update(args: argparse.Namespace) -> None:
+    content, kind = content_for(args)
+    folder = folder_for(args.folder)
+    root = data_root()
+    with edit_list("artifacts", "artifacts", folder) as data:
+        artifact = find(data["artifacts"], args.id)
+        version = write_version(root, artifact, kind, content)
+        artifact["kind"] = kind
+        artifact["updated"] = version["at"]
+    print(json.dumps(artifact, indent=2, ensure_ascii=False) if args.json else f"{artifact['id']}  v{version['n']}")
+
+
+def artifact_list(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    _, data = read_list("artifacts", "artifacts", folder)
+    artifacts = sorted(data["artifacts"], key=lambda artifact: artifact.get("created", ""))
+    if args.json:
+        print(json.dumps({"format": data.get("format"), "folder": folder, "artifacts": artifacts}, indent=2, ensure_ascii=False))
+        return
+    for artifact in artifacts:
+        version = latest(artifact)["n"] if artifact.get("versions") else 0
+        print(f"{artifact['id']}\tv{version}\t{artifact.get('kind', 'markdown')}\t{artifact.get('title', '')}")
+    if not artifacts:
+        print("no artifacts", file=sys.stderr)
+
+
+def artifact_show(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    _, data = read_list("artifacts", "artifacts", folder)
+    artifact = find(data["artifacts"], args.id)
+    content = read_content(data_root(), artifact)
+    if args.json:
+        print(json.dumps({**artifact, "version": latest(artifact)["n"], "content": content}, indent=2, ensure_ascii=False))
+    else:
+        sys.stdout.write(content if content.endswith("\n") else content + "\n")
+
+
+def artifact_rm(args: argparse.Namespace) -> None:
+    folder = folder_for(args.folder)
+    with edit_list("artifacts", "artifacts", folder) as data:
+        artifact = find(data["artifacts"], args.id)
+        data["artifacts"] = [item for item in data["artifacts"] if item is not artifact]
+    shutil.rmtree(data_root() / "artifacts" / "files" / artifact["id"], ignore_errors=True)
+    print(f"removed {artifact['id']}")
+
+
+def artifact_path(args: argparse.Namespace) -> None:
+    path, _ = read_list("artifacts", "artifacts", folder_for(args.folder))
+    print(path)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="herdr-artifact", description="Reports and notes per folder for Herdr's artifacts panel.")
+    # Also accepted after the command; SUPPRESS keeps the top-level value when it comes first.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--folder", default=argparse.SUPPRESS, help="the folder's list (default: this git worktree, else this folder)")
+    common.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="print JSON")
+    parser.add_argument("--folder", help="the folder's list (default: this git worktree, else this folder)")
+    parser.add_argument("--json", action="store_true", help="print JSON")
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    def content_options(command: argparse.ArgumentParser) -> None:
+        source = command.add_mutually_exclusive_group(required=True)
+        source.add_argument("-f", "--from", dest="source", help="read the content from a file (- for stdin)")
+        source.add_argument("-t", "--text", help="the content itself (Markdown)")
+
+    add = commands.add_parser("add", parents=[common], help="add an artifact")
+    add.add_argument("title", nargs="+")
+    content_options(add)
+    add.set_defaults(handler=artifact_add)
+
+    update = commands.add_parser("update", parents=[common], help="add a version to an artifact")
+    update.add_argument("id")
+    content_options(update)
+    update.set_defaults(handler=artifact_update)
+
+    listing = commands.add_parser("list", parents=[common], help="list artifacts")
+    listing.set_defaults(handler=artifact_list)
+
+    show = commands.add_parser("show", parents=[common], help="print an artifact's latest content")
+    show.add_argument("id")
+    show.set_defaults(handler=artifact_show)
+
+    remove = commands.add_parser("rm", parents=[common], help="remove an artifact and its versions")
+    remove.add_argument("id")
+    remove.set_defaults(handler=artifact_rm)
+
+    where = commands.add_parser("path", parents=[common], help="print the folder's list path")
+    where.set_defaults(handler=artifact_path)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        args.handler(args)
+    except Fail as error:
+        print(f"herdr-artifact: {error}", file=sys.stderr)
+        return 1
+    except BrokenPipeError:
+        return 0
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

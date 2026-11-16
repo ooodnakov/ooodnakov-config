@@ -84,6 +84,39 @@ key = "herdr-theme-gruvbox-light"
 source = "home/.config/herdr-app/themes/gruvbox-light.json"
 target = "{CONFIG_HOME}/herdr-app/themes/gruvbox-light.json"
 
+# The managed Tasks/Artifacts panels and the layout that places them.
+[[links]]
+key = "herdr-mod-oo-tasks"
+source = "home/.config/herdr-app/mods/oo-tasks"
+target = "{CONFIG_HOME}/herdr-app/mods/oo-tasks"
+
+[[links]]
+key = "herdr-mod-oo-artifacts"
+source = "home/.config/herdr-app/mods/oo-artifacts"
+target = "{CONFIG_HOME}/herdr-app/mods/oo-artifacts"
+
+[[links]]
+key = "herdr-layout-tasks"
+source = "home/.config/herdr-app/layouts/tasks.json"
+target = "{CONFIG_HOME}/herdr-app/layouts/tasks.json"
+
+[[links]]
+key = "herdr-layout-tasks-preview"
+source = "home/.config/herdr-app/layouts/tasks.svg"
+target = "{CONFIG_HOME}/herdr-app/layouts/tasks.svg"
+
+# `herdr-task` and `herdr-artifact`, which agents and people run: one entry
+# each, in ~/.local/bin beside oooconf. Plain POSIX scripts (Python 3.8+).
+[[links]]
+key = "herdr-task"
+source = "home/.config/ooodnakov/bin/herdr-task"
+target = "{LOCAL_BIN}/herdr-task"
+
+[[links]]
+key = "herdr-artifact"
+source = "home/.config/ooodnakov/bin/herdr-artifact"
+target = "{LOCAL_BIN}/herdr-artifact"
+
 # --- linux-only ---
 
 [[links]]

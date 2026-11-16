@@ -607,6 +607,25 @@ The tab/status bar remains local to this repo rather than replacing it wholesale
 
 `oooconf color` writes the selected theme to `~/.config/ooodnakov/local/ghostty.conf`, which the managed config loads through an optional `config-file` include. Put machine-local font size, opacity, or theme overrides in that file; [`home/.config/ooodnakov/local/ghostty.conf.example`](home/.config/ooodnakov/local/ghostty.conf.example) shows the format.
 
+## Herdr app
+
+The [Herdr app](https://herdr.dev) keeps its whole interface as files in `~/.config/herdr-app`, and Herdr rewrites parts of that folder on every start (`frame/`, `icons/`, `layouts/.state/`, sockets). The manifest therefore excludes the folder from autolink and links only the files this repo owns:
+
+- `home/.config/herdr-app/settings.json` — `theme` names the managed Gruvbox pair
+- `home/.config/herdr-app/themes/gruvbox-{dark,light}.json` — the palettes, selectable in Settings → Look
+- `home/.config/herdr-app/mods/oo-tasks/` — the Tasks panel
+- `home/.config/herdr-app/mods/oo-artifacts/` — the Artifacts panel
+- `home/.config/herdr-app/layouts/tasks.json` (with `tasks.svg`) — a small layout with both panels side by side; `Ctrl+Shift+L` cycles to it
+
+Panels never write: they read the per-folder JSON lists that two commands write, both linked into `~/.local/bin` beside `oooconf`:
+
+- `herdr-task add "Split the importer" --note "Then run the tests"`, `herdr-task list`, `herdr-task set <id> doing|blocked|done`, `herdr-task show <id>`, `herdr-task rm <id>`
+- `herdr-artifact add "Weekly report" --from report.md` (or `--text "…"`), `herdr-artifact update <id> --from report.md`, `herdr-artifact list`, `herdr-artifact show <id>`, `herdr-artifact rm <id>`
+
+Both act on `--folder …`, else the current git worktree, else the cwd, and print JSON with `--json`. Data lives in `~/.local/share/ooodnakov/herdr/` (`index.json` maps a folder to its slug; `tasks/` and `artifacts/` hold the lists; artifact versions keep their last 20 contents). The location is deliberately fixed instead of `XDG_DATA_HOME`-derived so the mods, which cannot read the environment, find the same files. Every write takes a lock and replaces the file atomically.
+
+Herdr watches `mods/` through the managed symlinks unevenly: after editing a mod in the repo, switch layouts (`Ctrl+Shift+L`) to start it fresh; restarting Herdr is not needed. `herdr-app check ~/.config/herdr-app/mods/oo-tasks` validates a mod before you rely on it.
+
 ## CI/CD
 
 - CI runs on pushes to `main` and pull requests

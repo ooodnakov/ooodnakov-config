@@ -106,6 +106,10 @@ home/.glzr/zebar/ooodnakov/theme-overrides.css
 home/.glzr/zebar/ooodnakov-komorebi/theme-overrides.css
 home/.pi/agent/run-history.jsonl
 
+# Herdr rewrites these into every mod folder on start
+home/.config/herdr-app/mods/*/gpui-kit.d.ts
+home/.config/herdr-app/mods/*/jsconfig.json
+
 # Python coverage artifacts
 .coverage
 .coverage.*

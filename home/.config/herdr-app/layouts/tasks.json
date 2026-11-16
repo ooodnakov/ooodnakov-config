@@ -1,0 +1,22 @@
+{
+  "id": "root",
+  "type": "row",
+  "background": "canvas",
+  "preview": "layouts/tasks.svg",
+  "padding": 8,
+  "gap": 8,
+  "children": [
+    {
+      "id": "tasks",
+      "type": "block",
+      "size": { "weight": 3 },
+      "content": { "mod": "oo-tasks" }
+    },
+    {
+      "id": "artifacts",
+      "type": "block",
+      "size": { "weight": 2 },
+      "content": { "mod": "oo-artifacts" }
+    }
+  ]
+}

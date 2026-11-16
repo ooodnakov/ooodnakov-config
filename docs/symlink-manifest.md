@@ -147,12 +147,24 @@ are linked:
 | `herdr-settings` | `home/.config/herdr-app/settings.json` | `~/.config/herdr-app/settings.json` |
 | `herdr-theme-gruvbox-dark` | `home/.config/herdr-app/themes/gruvbox-dark.json` | `~/.config/herdr-app/themes/gruvbox-dark.json` |
 | `herdr-theme-gruvbox-light` | `home/.config/herdr-app/themes/gruvbox-light.json` | `~/.config/herdr-app/themes/gruvbox-light.json` |
+| `herdr-mod-oo-tasks` | `home/.config/herdr-app/mods/oo-tasks/` | `~/.config/herdr-app/mods/oo-tasks` |
+| `herdr-mod-oo-artifacts` | `home/.config/herdr-app/mods/oo-artifacts/` | `~/.config/herdr-app/mods/oo-artifacts` |
+| `herdr-layout-tasks` | `home/.config/herdr-app/layouts/tasks.json` | `~/.config/herdr-app/layouts/tasks.json` |
+| `herdr-layout-tasks-preview` | `home/.config/herdr-app/layouts/tasks.svg` | `~/.config/herdr-app/layouts/tasks.svg` |
+| `herdr-task` | `home/.config/ooodnakov/bin/herdr-task` | `~/.local/bin/herdr-task` |
+| `herdr-artifact` | `home/.config/ooodnakov/bin/herdr-artifact` | `~/.local/bin/herdr-artifact` |
 
 Any `themes/<name>.json` Herdr finds becomes selectable in Settings → Look;
 `settings.json`'s `"theme": {"light": "<name>", "dark": "<name>"}` is the default
 for layouts that set none (Herdr's `main` layout does), and the theme picker
 stores a per-layout choice in `layouts/.state/`, which is app-written and never
 tracked. Add another managed theme as a new file plus a `[[links]]` entry.
+
+The `tasks` layout places the two repo-owned mods; they read the per-folder
+lists under `~/.local/share/ooodnakov/herdr/` that `herdr-task` and
+`herdr-artifact` write. Those two commands import
+`home/.config/ooodnakov/bin/_herdr_store.py` by resolving their own symlink, so
+only the commands themselves are linked, not the module.
 
 ## Platform Tags
 
