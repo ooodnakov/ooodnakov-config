@@ -236,6 +236,20 @@ windows.manager = "choco"
 windows.package = "fd"
 
 [[deps]]
+key = "sd"
+display = "sd"
+description = "find-and-replace with regex by default, literal mode, and no sed escaping traps"
+bin = "sd"
+check = "sd --version"
+linux.manager = "apt"
+linux.package = "sd"
+macos.manager = "brew"
+macos.package = "sd"
+windows.manager = "winget"
+windows.winget_id = "chmln.sd"
+windows.package = "sd"
+
+[[deps]]
 key = "zsh"
 display = "zsh"
 description = "default shell support"
@@ -399,6 +413,21 @@ macos.package = "jq"
 windows.manager = "winget"
 windows.winget_id = "jqlang.jq"
 windows.package = "jq"
+
+[[deps]]
+key = "yq"
+display = "yq"
+description = "YAML/JSON/XML processor with jq syntax (Mike Farah build, not the Python jq wrapper)"
+bin = "yq"
+check = "yq --version"
+# Distro and PyPI yq are the Python jq wrapper; Homebrew ships the Go binary.
+linux.manager = "brew"
+linux.package = "yq"
+macos.manager = "brew"
+macos.package = "yq"
+windows.manager = "winget"
+windows.winget_id = "MikeFarah.yq"
+windows.package = "yq"
 
 [[deps]]
 key = "unzip"
