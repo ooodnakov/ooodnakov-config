@@ -1,0 +1,37 @@
+--- tabs/main.js
++++ tabs-panels/main.js
+@@ -1,6 +1,6 @@
+ import { View, div, svg, image } from "gpui-kit";
+ import { h_flex, ScrollHandle } from "gpui-base";
+-import { spaces, panes, run, openOverlay, theme, window, shared, layout, settings } from "herdr";
++import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings, checking } from "herdr";
+ 
+ function find(node, id) {
+   if (node?.id === id) return node;
+@@ -34,6 +34,12 @@
+     try { this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}"); } catch { this.panels = {}; }
+     if (!this.panels || typeof this.panels !== "object" || Array.isArray(this.panels)) this.panels = {};
+     this.swipe = { acc: 0, steps: 0, at: 0, last: 0 };
++    // The tab bar restores a space's panel only when its id is in this list.
++    if (!checking()) {
++      const enabled = shared("workspace.panels") ?? ["files", "changes"];
++      const merged = [...new Set([...enabled, "oo-tasks", "oo-artifacts", "oo-agent"])];
++      if (merged.length !== enabled.length) setShared("workspace.panels", merged);
++    }
+   }
+ 
+   // One tab per wheel notch. A touchpad or smooth-scrolling mouse sends many
+@@ -150,8 +156,10 @@
+       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
+       .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
+       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
+-      .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
+-        .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
+-        .child(button("close-window", w.platform === "windows" ? svg("mods/tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
++      .when(enabled.includes("oo-tasks"), el => el.child(panelButton("oo-tasks", "Tasks", "mods/tabs-panels/tasks.svg")))
++      .when(enabled.includes("oo-artifacts"), el => el.child(panelButton("oo-artifacts", "Artifacts", "mods/tabs-panels/artifacts.svg")))
++      .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/tabs-panels/win-min.svg").size(16) : "−", () => run("window.minimize")))
++        .child(button("maximize", w.platform === "windows" ? svg(`mods/tabs-panels/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
++        .child(button("close-window", w.platform === "windows" ? svg("mods/tabs-panels/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));
+   }
+ }
