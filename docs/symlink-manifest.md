@@ -184,9 +184,10 @@ panels from the top-right tab bar needs buttons there, so
 `tabs-panels` is a clone of the shipped `tabs` mod with two `panelButton` calls
 added (Tasks, Artifacts) and the `workspace.panels` merge in its `init` that keeps
 the tab bar's per-space panel restore aware of the new ids. The panels read the
-per-folder lists under `~/.local/share/ooodnakov/herdr/` that `herdr-task` and
-`herdr-artifact` write (on the space's own machine, over herdr-core for remote
-spaces). A task may carry an agent: `herdr-task spawn` starts it with
+per-folder lists that `herdr-task` and `herdr-artifact` write under the root
+recorded in `~/.config/ooodnakov/herdr-data` (on the space's own machine, over
+herdr-core for remote spaces), falling back to `~/.local/share/ooodnakov/herdr`.
+A task may carry an agent: `herdr-task spawn` starts it with
 `hc run --label herdr.task=<slug>#<id>` and stores `terminal` on the task; the
 mod matches that label (or the stored address) in `terminals()`, counts the
 sub-agents whose `parent` is that terminal, and its detail shows the terminal in

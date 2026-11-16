@@ -3,7 +3,8 @@
 
 A task is a title, an optional note and a status (todo, doing, blocked, done)
 in one JSON list per folder, so every agent and the `oo-tasks` panel see the
-same list. Lists live in ~/.local/share/ooodnakov/herdr/tasks/<slug>.json.
+same list. Lists live in tasks/<slug>.json under the root recorded in
+~/.config/ooodnakov/herdr-data (default ~/.local/share/ooodnakov/herdr).
 
     herdr-task add "Split the importer" --note "Then run the tests"
     herdr-task list

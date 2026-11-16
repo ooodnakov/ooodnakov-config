@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Shared store for the repo-managed `herdr-task` and `herdr-artifact` commands.
 
-One JSON list per folder under ~/.local/share/ooodnakov/herdr, written only by
-those two commands and read by the `oo-tasks` / `oo-artifacts` mods:
+One JSON list per folder under the data root, written only by those two commands
+and read by the `oo-tasks` / `oo-artifacts` mods. The root defaults to
+~/.local/share/ooodnakov/herdr (or $XDG_DATA_HOME/ooodnakov/herdr) and is
+recorded in ~/.config/ooodnakov/herdr-data on first use so the mods, which cannot
+read the environment, find it without hard-coding a path:
 
     index.json                     {"format": 1, "folders": {"<folder>": "<slug>"}}
     tasks/<slug>.json              {"format": 1, "folder": "<folder>", "tasks": [...]}
@@ -35,12 +38,42 @@ class Fail(Exception):
     """A user-facing failure: printed without a traceback."""
 
 
+def pointer_path() -> Path:
+    """The file that tells the environment-blind mods where the data root is."""
+    return Path.home() / ".config" / "ooodnakov" / "herdr-data"
+
+
+def default_data_root() -> Path:
+    """The root before anything overrides it: XDG_DATA_HOME, else ~/.local/share."""
+    share = os.environ.get("XDG_DATA_HOME")
+    base = Path(share).expanduser() if share else Path.home() / ".local" / "share"
+    return base / "ooodnakov" / "herdr"
+
+
+def _write_pointer(root: Path) -> None:
+    pointer = pointer_path()
+    try:
+        pointer.parent.mkdir(parents=True, exist_ok=True)
+        pointer.write_text(f"{root}\n", encoding="utf-8")
+    except OSError:
+        # An unwritable config directory must not stop a command from using its root.
+        pass
+
+
 def data_root() -> Path:
-    """The store's root. Fixed (not XDG-derived) so the mods find it without an environment."""
+    """The store's root: the override, else the recorded pointer, else the default."""
     override = os.environ.get("OODNAKOV_HERDR_DATA")
     if override:
         return Path(override).expanduser()
-    return Path.home() / ".local" / "share" / "ooodnakov" / "herdr"
+    try:
+        recorded = pointer_path().read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeDecodeError):
+        recorded = ""
+    if recorded:
+        return Path(recorded).expanduser()
+    root = default_data_root()
+    _write_pointer(root)
+    return root
 
 
 def normalize(path: str) -> str:
