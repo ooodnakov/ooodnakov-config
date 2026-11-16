@@ -149,6 +149,7 @@ are linked:
 | `herdr-theme-gruvbox-light` | `home/.config/herdr-app/themes/gruvbox-light.json` | `~/.config/herdr-app/themes/gruvbox-light.json` |
 | `herdr-mod-oo-tasks` | `home/.config/herdr-app/mods/oo-tasks/` | `~/.config/herdr-app/mods/oo-tasks` |
 | `herdr-mod-oo-artifacts` | `home/.config/herdr-app/mods/oo-artifacts/` | `~/.config/herdr-app/mods/oo-artifacts` |
+| `herdr-mod-oo-agent-head` | `home/.config/herdr-app/mods/oo-agent-head/` | `~/.config/herdr-app/mods/oo-agent-head` |
 | `herdr-mod-tabs-panels` | `home/.config/herdr-app/mods/tabs-panels/` | `~/.config/herdr-app/mods/tabs-panels` |
 | `herdr-layout-tasks` | `home/.config/herdr-app/layouts/tasks.json` | `~/.config/herdr-app/layouts/tasks.json` |
 | `herdr-layout-tasks-preview` | `home/.config/herdr-app/layouts/tasks.svg` | `~/.config/herdr-app/layouts/tasks.svg` |
@@ -165,8 +166,10 @@ tracked. Add another managed theme as a new file plus a `[[links]]` entry.
 
 The `tasks` layout places the two repo-owned mods side by side; `main-panels` is a
 clone of Herdr's `main` whose panel stack (`panel-body`) adds them after Files and
-Changes, plus an `oo-agent` block (`{ "agent": "focused" }`) that shows the agent
-chosen with `agent.focus`, so a task's terminal can fill the panel. Reaching the
+Changes, plus an `oo-agent` column: the `oo-agent-head` header (the selected
+task's title and a `← Tasks` chip, fed by shared `oo-tasks.selected`) above a
+`{ "agent": "focused" }` block that shows the agent chosen with `agent.focus`, so
+a task's terminal can fill the panel. Reaching the
 panels from the top-right tab bar needs buttons there, so
 `tabs-panels` is a clone of the shipped `tabs` mod with two `panelButton` calls
 added (Tasks, Artifacts) and the `workspace.panels` merge in its `init` that keeps

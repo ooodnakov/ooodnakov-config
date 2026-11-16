@@ -4,7 +4,7 @@
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, home, checking } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, home, checking, setShared } from "herdr";
 
 const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
 const ROOTS = new Map();
@@ -14,6 +14,11 @@ const DOTS = { blocked: "blocked", doing: "working", todo: "muted", done: "done"
 const AGENT_COLORS = { working: "working", blocked: "blocked", done: "done", idle: "idle" };
 
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
+
+// The agent panel's header reads this: the task whose terminal it can show.
+function select(task) {
+  setShared("oo-tasks.selected", task ? { id: task.id, title: task.title ?? "" } : null);
+}
 
 // Each machine keeps its own lists; a space on another machine reads them there.
 async function rootFor(on) {
@@ -80,6 +85,7 @@ export default class Tasks extends View {
     this.error = null;
     this.loading = false;
     if (checking()) return;
+    select(null);
     cx.timer.every(5000, (cx) => this.reload(cx));
   }
 
@@ -96,6 +102,7 @@ export default class Tasks extends View {
     this.selected = null;
     this.confirm = null;
     this.error = null;
+    select(null);
     if (!at.folder) {
       this.error = "No folder";
       return;
@@ -140,6 +147,10 @@ export default class Tasks extends View {
       if (this.focus !== key) return;
       this.slug = slug ?? null;
       this.data = text ? JSON.parse(text) : { tasks: [] };
+      if (this.selected && !(this.data.tasks ?? []).some((task) => task.id === this.selected)) {
+        this.selected = null;
+        select(null);
+      }
       this.error = null;
     } catch (error) {
       if (this.focus === key) this.error = String(error);
@@ -164,6 +175,7 @@ export default class Tasks extends View {
       this.confirm = null;
       this.focus = null;
       this.data = null;
+      select(null);
     } catch (error) {
       this.error = String(error);
       this.confirm = null;
@@ -188,7 +200,7 @@ export default class Tasks extends View {
           : t[DOTS[status]];
         out.push(h_flex().id(`oo-task-${task.id}`).h(30).flex_none().mx(6).px(6).gap(8).items_center().rounded(7)
           .cursor_pointer().hover((s) => s.bg(t.hover))
-          .on_click((_event, cx) => { this.selected = task.id; this.confirm = null; cx.notify(); })
+          .on_click((_event, cx) => { this.selected = task.id; this.confirm = null; select(task); cx.notify(); })
           .child(div().w(7).h(7).flex_none().rounded(4).bg(color))
           .child(div().flex_1().min_w(0).truncate().text_color(status === "done" ? t.muted : t.foreground).child(task.title ?? ""))
           .when(Boolean(agent?.children), (el) => el.child(div().text_size(11).text_color(t.dim).child(`+${agent.children}`)))
@@ -204,7 +216,7 @@ export default class Tasks extends View {
     return v_flex().size_full().min_h(0)
       .child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().id("oo-task-back").w(20).cursor_pointer().text_color(t.muted)
-          .on_click((_event, cx) => { this.selected = null; this.confirm = null; cx.notify(); }).child("←"))
+          .on_click((_event, cx) => { this.selected = null; this.confirm = null; select(null); cx.notify(); }).child("←"))
         .child(div().flex_1().min_w(0).truncate().font_semibold().child(task.title ?? ""))
         .child(div().text_size(11).text_color(t.dim).child(task.status ?? "todo")))
       .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar().p(12).gap(10)
@@ -219,6 +231,7 @@ export default class Tasks extends View {
             .child(div().flex_1())
             .when(agent.root.state === "live", (row) => row
               .child(chip("Panel", () => {
+                select(task);
                 if (!agent.root.status) {
                   // No status report: the agent block can't show it, so peek instead.
                   run("terminal.peek", { terminal: agent.root.address });
