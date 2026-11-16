@@ -28,6 +28,7 @@ Authoritative managed config lives in:
 - `home/.config/powershell/`
 - `home/.config/ohmyposh/`
 - `home/.config/ooodnakov/`
+- `home/.config/herdr-app/` (only `settings.json` and `themes/*.json`; the folder itself is excluded from autolink because Herdr writes its own runtime state there)
 - `home/.omp/` (only the explicit OMP config/content links; runtime state stays in `~/.omp`)
 - desktop/window-manager trees under `home/.config/{niri,umbriel,hypr,pypr,noctalia,komorebi,aerospace,omniwm,sketchybar,borders}/` and `home/.glzr/`
 

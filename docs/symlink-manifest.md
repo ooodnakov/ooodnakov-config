@@ -50,12 +50,12 @@ target = "{HOME}/.zshrc"
 
 ### Discovery Section
 
-`autolink_dirs` lists directories scanned for auto-linking. Each subdirectory in those dirs becomes a symlink target unless it matches a configured `exclude` pattern or has an explicit `[[links]]` entry with a platform restriction. The current manifest does not define active excludes.
+`autolink_dirs` lists directories scanned for auto-linking. Each subdirectory in those dirs becomes a symlink target unless it matches a configured `exclude` pattern or has an explicit `[[links]]` entry with a platform restriction. Active excludes: `home/.config/noctty` (Windows-only, linked explicitly because it needs the extra `%LOCALAPPDATA%` target) and `home/.config/herdr-app` (Herdr writes runtime state into it; only the files this repo owns are linked).
 
 **What is auto-linked:**
 
 - Every directory under `home/.config/`, `home/.local/`, and `home/.glzr/` is a candidate for linking, unless:
-  - It matches an `exclude` pattern in `scripts/links.toml` (none are active today)
+  - It matches an `exclude` pattern in `scripts/links.toml` (e.g. `home/.config/herdr-app`)
   - An explicit `[[links]]` entry exists for the same `key` and that entry has an `only` or `except` platform tag that excludes the current platform
 - Auto-linked dirs always map to `{CONFIG_HOME}/<key>` — no manifest edit needed
 
@@ -63,7 +63,8 @@ Examples: `home/.config/wezterm/` → `~/.config/wezterm`, `home/.config/yazi/` 
 
 **What is auto-linked today:**
 
-- The current manifest has no active discovery excludes, so `home/.config/ooodnakov` is also linked into `~/.config/ooodnakov`. Its ignored `local/` children hold machine-specific overrides while tracked examples stay reproducible.
+- `home/.config/ooodnakov` is linked into `~/.config/ooodnakov`. Its ignored `local/` children hold machine-specific overrides while tracked examples stay reproducible.
+- Everything under `home/.config/`, `home/.local/`, and `home/.glzr/` except the excludes above; see the Herdr App section for the one partial tree.
 
 **When to add an explicit `[[links]]` entry:**
 
@@ -133,6 +134,25 @@ turned a tracked source into a self-referential link, `oooconf rollback --last`
 removes the loop and restores the backed-up file.
 Update any machine-local overrides or custom profiles that selected the old
 `omp` key to use the individual keys above. Fresh setups need no migration.
+
+## Herdr App File Links
+
+`~/.config/herdr-app` is Herdr's whole interface, and Herdr rewrites parts of it
+on every start (`frame/`, `icons/`, `layouts/.state/`, `view.json`, sockets), so
+the folder is in the discovery `exclude` list and only the files this repo owns
+are linked:
+
+| Key | Managed source | Target |
+|-----|----------------|--------|
+| `herdr-settings` | `home/.config/herdr-app/settings.json` | `~/.config/herdr-app/settings.json` |
+| `herdr-theme-gruvbox-dark` | `home/.config/herdr-app/themes/gruvbox-dark.json` | `~/.config/herdr-app/themes/gruvbox-dark.json` |
+| `herdr-theme-gruvbox-light` | `home/.config/herdr-app/themes/gruvbox-light.json` | `~/.config/herdr-app/themes/gruvbox-light.json` |
+
+Any `themes/<name>.json` Herdr finds becomes selectable in Settings → Look;
+`settings.json`'s `"theme": {"light": "<name>", "dark": "<name>"}` is the default
+for layouts that set none (Herdr's `main` layout does), and the theme picker
+stores a per-layout choice in `layouts/.state/`, which is app-written and never
+tracked. Add another managed theme as a new file plus a `[[links]]` entry.
 
 ## Platform Tags
 

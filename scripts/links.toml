@@ -2,7 +2,10 @@
 autolink_dirs = ["home/.config", "home/.local", "home/.glzr"]
 # noctty is Windows-only; it is linked explicitly in the Windows-only section
 # because it needs the additional %LOCALAPPDATA% target.
-exclude = ["home/.config/noctty"]
+# herdr-app writes its own runtime state into ~/.config/herdr-app (frame/,
+# icons/, layouts/.state/, view.json, *.sock), so only the settings and theme
+# files this repo owns are linked, never the whole folder.
+exclude = ["home/.config/noctty", "home/.config/herdr-app"]
 
 [[links]]
 key = "zshrc"
@@ -63,6 +66,23 @@ target = "{HOME}/.omp/agent/vibes"
 key = "omp-rtk"
 source = "home/.omp/extensions/rtk.ts"
 target = "{HOME}/.omp/extensions/rtk.ts"
+
+# herdr-app: the folder is excluded from autolink (see [discovery]); link the
+# files this repo owns. `theme` in settings.json names the managed themes.
+[[links]]
+key = "herdr-settings"
+source = "home/.config/herdr-app/settings.json"
+target = "{CONFIG_HOME}/herdr-app/settings.json"
+
+[[links]]
+key = "herdr-theme-gruvbox-dark"
+source = "home/.config/herdr-app/themes/gruvbox-dark.json"
+target = "{CONFIG_HOME}/herdr-app/themes/gruvbox-dark.json"
+
+[[links]]
+key = "herdr-theme-gruvbox-light"
+source = "home/.config/herdr-app/themes/gruvbox-light.json"
+target = "{CONFIG_HOME}/herdr-app/themes/gruvbox-light.json"
 
 # --- linux-only ---
 
