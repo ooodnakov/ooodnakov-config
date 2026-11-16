@@ -17,7 +17,7 @@ herdr-task spawn t-20261024-ab12cd -- claude -p "Review the retry logic in src/f
 # prints: t-20261024-ab12cd  t12  Review the retry logic
 ```
 
-`spawn` runs `hc run --keep --bg --json --label herdr.task=<slug>#<id> --cwd <folder> -- <argv>` and stores the terminal address on the task. It starts in the task's folder (a git worktree root when there is one); pass `--cwd` to change that and `--dry-run` to see the command.
+`spawn` runs `hc run --keep --bg --json --label herdr.task=<slug>#<id> --cwd <folder> -- <argv>` and stores the terminal address on the task. It starts in the task's folder (a git worktree root when there is one); pass `--cwd` to change that and `--dry-run` to see the command. `--keep-open` keeps the terminal after the program exits (`sh -c '<command>; exec "${SHELL:-sh}"'`), and `--worktree [path]` creates `herdr/<id>` with `git worktree add -b` at `path` (default `<repo>-wt/<id>` beside the repo), spawns there and records `branch` and `worktree` on the task, so parallel edits never share a checkout.
 
 Then treat the terminal like any herdr-core terminal:
 
