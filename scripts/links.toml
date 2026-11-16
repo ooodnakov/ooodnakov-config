@@ -90,7 +90,8 @@ key = "herdr-theme-gruvbox-light"
 source = "home/.config/herdr-app/themes/gruvbox-light.json"
 target = "{CONFIG_HOME}/herdr-app/themes/gruvbox-light.json"
 
-# The managed Tasks/Artifacts panels and the layout that places them.
+# The managed Tasks/Artifacts panels, the agent panel's header, and the layout
+# that places them.
 [[links]]
 key = "herdr-mod-oo-tasks"
 source = "home/.config/herdr-app/mods/oo-tasks"
@@ -100,6 +101,11 @@ target = "{CONFIG_HOME}/herdr-app/mods/oo-tasks"
 key = "herdr-mod-oo-artifacts"
 source = "home/.config/herdr-app/mods/oo-artifacts"
 target = "{CONFIG_HOME}/herdr-app/mods/oo-artifacts"
+
+[[links]]
+key = "herdr-mod-oo-agent-head"
+source = "home/.config/herdr-app/mods/oo-agent-head"
+target = "{CONFIG_HOME}/herdr-app/mods/oo-agent-head"
 
 [[links]]
 key = "herdr-mod-tabs-panels"

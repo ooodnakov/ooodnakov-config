@@ -5,7 +5,7 @@
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, home, checking } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, home, checking, setShared } from "herdr";
 
 const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
 const DEFAULT_ROOT = `${home()}/.local/share/ooodnakov/herdr`;
@@ -18,6 +18,11 @@ const AGENT_COLORS = { working: "working", blocked: "blocked", done: "done", idl
 
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
 const pointed = (text) => norm(String(text ?? "").trim());
+
+// The agent panel's header reads this: the task whose terminal it can show.
+function select(task) {
+  setShared("oo-tasks.selected", task ? { id: task.id, title: task.title ?? "" } : null);
+}
 
 // Each machine keeps its own lists; a space on another machine reads them there.
 // The command records the root in `herdr-data`; the mod only reads that file.
@@ -90,6 +95,7 @@ export default class Tasks extends View {
     this.error = null;
     this.loading = false;
     if (checking()) return;
+    select(null);
     cx.timer.every(5000, (cx) => this.reload(cx));
   }
 
@@ -109,6 +115,7 @@ export default class Tasks extends View {
     this.outputFor = null;
     this.outputError = null;
     this.error = null;
+    select(null);
     if (!at.folder) {
       this.error = "No folder";
       return;
@@ -153,6 +160,10 @@ export default class Tasks extends View {
       if (this.focus !== key) return;
       this.slug = slug ?? null;
       this.data = text ? JSON.parse(text) : { tasks: [] };
+      if (this.selected && !(this.data.tasks ?? []).some((task) => task.id === this.selected)) {
+        this.selected = null;
+        select(null);
+      }
       this.error = null;
     } catch (error) {
       if (this.focus === key) this.error = String(error);
@@ -177,6 +188,7 @@ export default class Tasks extends View {
       this.confirm = null;
       this.focus = null;
       this.data = null;
+      select(null);
     } catch (error) {
       this.error = String(error);
       this.confirm = null;
@@ -246,6 +258,7 @@ export default class Tasks extends View {
           .on_click((_event, cx) => {
             this.selected = task.id; this.confirm = null;
             this.output = null; this.outputFor = null; this.outputError = null;
+            select(task);
             cx.notify();
           })
           .child(div().w(7).h(7).flex_none().rounded(4).bg(color))
@@ -279,6 +292,7 @@ export default class Tasks extends View {
           .on_click((_event, cx) => {
             this.selected = null; this.confirm = null;
             this.output = null; this.outputFor = null; this.outputError = null;
+            select(null);
             cx.notify();
           }).child("←"))
         .child(div().flex_1().min_w(0).truncate().font_semibold().child(task.title ?? ""))
@@ -295,6 +309,7 @@ export default class Tasks extends View {
             .child(div().flex_1())
             .when(agent.root.state === "live", (row) => row
               .child(chip("Panel", () => {
+                select(task);
                 if (!agent.root.status) {
                   // No status report: the agent block can't show it, so peek instead.
                   run("terminal.peek", { terminal: agent.root.address });

@@ -157,10 +157,26 @@
                     },
                     {
                       "id": "oo-agent",
-                      "type": "block",
-                      "content": {
-                        "agent": "focused"
-                      }
+                      "type": "column",
+                      "children": [
+                        {
+                          "id": "oo-agent-head",
+                          "type": "block",
+                          "content": {
+                            "mod": "oo-agent-head"
+                          },
+                          "size": {
+                            "px": 34
+                          }
+                        },
+                        {
+                          "id": "oo-agent-body",
+                          "type": "block",
+                          "content": {
+                            "agent": "focused"
+                          }
+                        }
+                      ]
                     }
                   ],
                   "active": "files"
