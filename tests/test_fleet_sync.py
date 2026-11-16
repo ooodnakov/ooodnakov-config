@@ -5,6 +5,7 @@ No network and no `ssh`: every remote call goes through a fake transport.
 
 from __future__ import annotations
 
+import io
 import json
 import re
 import sys
@@ -67,7 +68,7 @@ class FakeTransport:
         self.calls: list[tuple[str, str]] = []
         self._lock = threading.Lock()
 
-    def run(self, host: str, script: str) -> fleet_sync.CommandResult:
+    def run(self, host: str, script: str, on_line: object | None = None) -> fleet_sync.CommandResult:
         with self._lock:
             self.calls.append((host, script))
         return self._handler(host, script)
@@ -84,6 +85,25 @@ class FakeTransport:
 
     def issued(self, fragment: str, host: str | None = None) -> bool:
         return bool(self.find(fragment, host))
+
+
+class _FakeAgentProcess:
+    def __init__(self, argv: list[str], output: bytes, returncode: int) -> None:
+        self.argv = argv
+        self.stdout = io.BytesIO(output)
+        self._returncode = returncode
+
+    def wait(self, timeout=None) -> int:
+        return self._returncode
+
+
+def fake_popen(calls: list[dict], output: bytes = b"agent output\n", returncode: int = 0):
+    def factory(argv, **kwargs):
+        process = _FakeAgentProcess(list(argv), output, returncode)
+        calls.append({"argv": list(argv), **kwargs, "process": process})
+        return process
+
+    return factory
 
 
 def _index(scripts: list[str], fragment: str) -> int:
@@ -390,8 +410,8 @@ def test_single_pending_host_runs_remote_agent_then_completes(monkeypatch) -> No
             ]
         )
     )
-    local_calls: list[object] = []
-    monkeypatch.setattr(fleet_sync.subprocess, "run", lambda *args, **kwargs: local_calls.append(args))
+    local_calls: list[dict] = []
+    monkeypatch.setattr(fleet_sync.subprocess, "Popen", fake_popen(local_calls))
 
     options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
     result = fleet_sync.sync_host("alpha", options, transport)
@@ -456,12 +476,7 @@ def test_several_pending_hosts_run_exactly_one_local_agent(monkeypatch) -> None:
         )
     )
     calls: list[dict] = []
-
-    def fake_run(argv, **kwargs):
-        calls.append({"argv": list(argv), **kwargs})
-        return SimpleNamespace(returncode=0, stdout="", stderr="")
-
-    monkeypatch.setattr(fleet_sync.subprocess, "run", fake_run)
+    monkeypatch.setattr(fleet_sync.subprocess, "Popen", fake_popen(calls))
 
     options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
     results = fleet_sync.sync_hosts(["alpha", "beta"], options, transport, jobs=1)
@@ -477,9 +492,11 @@ def test_several_pending_hosts_run_exactly_one_local_agent(monkeypatch) -> None:
     assert "host=beta" in prompt
     assert prompt.count("status=conflict") == 2
     assert calls[0]["cwd"] == str(REPO_ROOT)
-    assert calls[0]["capture_output"] is True
-    assert calls[0]["text"] is True
-    assert calls[0]["check"] is False
+    assert calls[0]["stdin"] == fleet_sync.subprocess.DEVNULL
+    assert calls[0]["stderr"] == fleet_sync.subprocess.STDOUT
+    assert calls[0]["stdout"] == fleet_sync.subprocess.PIPE
+    assert "capture_output" not in calls[0]
+    assert "text" not in calls[0]
     assert not transport.issued("omp -p")
     assert [result.fix for result in results] == ["local-agent", "local-agent"]
     assert [result.status for result in results] == [fleet_sync.STATUS_OK] * 2
@@ -488,8 +505,8 @@ def test_several_pending_hosts_run_exactly_one_local_agent(monkeypatch) -> None:
 
 def test_resolve_with_dry_run_spawns_no_agent(monkeypatch) -> None:
     transport = FakeTransport(handler_for([("rev-list --left-right --count", _result(0, "2\t1\n"))]))
-    calls: list[object] = []
-    monkeypatch.setattr(fleet_sync.subprocess, "run", lambda *args, **kwargs: calls.append(args))
+    calls: list[dict] = []
+    monkeypatch.setattr(fleet_sync.subprocess, "Popen", fake_popen(calls))
 
     options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True, dry_run=True)
     results = fleet_sync.sync_hosts(["alpha", "beta"], options, transport, jobs=1)
@@ -522,7 +539,7 @@ def test_stash_pop_failure_after_fix_stays_conflict(monkeypatch) -> None:
             ]
         )
     )
-    monkeypatch.setattr(fleet_sync.subprocess, "run", lambda *args, **kwargs: None)
+    monkeypatch.setattr(fleet_sync.subprocess, "Popen", fake_popen([]))
 
     options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
     result = fleet_sync.sync_host("alpha", options, transport)
@@ -710,13 +727,8 @@ def test_main_applies_two_phase_fixes_after_the_fan_out(monkeypatch, capsys) -> 
     )
     monkeypatch.setattr(fleet_sync, "SshTransport", lambda *args, **kwargs: transport)
     monkeypatch.setattr(fleet_sync, "parse_ssh_targets", lambda home=None: [])
-    agent_calls: list[list[str]] = []
-
-    def fake_run(argv, **kwargs):
-        agent_calls.append(list(argv))
-        return SimpleNamespace(returncode=0, stdout="", stderr="")
-
-    monkeypatch.setattr(fleet_sync.subprocess, "run", fake_run)
+    agent_calls: list[dict] = []
+    monkeypatch.setattr(fleet_sync.subprocess, "Popen", fake_popen(agent_calls))
 
     code = fleet_sync.main(
         ["--repo-root", str(REPO_ROOT), "sync", "alpha", "beta", "--repo-path", REMOTE_REPO, "--resolve"]
@@ -726,9 +738,10 @@ def test_main_applies_two_phase_fixes_after_the_fan_out(monkeypatch, capsys) -> 
     assert code == 0
     # One local agent covers both hosts and receives their status.
     assert len(agent_calls) == 1
-    assert agent_calls[0][:2] == ["omp", "-p"]
-    assert "host=alpha" in agent_calls[0][2]
-    assert "host=beta" in agent_calls[0][2]
+    assert agent_calls[0]["argv"][:2] == ["omp", "-p"]
+    prompt = agent_calls[0]["argv"][2]
+    assert "host=alpha" in prompt
+    assert "host=beta" in prompt
     # The per-host status is printed before the agent runs, the final summary after it.
     assert " conflict " in out
     assert out.count("fix=local-agent") == 2
@@ -998,9 +1011,7 @@ def test_apply_fixes_reports_every_repaired_host(monkeypatch) -> None:
             ]
         )
     )
-    monkeypatch.setattr(
-        fleet_sync.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="", stderr="")
-    )
+    monkeypatch.setattr(fleet_sync.subprocess, "Popen", fake_popen([]))
     options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
     results = fleet_sync.sync_hosts(["alpha", "beta"], options, transport, jobs=1)
     assert [result.status for result in results] == [fleet_sync.STATUS_CONFLICT] * 2
@@ -1086,6 +1097,7 @@ def test_sync_host_reports_each_step_in_order() -> None:
     )
 
     expected = [
+        "connecting to alpha",
         "checking ssh, user and checkout",
         "preflight ok",
         "resolving repo path",
@@ -1129,7 +1141,7 @@ def test_reporter_spins_in_place_on_a_tty(capsys) -> None:
     assert "\x1b[K" in spinner
     assert "fetching origin/main" in spinner
     assert any(frame in spinner for frame in fleet_sync.SPINNER_FRAMES + fleet_sync.ASCII_SPINNER_FRAMES)
-    assert "alpha" in capsys.readouterr().out
+    assert "alpha" in spinner
 
 
 def test_main_streams_step_lines_before_results(monkeypatch, capsys) -> None:
@@ -1144,3 +1156,40 @@ def test_main_streams_step_lines_before_results(monkeypatch, capsys) -> None:
     assert "alpha: preflight ok" in out
     assert out.index("alpha: preflight ok") < out.index("branch=main")
     assert "fleet sync:" in out
+
+
+def test_apply_fixes_reports_spawn_streams_agent_output_and_waits(monkeypatch) -> None:
+    transport = FakeTransport(
+        handler_for(
+            [
+                ("status --porcelain", _result(0, f" M {CONFLICT_FILE}\n")),
+                ("pull --rebase origin", _result(1, "", "error: could not apply 1234abc\n")),
+                ("--diff-filter=U", _result(0, CONFLICT_FILE + "\n")),
+            ]
+        )
+    )
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        fleet_sync.subprocess,
+        "Popen",
+        fake_popen(calls, output=b"agent says hi\nsecond line\n", returncode=0),
+    )
+    options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
+    results = fleet_sync.sync_hosts(["alpha", "beta"], options, transport, jobs=1)
+    lines: list[str] = []
+
+    fleet_sync.apply_fixes(
+        results,
+        options,
+        transport,
+        REPO_ROOT,
+        line=lines.append,
+    )
+
+    assert any("spawning one local omp agent for 2 host(s)" in line for line in lines)
+    assert "agent says hi" in lines
+    assert "second line" in lines
+    assert any("omp agent finished (exit 0)" in line for line in lines)
+    # The agent is waited on and its exit status is recorded before completion runs.
+    assert calls[0]["process"].stdout.tell() == len(b"agent says hi\nsecond line\n")
+    assert [result.status for result in results] == [fleet_sync.STATUS_OK] * 2

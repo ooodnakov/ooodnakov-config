@@ -19,6 +19,17 @@ Tracked secret references belong in:
 
 - `~/.config/ooodnakov/secrets/env.template`
 
+## Interactive output
+
+`oooconf` output adapts to where it is printed:
+
+- `OOOCONF_UI=stdout` forces plain piped output even when a console is attached; `OOOCONF_UI=console` is accepted as the explicit opposite.
+- `OOOCONF_COLOR=always|never|auto` overrides color detection; `NO_COLOR` disables color, `FORCE_COLOR` enables it.
+- `OOOCONF_ASCII=1` replaces Nerd Font icons with ASCII tags.
+- `OOOCONF_THEME` and `OOOCONF_COLOR_MODE` select the palette used by every command (`oooconf color` manages them).
+
+On Windows, PowerShell pipes a native command's stdout, so `isatty()` is false there even in a real terminal; commands print through the attached console device instead, which keeps colors, icons, and animated progress live.
+
 ## Shell integrations
 
 SSH host aliases come from `~/.ssh/config`, every file it `Include`s (the tracked managed config is `home/.config/ooodnakov/ssh/config`), and `~/.ssh/config.local`. In both zsh and PowerShell, `z <host>` opens an SSH session when `<host>` is one of those aliases; any other argument keeps the zoxide directory jump. In zsh, `z -- <name>` forces the directory jump when an alias shadows a zoxide entry; in PowerShell, `zi` is the interactive directory picker for that case.

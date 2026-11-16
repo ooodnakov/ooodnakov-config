@@ -150,7 +150,7 @@ class _SshSession:
         self.token = f"__OOOCONF_FLEET_DONE_{uuid.uuid4().hex}__ "
         self.process = transport.spawn(host)
 
-    def execute(self, script: str) -> CommandResult:
+    def execute(self, script: str, on_line: object | None = None) -> CommandResult:
         process = self.process
         if process is None or process.stdin is None or process.stdout is None:
             return CommandResult(255, "", "ssh session closed")
@@ -179,6 +179,8 @@ class _SshSession:
                     status = 255
                 return CommandResult(status, "".join(lines), "")
             lines.append(line)
+            if on_line is not None:
+                on_line(line.rstrip("\n"))  # type: ignore[operator]
 
     def close(self) -> None:
         process, self.process = self.process, None
@@ -250,11 +252,11 @@ class SshTransport:
         if session is not None:
             session.close()
 
-    def run(self, host: str, script: str) -> CommandResult:
+    def run(self, host: str, script: str, on_line: object | None = None) -> CommandResult:
         result = CommandResult(255, "", "ssh session closed")
         for attempt in range(self.retries + 1):
             try:
-                result = self._session(host).execute(script)
+                result = self._session(host).execute(script, on_line)
             except OSError as exc:
                 return CommandResult(127, "", str(exc))
             if not _is_connection_error(result.stdout + result.stderr):
@@ -502,8 +504,10 @@ def _preflight(host: str, options: SyncOptions, transport: object, result: HostR
     return True
 
 
-def _run(transport: object, host: str, script: str) -> CommandResult:
-    return transport.run(host, script)  # type: ignore[attr-defined]
+def _run(transport: object, host: str, script: str, on_line: object | None = None) -> CommandResult:
+    if on_line is None:
+        return transport.run(host, script)  # type: ignore[attr-defined]
+    return transport.run(host, script, on_line)  # type: ignore[attr-defined]
 
 
 def _fail(result: HostResult, step: str, outcome: CommandResult) -> HostResult:
@@ -578,9 +582,19 @@ def _local_fix_prompt(pending: list[HostResult]) -> str:
     return " ".join(lines)
 
 
-def _run_remote_agent(result: HostResult, options: SyncOptions, transport: object) -> CommandResult:
+def _run_remote_agent(
+    result: HostResult,
+    options: SyncOptions,
+    transport: object,
+    on_line: object | None = None,
+) -> CommandResult:
     command = " ".join(shlex.quote(part) for part in (*options.agent_command, _remote_fix_prompt(result)))
-    outcome = _run(transport, result.host, _script(f"cd {_quote_repo(result.repo or DEFAULT_REPO_PATH)} && {command}"))
+    outcome = _run(
+        transport,
+        result.host,
+        _script(f"cd {_quote_repo(result.repo or DEFAULT_REPO_PATH)} && {command}"),
+        on_line,
+    )
     if outcome.returncode != 0:
         detail = _compact(outcome.stderr or outcome.stdout) or f"exit code {outcome.returncode}"
         result.log.append(f"remote fix agent failed: {detail}")
@@ -589,13 +603,35 @@ def _run_remote_agent(result: HostResult, options: SyncOptions, transport: objec
     return outcome
 
 
-def _run_local_agent(pending: list[HostResult], options: SyncOptions, repo_root: Path) -> CommandResult:
+def _run_local_agent(
+    pending: list[HostResult],
+    options: SyncOptions,
+    repo_root: Path,
+    on_line: object | None = None,
+) -> CommandResult:
     command = [*options.agent_command, _local_fix_prompt(pending)]
     try:
-        completed = subprocess.run(command, cwd=str(repo_root), capture_output=True, text=True, check=False)
+        process = subprocess.Popen(
+            command,
+            cwd=str(repo_root),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=0,
+        )
     except OSError as exc:
         return CommandResult(returncode=127, stderr=str(exc))
-    return CommandResult(returncode=completed.returncode, stdout=completed.stdout, stderr=completed.stderr)
+    collected: list[str] = []
+    assert process.stdout is not None
+    while True:
+        raw = process.stdout.readline()
+        if not raw:
+            break
+        line = raw.decode("utf-8", "replace")
+        collected.append(line)
+        if on_line is not None:
+            on_line(line.rstrip("\n"))  # type: ignore[operator]
+    return CommandResult(returncode=process.wait(), stdout="".join(collected))
 
 
 def needs_fix(results: list[HostResult]) -> list[HostResult]:
@@ -659,25 +695,32 @@ def apply_fixes(
     repo_root: Path,
     on_result: object | None = None,
     on_event: object | None = None,
+    line: object | None = None,
 ) -> list[HostResult]:
     """Spawn one omp agent on the single broken host, or one local agent for several, then finish them."""
     pending = needs_fix(results)
     if not pending or not options.resolve or options.dry_run:
         return results
 
+    write = line or _write
     mode = "remote-agent" if len(pending) == 1 else "local-agent"
     if mode == "remote-agent":
-        _notify(on_event, pending[0].host, "handing the host to omp on that machine")
-        _run_remote_agent(pending[0], options, transport)
+        write(
+            f"{cli_ui.colorize(cli_ui.icon('hint'), 'hint')} spawning omp agent on {pending[0].host} (default settings)"
+        )
+        outcome = _run_remote_agent(pending[0], options, transport, on_line=write)
     else:
-        for result in pending:
-            _notify(on_event, result.host, "one local omp agent is repairing this host")
-        outcome = _run_local_agent(pending, options, repo_root)
+        write(
+            f"{cli_ui.colorize(cli_ui.icon('hint'), 'hint')} spawning one local omp agent for "
+            f"{len(pending)} host(s) (default settings)"
+        )
+        outcome = _run_local_agent(pending, options, repo_root, on_line=write)
         detail = _compact(outcome.stderr or outcome.stdout)
         for result in pending:
             result.log.append(
                 f"local fix agent exit={outcome.returncode}" + (f": {detail}" if detail and outcome.returncode else "")
             )
+    write(f"{cli_ui.colorize(cli_ui.icon('info'), 'info')} omp agent finished (exit {outcome.returncode})")
     for result in pending:
         result.fix = mode
 
@@ -738,6 +781,7 @@ def sync_host(
         _notify(on_event, message)
 
     result = HostResult(host=host, status=STATUS_OK)
+    step(f"connecting to {host}")
     step("checking ssh, user and checkout")
     if not _preflight(host, options, transport, result):
         return result
@@ -926,11 +970,33 @@ def host_line(result: HostResult) -> str:
     return line
 
 
-def emit_result(result: HostResult) -> None:
-    """One live progress line per host, with the shared Nerd Font icon for its status."""
-    cli_ui.status(_STATUS_ROLES.get(result.status, "info"), host_line(result))
+def _write(text: str) -> None:
+    """Write straight to the interactive stream and flush, so PowerShell pipelines stay live."""
+    stream = cli_ui.console_stream()
+    stream.write(text)
+    stream.flush()
+
+
+def _status(role: str, message: str) -> None:
+    _write(f"{cli_ui.colorize(cli_ui.icon(role), role, bold=True)} {message}\n")
+
+
+def _separator() -> None:
+    char = "─" if cli_ui.supports_nerd_font_output() else "-"
+    _write(cli_ui.colorize(char * 54, "muted") + "\n")
+
+
+def result_text(result: HostResult) -> str:
+    """Status line(s) for one host, with the shared icon/color helpers."""
+    role = _STATUS_ROLES.get(result.status, "info")
+    lines = [f"{cli_ui.colorize(cli_ui.icon(role), role, bold=True)} {host_line(result)}"]
     if result.error:
-        cli_ui.status("fail", f"  error: {result.error}")
+        lines.append(f"{cli_ui.colorize(cli_ui.icon('fail'), 'fail', bold=True)}   error: {result.error}")
+    return "\n".join(lines)
+
+
+def emit_result(result: HostResult) -> None:
+    _write(result_text(result) + "\n")
 
 
 SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
@@ -946,7 +1012,7 @@ class ProgressReporter:
     """Per-step activity while hosts run: an animated spinner on a TTY, plain step lines otherwise."""
 
     def __init__(self, stream: object | None = None) -> None:
-        self.stream = stream or sys.stdout
+        self.stream = stream or cli_ui.console_stream()
         self._interactive = bool(getattr(self.stream, "isatty", lambda: False)())
         self._frames = SPINNER_FRAMES if cli_ui.can_encode(SPINNER_FRAMES[0]) else ASCII_SPINNER_FRAMES
         self._lock = threading.Lock()
@@ -975,13 +1041,19 @@ class ProgressReporter:
             return
         self._write(f"{cli_ui.icon('hint')} {host}: {step}\n")
 
+    def line(self, text: str) -> None:
+        """Print one complete line without letting the spinner overwrite it."""
+        with self._lock:
+            self._clear_locked()
+            self._write(text + "\n")
+
     def finish(self, result: HostResult) -> None:
         with self._lock:
             self._active.pop(result.host, None)
             if self._last is not None and self._last[0] == result.host:
                 self._last = None
             self._clear_locked()
-        emit_result(result)
+        self._write(result_text(result) + "\n")
 
     def close(self) -> None:
         self._stop.set()
@@ -1157,6 +1229,9 @@ def main(argv: list[str] | None = None) -> int:
     transport = build_transport(options)
     stream = args.format != "json"
     repo_root = Path(args.repo_root).expanduser() if args.repo_root else Path.cwd()
+    if stream and cli_ui.console_stream() is not sys.stdout:
+        # PowerShell pipes a native command's stdout; keep colors/icons for the attached console.
+        cli_ui.set_ui_override(True)
     reporter = ProgressReporter() if stream else None
 
     def handle_event(host: str, step: str) -> None:
@@ -1175,7 +1250,7 @@ def main(argv: list[str] | None = None) -> int:
         if stream:
             mode = " (dry-run)" if options.dry_run else ""
             workers = max(1, min(args.jobs, len(live)))
-            cli_ui.status("info", f"fleet sync: {len(live)} host(s), jobs={workers}{mode}")
+            _status("info", f"fleet sync: {len(live)} host(s), jobs={workers}{mode}")
         results = sync_hosts(
             live,
             options,
@@ -1188,7 +1263,7 @@ def main(argv: list[str] | None = None) -> int:
         if pending and options.resolve and not options.dry_run:
             if stream:
                 agent = "a remote omp agent" if len(pending) == 1 else "one local omp agent"
-                cli_ui.status("hint", f"fixing {len(pending)} host(s) with {agent}")
+                _status("hint", f"fixing {len(pending)} host(s) with {agent}")
             results = apply_fixes(
                 results,
                 options,
@@ -1196,6 +1271,7 @@ def main(argv: list[str] | None = None) -> int:
                 repo_root,
                 on_result=handle_result,
                 on_event=handle_event,
+                line=reporter.line if reporter is not None else _write,
             )
     finally:
         transport.close()
@@ -1213,10 +1289,10 @@ def main(argv: list[str] | None = None) -> int:
             ordered.append(by_host[host])
 
     if stream:
-        cli_ui.separator()
-        cli_ui.status(summary_role(ordered), summary_line(ordered, options))
+        _separator()
+        _status(summary_role(ordered), summary_line(ordered, options))
         if _summarize(ordered)["conflict"] and not options.resolve:
-            cli_ui.status("hint", CONFLICT_HINT)
+            _status("hint", CONFLICT_HINT)
     else:
         document = {
             "schema_version": SCHEMA_VERSION,

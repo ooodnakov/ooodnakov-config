@@ -169,12 +169,18 @@ waits up to 5 seconds, then kills a shell that refuses to exit.
    a failing host also gets an indented `error:` line;
 4. duplicate aliases are reported as `skipped` with `reason=duplicate of <alias>` after
    the fan-out, before the summary;
-5. a separator, then exactly one summary line with the
+5. when `--resolve` spawns an agent, a `spawning …` line, the agent's own output
+   streamed line by line, and `omp agent finished (exit N)`; the command waits for
+   the agent to exit before it continues;
+6. a separator, then exactly one summary line with the
    `ok`/`conflict`/`failed`/`skipped`/`dry-run` counts, plus the
    `re-run with --resolve` hint when a conflict remains.
 
 Spinner frames are braille glyphs on a capable terminal and `|/-\\` sequences otherwise;
-a non-terminal stream gets no carriage returns at all. Each status line starts with the
+a non-terminal stream gets no carriage returns at all. PowerShell pipes a native
+command's stdout, so `isatty()` is false there; the command detects the attached console
+and writes progress through it, keeping colors, icons, and the spinner live. Set
+`OOOCONF_UI=stdout` to force plain piped output, for example when redirecting to a file. Each status line starts with the
 shared Nerd Font icon for its role (`ok`, `warn`, `fail`,
 `missing`, `info`), or the ASCII fallback (`[ok]`, `[warn]`, `[fail]`, ...) when the
 terminal or `OOOCONF_ASCII=1` cannot render Nerd Font glyphs. The per-host table is never

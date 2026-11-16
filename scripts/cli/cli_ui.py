@@ -156,17 +156,61 @@ def _theme_palette() -> dict[str, int]:
     return THEME_COLORS.get(os.environ.get("OOOCONF_THEME", "default").lower(), THEME_COLORS["default"])
 
 
+_CONSOLE_STREAM = None
+
+
+def _console_disabled() -> bool:
+    mode = os.environ.get("OOOCONF_UI", "").lower()
+    if mode in {"stdout", "off", "never"}:
+        return True
+    return os.environ.get("OOOCONF_NO_CONSOLE") == "1"
+
+
+def console_stream():
+    """Stream for interactive UI output: stdout on a TTY, else the Windows console device.
+
+    PowerShell pipes a native command's stdout, so `sys.stdout.isatty()` is False there even
+    though a console is attached; writing to CONOUT$ keeps progress live and colored.
+    """
+    global _CONSOLE_STREAM
+    if sys.stdout.isatty() or sys.stdout is not sys.__stdout__:
+        return sys.stdout
+    if sys.platform != "win32" or _console_disabled():
+        return sys.stdout
+    if _CONSOLE_STREAM is None:
+        try:
+            candidate = open("CONOUT$", "w", encoding="utf-8", errors="replace", newline="\n", buffering=1)
+        except OSError:
+            candidate = None
+        _CONSOLE_STREAM = candidate if candidate is not None and candidate.isatty() else False
+    return _CONSOLE_STREAM or sys.stdout
+
+
+_UI_OVERRIDE = False
+
+
+def set_ui_override(enabled: bool) -> None:
+    """Treat the console as interactive for this process (used when stdout is piped by a host)."""
+    global _UI_OVERRIDE
+    _UI_OVERRIDE = enabled
+
+
+def _ui_stream():
+    return console_stream() if _UI_OVERRIDE else sys.stdout
+
+
 def supports_nerd_font_output() -> bool:
     if os.environ.get("OOOCONF_ASCII") == "1":
         return False
-    if not sys.stdout.isatty():
+    stream = _ui_stream()
+    if not stream.isatty():
         return False
-    encoding = (sys.stdout.encoding or "").lower()
+    encoding = (stream.encoding or "").lower()
     return "utf" in encoding
 
 
 def can_encode(text: str) -> bool:
-    encoding = sys.stdout.encoding or "utf-8"
+    encoding = _ui_stream().encoding or "utf-8"
     try:
         text.encode(encoding)
         return True
@@ -180,7 +224,7 @@ def supports_color_output() -> bool:
         return False
     if mode in {"1", "true", "always"} or os.environ.get("FORCE_COLOR") is not None:
         return True
-    return sys.stdout.isatty()
+    return _ui_stream().isatty()
 
 
 def icon(name: str) -> str:
