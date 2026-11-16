@@ -6,7 +6,7 @@
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView, Input, InputState } from "gpui-base";
 import { spaces, panes, focused, exec, readTextFile, writeTextFile, watchFolder, terminals, run, theme, home, checking, setShared, notify, playSound, knownAgents } from "herdr";
-import { randomBytes } from "crypto";
+import { randomUUID } from "crypto";
 
 const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
 const DEFAULT_ROOT = `${home()}/.local/share/ooodnakov/herdr`;
@@ -40,7 +40,8 @@ function isoNow() {
 function newId() {
   const now = new Date();
   const day = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-  return `t-${day}-${randomBytes(3).toString("hex")}`;
+  // gpui-shell's randomBytes Buffer returns "" for toString("hex"); a UUID's first six hex digits do not.
+  return `t-${day}-${randomUUID().replace(/-/g, "").slice(0, 6)}`;
 }
 
 // _herdr_store.slug_for's name rule, for a folder the index does not know yet.
@@ -447,7 +448,22 @@ export default class Tasks extends View {
     const args = ["spawn", task.id, "--folder", this.folder, "--name", task.title || task.id, "--", ...program.run, prompt];
     cx.spawn(async (cx) => {
       try {
-        const result = await exec(this.on ? "herdr-task" : CLI, args, { on: this.on });
+        // The command is an extensionless Python script: Windows cannot exec it
+        // directly, so fall back to python before giving up.
+        const attempts = this.on
+          ? [["herdr-task", args]]
+          : [[CLI, args], ["python3", [CLI, ...args]], ["python", [CLI, ...args]]];
+        let result = null;
+        let failure = null;
+        for (const [command, argv] of attempts) {
+          try {
+            result = await exec(command, argv, { on: this.on });
+            break;
+          } catch (error) {
+            failure = error;
+          }
+        }
+        if (!result) throw failure ?? new Error("cannot run herdr-task");
         if (result.code !== 0) throw new Error(result.stderr.trim() || `herdr-task spawn failed (${result.code})`);
         // The agent runs as a sub-agent; give it a real pane so you type in its own TUI.
         const address = result.stdout.trim().split(/\s+/)[1];
@@ -785,9 +801,7 @@ export default class Tasks extends View {
           .when(this.confirm === task.id, (row) => row
             .child(div().text_size(11).text_color(t.dim).child("Delete this task?"))
             .child(chip("Delete", (cx) => this.remove(task, cx), t, true))
-            .child(chip("Cancel", (cx) => { this.confirm = null; cx.notify(); }, t)))
-          .when(Boolean(this.error), (row) => row
-            .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.blocked).child(this.error)))));
+            .child(chip("Cancel", (cx) => { this.confirm = null; cx.notify(); }, t)))));
   }
 
   render(cx) {
