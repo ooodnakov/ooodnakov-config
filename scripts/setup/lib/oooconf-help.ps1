@@ -1,7 +1,7 @@
 # Dot-sourced by scripts/setup/ooodnakov.ps1; do not execute directly.
 
 function Get-KnownCommands {
-    $fallback = @("install", "deps", "update", "doctor", "status", "snapshot", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "secrets", "shell", "color", "delta", "version", "check", "preview", "upgrade")
+    $fallback = @("install", "deps", "update", "doctor", "status", "snapshot", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "fleet", "secrets", "shell", "color", "delta", "version", "check", "preview", "upgrade")
     if (-not (Test-Path $CommandsFile)) {
         return $fallback
     }
@@ -237,6 +237,7 @@ function Show-Usage {
     Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
     Write-UiCommandRow -CommandName "env" -Description "set machine-local environment variables"
     Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
+    Write-UiCommandRow -CommandName "fleet" -Description "sync this repo across SSH fleet hosts"
     Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
 
     Write-UiSpacer
@@ -516,6 +517,42 @@ Examples:
   oooconf agents mcp status
   oooconf agents provider sync minimax --agents codex
   oooconf agents skills view --json
+"@
+        }
+        "fleet" {
+            Write-UiHelpBlock @"
+Usage: oooconf fleet sync [HOST...] [--all] [--repo-path PATH] [--branch NAME]
+                         [--jobs N] [--resolve] [--no-push] [--format text|json]
+                         [--dry-run]
+
+Pull this repo's latest changes on SSH fleet hosts.
+Per host: stash local work, rebase onto the remote branch, restore the stash,
+push commits that exist only on that host, then run oooconf update --no-deps.
+An omp agent is only spawned when --resolve is passed.
+Hosts:
+  HOST...                SSH config aliases from ~/.ssh/config and included files
+  --all                  select every host alias; wildcard patterns are skipped
+Checks (per host, before anything else runs):
+  ssh reachable, user is not root, the repo path exists, the machine is not
+  this one; aliases sharing a HostName and Port are deduped and skipped.
+Options:
+  --repo-path PATH       remote repo path (default: oooconf --print-repo-root)
+  --branch NAME          remote branch (default: checked-out branch's upstream)
+  --jobs N               parallel hosts (default: 4)
+  --resolve              let an omp agent resolve conflicts on the host
+  --no-push              never push commits that exist only on the host
+  --format text|json     output format (default: text)
+  --dry-run              inspect repo/branch/dirty/ahead/behind only
+Safety:
+  Without --resolve, a conflict keeps the stash in place and stops before update.
+  --dry-run performs no fetch, stash, pull, push, or link refresh.
+Exit codes:
+  0 ok, dry-run, and skipped hosts       2 at least one conflict       1 failure
+Examples:
+  oooconf fleet sync --all --format json
+  oooconf fleet sync orange site
+  oooconf fleet sync --all --resolve
+  oooconf fleet sync site --dry-run
 "@
         }
         "secrets" {

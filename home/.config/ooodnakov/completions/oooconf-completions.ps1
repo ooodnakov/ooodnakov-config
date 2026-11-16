@@ -24,6 +24,7 @@ function Get-OooconfCompletions {
         'completions',
         'link',
         'agents',
+        'fleet',
         'secrets',
         'env',
         'shell',
@@ -329,6 +330,23 @@ function Get-OooconfCompletions {
             Values = @()
             Subcommands = @()
             OptionValues = @{
+            }
+        }
+        'fleet' = @{
+            Options = @()
+            OptionsWithArgs = @()
+            Values = @()
+            Subcommands = @('sync')
+            OptionValues = @{
+            }
+        }
+        'fleet:sync' = @{
+            Options = @('--all', '--repo-path', '--branch', '--jobs', '--resolve', '--no-push', '--format', '--dry-run', '-h', '--help')
+            OptionsWithArgs = @('--format')
+            Values = @()
+            Subcommands = @()
+            OptionValues = @{
+                '--format' = @('text', 'json')
             }
         }
         'help' = @{

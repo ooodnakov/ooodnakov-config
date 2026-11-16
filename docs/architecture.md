@@ -147,6 +147,18 @@ export/import. Diagnostics use the versioned
 preference values are explicit allowlists; applying a snapshot first validates and
 builds a link plan, then delegates mutations to the transaction executor.
 
+Fleet synchronization lives in `scripts/cli/fleet_sync.py`, the shared Bash/PowerShell
+implementation of `fleet sync`. It discovers hosts from the SSH config chain, dedupes
+aliases that resolve to the same `HostName`/`Port`, and runs a preflight on each host
+before anything else: ssh must connect, the user must not be `root`, the checkout must
+exist, and the machine must not be the local one. Then it stashes local work, rebases
+onto the remote branch, optionally delegates conflicts to an `omp` agent on that machine
+(`--resolve`), restores the stash, pushes commits that exist only there, then runs
+`oooconf update --no-deps` so managed links are re-applied. Remote work runs over
+`ssh <host> sh -lc` with `GIT_TERMINAL_PROMPT=0`, so a credential prompt can never hang
+the fan-out; on Windows the native `System32\OpenSSH\ssh.exe` is preferred so a managed
+PATH shim cannot shadow it with an ssh that ignores `~/.ssh/config`.
+
 Portable capability profiles live under
 `home/.config/ooodnakov/profiles/`. `capabilities.toml` maps portable capability
 names to manifest link keys, dependency recommendations, and platform applicability;

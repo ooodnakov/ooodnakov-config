@@ -3,7 +3,7 @@ schema_version = 1
 minimum_reader_version = 1
 
 [global]
-options = { "--all" = "select all dependency keys at once", "--latest" = "check for and install latest manager-backed dependency versions", "--skip-deps" = "skip dependency installation", "--no-deps" = "alias for --skip-deps", "-C" = "set repo root path", "--repo-root" = "set repo root path", "--profile" = "select portable capability profile", "--print-repo-root" = "print resolved repo root", "-h" = "show help", "--help" = "show help", "-n" = "preview actions without changing files", "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-V" = "show version", "--version" = "show version" }
+options = { "--all" = "select all dependency keys at once (fleet sync: all SSH hosts)", "--latest" = "check for and install latest manager-backed dependency versions", "--skip-deps" = "skip dependency installation", "--no-deps" = "alias for --skip-deps", "-C" = "set repo root path", "--repo-root" = "set repo root path", "--profile" = "select portable capability profile", "--print-repo-root" = "print resolved repo root", "-h" = "show help", "--help" = "show help", "-n" = "preview actions without changing files", "--dry-run" = "preview actions without changing files", "--yes-optional" = "auto-confirm optional dependency installs", "-V" = "show version", "--version" = "show version" }
 completers = { "-C" = "_files -/", "--repo-root" = "_files -/" }
 option_value_sets = { "--profile" = "profiles" }
 
@@ -319,6 +319,18 @@ handler_id = "oooconf.agents.skills.add"
 platforms = ["linux", "macos", "windows"]
 description = "add one shared skill source and optionally sync"
 options = { "--agent" = "target agent", "--sync-now" = "sync after adding", "--check" = "check only" }
+
+[commands.fleet]
+handler_id = "oooconf.fleet"
+platforms = ["linux", "macos", "windows"]
+description = "synchronize this repo across SSH fleet hosts"
+
+[commands.fleet.subcommands.sync]
+handler_id = "oooconf.fleet.sync"
+platforms = ["linux", "macos", "windows"]
+description = "preflight, then stash, pull, optionally resolve conflicts, push, and re-link on SSH hosts"
+options = { "--all" = "select every host alias from SSH config", "--repo-path" = "remote repo path that must already exist", "--branch" = "remote branch name", "--jobs" = "parallel host count", "--resolve" = "spawn an omp agent to resolve conflicts", "--no-push" = "never push commits", "--format" = "output format", "--dry-run" = "inspect hosts without changing them", "-h" = "show help", "--help" = "show help" }
+option_value_sets = { "--format" = "diagnostic_formats" }
 
 [commands.secrets]
 handler_id = "oooconf.secrets"

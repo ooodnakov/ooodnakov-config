@@ -17,6 +17,7 @@ $GenerateLockScript = Join-Path $RepoRoot "scripts/generate/generate_dependency_
 $UpdatePinsScript = Join-Path $RepoRoot "scripts/update/update_pins.py"
 $RenderSecretsScript = Join-Path $RepoRoot "scripts/generate/render_secrets.py"
 $AgentsToolScript = Join-Path $RepoRoot "scripts/cli/agents_tool.py"
+$FleetSyncScript = Join-Path $RepoRoot "scripts/cli/fleet_sync.py"
 $EnvToolScript = Join-Path $RepoRoot "scripts/cli/env_tool.py"
 $LifecycleToolScript = Join-Path $RepoRoot "scripts/cli/lifecycle_tool.py"
 $SyncColorThemeScript = Join-Path $RepoRoot "scripts/lib/sync_color_theme.py"
@@ -350,6 +351,22 @@ switch ($command) {
         }
         Require-PythonRuntime
         Run-Python -ScriptPath $AgentsToolScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining + $agentsDryRun)
+    }
+    "fleet" {
+        if ($remaining.Count -eq 0 -or $remaining[0] -in @("-h", "--help", "help")) {
+            Show-CommandUsage "fleet"
+            exit 0
+        }
+        # Subcommands own --dry-run and --all, so forward the hoisted global flags at the end.
+        $fleetFlags = @()
+        if ($allDepsRequested) {
+            $fleetFlags += "--all"
+        }
+        if ($dryRunRequested) {
+            $fleetFlags += "--dry-run"
+        }
+        Require-PythonRuntime
+        Run-Python -ScriptPath $FleetSyncScript -ScriptArgs (@("--repo-root", $RepoRoot) + $remaining + $fleetFlags)
     }
     "wm" {
         if ($remaining.Count -ge 2 -and $remaining[0] -eq "bar" -and $remaining[1] -in @("-h", "--help")) {

@@ -16,6 +16,7 @@ update-pins
 completions
 link
 agents
+fleet
 secrets
 env
 shell

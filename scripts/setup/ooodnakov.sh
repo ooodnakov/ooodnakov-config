@@ -14,6 +14,7 @@ GEN_LOCK="$REPO_ROOT/scripts/generate/generate_dependency_lock.py"
 UPDATE_PINS="$REPO_ROOT/scripts/update/update-pins.sh"
 RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
 AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
+FLEET_TOOL="$REPO_ROOT/scripts/cli/fleet_sync.py"
 ENV_TOOL="$REPO_ROOT/scripts/cli/env_tool.py"
 SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
 OPERATION_PLAN="$REPO_ROOT/scripts/cli/operation_plan.py"
@@ -90,6 +91,7 @@ while [ "$#" -gt 0 ]; do
       UPDATE_PINS="$REPO_ROOT/scripts/update/update-pins.sh"
       RENDER_SECRETS="$REPO_ROOT/scripts/generate/render_secrets.py"
       AGENTS_TOOL="$REPO_ROOT/scripts/cli/agents_tool.py"
+      FLEET_TOOL="$REPO_ROOT/scripts/cli/fleet_sync.py"
       ENV_TOOL="$REPO_ROOT/scripts/cli/env_tool.py"
       SYNC_COLOR_THEME="$REPO_ROOT/scripts/lib/sync_color_theme.py"
       OPERATION_PLAN="$REPO_ROOT/scripts/cli/operation_plan.py"
@@ -335,6 +337,24 @@ case "$command" in
       dry_run_arg="--dry-run"
     fi
     exec "$(command -v env)" OOODNAKOV_REPO_ROOT="$REPO_ROOT" python3 "$AGENTS_TOOL" --repo-root "$REPO_ROOT" "$@" $dry_run_arg
+    ;;
+  fleet)
+    if [ "$#" -eq 0 ]; then
+      command_usage fleet
+      exit 0
+    fi
+    case "$1" in
+      -h|--help|help)
+        command_usage fleet
+        exit 0
+        ;;
+    esac
+    # Subcommands own --dry-run and --all, so forward the hoisted global flags at the end.
+    fleet_flags=""
+    [ "$all_deps_requested" -eq 1 ] && fleet_flags="--all"
+    [ "$dry_run_requested" -eq 1 ] && fleet_flags="$fleet_flags --dry-run"
+    OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$FLEET_TOOL" --repo-root "$REPO_ROOT" "$@" $fleet_flags
+    exit $?
     ;;
   secrets)
     OOODNAKOV_REPO_ROOT="$REPO_ROOT" run_python "$RENDER_SECRETS" --repo-root "$REPO_ROOT" "$@"
