@@ -76,7 +76,7 @@ function here() {
 async function probeFor(on) {
   if (!on) return "ok";
   if (!PROBES.has(on)) {
-    const result = await exec("sh", ["-c", "command -v herdr-task >/dev/null && ls -d ~/.local/share/ooodnakov/herdr"], { on }).catch(() => null);
+    const result = await exec("sh", ["-c", '(command -v herdr-task >/dev/null 2>&1 || [ -x "$HOME/.local/bin/herdr-task" ]) && ls -d "$HOME/.local/share/ooodnakov/herdr" >/dev/null'], { on }).catch(() => null);
     if (!result) return "unknown";
     // `command -v` fails silently; a missing store fails in `ls`, which writes to stderr.
     PROBES.set(on, result.code === 0 ? "ok" : String(result.stderr ?? "").trim() ? "store" : "task");
