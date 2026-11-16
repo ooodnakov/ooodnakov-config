@@ -413,10 +413,10 @@ Avoid both excessive caution that prevents progress and unjustified confidence t
 
 ### Modern CLI tools
 
-- Prefer ripgrep (`rg`) over `grep -r`, `fd` over `find`, `sd` over `sed -i`, `jq` and `yq` for JSON/YAML, `bat` for reading files, `eza` for listings, `hyperfine` for measuring commands.
+- Prefer ripgrep (`rg`) over `grep -r`, `fd` over `find`, `sd` over `sed -i`, and `jq`/`yq` for structured data.
 - Fall back to the POSIX tool only when the modern one is missing or a script must stay portable; check with `command -v rg` instead of assuming absence.
 - Chain tools in one command instead of many sequential calls, for example `rg -l pattern | xargs fd`, or `jq -r '.items[].name' file.json`, or `fd -e ts -x sd old new`.
-- These tools are installed in this environment; do not install alternatives when one of them already answers the question.
+- Most of these tools are present on this machine, but availability differs per host: run `command -v <tool>` before relying on one, and prefer an installed tool over installing a new alternative.
 - Use `rg` and `fd` inside bash pipelines and delegated subagents; quoting and exit codes matter more than tool novelty.
 
 Tool selection should follow the task, not dictate the workflow.
