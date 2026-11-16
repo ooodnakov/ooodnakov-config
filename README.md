@@ -615,14 +615,18 @@ The [Herdr app](https://herdr.dev) keeps its whole interface as files in `~/.con
 - `home/.config/herdr-app/themes/gruvbox-{dark,light}.json` — the palettes, selectable in Settings → Look
 - `home/.config/herdr-app/mods/oo-tasks/` — the Tasks panel
 - `home/.config/herdr-app/mods/oo-artifacts/` — the Artifacts panel
-- `home/.config/herdr-app/layouts/tasks.json` (with `tasks.svg`) — a small layout with both panels side by side; `Ctrl+Shift+L` cycles to it
+- `home/.config/herdr-app/mods/panel-tabs/` — the strip above the docked panels
+- `home/.config/herdr-app/layouts/main-panels.json` (with `main-panels.svg`) — a clone of Herdr's `main` whose right-hand panel stack holds Files, Changes, Tasks and Artifacts; the strip switches between them, and the tab bar's Files / Changes buttons still toggle the whole panel
+- `home/.config/herdr-app/layouts/tasks.json` (with `tasks.svg`) — a focused layout with only Tasks beside Artifacts; `Ctrl+Shift+L` cycles layouts
+
+`main-panels` is a clone: Herdr never updates clones, so when Herdr's own `main` gains something, duplicate it again (`layout.clone`) and re-apply the panel-stack edit — the strip mod and the added children are the only differences.
 
 Panels never write: they read the per-folder JSON lists that two commands write, both linked into `~/.local/bin` beside `oooconf`:
 
 - `herdr-task add "Split the importer" --note "Then run the tests"`, `herdr-task list`, `herdr-task set <id> doing|blocked|done`, `herdr-task show <id>`, `herdr-task rm <id>`
 - `herdr-artifact add "Weekly report" --from report.md` (or `--text "…"`), `herdr-artifact update <id> --from report.md`, `herdr-artifact list`, `herdr-artifact show <id>`, `herdr-artifact rm <id>`
 
-Both act on `--folder …`, else the current git worktree, else the cwd, and print JSON with `--json`. Data lives in `~/.local/share/ooodnakov/herdr/` (`index.json` maps a folder to its slug; `tasks/` and `artifacts/` hold the lists; artifact versions keep their last 20 contents). The location is deliberately fixed instead of `XDG_DATA_HOME`-derived so the mods, which cannot read the environment, find the same files. Every write takes a lock and replaces the file atomically.
+Both act on `--folder …`, else the current git worktree, else the cwd, and print JSON with `--json`. Data lives in `~/.local/share/ooodnakov/herdr/` (`index.json` maps a folder to its slug; `tasks/` and `artifacts/` hold the lists; artifact versions keep their last 20 contents). The location is deliberately fixed instead of `XDG_DATA_HOME`-derived so the mods, which cannot read the environment, find the same files. Every write takes a lock and replaces the file atomically. A space on another machine reads that machine's lists over the herdr-core link, so the commands must be linked there too (the normal `oooconf` link apply does it).
 
 Herdr watches `mods/` through the managed symlinks unevenly: after editing a mod in the repo, switch layouts (`Ctrl+Shift+L`) to start it fresh; restarting Herdr is not needed. `herdr-app check ~/.config/herdr-app/mods/oo-tasks` validates a mod before you rely on it.
 

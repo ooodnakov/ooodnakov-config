@@ -6,7 +6,19 @@ import { v_flex, h_flex, TextView } from "gpui-base";
 import { spaces, panes, focused, exec, readTextFile, theme, home, checking } from "herdr";
 
 const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
+const ROOTS = new Map();
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
+
+// Each machine keeps its own lists; a space on another machine reads them there.
+async function rootFor(on) {
+  if (!on) return ROOT;
+  if (!ROOTS.has(on)) {
+    const homeDir = await exec("sh", ["-c", 'printf %s "$HOME"'], { on }).catch(() => null);
+    const path = homeDir?.code === 0 ? homeDir.stdout.trim() : "";
+    ROOTS.set(on, path ? `${path}/.local/share/ooodnakov/herdr` : null);
+  }
+  return ROOTS.get(on);
+}
 
 function here() {
   const space = spaces().find((s) => s.active);
@@ -43,6 +55,8 @@ export default class Artifacts extends View {
     if (key === this.focus) return;
     this.focus = key;
     this.folder = null;
+    this.root = null;
+    this.on = at.on ?? null;
     this.data = null;
     this.selected = null;
     this.content = null;
@@ -51,15 +65,18 @@ export default class Artifacts extends View {
       this.error = "No folder";
       return;
     }
-    if (at.on) {
-      this.error = `Artifacts stay on the machine they were written on (${at.on})`;
-      return;
-    }
     this.loading = true;
     cx.spawn(async (cx) => {
-      const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd: at.folder }).catch(() => null);
+      const root = await rootFor(at.on);
+      if (!root) {
+        if (this.focus === key) { this.error = `Cannot find this machine's home (${at.on})`; this.loading = false; }
+        cx.notify();
+        return;
+      }
+      const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd: at.folder, on: at.on }).catch(() => null);
       const folder = norm(top?.code === 0 && top.stdout.trim() ? top.stdout.trim() : at.folder);
       if (this.focus !== key) return;
+      this.root = root;
       this.folder = folder;
       await this.read(key, cx);
       this.loading = false;
@@ -81,9 +98,10 @@ export default class Artifacts extends View {
 
   async read(key, cx) {
     try {
-      const index = JSON.parse((await readTextFile(`${ROOT}/index.json`)) || "{}");
+      const on = this.on;
+      const index = JSON.parse((await readTextFile(`${this.root}/index.json`, { on })) || "{}");
       const slug = index?.folders?.[this.folder];
-      const text = slug ? await readTextFile(`${ROOT}/artifacts/${slug}.json`) : null;
+      const text = slug ? await readTextFile(`${this.root}/artifacts/${slug}.json`, { on }) : null;
       if (this.focus !== key) return;
       this.data = text ? JSON.parse(text) : { artifacts: [] };
       this.error = null;
@@ -103,7 +121,7 @@ export default class Artifacts extends View {
     if (!version) return;
     const key = this.focus;
     cx.spawn(async (cx) => {
-      const text = await readTextFile(`${ROOT}/${version.path}`).catch(() => null);
+      const text = await readTextFile(`${this.root}/${version.path}`, { on: this.on }).catch(() => null);
       if (this.focus !== key || this.selected !== artifact.id) return;
       this.content = text ?? "(cannot read this version)";
       cx.notify();
