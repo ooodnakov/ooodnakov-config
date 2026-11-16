@@ -539,12 +539,16 @@ Options:
   --repo-path PATH       remote repo path (default: oooconf --print-repo-root)
   --branch NAME          remote branch (default: checked-out branch's upstream)
   --jobs N               parallel hosts (default: 4)
-  --resolve              let an omp agent resolve conflicts on the host
+  --resolve              after the run, let omp fix unfinished hosts: one host
+                         gets a remote agent, several get one local agent that
+                         ssh's out; the agent receives each host's status
   --no-push              never push commits that exist only on the host
   --format text|json     output format (default: text)
   --dry-run              inspect repo/branch/dirty/ahead/behind only
 Safety:
   Without --resolve, a conflict keeps the stash in place and stops before update.
+  With --resolve the sync prints the per-host status first, then the agent fixes
+  conflicts, restores the stash, pushes host-only commits, and re-runs the links.
   --dry-run performs no fetch, stash, pull, push, or link refresh.
 Exit codes:
   0 ok, dry-run, and skipped hosts       2 at least one conflict       1 failure

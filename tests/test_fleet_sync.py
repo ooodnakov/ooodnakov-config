@@ -9,6 +9,7 @@ import json
 import sys
 import threading
 from pathlib import Path
+from types import SimpleNamespace
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -21,21 +22,6 @@ CONFLICT_FILE = "home/.config/zsh/.zshrc"
 
 def _result(returncode: int = 0, stdout: str = "", stderr: str = "") -> fleet_sync.CommandResult:
     return fleet_sync.CommandResult(returncode, stdout, stderr)
-
-
-class Sequence:
-    """Returns scripted results in order, repeating the last one afterwards."""
-
-    def __init__(self, *results: fleet_sync.CommandResult) -> None:
-        self._results = list(results)
-        self._index = 0
-        self._lock = threading.Lock()
-
-    def __call__(self, host: str, script: str) -> fleet_sync.CommandResult:
-        with self._lock:
-            index = min(self._index, len(self._results) - 1)
-            self._index += 1
-        return self._results[index]
 
 
 PREFLIGHT_OUTPUT = "hostname=fleet-node-1\nuser=tester\nrepo=yes\n"
@@ -388,30 +374,47 @@ def test_pull_conflict_without_resolve_keeps_stash_and_stops() -> None:
     assert fleet_sync.exit_code([result]) == 2
 
 
-def test_resolve_lets_agent_repair_tree_then_continues() -> None:
+def test_single_pending_host_runs_remote_agent_then_completes(monkeypatch) -> None:
     transport = FakeTransport(
         handler_for(
             [
                 ("omp -p", _result(0)),
                 ("status --porcelain", _result(0, f" M {CONFLICT_FILE}\n")),
                 ("pull --rebase origin", _result(1, "", "error: could not apply 1234abc\n")),
-                ("--diff-filter=U", Sequence(_result(0, CONFLICT_FILE + "\n"), _result(0))),
+                ("--diff-filter=U", _result(0, CONFLICT_FILE + "\n")),
             ]
         )
     )
+    local_calls: list[object] = []
+    monkeypatch.setattr(fleet_sync.subprocess, "run", lambda *args, **kwargs: local_calls.append(args))
 
-    result = fleet_sync.sync_host("alpha", fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True), transport)
+    options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
+    result = fleet_sync.sync_host("alpha", options, transport)
 
-    assert result.status == fleet_sync.STATUS_OK
-    assert result.resolved is True
-    assert result.conflicts == []
+    # The per-host pipeline reports the conflict and never spawns an agent itself.
+    assert result.status == fleet_sync.STATUS_CONFLICT
+    assert result.stashed is True
+    assert not transport.issued("omp -p")
+
+    results = fleet_sync.apply_fixes([result], options, transport, REPO_ROOT)
+
+    scripts = transport.scripts()
+    assert _index(scripts, "pull --rebase") < _index(scripts, "omp -p")
     agent_scripts = transport.find("omp -p")
     assert len(agent_scripts) == 1
-    assert REMOTE_REPO in agent_scripts[0]
+    assert f"cd {REMOTE_REPO} && omp -p" in agent_scripts[0]
+    assert "host=alpha status=conflict" in agent_scripts[0]
+
+    assert results[0].status == fleet_sync.STATUS_OK
+    assert results[0].resolved is True
+    assert results[0].fix == "remote-agent"
+    assert results[0].conflicts == []
     assert transport.issued("stash pop")
     assert transport.issued("oooconf update --no-deps")
     assert not transport.issued("push origin")
-    assert fleet_sync.exit_code([result]) == 0
+    assert local_calls == []
+    assert "fix=remote-agent" in fleet_sync.render_text(results, options)
+    assert fleet_sync.exit_code(results) == 0
 
 
 def test_stash_pop_conflict_is_reported_as_conflict() -> None:
@@ -432,6 +435,100 @@ def test_stash_pop_conflict_is_reported_as_conflict() -> None:
     assert not transport.issued("push origin")
     assert not transport.issued("oooconf update")
     assert fleet_sync.exit_code([result]) == 2
+
+
+# --- two-phase fixing ---------------------------------------------------------------
+
+
+def test_several_pending_hosts_run_exactly_one_local_agent(monkeypatch) -> None:
+    transport = FakeTransport(
+        handler_for(
+            [
+                ("status --porcelain", _result(0, f" M {CONFLICT_FILE}\n")),
+                ("pull --rebase origin", _result(1, "", "error: could not apply 1234abc\n")),
+                ("--diff-filter=U", _result(0, CONFLICT_FILE + "\n")),
+            ]
+        )
+    )
+    calls: list[dict] = []
+
+    def fake_run(argv, **kwargs):
+        calls.append({"argv": list(argv), **kwargs})
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(fleet_sync.subprocess, "run", fake_run)
+
+    options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
+    results = fleet_sync.sync_hosts(["alpha", "beta"], options, transport, jobs=1)
+    assert [result.status for result in results] == [fleet_sync.STATUS_CONFLICT] * 2
+
+    fleet_sync.apply_fixes(results, options, transport, REPO_ROOT)
+
+    assert len(calls) == 1
+    command = calls[0]["argv"]
+    assert command[:2] == ["omp", "-p"]
+    prompt = command[2]
+    assert "host=alpha" in prompt
+    assert "host=beta" in prompt
+    assert prompt.count("status=conflict") == 2
+    assert calls[0]["cwd"] == str(REPO_ROOT)
+    assert calls[0]["capture_output"] is True
+    assert calls[0]["text"] is True
+    assert calls[0]["check"] is False
+    assert not transport.issued("omp -p")
+    assert [result.fix for result in results] == ["local-agent", "local-agent"]
+    assert [result.status for result in results] == [fleet_sync.STATUS_OK] * 2
+    assert all(result.resolved for result in results)
+
+
+def test_resolve_with_dry_run_spawns_no_agent(monkeypatch) -> None:
+    transport = FakeTransport(handler_for([("rev-list --left-right --count", _result(0, "2\t1\n"))]))
+    calls: list[object] = []
+    monkeypatch.setattr(fleet_sync.subprocess, "run", lambda *args, **kwargs: calls.append(args))
+
+    options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True, dry_run=True)
+    results = fleet_sync.sync_hosts(["alpha", "beta"], options, transport, jobs=1)
+    fleet_sync.apply_fixes(results, options, transport, REPO_ROOT)
+
+    assert [result.status for result in results] == [fleet_sync.STATUS_DRY_RUN] * 2
+    assert calls == []
+    assert not transport.issued("omp -p")
+    assert all(result.fix is None for result in results)
+
+
+def test_needs_fix_includes_conflicts_and_reachable_failures_only() -> None:
+    conflict = fleet_sync.HostResult(host="alpha", status=fleet_sync.STATUS_CONFLICT, reachable=True)
+    unreachable = fleet_sync.HostResult(host="beta", status=fleet_sync.STATUS_FAILED, reachable=False)
+    reachable = fleet_sync.HostResult(host="gamma", status=fleet_sync.STATUS_FAILED, reachable=True)
+    ok = fleet_sync.HostResult(host="delta", status=fleet_sync.STATUS_OK, reachable=True)
+
+    assert fleet_sync.needs_fix([conflict, unreachable, reachable, ok]) == [conflict, reachable]
+
+
+def test_stash_pop_failure_after_fix_stays_conflict(monkeypatch) -> None:
+    transport = FakeTransport(
+        handler_for(
+            [
+                ("omp -p", _result(0)),
+                ("status --porcelain", _result(0, f" M {CONFLICT_FILE}\n")),
+                ("pull --rebase origin", _result(1, "", "error: could not apply 1234abc\n")),
+                ("--diff-filter=U", _result(0, CONFLICT_FILE + "\n")),
+                ("stash pop", _result(1, "", f"CONFLICT (content): Merge conflict in {CONFLICT_FILE}\n")),
+            ]
+        )
+    )
+    monkeypatch.setattr(fleet_sync.subprocess, "run", lambda *args, **kwargs: None)
+
+    options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
+    result = fleet_sync.sync_host("alpha", options, transport)
+    fleet_sync.apply_fixes([result], options, transport, REPO_ROOT)
+
+    assert result.status == fleet_sync.STATUS_CONFLICT
+    assert result.resolved is False
+    assert result.fix == "remote-agent"
+    assert result.conflicts == [CONFLICT_FILE]
+    assert not transport.issued("push origin")
+    assert not transport.issued("oooconf update")
 
 
 # --- push behaviour -----------------------------------------------------------------
@@ -580,6 +677,8 @@ def test_json_format_document_shape(monkeypatch, capsys) -> None:
         assert entry["repo"] == REMOTE_REPO
         assert entry["branch"] == "main"
         assert entry["linked"] is True
+        assert entry["reachable"] is True
+        assert entry["fix"] is None
         assert entry["skip_reason"] is None
 
 
@@ -592,3 +691,41 @@ def test_remote_git_commands_disable_terminal_prompts() -> None:
     assert git_scripts
     for script in git_scripts:
         assert "GIT_TERMINAL_PROMPT=0" in script
+
+
+def test_main_applies_two_phase_fixes_after_the_fan_out(monkeypatch, capsys) -> None:
+    transport = FakeTransport(
+        handler_for(
+            [
+                ("status --porcelain", _result(0, f" M {CONFLICT_FILE}\n")),
+                ("pull --rebase origin", _result(1, "", "error: could not apply 1234abc\n")),
+                ("--diff-filter=U", _result(0, CONFLICT_FILE + "\n")),
+            ]
+        )
+    )
+    monkeypatch.setattr(fleet_sync, "SshTransport", lambda *args, **kwargs: transport)
+    monkeypatch.setattr(fleet_sync, "parse_ssh_targets", lambda home=None: [])
+    agent_calls: list[list[str]] = []
+
+    def fake_run(argv, **kwargs):
+        agent_calls.append(list(argv))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(fleet_sync.subprocess, "run", fake_run)
+
+    code = fleet_sync.main(
+        ["--repo-root", str(REPO_ROOT), "sync", "alpha", "beta", "--repo-path", REMOTE_REPO, "--resolve"]
+    )
+
+    out = capsys.readouterr().out
+    assert code == 0
+    # One local agent covers both hosts and receives their status.
+    assert len(agent_calls) == 1
+    assert agent_calls[0][:2] == ["omp", "-p"]
+    assert "host=alpha" in agent_calls[0][2]
+    assert "host=beta" in agent_calls[0][2]
+    # The per-host status is printed before the agent runs, the final summary after it.
+    assert " conflict " in out
+    assert out.count("fix=local-agent") == 2
+    assert "ok=2 conflict=0" in out
+    assert not transport.issued("omp -p")

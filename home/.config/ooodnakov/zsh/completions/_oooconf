@@ -1222,7 +1222,7 @@ _oooconf_fleet_sync() {
     '--repo-path[remote repo path that must already exist]' \
     '--branch[remote branch name]' \
     '--jobs[parallel host count]' \
-    '--resolve[spawn an omp agent to resolve conflicts]' \
+    '--resolve[fix unfinished hosts with omp (a remote agent for one host, one local agent for several)]' \
     '--no-push[never push commits]' \
     '--format[output format]:value:(text json)' \
     '--dry-run[inspect hosts without changing them]' \

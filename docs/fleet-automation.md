@@ -64,10 +64,11 @@ oooconf fleet sync [HOST...] [--all] [--repo-path PATH] [--branch NAME] [--jobs 
 - `--branch NAME`: remote branch. Defaults to the branch's upstream minus `origin/`,
   then to `main`.
 - `--jobs N`: hosts synced in parallel (default 4).
-- `--resolve`: let an `omp` agent repair conflicts (see below).
+- `--resolve`: after the fan-out, spawn one `omp` agent to repair hosts left `conflict`
+  or `failed` but reachable (see Two-phase fixing below).
 - `--no-push`: never push commits that exist only on the host.
 - `--format text|json`: human summary or a versioned JSON document
-  (`schema_version`, per-host results including `skip_reason`, and
+  (`schema_version`, per-host results including `reachable`, `fix`, and `skip_reason`, and
   ok/conflict/failed/dry-run/skipped counts).
 - `--dry-run`: inspect only; reports repo, branch, dirty state, and ahead/behind without
   fetching, stashing, pulling, pushing, or re-linking.
@@ -99,7 +100,8 @@ codes. Preflight failures are ordinary failures, not skips.
 4. Stash local work (`git stash push -u`).
 5. `git fetch --prune origin <branch>` then `git pull --rebase origin <branch>`.
 6. On a pull failure, treat unmerged paths and an in-progress rebase as a conflict;
-   any other failure marks the host failed.
+   any other failure marks the host failed. The per-host pass never spawns an agent:
+   with `--resolve` it still returns `conflict`, and repair happens afterwards.
 7. Restore the stash after a clean rebase, with the same conflict handling.
 8. Recompute ahead/behind; push commits that only exist on the host unless `--no-push`.
 9. Run `oooconf update --no-deps` in the checkout so managed links are re-applied.
@@ -107,16 +109,41 @@ codes. Preflight failures are ordinary failures, not skips.
 Every remote git command runs with `GIT_TERMINAL_PROMPT=0`, so a missing credential
 fails the host instead of hanging the run.
 
+### Two-phase fixing
+
+With `--resolve` and without `--dry-run`, the fan-out finishes first and `apply_fixes`
+then repairs the hosts that are still broken. A host needs fixing when its status is
+`conflict`, or `failed` while reachable (a host whose `ssh` preflight failed is left
+alone).
+
+- Exactly one host needs fixing: `omp -p <prompt>` runs on that host.
+- Two or more hosts need fixing: one local `omp -p <prompt>` runs in this repo and is
+  told to drive each host over `ssh`.
+
+Either prompt embeds a status block per host: host, status, branch, repo, the
+dirty/stashed/behind/ahead/pushed/linked flags, the error, the conflicting paths, and the
+last 8 log lines. After the agent exits, each repaired host is completed here: the stash
+is restored (`git stash pop`), commits that exist only on that host are pushed unless
+`--no-push`, and `oooconf update --no-deps` re-applies managed links. A stash pop that
+conflicts again leaves the host `conflict` with no push and no update. Results carry
+`fix=remote-agent` or `fix=local-agent` (also in JSON).
+
 ### Safety model
 
 - A host skipped by dedupe or preflight never runs git or `oooconf`; `--dry-run`,
   `--no-push`, and `--resolve` do not change that.
 - A conflict without `--resolve` leaves the stash in place and performs no push and no
   link refresh; inspect the host, fix it, and re-run.
-- An `omp` agent runs only when `--resolve` is passed. Its prompt asks it to resolve
-  the listed conflicts, stage the files, finish the rebase or stash restore, leave a
-  clean tree, never `reset --hard`, and never push. The host is re-checked afterwards;
-  remaining unmerged paths still count as a conflict.
+- An `omp` agent runs only when `--resolve` is passed, and only after the fan-out: the
+  per-host pass itself never spawns one. One pending host is repaired by `omp -p` on that
+  host; two or more are repaired by one local `omp -p` that `ssh`es into each of them.
+  Both prompts embed a per-host status block (host, status, branch, repo,
+  dirty/stashed/behind/ahead/pushed/linked, error, conflicts, last 8 log lines) and ask
+  the agent to resolve conflicts, stage the files, finish the rebase or stash restore,
+  push commits that only exist on the host, leave a clean tree, never `reset --hard`, and
+  never force-push. Completion then restores the stash, pushes host-only commits, and
+  runs `oooconf update --no-deps`; a failing stash pop leaves the host `conflict` with no
+  push and no update. The result records `fix=remote-agent` or `fix=local-agent`.
 - Pushing is limited to commits already made on that host; the sync itself never
   rewrites history.
 - `--dry-run` is read-only, and `--no-push` keeps the host's commits local.

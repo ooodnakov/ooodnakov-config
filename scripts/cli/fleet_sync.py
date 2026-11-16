@@ -63,11 +63,14 @@ class HostResult:
     branch: str | None = None
     dirty: bool = False
     stashed: bool = False
+    stash_pending: bool = False
     behind: int = 0
     ahead: int = 0
     pushed: bool = False
     linked: bool = False
     resolved: bool = False
+    reachable: bool = False
+    fix: str | None = None
     conflicts: list[str] = field(default_factory=list)
     log: list[str] = field(default_factory=list)
     error: str | None = None
@@ -86,6 +89,8 @@ class HostResult:
             "pushed": self.pushed,
             "linked": self.linked,
             "resolved": self.resolved,
+            "reachable": self.reachable,
+            "fix": self.fix,
             "conflicts": list(self.conflicts),
             "log": list(self.log),
             "error": self.error,
@@ -348,6 +353,7 @@ def _preflight(host: str, options: SyncOptions, transport: object, result: HostR
         return skip(f"{probe_path} not found")
     if _is_local_hostname(remote_host):
         return skip("local machine")
+    result.reachable = True
     result.log.append(f"preflight ok: user={user or '?'} host={remote_host or '?'}")
     return True
 
@@ -373,34 +379,162 @@ def _unmerged_files(host: str, repo: str, transport: object) -> list[str]:
     return [line.strip() for line in outcome.stdout.splitlines() if line.strip()]
 
 
-def _resolve_prompt(host: str, repo: str) -> str:
-    return (
-        f"Resolve the git merge/rebase conflicts in {repo} on host {host}. "
-        f"List them with `git -C {repo} diff --name-only --diff-filter=U`, edit each file into a correct merge, "
-        f"`git -C {repo} add` every resolved file, then run `git -C {repo} rebase --continue` if a rebase is in "
-        f"progress, otherwise finish the pending `git -C {repo} stash pop`. Leave the working tree clean. "
-        "Never run `git reset --hard`, never discard commits, and never push."
+def _status_lines(result: HostResult) -> list[str]:
+    """The sync state an agent needs to know before touching a host."""
+    lines = [
+        f"host={result.host} status={result.status} branch={result.branch or '-'} repo={result.repo or '-'}",
+        f"dirty={'yes' if result.dirty else 'no'} stashed={'yes' if result.stashed else 'no'} "
+        f"behind={result.behind} ahead={result.ahead} pushed={'yes' if result.pushed else 'no'} "
+        f"linked={'yes' if result.linked else 'no'}",
+    ]
+    if result.error:
+        lines.append(f"error: {result.error}")
+    if result.conflicts:
+        lines.append("conflicts: " + ", ".join(result.conflicts))
+    for entry in result.log[-8:]:
+        lines.append(f"- {entry}")
+    return lines
+
+
+def _remote_fix_prompt(result: HostResult) -> str:
+    return " ".join(
+        [
+            f"You are repairing {result.repo or DEFAULT_REPO_PATH} on this machine after `oooconf fleet sync`",
+            "stopped there.",
+            "Status reported by the sync:",
+            "; ".join(_status_lines(result)),
+            f"Inspect with `git -C {result.repo} status`, resolve every conflict into a correct merge,",
+            f"`git -C {result.repo} add` each resolved file, finish the in-progress rebase with",
+            f"`git -C {result.repo} rebase --continue` or the pending `git -C {result.repo} stash pop`, then push",
+            "the branch to origin if it is ahead. Leave a clean working tree. Never run `git reset --hard`,",
+            "never force-push, and never discard commits.",
+        ]
     )
 
 
-def _try_resolve(host: str, repo: str, options: SyncOptions, transport: object, result: HostResult) -> bool:
-    """Ask an omp agent to finish the interrupted operation; True when the tree is unblocked."""
-    if not options.resolve:
-        return False
-    agent = " ".join(shlex.quote(part) for part in (*options.agent_command, _resolve_prompt(host, repo)))
-    outcome = _run(transport, host, _script(f"cd {_quote_repo(repo)} && {agent}"))
-    result.log.append(f"spawned {' '.join(options.agent_command)} agent to resolve conflicts")
+def _local_fix_prompt(pending: list[HostResult]) -> str:
+    lines = [
+        "You are repairing fleet hosts that `oooconf fleet sync` could not finish.",
+        "Run every remote command over ssh, for example: ssh <host> 'sh -lc \"...\"'.",
+        "Status reported by the sync:",
+    ]
+    for result in pending:
+        lines.append(f"- {'; '.join(_status_lines(result))}")
+    lines.extend(
+        [
+            "For each host: cd to its repo, inspect with `git status`, resolve every conflict into a correct merge,",
+            "`git add` each resolved file, finish the in-progress rebase (`git rebase --continue`) or the pending",
+            "`git stash pop`, push the branch to origin when it is ahead, then run `oooconf update --no-deps` in",
+            "that checkout. Leave clean working trees. Never run `git reset --hard`, never force-push, and never",
+            "discard commits. Finish by printing one status line per host.",
+        ]
+    )
+    return " ".join(lines)
+
+
+def _run_remote_agent(result: HostResult, options: SyncOptions, transport: object) -> CommandResult:
+    command = " ".join(shlex.quote(part) for part in (*options.agent_command, _remote_fix_prompt(result)))
+    outcome = _run(transport, result.host, _script(f"cd {_quote_repo(result.repo or DEFAULT_REPO_PATH)} && {command}"))
     if outcome.returncode != 0:
         detail = _compact(outcome.stderr or outcome.stdout) or f"exit code {outcome.returncode}"
-        result.log.append(f"resolve agent failed: {detail}")
-    remaining = _unmerged_files(host, repo, transport)
-    if remaining:
-        result.conflicts = remaining
-        return False
+        result.log.append(f"remote fix agent failed: {detail}")
+    else:
+        result.log.append("remote fix agent finished")
+    return outcome
+
+
+def _run_local_agent(pending: list[HostResult], options: SyncOptions, repo_root: Path) -> CommandResult:
+    command = [*options.agent_command, _local_fix_prompt(pending)]
+    try:
+        completed = subprocess.run(command, cwd=str(repo_root), capture_output=True, text=True, check=False)
+    except OSError as exc:
+        return CommandResult(returncode=127, stderr=str(exc))
+    return CommandResult(returncode=completed.returncode, stdout=completed.stdout, stderr=completed.stderr)
+
+
+def needs_fix(results: list[HostResult]) -> list[HostResult]:
+    """Hosts an agent can still repair: conflicts, or a reachable host that failed mid-pipeline."""
+    return [
+        result
+        for result in results
+        if result.status == STATUS_CONFLICT or (result.status == STATUS_FAILED and result.reachable)
+    ]
+
+
+def _complete_after_fix(result: HostResult, options: SyncOptions, transport: object) -> HostResult:
+    """Finish a host after an agent repaired it: restore the stash, push host commits, re-link."""
+    repo, branch = result.repo, result.branch
+    if repo is None or branch is None:
+        return result
+    host = result.host
+    if result.stash_pending:
+        pop = _run(transport, host, _script(_git(repo, "stash", "pop")))
+        already_popped = "No stash entries" in (pop.stdout + pop.stderr)
+        if pop.returncode != 0 and not already_popped:
+            files = _unmerged_files(host, repo, transport)
+            result.conflicts = files or result.conflicts
+            detail = _compact(pop.stderr or pop.stdout)
+            if detail:
+                result.log.append(f"git stash pop after fix: {detail}")
+            result.status = STATUS_CONFLICT
+            return result
+        result.stash_pending = False
+        result.log.append("stash restored after fix" if not already_popped else "stash already restored by the agent")
+
+    counts = _run(
+        transport,
+        host,
+        _script(_git(repo, "rev-list", "--left-right", "--count", shlex.quote(f"origin/{branch}...HEAD"))),
+    )
+    if counts.returncode == 0:
+        result.behind, result.ahead = _parse_counts(counts.stdout)
+    if result.ahead > 0 and options.push:
+        push = _run(transport, host, _script(_git(repo, "push", "origin", shlex.quote(branch))))
+        if push.returncode != 0:
+            return _fail(result, "git push origin", push)
+        result.pushed = True
+        result.log.append(f"pushed {result.ahead} commit(s) after fix")
+
+    link = _run(transport, host, _script(f"cd {_quote_repo(repo)} && oooconf update --no-deps"))
+    if link.returncode != 0:
+        link = _run(transport, host, _script(f"cd {_quote_repo(repo)} && {LINK_FALLBACK}"))
+        if link.returncode != 0:
+            return _fail(result, "oooconf update --no-deps", link)
+    result.linked = True
     result.conflicts = []
-    result.resolved = True
-    result.log.append("conflicts resolved by agent")
-    return True
+    result.status = STATUS_OK
+    return result
+
+
+def apply_fixes(
+    results: list[HostResult],
+    options: SyncOptions,
+    transport: object,
+    repo_root: Path,
+) -> list[HostResult]:
+    """Spawn one omp agent on the single broken host, or one local agent for several, then finish them."""
+    pending = needs_fix(results)
+    if not pending or not options.resolve or options.dry_run:
+        return results
+
+    mode = "remote-agent" if len(pending) == 1 else "local-agent"
+    if mode == "remote-agent":
+        _run_remote_agent(pending[0], options, transport)
+    else:
+        outcome = _run_local_agent(pending, options, repo_root)
+        detail = _compact(outcome.stderr or outcome.stdout)
+        for result in pending:
+            result.log.append(
+                f"local fix agent exit={outcome.returncode}" + (f": {detail}" if detail and outcome.returncode else "")
+            )
+    for result in pending:
+        result.fix = mode
+
+    for result in pending:
+        _complete_after_fix(result, options, transport)
+        if result.status == STATUS_OK:
+            result.resolved = True
+    return results
 
 
 def _detect_branch(host: str, repo: str, options: SyncOptions, transport: object, result: HostResult) -> str:
@@ -483,34 +617,32 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
         if stash.returncode != 0:
             return _fail(result, "git stash push", stash)
         result.stashed = True
+        result.stash_pending = True
         result.log.append("stashed local changes")
 
     pull = _run(transport, host, _script(_git(repo, "pull", "--rebase", "origin", shlex.quote(branch))))
     if pull.returncode != 0:
         files = _unmerged_files(host, repo, transport)
-        if files:
-            result.conflicts = files
-            if not _try_resolve(host, repo, options, transport, result):
-                result.status = STATUS_CONFLICT
-                detail = _compact(pull.stderr or pull.stdout)
-                if detail:
-                    result.log.append(f"git pull --rebase: {detail}")
-                return result
-        else:
+        if not files:
             return _fail(result, "git pull --rebase", pull)
+        result.conflicts = files
+        result.status = STATUS_CONFLICT
+        detail = _compact(pull.stderr or pull.stdout)
+        if detail:
+            result.log.append(f"git pull --rebase: {detail}")
+        return result
 
     if result.stashed:
         pop = _run(transport, host, _script(_git(repo, "stash", "pop")))
         if pop.returncode != 0:
-            files = _unmerged_files(host, repo, transport)
-            if files:
-                result.conflicts = files
-            if not _try_resolve(host, repo, options, transport, result):
-                result.status = STATUS_CONFLICT
-                detail = _compact(pop.stderr or pop.stdout)
-                if detail:
-                    result.log.append(f"git stash pop: {detail}")
-                return result
+            result.conflicts = _unmerged_files(host, repo, transport) or result.conflicts
+            result.status = STATUS_CONFLICT
+            detail = _compact(pop.stderr or pop.stdout)
+            if detail:
+                result.log.append(f"git stash pop: {detail}")
+            return result
+        result.stash_pending = False
+        result.log.append("restored stash")
 
     after = _run(transport, host, _script(_git(repo, "rev-list", "--left-right", "--count", remote_range)))
     if after.returncode == 0:
@@ -568,6 +700,8 @@ def render_text(results: list[HostResult], options: SyncOptions) -> str:
         )
         if result.resolved:
             line += " resolved=yes"
+        if result.fix:
+            line += " fix=" + result.fix
         if result.conflicts:
             line += " conflicts=" + ",".join(result.conflicts)
         if result.skip_reason:
@@ -620,11 +754,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     sync_parser = subparsers.add_parser(
         "sync",
-        help="Stash, pull, optionally resolve conflicts, push, then re-link on SSH hosts.",
+        help="Stash, pull, fix unfinished hosts with omp, push, then re-link on SSH hosts.",
         description=(
-            "For each host: stash local changes, rebase onto the remote branch, optionally let an omp agent "
-            "resolve conflicts (--resolve), restore the stash, push machine-local commits, then run "
-            "`oooconf update --no-deps`."
+            "For each host: stash local changes, rebase onto the remote branch, restore the stash, push "
+            "machine-local commits, then run `oooconf update --no-deps`. With --resolve the per-host status "
+            "is printed first and unfinished hosts are handed to omp: one host gets an agent on that "
+            "machine, several get a single local agent that ssh's out with each host's status."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
@@ -642,7 +777,10 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser.add_argument(
         "--resolve",
         action="store_true",
-        help="Spawn an omp agent on the host to resolve conflicts (default: off).",
+        help=(
+            "Fix unfinished hosts with omp after the run: a remote agent for one host, one local agent for "
+            "several (default: off)."
+        ),
     )
     sync_parser.add_argument("--no-push", action="store_true", help="Never push machine-local commits.")
     sync_parser.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
@@ -687,6 +825,13 @@ def main(argv: list[str] | None = None) -> int:
     live, duplicates = dedupe_hosts(requested)
     transport = build_transport(options)
     results = sync_hosts(live, options, transport, jobs=args.jobs)
+    pending = needs_fix(results)
+    if pending and options.resolve and not options.dry_run and args.format != "json":
+        print(render_text(results, options))
+        print()
+    results = apply_fixes(
+        results, options, transport, Path(args.repo_root).expanduser() if args.repo_root else Path.cwd()
+    )
     by_host = {result.host: result for result in results}
     ordered: list[HostResult] = []
     for host in requested:

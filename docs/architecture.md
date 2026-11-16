@@ -152,8 +152,10 @@ implementation of `fleet sync`. It discovers hosts from the SSH config chain, de
 aliases that resolve to the same `HostName`/`Port`, and runs a preflight on each host
 before anything else: ssh must connect, the user must not be `root`, the checkout must
 exist, and the machine must not be the local one. Then it stashes local work, rebases
-onto the remote branch, optionally delegates conflicts to an `omp` agent on that machine
-(`--resolve`), restores the stash, pushes commits that exist only there, then runs
+onto the remote branch, and with `--resolve` prints the per-host status before handing
+unfinished hosts to `omp`: one broken host gets an agent on that machine, several get a
+single local agent that ssh's out with each host's status in its prompt. The agent repairs
+conflicts, the sync restores the stash, pushes commits that exist only there, then runs
 `oooconf update --no-deps` so managed links are re-applied. Remote work runs over
 `ssh <host> sh -lc` with `GIT_TERMINAL_PROMPT=0`, so a credential prompt can never hang
 the fan-out; on Windows the native `System32\OpenSSH\ssh.exe` is preferred so a managed

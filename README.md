@@ -202,7 +202,7 @@ Primary commands:
 - `oooconf agents update`: update installed agent CLIs using their preferred package manager (pnpm-based tools are updated via `pnpm`)
 - `oooconf agents install <agent>`: install one specific agent CLI
 - `oooconf agents install-scripts-build`: rebuild standalone install scripts for agents
-- `oooconf fleet sync`: preflight each host, stash, rebase, optionally resolve, push, and re-link this repo on SSH fleet hosts (`--all` for every alias in `~/.ssh/config` with per-machine dedupe, plus `--resolve`, `--no-push`, `--dry-run`, `--format json`); hosts that are root, missing the checkout, or on this same machine are reported as `skipped`
+- `oooconf fleet sync`: preflight each host, stash, rebase, push, and re-link this repo on SSH fleet hosts (`--all` for every alias in `~/.ssh/config` with per-machine dedupe, plus `--no-push`, `--dry-run`, `--format json`); `--resolve` then repairs hosts left broken in a second phase with one `omp` agent (on the host when a single host needs fixing, locally when several do); hosts that are root, missing the checkout, or on this same machine are reported as `skipped`
 
 The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts will run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`). If `uv` is missing, they fall back to the system `python3`.
 
