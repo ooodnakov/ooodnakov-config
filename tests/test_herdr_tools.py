@@ -30,6 +30,78 @@ def tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return load("herdr_task_cli", "herdr-task"), load("herdr_artifact_cli", "herdr-artifact")
 
 
+def store():
+    return load("herdr_store_pointer", "_herdr_store.py")
+
+
+@pytest.fixture
+def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.delenv("OODNAKOV_HERDR_DATA", raising=False)
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    return home
+
+
+def test_data_root_records_the_default_under_home(isolated_home: Path) -> None:
+    root = store().data_root()
+
+    expected = isolated_home / ".local" / "share" / "ooodnakov" / "herdr"
+    assert root == expected
+    pointer = isolated_home / ".config" / "ooodnakov" / "herdr-data"
+    assert pointer.read_text(encoding="utf-8").strip() == str(expected)
+
+
+def test_data_root_records_an_xdg_root(tmp_path: Path, isolated_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    share = tmp_path / "share"
+    monkeypatch.setenv("XDG_DATA_HOME", str(share))
+
+    root = store().data_root()
+
+    expected = share / "ooodnakov" / "herdr"
+    assert root == expected
+    pointer = isolated_home / ".config" / "ooodnakov" / "herdr-data"
+    assert pointer.read_text(encoding="utf-8").strip() == str(expected)
+
+
+def test_data_root_prefers_the_recorded_pointer(
+    tmp_path: Path, isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recorded = tmp_path / "recorded"
+    pointer = isolated_home / ".config" / "ooodnakov" / "herdr-data"
+    pointer.parent.mkdir(parents=True)
+    pointer.write_text(f"{recorded}\n", encoding="utf-8")
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "elsewhere"))
+
+    assert store().data_root() == recorded
+
+
+def test_override_does_not_rewrite_the_pointer(
+    tmp_path: Path, isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    override = tmp_path / "override"
+    monkeypatch.setenv("OODNAKOV_HERDR_DATA", str(override))
+
+    assert store().data_root() == override
+    assert not (isolated_home / ".config" / "ooodnakov" / "herdr-data").exists()
+
+
+def test_task_command_writes_the_pointer(tmp_path: Path, isolated_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    share = tmp_path / "share"
+    monkeypatch.setenv("XDG_DATA_HOME", str(share))
+    task = load("herdr_task_pointer", "herdr-task")
+    folder = str(tmp_path / "repo")
+
+    assert task.main(["add", "Recorded", "--folder", folder]) == 0
+
+    root = share / "ooodnakov" / "herdr"
+    pointer = isolated_home / ".config" / "ooodnakov" / "herdr-data"
+    assert pointer.read_text(encoding="utf-8").strip() == str(root)
+    assert (root / "index.json").exists()
+
+
 def test_task_add_list_and_status(tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]) -> None:
     task, _ = tools
     folder = str(tmp_path / "repo")
@@ -61,7 +133,9 @@ def test_task_add_list_and_status(tmp_path: Path, tools, capsys: pytest.CaptureF
     assert "no tasks" in capsys.readouterr().err
 
 
-def test_folders_with_the_same_name_get_their_own_lists(tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]) -> None:
+def test_folders_with_the_same_name_get_their_own_lists(
+    tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]
+) -> None:
     task, _ = tools
     first, second = str(tmp_path / "a" / "repo"), str(tmp_path / "b" / "repo")
 
@@ -102,7 +176,9 @@ def test_artifact_versions_and_content(tmp_path: Path, tools, capsys: pytest.Cap
     slug = index["folders"][folder.replace("\\", "/")]
     saved = json.loads((store / "artifacts" / f"{slug}.json").read_text(encoding="utf-8"))
     assert [version["n"] for version in saved["artifacts"][0]["versions"]] == [1, 2]
-    assert (store / saved["artifacts"][0]["versions"][1]["path"]).read_text(encoding="utf-8") == "# Report\n\nAll green.\n"
+    assert (store / saved["artifacts"][0]["versions"][1]["path"]).read_text(
+        encoding="utf-8"
+    ) == "# Report\n\nAll green.\n"
 
     assert artifact.main(["rm", artifact_id, "--folder", folder]) == 0
     assert not (store / "artifacts" / "files" / artifact_id).exists()

@@ -1,12 +1,15 @@
 // Tasks: the folder's task list, written by the `herdr-task` command.
 // A task is a title, an optional note and a status; agents add and move them,
-// this panel only reads ~/.local/share/ooodnakov/herdr/tasks/<slug>.json.
+// this panel only reads <root>/tasks/<slug>.json, where the root is named by
+// ~/.config/ooodnakov/herdr-data (or ~/.local/share/ooodnakov/herdr before that).
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
 import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, home, checking } from "herdr";
 
-const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
+const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
+const DEFAULT_ROOT = `${home()}/.local/share/ooodnakov/herdr`;
+const REMOTE_ROOT = 'if [ -r "$HOME/.config/ooodnakov/herdr-data" ]; then cat "$HOME/.config/ooodnakov/herdr-data"; else printf "%s" "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov/herdr"; fi';
 const ROOTS = new Map();
 const ORDER = ["blocked", "doing", "todo", "done"];
 const TITLES = { blocked: "Blocked", doing: "Doing", todo: "To do", done: "Done" };
@@ -14,14 +17,18 @@ const DOTS = { blocked: "blocked", doing: "working", todo: "muted", done: "done"
 const AGENT_COLORS = { working: "working", blocked: "blocked", done: "done", idle: "idle" };
 
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
+const pointed = (text) => norm(String(text ?? "").trim());
 
 // Each machine keeps its own lists; a space on another machine reads them there.
+// The command records the root in `herdr-data`; the mod only reads that file.
 async function rootFor(on) {
-  if (!on) return ROOT;
+  if (!on) {
+    const text = await readTextFile(POINTER).catch(() => null);
+    return pointed(text) || DEFAULT_ROOT;
+  }
   if (!ROOTS.has(on)) {
-    const homeDir = await exec("sh", ["-c", 'printf %s "$HOME"'], { on }).catch(() => null);
-    const path = homeDir?.code === 0 ? homeDir.stdout.trim() : "";
-    ROOTS.set(on, path ? `${path}/.local/share/ooodnakov/herdr` : null);
+    const probe = await exec("sh", ["-c", REMOTE_ROOT], { on }).catch(() => null);
+    ROOTS.set(on, probe?.code === 0 ? pointed(probe.stdout) || null : null);
   }
   return ROOTS.get(on);
 }

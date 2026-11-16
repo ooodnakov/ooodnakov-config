@@ -1,21 +1,28 @@
 // Artifacts: reports and notes an agent left for you, written by `herdr-artifact`.
-// One list per folder in ~/.local/share/ooodnakov/herdr/artifacts; click one to
-// read its latest version, ← goes back. The panel only reads those files.
+// One list per folder in <root>/artifacts, where the root is named by
+// ~/.config/ooodnakov/herdr-data (or ~/.local/share/ooodnakov/herdr before that);
+// click one to read its latest version, ← goes back. The panel only reads.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
 import { spaces, panes, focused, exec, readTextFile, theme, home, checking } from "herdr";
 
-const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
+const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
+const DEFAULT_ROOT = `${home()}/.local/share/ooodnakov/herdr`;
+const REMOTE_ROOT = 'if [ -r "$HOME/.config/ooodnakov/herdr-data" ]; then cat "$HOME/.config/ooodnakov/herdr-data"; else printf "%s" "${XDG_DATA_HOME:-$HOME/.local/share}/ooodnakov/herdr"; fi';
 const ROOTS = new Map();
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
+const pointed = (text) => norm(String(text ?? "").trim());
 
 // Each machine keeps its own lists; a space on another machine reads them there.
+// The command records the root in `herdr-data`; the mod only reads that file.
 async function rootFor(on) {
-  if (!on) return ROOT;
+  if (!on) {
+    const text = await readTextFile(POINTER).catch(() => null);
+    return pointed(text) || DEFAULT_ROOT;
+  }
   if (!ROOTS.has(on)) {
-    const homeDir = await exec("sh", ["-c", 'printf %s "$HOME"'], { on }).catch(() => null);
-    const path = homeDir?.code === 0 ? homeDir.stdout.trim() : "";
-    ROOTS.set(on, path ? `${path}/.local/share/ooodnakov/herdr` : null);
+    const probe = await exec("sh", ["-c", REMOTE_ROOT], { on }).catch(() => null);
+    ROOTS.set(on, probe?.code === 0 ? pointed(probe.stdout) || null : null);
   }
   return ROOTS.get(on);
 }

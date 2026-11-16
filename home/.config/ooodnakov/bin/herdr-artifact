@@ -2,7 +2,8 @@
 """herdr-artifact: reports and notes an agent wants to show, one list per folder.
 
 An artifact is a title and versioned content (Markdown by default), kept in
-~/.local/share/ooodnakov/herdr/artifacts/ and shown by the `oo-artifacts`
+artifacts/ under the root recorded in ~/.config/ooodnakov/herdr-data (default
+~/.local/share/ooodnakov/herdr) and shown by the `oo-artifacts`
 panel beside the chat. Each version's content stays on disk (the last 20).
 
     herdr-artifact add "Flaky tests" --from report.md
