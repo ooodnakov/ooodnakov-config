@@ -4,7 +4,7 @@
 // click one to read its latest version, ← goes back. The panel only reads.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, theme, home, checking } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, home, checking } from "herdr";
 
 const POINTER = `${home()}/.config/ooodnakov/herdr-data`;
 const DEFAULT_ROOT = `${home()}/.local/share/ooodnakov/herdr`;
@@ -66,8 +66,54 @@ export default class Artifacts extends View {
     this.content = null;
     this.error = null;
     this.loading = false;
+    this.token = null;
+    this.watch = null;
+    this.timer = null;
     if (checking()) return;
-    cx.timer.every(5000, (cx) => this.reload(cx));
+  }
+
+  // Follow the data folder; herdr's watch is local-only, so a remote space and a
+  // rejected watch (missing folder, oversized tree) fall back to the timer.
+  follow(cx) {
+    const token = `${this.on ?? ""}|${this.root}`;
+    if (this.token === token) return;
+    this.stop();
+    this.token = token;
+    if (checking() || !this.root) return;
+    if (this.on) {
+      this.poll(cx);
+      return;
+    }
+    cx.spawn(async (cx) => {
+      try {
+        while (this.token === token) {
+          const watch = watchFolder(this.root);
+          this.watch = watch;
+          await watch;
+          if (this.token !== token) return;
+          this.watch = null;
+          if (!this.folder || !this.focus) continue;
+          await this.read(this.focus, cx);
+          if (this.token === token) cx.notify();
+        }
+      } catch {
+        if (this.token !== token) return;
+        this.watch = null;
+        this.poll(cx);
+      }
+    });
+  }
+
+  stop() {
+    this.watch?.cancel();
+    this.watch = null;
+    this.timer?.cancel();
+    this.timer = null;
+  }
+
+  poll(cx) {
+    if (this.timer) return;
+    this.timer = cx.timer.every(5000, (cx) => this.reload(cx));
   }
 
   ensure(cx) {
@@ -75,6 +121,8 @@ export default class Artifacts extends View {
     const key = `${at.folder}|${at.on ?? ""}`;
     if (key === this.focus) return;
     this.focus = key;
+    this.stop();
+    this.token = null;
     this.folder = null;
     this.root = null;
     this.on = at.on ?? null;
@@ -106,6 +154,7 @@ export default class Artifacts extends View {
       this.missing = probe === "task" ? `herdr-task missing on ${at.on}` : probe === "store" ? "no store yet" : null;
       await this.read(key, cx);
       this.loading = false;
+      if (this.focus === key) this.follow(cx);
       cx.notify();
     });
   }
