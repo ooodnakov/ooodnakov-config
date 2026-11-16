@@ -156,10 +156,14 @@ onto the remote branch, and with `--resolve` prints the per-host status before h
 unfinished hosts to `omp`: one broken host gets an agent on that machine, several get a
 single local agent that ssh's out with each host's status in its prompt. The agent repairs
 conflicts, the sync restores the stash, pushes commits that exist only there, then runs
-`oooconf update --no-deps` so managed links are re-applied. Remote work runs over
-`ssh <host> sh -lc` with `GIT_TERMINAL_PROMPT=0`, so a credential prompt can never hang
-the fan-out; on Windows the native `System32\OpenSSH\ssh.exe` is preferred so a managed
-PATH shim cannot shadow it with an ssh that ignores `~/.ssh/config`.
+`oooconf update --no-deps` so managed links are re-applied. Each host gets one persistent
+`ssh <host> sh -l` session whose scripts are delimited by a per-run sentinel, so a dozen
+steps share a single connection; a transient connection error drops the session and retries once.
+Progress is streamed: every host prints a status line with the shared `cli_ui` Nerd Font
+icon table as it finishes, and `--format json` stays a single document. Remote work runs
+with `GIT_TERMINAL_PROMPT=0`, so a credential prompt can never hang the fan-out; on Windows
+the native `System32\OpenSSH\ssh.exe` is preferred so a managed PATH shim cannot shadow it
+with an ssh that ignores `~/.ssh/config`.
 
 Portable capability profiles live under
 `home/.config/ooodnakov/profiles/`. `capabilities.toml` maps portable capability

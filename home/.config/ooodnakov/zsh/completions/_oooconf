@@ -1176,7 +1176,7 @@ _oooconf_fleet() {
   typeset -A opt_args
   local -a subcmds
   subcmds=(
-    'sync:preflight, then stash, pull, optionally resolve conflicts, push, and re-link on SSH hosts'
+    'sync:preflight, stash, pull, push, and re-link on SSH hosts with live progress, repairing unfinished hosts on request'
   )
   local -a opts_with_args
   opts_with_args=(${_oooconf_global_opts_with_args[@]} )

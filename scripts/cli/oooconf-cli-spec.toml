@@ -328,7 +328,7 @@ description = "synchronize this repo across SSH fleet hosts"
 [commands.fleet.subcommands.sync]
 handler_id = "oooconf.fleet.sync"
 platforms = ["linux", "macos", "windows"]
-description = "preflight, then stash, pull, optionally resolve conflicts, push, and re-link on SSH hosts"
+description = "preflight, stash, pull, push, and re-link on SSH hosts with live progress, repairing unfinished hosts on request"
 options = { "--all" = "select every host alias from SSH config", "--repo-path" = "remote repo path that must already exist", "--branch" = "remote branch name", "--jobs" = "parallel host count", "--resolve" = "fix unfinished hosts with omp (a remote agent for one host, one local agent for several)", "--no-push" = "never push commits", "--format" = "output format", "--dry-run" = "inspect hosts without changing them", "-h" = "show help", "--help" = "show help" }
 option_value_sets = { "--format" = "diagnostic_formats" }
 

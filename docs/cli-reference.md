@@ -72,7 +72,7 @@ Operational examples remain hand-authored in `README.md` and the platform-native
 | `oooconf agents skills view` | list global shared skills catalog via pnpm dlx | linux, macos, windows | `oooconf.agents.skills.view` | `--check`, `--json` |
 | `oooconf agents skills add` | add one shared skill source and optionally sync | linux, macos, windows | `oooconf.agents.skills.add` | `--agent`, `--sync-now`, `--check` |
 | `oooconf fleet` | synchronize this repo across SSH fleet hosts | linux, macos, windows | `oooconf.fleet` | — |
-| `oooconf fleet sync` | preflight, then stash, pull, optionally resolve conflicts, push, and re-link on SSH hosts | linux, macos, windows | `oooconf.fleet.sync` | `--all`, `--repo-path`, `--branch`, `--jobs`, `--resolve`, `--no-push`, `--format`, `--dry-run`, `-h`, `--help` |
+| `oooconf fleet sync` | preflight, stash, pull, push, and re-link on SSH hosts with live progress, repairing unfinished hosts on request | linux, macos, windows | `oooconf.fleet.sync` | `--all`, `--repo-path`, `--branch`, `--jobs`, `--resolve`, `--no-push`, `--format`, `--dry-run`, `-h`, `--help` |
 | `oooconf secrets` | sync or validate local secret env files | linux, macos, windows | `oooconf.secrets` | — |
 | `oooconf secrets login` | log in to Bitwarden/Vaultwarden and unlock the vault | linux, macos, windows | `oooconf.secrets.login` | `--server`, `--method`, `--client-id`, `--client-secret` |
 | `oooconf secrets unlock` | unlock and print session exports | linux, macos, windows | `oooconf.secrets.unlock` | `--shell`, `--raw` |

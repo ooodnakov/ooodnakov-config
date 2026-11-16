@@ -17,10 +17,19 @@ import shutil
 import socket
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
+import threading
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+
+_CLI_DIR = str(Path(__file__).resolve().parent)
+if _CLI_DIR not in sys.path:
+    sys.path.insert(0, _CLI_DIR)
+
+import cli_ui  # noqa: E402  (shared Nerd Font icon/color helpers live beside this script)
 
 STATUS_OK = "ok"
 STATUS_CONFLICT = "conflict"
@@ -53,6 +62,7 @@ class SyncOptions:
     dry_run: bool = False
     agent_command: tuple[str, ...] = ("omp", "-p")
     connect_timeout: float = 10.0
+    connect_retries: int = 1
 
 
 @dataclass
@@ -108,21 +118,155 @@ def _ssh_executable() -> str:
     return found or "ssh"
 
 
-class SshTransport:
-    """Runs one POSIX shell script per call on a remote host over ssh."""
+CONNECTION_ERROR_MARKERS = (
+    "ssh: connect to host",
+    "connection timed out",
+    "operation timed out",
+    "connection refused",
+    "connection reset",
+    "no route to host",
+    "network is unreachable",
+    "kex_exchange_identification",
+    "ssh_exchange_identification",
+    "timeout, server",
+    "banner exchange",
+    "broken pipe",
+    "client_loop",
+    "connection to ",
+    "connection closed",
+    "session closed",
+)
 
-    def __init__(self, connect_timeout: float = 10.0, ssh: str | None = None) -> None:
+
+def _is_connection_error(text: str) -> bool:
+    lowered = text.lower()
+    return any(marker in lowered for marker in CONNECTION_ERROR_MARKERS)
+
+
+class _SshSession:
+    """One persistent `ssh <host> sh`, reused for every remote call to that host."""
+
+    def __init__(self, transport: "SshTransport", host: str) -> None:
+        self.token = f"__OOOCONF_FLEET_DONE_{uuid.uuid4().hex}__ "
+        self.process = transport.spawn(host)
+
+    def execute(self, script: str) -> CommandResult:
+        process = self.process
+        if process is None or process.stdin is None or process.stdout is None:
+            return CommandResult(255, "", "ssh session closed")
+        payload = f"{{ {script}\n}} </dev/null 2>&1\nprintf '{self.token}%s\\n' \"$?\"\n"
+        try:
+            # Binary pipes keep the wire protocol LF-only on every platform.
+            process.stdin.write(payload.encode("utf-8"))
+            process.stdin.flush()
+        except (OSError, ValueError):
+            return CommandResult(255, "", "ssh session closed")
+
+        lines: list[str] = []
+        while True:
+            try:
+                raw = process.stdout.readline()
+            except (OSError, ValueError):
+                return CommandResult(255, "".join(lines), "ssh session closed")
+            if not raw:
+                code = process.poll()
+                return CommandResult(255 if code is None else code, "".join(lines), "ssh session closed")
+            line = raw.decode("utf-8", "replace")
+            if line.startswith(self.token):
+                try:
+                    status = int(line[len(self.token) :].strip())
+                except ValueError:
+                    status = 255
+                return CommandResult(status, "".join(lines), "")
+            lines.append(line)
+
+    def close(self) -> None:
+        process, self.process = self.process, None
+        if process is None:
+            return
+        try:
+            if process.stdin is not None:
+                process.stdin.close()
+        except OSError:
+            pass
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+
+class SshTransport:
+    """Runs every remote script inside one persistent shell per host, retrying a dropped connection."""
+
+    def __init__(
+        self,
+        connect_timeout: float = 10.0,
+        ssh: str | None = None,
+        retries: int = 1,
+        popen: object | None = None,
+    ) -> None:
         self.connect_timeout = connect_timeout
         self.ssh = ssh or _ssh_executable()
+        self.retries = max(0, retries)
+        self.popen = popen or subprocess.Popen
+        self._sessions: dict[str, _SshSession] = {}
+        self._lock = threading.Lock()
+
+    def command_for(self, host: str) -> list[str]:
+        return [
+            self.ssh,
+            "-o",
+            f"ConnectTimeout={self.connect_timeout:g}",
+            "-o",
+            "ServerAliveInterval=15",
+            "-o",
+            "ServerAliveCountMax=4",
+            "--",
+            host,
+            "sh",
+            "-l",
+        ]
+
+    def spawn(self, host: str) -> object:
+        return self.popen(
+            self.command_for(host),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=0,
+        )
+
+    def _session(self, host: str) -> _SshSession:
+        with self._lock:
+            session = self._sessions.get(host)
+            if session is None:
+                session = _SshSession(self, host)
+                self._sessions[host] = session
+            return session
+
+    def _drop(self, host: str) -> None:
+        with self._lock:
+            session = self._sessions.pop(host, None)
+        if session is not None:
+            session.close()
 
     def run(self, host: str, script: str) -> CommandResult:
-        timeout = f"{self.connect_timeout:g}"
-        command = [self.ssh, "-o", f"ConnectTimeout={timeout}", "--", host, "sh -lc " + shlex.quote(script)]
-        try:
-            completed = subprocess.run(command, capture_output=True, text=True, check=False)
-        except OSError as exc:
-            return CommandResult(returncode=127, stderr=str(exc))
-        return CommandResult(returncode=completed.returncode, stdout=completed.stdout, stderr=completed.stderr)
+        result = CommandResult(255, "", "ssh session closed")
+        for attempt in range(self.retries + 1):
+            try:
+                result = self._session(host).execute(script)
+            except OSError as exc:
+                return CommandResult(127, "", str(exc))
+            if not _is_connection_error(result.stdout + result.stderr):
+                return result
+            self._drop(host)
+            if attempt < self.retries:
+                time.sleep(0.4 * (attempt + 1))
+        return result
+
+    def close(self) -> None:
+        for host in list(self._sessions):
+            self._drop(host)
 
 
 def _script(*commands: str) -> str:
@@ -363,7 +507,9 @@ def _run(transport: object, host: str, script: str) -> CommandResult:
 
 
 def _fail(result: HostResult, step: str, outcome: CommandResult) -> HostResult:
-    detail = _compact(outcome.stderr or outcome.stdout)
+    # Merged stderr streams put the useful ssh/git text in stdout; keep both when they differ.
+    combined = "\n".join(part.strip() for part in (outcome.stdout, outcome.stderr) if part.strip())
+    detail = _compact(combined)
     if not detail:
         detail = f"exit code {outcome.returncode}"
     result.status = STATUS_FAILED
@@ -511,6 +657,7 @@ def apply_fixes(
     options: SyncOptions,
     transport: object,
     repo_root: Path,
+    on_result: object | None = None,
 ) -> list[HostResult]:
     """Spawn one omp agent on the single broken host, or one local agent for several, then finish them."""
     pending = needs_fix(results)
@@ -534,6 +681,8 @@ def apply_fixes(
         _complete_after_fix(result, options, transport)
         if result.status == STATUS_OK:
             result.resolved = True
+        if on_result is not None:
+            on_result(result)  # type: ignore[operator]
     return results
 
 
@@ -561,7 +710,13 @@ def _resolve_repo(host: str, options: SyncOptions, transport: object, result: Ho
     if options.repo_path is not None:
         return options.repo_path
     outcome = _run(transport, host, _script("oooconf --print-repo-root"))
-    found = _first_line(outcome.stdout) if outcome.returncode == 0 else ""
+    found = ""
+    if outcome.returncode == 0:
+        # Login-shell banners can precede the path, so take the last absolute-path line.
+        for line in outcome.stdout.splitlines():
+            candidate = line.strip()
+            if candidate.startswith("/"):
+                found = candidate
     if found:
         return found
     result.log.append(f"repo path lookup failed; defaulting to {DEFAULT_REPO_PATH}")
@@ -616,9 +771,13 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
         stash = _run(transport, host, _script(_git(repo, "stash", "push", "-u", "-m", message)))
         if stash.returncode != 0:
             return _fail(result, "git stash push", stash)
-        result.stashed = True
-        result.stash_pending = True
-        result.log.append("stashed local changes")
+        if "No local changes to save" in stash.stdout + stash.stderr:
+            # A retried attempt can see the tree already stashed; treat it as a no-op.
+            result.log.append("nothing left to stash")
+        else:
+            result.stashed = True
+            result.stash_pending = True
+            result.log.append("stashed local changes")
 
     pull = _run(transport, host, _script(_git(repo, "pull", "--rebase", "origin", shlex.quote(branch))))
     if pull.returncode != 0:
@@ -634,7 +793,8 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
 
     if result.stashed:
         pop = _run(transport, host, _script(_git(repo, "stash", "pop")))
-        if pop.returncode != 0:
+        already_popped = "No stash entries" in (pop.stdout + pop.stderr)
+        if pop.returncode != 0 and not already_popped:
             result.conflicts = _unmerged_files(host, repo, transport) or result.conflicts
             result.status = STATUS_CONFLICT
             detail = _compact(pop.stderr or pop.stdout)
@@ -642,7 +802,7 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
                 result.log.append(f"git stash pop: {detail}")
             return result
         result.stash_pending = False
-        result.log.append("restored stash")
+        result.log.append("restored stash" if not already_popped else "stash already restored")
 
     after = _run(transport, host, _script(_git(repo, "rev-list", "--left-right", "--count", remote_range)))
     if after.returncode == 0:
@@ -666,14 +826,34 @@ def sync_host(host: str, options: SyncOptions, transport: object) -> HostResult:
     return result
 
 
-def sync_hosts(hosts: list[str], options: SyncOptions, transport: object, jobs: int = DEFAULT_JOBS) -> list[HostResult]:
+def sync_hosts(
+    hosts: list[str],
+    options: SyncOptions,
+    transport: object,
+    jobs: int = DEFAULT_JOBS,
+    on_result: object | None = None,
+) -> list[HostResult]:
+    """Sync hosts in parallel, reporting each as it finishes; the returned list keeps input order."""
     if not hosts:
         return []
     workers = max(1, jobs)
+    results: dict[int, HostResult] = {}
+
+    def report(index: int, host: str) -> None:
+        results[index] = sync_host(host, options, transport)
+        if on_result is not None:
+            on_result(results[index])  # type: ignore[operator]
+
     if workers == 1 or len(hosts) == 1:
-        return [sync_host(host, options, transport) for host in hosts]
+        for index, host in enumerate(hosts):
+            report(index, host)
+        return [results[index] for index in range(len(hosts))]
+
     with ThreadPoolExecutor(max_workers=min(workers, len(hosts))) as pool:
-        return list(pool.map(lambda host: sync_host(host, options, transport), hosts))
+        futures = {pool.submit(report, index, host): index for index, host in enumerate(hosts)}
+        for future in as_completed(futures):
+            future.result()
+    return [results[index] for index in range(len(hosts))]
 
 
 def _summarize(results: list[HostResult]) -> dict[str, int]:
@@ -690,34 +870,66 @@ def _flag(value: bool) -> str:
     return "yes" if value else "no"
 
 
-def render_text(results: list[HostResult], options: SyncOptions) -> str:
-    lines: list[str] = []
-    for result in results:
-        line = (
-            f"{result.host:<18} {result.status:<8} branch={result.branch or '-'} repo={result.repo or '-'} "
-            f"dirty={_flag(result.dirty)} stashed={_flag(result.stashed)} behind={result.behind} "
-            f"ahead={result.ahead} pushed={_flag(result.pushed)} linked={_flag(result.linked)}"
-        )
-        if result.resolved:
-            line += " resolved=yes"
-        if result.fix:
-            line += " fix=" + result.fix
-        if result.conflicts:
-            line += " conflicts=" + ",".join(result.conflicts)
-        if result.skip_reason:
-            line += " reason=" + result.skip_reason
-        lines.append(line)
-        if result.error:
-            lines.append(f"  error: {result.error}")
+_STATUS_ROLES = {
+    STATUS_OK: "ok",
+    STATUS_CONFLICT: "warn",
+    STATUS_FAILED: "fail",
+    STATUS_SKIPPED: "missing",
+    STATUS_DRY_RUN: "info",
+}
 
+
+def host_line(result: HostResult) -> str:
+    line = (
+        f"{result.host:<18} {result.status:<8} branch={result.branch or '-'} repo={result.repo or '-'} "
+        f"dirty={_flag(result.dirty)} stashed={_flag(result.stashed)} behind={result.behind} "
+        f"ahead={result.ahead} pushed={_flag(result.pushed)} linked={_flag(result.linked)}"
+    )
+    if result.resolved:
+        line += " resolved=yes"
+    if result.fix:
+        line += " fix=" + result.fix
+    if result.conflicts:
+        line += " conflicts=" + ",".join(result.conflicts)
+    if result.skip_reason:
+        line += " reason=" + result.skip_reason
+    return line
+
+
+def emit_result(result: HostResult) -> None:
+    """One live progress line per host, with the shared Nerd Font icon for its status."""
+    cli_ui.status(_STATUS_ROLES.get(result.status, "info"), host_line(result))
+    if result.error:
+        cli_ui.status("fail", f"  error: {result.error}")
+
+
+def summary_line(results: list[HostResult], options: SyncOptions) -> str:
     summary = _summarize(results)
     prefix = " (dry-run)" if options.dry_run else ""
-    lines.append("")
-    lines.append(
+    return (
         f"fleet sync{prefix}: ok={summary['ok']} conflict={summary['conflict']} "
         f"failed={summary['failed']} skipped={summary['skipped']} dry-run={summary['dry_run']}"
     )
-    if summary["conflict"] and not options.resolve:
+
+
+def summary_role(results: list[HostResult]) -> str:
+    summary = _summarize(results)
+    if summary["failed"]:
+        return "fail"
+    if summary["conflict"]:
+        return "warn"
+    return "ok"
+
+
+def render_text(results: list[HostResult], options: SyncOptions) -> str:
+    lines: list[str] = []
+    for result in results:
+        lines.append(host_line(result))
+        if result.error:
+            lines.append(f"  error: {result.error}")
+    lines.append("")
+    lines.append(summary_line(results, options))
+    if _summarize(results)["conflict"] and not options.resolve:
         lines.append(f"hint: {CONFLICT_HINT}")
     return "\n".join(lines)
 
@@ -733,7 +945,7 @@ def exit_code(results: list[HostResult]) -> int:
 
 
 def build_transport(options: SyncOptions) -> SshTransport:
-    return SshTransport(connect_timeout=options.connect_timeout)
+    return SshTransport(connect_timeout=options.connect_timeout, retries=options.connect_retries)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -824,31 +1036,46 @@ def main(argv: list[str] | None = None) -> int:
     )
     live, duplicates = dedupe_hosts(requested)
     transport = build_transport(options)
-    results = sync_hosts(live, options, transport, jobs=args.jobs)
-    pending = needs_fix(results)
-    if pending and options.resolve and not options.dry_run and args.format != "json":
-        print(render_text(results, options))
-        print()
-    results = apply_fixes(
-        results, options, transport, Path(args.repo_root).expanduser() if args.repo_root else Path.cwd()
-    )
+    stream = args.format != "json"
+    progress = emit_result if stream else None
+    repo_root = Path(args.repo_root).expanduser() if args.repo_root else Path.cwd()
+    try:
+        if stream:
+            mode = " (dry-run)" if options.dry_run else ""
+            workers = max(1, min(args.jobs, len(live)))
+            cli_ui.status("info", f"fleet sync: {len(live)} host(s), jobs={workers}{mode}")
+        results = sync_hosts(live, options, transport, jobs=args.jobs, on_result=progress)
+        pending = needs_fix(results)
+        if pending and options.resolve and not options.dry_run:
+            if stream:
+                agent = "a remote omp agent" if len(pending) == 1 else "one local omp agent"
+                cli_ui.status("hint", f"fixing {len(pending)} host(s) with {agent}")
+            results = apply_fixes(results, options, transport, repo_root, on_result=progress)
+    finally:
+        transport.close()
     by_host = {result.host: result for result in results}
     ordered: list[HostResult] = []
     for host in requested:
         if host in duplicates:
-            ordered.append(HostResult(host=host, status=STATUS_SKIPPED, skip_reason=f"duplicate of {duplicates[host]}"))
+            placeholder = HostResult(host=host, status=STATUS_SKIPPED, skip_reason=f"duplicate of {duplicates[host]}")
+            ordered.append(placeholder)
+            if stream:
+                emit_result(placeholder)
         else:
             ordered.append(by_host[host])
 
-    if args.format == "json":
+    if stream:
+        cli_ui.separator()
+        cli_ui.status(summary_role(ordered), summary_line(ordered, options))
+        if _summarize(ordered)["conflict"] and not options.resolve:
+            cli_ui.status("hint", CONFLICT_HINT)
+    else:
         document = {
             "schema_version": SCHEMA_VERSION,
             "hosts": [result.to_dict() for result in ordered],
             "summary": _summarize(ordered),
         }
         print(json.dumps(document, indent=2))
-    else:
-        print(render_text(ordered, options))
     return exit_code(ordered)
 
 

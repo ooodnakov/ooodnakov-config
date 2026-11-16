@@ -545,10 +545,18 @@ Options:
   --no-push              never push commits that exist only on the host
   --format text|json     output format (default: text)
   --dry-run              inspect repo/branch/dirty/ahead/behind only
+Output:
+  one line per host as it finishes, with oooconf status icons (Nerd Font when
+  the terminal supports it); the summary prints last. --format json prints
+  only the JSON document.
+Transport:
+  one persistent ssh session per host (sh -l), so every step shares a single
+  connection; a transient connection error is retried once per call.
 Safety:
   Without --resolve, a conflict keeps the stash in place and stops before update.
-  With --resolve the sync prints the per-host status first, then the agent fixes
-  conflicts, restores the stash, pushes host-only commits, and re-runs the links.
+  With --resolve the streamed per-host status is followed by the agent, which
+  fixes conflicts; the sync then restores the stash, pushes host-only commits,
+  and re-runs the links.
   --dry-run performs no fetch, stash, pull, push, or link refresh.
 Exit codes:
   0 ok, dry-run, and skipped hosts       2 at least one conflict       1 failure

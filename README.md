@@ -157,6 +157,7 @@ Primary commands:
 - `oooconf link`: create or update symlinks from manifest (also runs automatically during install)
 - `oooconf completions`: regenerate completion files
 - `oooconf snapshot export|inspect|apply`: move allowlisted preferences and capabilities without exporting secrets or host paths
+- `oooconf fleet sync <host...>|--all`: stash, rebase, push, then re-link on SSH fleet hosts over one persistent session per host; dropped connections are retried and text output streams a progress line per host (`--format json` emits only the document)
 
 Every remaining command family has a guide of its own:
 
@@ -206,7 +207,7 @@ Upstream inspirations: [`jotyGill/ezsh`](https://github.com/jotyGill/ezsh) and [
 - CI runs on pushes to `main` and pull requests: Python lint/format, Bash `shellcheck` on Linux and macOS, PowerShell parser validation on Windows, lockfile reproducibility, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on a fresh HOME, and `lock`)
 - tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases
 - the complete plan/apply/doctor/remove/restore/rollback lifecycle runs in isolated temporary homes on Linux, macOS, and Windows with network installs disabled and a ratchetable coverage floor
-- Fleet automation is locked and preview-only for merges by default; `oooconf fleet sync` then pulls the result onto SSH hosts (see [Fleet automation](docs/fleet-automation.md))
+- Fleet automation is locked and preview-only for merges by default; `oooconf fleet sync` then pulls the result onto SSH hosts (one persistent session per host, retried connections, and a progress line per host) (see [Fleet automation](docs/fleet-automation.md))
 
 ## Development
 

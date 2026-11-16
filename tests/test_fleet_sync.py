@@ -6,6 +6,7 @@ No network and no `ssh`: every remote call goes through a fake transport.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import threading
 from pathlib import Path
@@ -69,6 +70,9 @@ class FakeTransport:
         with self._lock:
             self.calls.append((host, script))
         return self._handler(host, script)
+
+    def close(self) -> None:
+        return None
 
     def scripts(self, host: str | None = None) -> list[str]:
         with self._lock:
@@ -729,3 +733,320 @@ def test_main_applies_two_phase_fixes_after_the_fan_out(monkeypatch, capsys) -> 
     assert out.count("fix=local-agent") == 2
     assert "ok=2 conflict=0" in out
     assert not transport.issued("omp -p")
+
+
+# --- persistent ssh session ---------------------------------------------------------
+
+
+class _FakeStdin:
+    """Binary stdin that answers each written script with the next scripted reply."""
+
+    def __init__(self, process: "_FakeProcess") -> None:
+        self._process = process
+        self.closed = False
+
+    def write(self, data: bytes) -> int:
+        self._process.written.append(data)
+        self._process.answer(data)
+        return len(data)
+
+    def flush(self) -> None:
+        return None
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class _FakeStdout:
+    """Pipe-like reader: `readline` drains one LF-terminated line, never rewinding."""
+
+    def __init__(self) -> None:
+        self.pending = bytearray()
+
+    def feed(self, data: bytes) -> None:
+        self.pending.extend(data)
+
+    def readline(self) -> bytes:
+        index = self.pending.find(b"\n")
+        if index < 0:
+            return b""
+        line = bytes(self.pending[: index + 1])
+        del self.pending[: index + 1]
+        return line
+
+
+class _FakeProcess:
+    """Stands in for `Popen` around one persistent `ssh <host> sh -l` session."""
+
+    def __init__(self, replies: list[tuple[str, int]]) -> None:
+        self.replies = list(replies)
+        self.written: list[bytes] = []
+        self.stdin = _FakeStdin(self)
+        self.stdout = _FakeStdout()
+        self.killed = False
+        self.waited: float | None = None
+
+    def answer(self, payload: bytes) -> None:
+        match = re.search(rb"printf '([^']+?)%s", payload)
+        if not self.replies or match is None:
+            return
+        output, code = self.replies.pop(0)
+        token = match.group(1)
+        self.stdout.feed(output.encode("utf-8") + token + str(code).encode("ascii") + b"\n")
+
+    def poll(self) -> None:
+        return None
+
+    def wait(self, timeout: float | None = None) -> int:
+        self.waited = timeout
+        return 0
+
+    def kill(self) -> None:
+        self.killed = True
+
+
+class FakePopen:
+    """Records every spawn and hands out one scripted session per call."""
+
+    def __init__(self, sessions: list[list[tuple[str, int]]]) -> None:
+        self.sessions = [list(replies) for replies in sessions]
+        self.calls: list[list[str]] = []
+        self.kwargs: list[dict] = []
+        self.processes: list[_FakeProcess] = []
+
+    def __call__(self, argv, **kwargs):
+        self.calls.append(list(argv))
+        self.kwargs.append(dict(kwargs))
+        process = _FakeProcess(self.sessions.pop(0) if self.sessions else [])
+        self.processes.append(process)
+        return process
+
+
+def _session_transport(popen: FakePopen, *, connect_timeout: float = 10.0, retries: int = 2):
+    return fleet_sync.SshTransport(connect_timeout=connect_timeout, ssh="ssh", retries=retries, popen=popen)
+
+
+def test_transport_command_uses_login_shell_and_keepalive_options() -> None:
+    transport = _session_transport(FakePopen([]), connect_timeout=7.5)
+
+    assert transport.command_for("alpha") == [
+        "ssh",
+        "-o",
+        "ConnectTimeout=7.5",
+        "-o",
+        "ServerAliveInterval=15",
+        "-o",
+        "ServerAliveCountMax=4",
+        "--",
+        "alpha",
+        "sh",
+        "-l",
+    ]
+    assert transport.command_for("alpha")[-1] == "-l"
+
+
+def test_transport_spawns_binary_merged_pipes() -> None:
+    popen = FakePopen([[("ok\n", 0)]])
+    transport = _session_transport(popen, retries=0)
+
+    transport.run("alpha", "echo ok")
+
+    assert popen.kwargs[0] == {
+        "stdin": fleet_sync.subprocess.PIPE,
+        "stdout": fleet_sync.subprocess.PIPE,
+        "stderr": fleet_sync.subprocess.STDOUT,
+        "bufsize": 0,
+    }
+    assert "text" not in popen.kwargs[0]
+    assert "encoding" not in popen.kwargs[0]
+
+
+def test_transport_reuses_one_session_for_every_script() -> None:
+    popen = FakePopen([[("hello\n", 0), ("conflict details\n", 7)]])
+    transport = _session_transport(popen, retries=0)
+
+    first = transport.run("alpha", "echo hello")
+    second = transport.run("alpha", "git status --porcelain")
+
+    assert len(popen.calls) == 1
+    assert first.returncode == 0
+    assert first.stdout == "hello\n"
+    assert second.returncode == 7
+    assert second.stdout == "conflict details\n"
+    assert "OOOCONF_FLEET_DONE" not in first.stdout + second.stdout
+    assert first.stderr == ""
+    payloads = b"".join(popen.processes[0].written)
+    assert b"echo hello" in payloads
+    assert b"git status --porcelain" in payloads
+    assert b"</dev/null" in payloads
+    assert b"\nprintf '" in payloads
+    assert b'"$?"' in payloads
+    # Binary pipes keep the protocol LF-only on Windows too.
+    assert b"\r" not in payloads
+
+
+def test_transport_retries_a_dropped_connection_on_a_fresh_session(monkeypatch) -> None:
+    sleeps: list[float] = []
+    monkeypatch.setattr(fleet_sync.time, "sleep", sleeps.append)
+    popen = FakePopen([[("ssh: connect to host alpha port 22: Connection refused\n", 255)], [("recovered\n", 0)]])
+    transport = _session_transport(popen, retries=2)
+
+    result = transport.run("alpha", "echo hi")
+
+    assert result.returncode == 0
+    assert result.stdout == "recovered\n"
+    assert len(popen.calls) == 2
+    assert popen.calls[0] == popen.calls[1]
+    assert sleeps == [0.4]
+    assert popen.processes[0].stdin.closed is True
+    assert transport._sessions["alpha"].process is popen.processes[1]
+
+
+def test_transport_does_not_retry_ordinary_remote_failures() -> None:
+    popen = FakePopen([[("fatal: not a git repository (or any of the parent directories)\n", 128)]])
+    transport = _session_transport(popen, retries=3)
+
+    result = transport.run("alpha", "git status --porcelain")
+
+    assert result.returncode == 128
+    assert result.stdout == "fatal: not a git repository (or any of the parent directories)\n"
+    assert len(popen.calls) == 1
+
+
+def test_zero_connect_retries_makes_a_single_attempt() -> None:
+    popen = FakePopen([[("ssh: connect to host alpha port 22: connection timed out\n", 255)]])
+    transport = _session_transport(popen, retries=0)
+
+    result = transport.run("alpha", "echo hi")
+
+    assert result.returncode == 255
+    assert "connection timed out" in result.stdout
+    assert len(popen.calls) == 1
+
+
+def test_build_transport_forwards_connect_retries(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_transport(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(close=lambda: None)
+
+    monkeypatch.setattr(fleet_sync, "SshTransport", fake_transport)
+
+    fleet_sync.build_transport(fleet_sync.SyncOptions(connect_timeout=4.0, connect_retries=0))
+
+    assert captured == {"connect_timeout": 4.0, "retries": 0}
+
+
+def test_transport_close_waits_then_reopens_on_demand() -> None:
+    popen = FakePopen([[("ok\n", 0)], [("again\n", 0)]])
+    transport = _session_transport(popen, retries=0)
+    transport.run("alpha", "echo ok")
+
+    transport.close()
+
+    process = popen.processes[0]
+    assert process.stdin.closed is True
+    assert process.waited == 5
+    assert process.killed is False
+    result = transport.run("alpha", "echo again")
+    assert len(popen.calls) == 2
+    assert result.stdout == "again\n"
+
+
+def test_resolve_repo_takes_the_last_absolute_path_after_banners() -> None:
+    transport = FakeTransport(
+        handler_for([("--print-repo-root", _result(0, "welcome to alpha\n/opt/stale/repo\n/home/tester/src/repo\n"))])
+    )
+    result = fleet_sync.HostResult(host="alpha", status=fleet_sync.STATUS_OK)
+
+    repo = fleet_sync._resolve_repo("alpha", fleet_sync.SyncOptions(), transport, result)
+
+    assert repo == "/home/tester/src/repo"
+    assert not any("defaulting to" in entry for entry in result.log)
+
+
+# --- live progress ------------------------------------------------------------------
+
+
+def test_sync_hosts_reports_each_host_once_and_keeps_input_order() -> None:
+    transport = FakeTransport(handler_for())
+    seen: list[fleet_sync.HostResult] = []
+
+    results = fleet_sync.sync_hosts(
+        ["alpha", "beta"],
+        fleet_sync.SyncOptions(repo_path=REMOTE_REPO),
+        transport,
+        jobs=2,
+        on_result=seen.append,
+    )
+
+    assert [result.host for result in results] == ["alpha", "beta"]
+    assert len(seen) == 2
+    assert sorted(result.host for result in seen) == ["alpha", "beta"]
+    assert all(result.status == fleet_sync.STATUS_OK for result in seen)
+
+
+def test_apply_fixes_reports_every_repaired_host(monkeypatch) -> None:
+    transport = FakeTransport(
+        handler_for(
+            [
+                ("status --porcelain", _result(0, f" M {CONFLICT_FILE}\n")),
+                ("pull --rebase origin", _result(1, "", "error: could not apply 1234abc\n")),
+                ("--diff-filter=U", _result(0, CONFLICT_FILE + "\n")),
+            ]
+        )
+    )
+    monkeypatch.setattr(
+        fleet_sync.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="", stderr="")
+    )
+    options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
+    results = fleet_sync.sync_hosts(["alpha", "beta"], options, transport, jobs=1)
+    assert [result.status for result in results] == [fleet_sync.STATUS_CONFLICT] * 2
+    seen: list[fleet_sync.HostResult] = []
+
+    fleet_sync.apply_fixes(results, options, transport, REPO_ROOT, on_result=seen.append)
+
+    assert seen == results
+    assert [result.status for result in seen] == [fleet_sync.STATUS_OK] * 2
+    assert [result.fix for result in seen] == ["local-agent", "local-agent"]
+
+
+def test_main_text_output_streams_one_line_per_host_before_the_summary(monkeypatch, capsys) -> None:
+    transport = FakeTransport(handler_for())
+    monkeypatch.setattr(fleet_sync, "SshTransport", lambda *args, **kwargs: transport)
+    monkeypatch.setattr(fleet_sync, "parse_ssh_targets", lambda home=None: [])
+
+    code = fleet_sync.main(["sync", "alpha", "beta", "--repo-path", REMOTE_REPO])
+
+    out = capsys.readouterr().out
+    summary = "fleet sync: ok=2 conflict=0 failed=0 skipped=0 dry-run=0"
+    assert code == 0
+    assert "fleet sync: 2 host(s), jobs=2" in out
+    assert summary in out
+    assert out.index("alpha") < out.index(summary)
+    assert out.index("beta") < out.index(summary)
+    # One progress line per host, then the summary: the per-host table is never reprinted.
+    assert out.count("branch=main") == 2
+    assert out.count("dirty=no") == 2
+    assert out.count("fleet sync:") == 2
+    assert out.count(summary) == 1
+    assert fleet_sync.cli_ui.icon("ok") in out
+    assert "[ok]" in out
+    assert "-" * 54 in out
+    assert "re-run with --resolve" not in out
+
+
+def test_main_json_output_streams_no_progress(monkeypatch, capsys) -> None:
+    transport = FakeTransport(handler_for())
+    monkeypatch.setattr(fleet_sync, "SshTransport", lambda *args, **kwargs: transport)
+    monkeypatch.setattr(fleet_sync, "parse_ssh_targets", lambda home=None: [])
+
+    code = fleet_sync.main(["sync", "alpha", "--repo-path", REMOTE_REPO, "--format", "json"])
+
+    out = capsys.readouterr().out
+    document = json.loads(out)
+    assert code == 0
+    assert "fleet sync:" not in out
+    assert "[ok]" not in out
+    assert document["summary"]["ok"] == 1

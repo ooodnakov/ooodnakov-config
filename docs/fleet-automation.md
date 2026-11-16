@@ -67,7 +67,8 @@ oooconf fleet sync [HOST...] [--all] [--repo-path PATH] [--branch NAME] [--jobs 
 - `--resolve`: after the fan-out, spawn one `omp` agent to repair hosts left `conflict`
   or `failed` but reachable (see Two-phase fixing below).
 - `--no-push`: never push commits that exist only on the host.
-- `--format text|json`: human summary or a versioned JSON document
+- `--format text|json`: text (the default) streams a progress line per host and ends with
+  the summary (see Live progress); JSON prints only a versioned document
   (`schema_version`, per-host results including `reachable`, `fix`, and `skip_reason`, and
   ok/conflict/failed/dry-run/skipped counts).
 - `--dry-run`: inspect only; reports repo, branch, dirty state, and ahead/behind without
@@ -79,7 +80,8 @@ Host aliases are deduped before any `ssh` call: two aliases whose configured
 `HostName`/`Port` pair is identical reach the same machine, so only the first is synced
 and the rest are reported as `skipped` with reason `duplicate of <alias>`.
 
-Each remaining host then gets exactly one preflight `ssh` call before any git command.
+Each remaining host then gets exactly one preflight remote call through its persistent
+session before any git command.
 It reports the remote hostname, the login user, and whether the checkout exists
 (`--repo-path` when given, otherwise `~/src/ooodnakov-config`). Outcomes:
 
@@ -108,6 +110,71 @@ codes. Preflight failures are ordinary failures, not skips.
 
 Every remote git command runs with `GIT_TERMINAL_PROMPT=0`, so a missing credential
 fails the host instead of hanging the run.
+
+### SSH transport and retries
+
+Each host gets a single persistent login shell:
+
+```console
+ssh -o ConnectTimeout=<n> -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -- <host> sh -l
+```
+
+Every pipeline step for that host runs inside it, so a sync costs one handshake per host
+instead of one per command. The keepalive options keep an idle session alive while other
+hosts are being synced in parallel.
+
+Each script is sent to that shell as UTF-8 bytes wrapped in a group with stdin detached:
+
+```sh
+{ <script>
+} </dev/null 2>&1
+printf '<token>%s\n' "$?"
+```
+
+The transport reads binary lines until the unique `<token>` sentinel, takes the exit code
+from that line, and strips the sentinel from the captured output. stdout and stderr share
+one merged stream, so `ssh` and `git` error text is captured even for non-zero exits.
+Pipes are binary with `bufsize=0`, which keeps the wire format LF-only on Windows and
+POSIX alike; lines are decoded with `errors="replace"`. Because a login shell may print a
+banner, the `oooconf --print-repo-root` lookup takes the last absolute-path line of its
+output and ignores everything else.
+
+A dropped connection is retried. When the merged output contains a transport-level
+failure (`ssh: connect to host`, `connection timed out`, `operation timed out`,
+`timeout, server`, `connection refused`, `connection reset`, `no route to host`,
+`network is unreachable`, `kex_exchange_identification`, `ssh_exchange_identification`,
+`banner exchange`, `broken pipe`, `client_loop`, `connection to`, `connection closed`,
+`session closed`), the session is dropped and the same script is re-sent on a fresh one
+after `0.4 * (attempt + 1)` seconds. Extra attempts are bounded by `connect_retries`
+(one by default); `0` means a single attempt. Ordinary remote failures — a `git` error, a
+conflict, any other non-zero exit — are returned as-is and never retried, so a broken
+pipeline step cannot silently run twice. Closing the run closes every session's stdin,
+waits up to 5 seconds, then kills a shell that refuses to exit.
+
+### Live progress
+
+`--format text` reports while it works instead of printing a table at the end:
+
+1. a header line, `fleet sync: <n> host(s), jobs=<n>` (plus `(dry-run)` when requested);
+2. one status line per host as soon as that host finishes — completion order under
+   `--jobs > 1`, input order at `--jobs 1` — carrying host, status, branch, repo, the
+   dirty/stashed/behind/ahead/pushed/linked flags, conflicts, `resolved`, and `fix`;
+   a failing host also gets an indented `error:` line;
+3. duplicate aliases are reported as `skipped` with `reason=duplicate of <alias>` after
+   the fan-out, before the summary;
+4. a separator, then exactly one summary line with the
+   `ok`/`conflict`/`failed`/`skipped`/`dry-run` counts, plus the
+   `re-run with --resolve` hint when a conflict remains.
+
+Each status line starts with the shared Nerd Font icon for its role (`ok`, `warn`, `fail`,
+`missing`, `info`), or the ASCII fallback (`[ok]`, `[warn]`, `[fail]`, ...) when the
+terminal or `OOOCONF_ASCII=1` cannot render Nerd Font glyphs. The per-host table is never
+reprinted after the summary. A host repaired by `--resolve` is reported twice: once with
+`conflict` when the fan-out ends, and again after repair with its final status and
+`fix=remote-agent` or `fix=local-agent`.
+
+`--format json` prints none of this: no header, no progress lines, no summary, no
+separator — only the JSON document, so the output stays parseable when piped.
 
 ### Two-phase fixing
 
