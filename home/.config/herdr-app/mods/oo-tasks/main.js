@@ -12,6 +12,9 @@ const ORDER = ["blocked", "doing", "todo", "done"];
 const TITLES = { blocked: "Blocked", doing: "Doing", todo: "To do", done: "Done" };
 const DOTS = { blocked: "blocked", doing: "working", todo: "muted", done: "done" };
 const AGENT_COLORS = { working: "working", blocked: "blocked", done: "done", idle: "idle" };
+// An agent that reported done or idle on a task still marked doing: offer the
+// status change, never make it. No live agent, no chip.
+const FINISHED = new Set(["done", "idle"]);
 
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
 
@@ -67,6 +70,12 @@ function agentFor(task, slug, all) {
   };
   collect(root.address);
   return { root, children: children.size };
+}
+
+function finished(task, agent) {
+  if (!agent || agent.root.state !== "live") return false;
+  if ((task.status || "todo") !== "doing") return false;
+  return FINISHED.has(agent.root.status);
 }
 
 export default class Tasks extends View {
@@ -171,6 +180,34 @@ export default class Tasks extends View {
     cx.notify();
   }
 
+  // Only a click lands here: the agent's report is a suggestion. Same compare-and-set
+  // rewrite as Delete; a remote machine writes its own list under its own lock.
+  async markDone(task, cx) {
+    const path = `${this.root}/tasks/${this.slug}.json`;
+    const stamp = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+    try {
+      if (this.on) {
+        const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-task", "set", task.id, "done", "--folder", this.folder]);
+        if (result.code !== 0) throw new Error(result.stderr || `herdr-task set failed (${result.code})`);
+        this.focus = null;
+        this.data = null;
+      } else {
+        const text = await readTextFile(path);
+        const data = text ? JSON.parse(text) : { tasks: [] };
+        const item = (data.tasks ?? []).find((entry) => entry.id === task.id);
+        if (!item) throw new Error(`${task.id} is no longer in the list`);
+        item.status = "done";
+        item.updated = stamp;
+        await writeTextFile(path, `${JSON.stringify(data, null, 2)}\n`, text);
+        this.data = data;
+      }
+      this.error = null;
+    } catch (error) {
+      this.error = String(error);
+    }
+    cx.notify();
+  }
+
   rows(tasks, t, all) {
     const out = [];
     for (const status of ORDER) {
@@ -233,12 +270,16 @@ export default class Tasks extends View {
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
         .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`))
         .child(h_flex().gap(6).items_center()
+          .when(finished(task, agent), (row) => row
+            .child(chip("Mark done", () => this.markDone(task, cx), t)))
           .when(this.confirm !== task.id, (row) => row
             .child(chip("Delete", () => { this.confirm = task.id; cx.notify(); }, t)))
           .when(this.confirm === task.id, (row) => row
             .child(div().text_size(11).text_color(t.dim).child("Delete this task?"))
             .child(chip("Delete", () => this.remove(task, cx), t, true))
-            .child(chip("Cancel", () => { this.confirm = null; cx.notify(); }, t)))));
+            .child(chip("Cancel", () => { this.confirm = null; cx.notify(); }, t)))
+          .when(Boolean(this.error), (row) => row
+            .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.blocked).child(this.error)))));
   }
 
   render(cx) {

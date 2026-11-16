@@ -621,7 +621,7 @@ The [Herdr app](https://herdr.dev) keeps its whole interface as files in `~/.con
 
 Both are clones: Herdr never updates clones, so after a Herdr update that changes `main` or the tab bar, duplicate the shipped file again (`layout.clone`, `mod.clone`), re-apply the two edits (the extra `panel-body` children; the two `panelButton` lines and the `workspace.panels` merge in the tab bar's `init`), and copy the result back into the repo.
 
-Panels read the per-folder JSON lists that two commands write, both linked into `~/.local/bin` beside `oooconf`; the only write a panel makes is the Tasks detail's **Delete** (a compare-and-set rewrite of the same list file, or `herdr-task rm` through `hc exec` on a remote machine):
+Panels read the per-folder JSON lists that two commands write, both linked into `~/.local/bin` beside `oooconf`; the only writes a panel makes are the Tasks detail's **Mark done** and **Delete**, each a compare-and-set rewrite of the same list file (`herdr-task set`/`herdr-task rm` through `hc exec` on a remote machine):
 
 - `herdr-task add "Split the importer" --note "Then run the tests"`, `herdr-task list`, `herdr-task set <id> doing|blocked|done`, `herdr-task show <id>`, `herdr-task rm <id>`
 - `herdr-task spawn <id> -- <program> [args…]` — starts the task's agent as a Herdr terminal (`hc run --keep --bg`, labelled `herdr.task=<slug>#<id>`, status becomes `doing`); `herdr-task label <id>` prints that label for a terminal you start yourself, `herdr-task bind <id> <terminal>` attaches one, `herdr-task kill <id>` ends it
@@ -629,11 +629,12 @@ Panels read the per-folder JSON lists that two commands write, both linked into 
 
 Both act on `--folder …`, else the current git worktree, else the cwd, and print JSON with `--json`. Data lives in `~/.local/share/ooodnakov/herdr/` (`index.json` maps a folder to its slug; `tasks/` and `artifacts/` hold the lists; artifact versions keep their last 20 contents). The location is deliberately fixed instead of `XDG_DATA_HOME`-derived so the mods, which cannot read the environment, find the same files. Every write takes a lock and replaces the file atomically. A space on another machine reads that machine's lists over the herdr-core link, so the commands must be linked there too (the normal `oooconf link apply` does it).
 
-A task can carry an agent: the Tasks panel finds it by its `herdr.task` label (or the address bound to the task), shows the terminal's live status and how many sub-agents it started (`parent`), and its detail has three actions:
+A task can carry an agent: the Tasks panel finds it by its `herdr.task` label (or the address bound to the task), shows the terminal's live status and how many sub-agents it started (`parent`), and its detail has these actions:
 
 - **Panel** — `layout.select` on the stack's `oo-agent` child (a `{ "agent": "focused" }` block), then `agent.focus`: the agent's live terminal fills the panel, keyboard included, while the Tasks list is one tab away. Terminals that report no status (a plain shell) can't sit in an agent block, so Panel falls back to `terminal.peek`.
 - **Pane** — `terminal.keep`: the agent as an ordinary pane, e.g. beside the tasks list.
 - **Stop** — `terminal.kill`.
+- **Mark done** — only while a live agent reports `done` or `idle` on a `doing` task: the chip moves it to `done` (compare-and-set rewrite with a fresh `updated`). The panel never changes a status on its own, and shows no chip when there is no live agent.
 - **Delete** — asks first, then removes the task; a running agent is left alone (Stop it separately).
 
 The spawned terminal is an ordinary herdr-core terminal, so `hc read/send/keys/wait <terminal>` work on it too. [`home/.omp/agent/skills/herdr-tasks/SKILL.md`](home/.omp/agent/skills/herdr-tasks/SKILL.md) teaches agents to delegate this way.
