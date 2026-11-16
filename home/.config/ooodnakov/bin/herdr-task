@@ -32,6 +32,7 @@ from _herdr_store import (  # noqa: E402
     find,
     folder_for,
     new_id,
+    normalize,
     now,
     read_list,
     slug_for,
@@ -96,6 +97,8 @@ def task_show(args: argparse.Namespace) -> None:
     lines = [f"{task['id']}  {task.get('status', 'todo')}", task.get("title", "")]
     if task.get("terminal"):
         lines.append(f"agent {task['terminal']}")
+    if task.get("worktree"):
+        lines.append(f"worktree {task['worktree']} ({task.get('branch', '')})")
     if task.get("note"):
         lines += ["", task["note"]]
     lines += ["", f"updated {task.get('updated', '')}"]
@@ -137,6 +140,59 @@ def task_bind(args: argparse.Namespace) -> None:
     emit(args, task, f"{task['id']}  {args.terminal or 'unbound'}")
 
 
+def git(repo: str, *argv: str) -> subprocess.CompletedProcess:
+    if not shutil.which("git"):
+        raise Fail("git is not on PATH")
+    return subprocess.run(["git", "-C", repo, *argv], capture_output=True, text=True)
+
+
+def repo_root(folder: str) -> str:
+    result = git(folder, "rev-parse", "--show-toplevel")
+    if result.returncode != 0:
+        raise Fail(f"{folder} is not inside a git worktree")
+    return normalize(result.stdout.strip())
+
+
+def registered_worktrees(repo: str) -> dict[str, str | None]:
+    """Every worktree git knows for `repo`, keyed by normalized path."""
+    result = git(repo, "worktree", "list", "--porcelain")
+    if result.returncode != 0:
+        raise Fail(result.stderr.strip() or "git worktree list failed")
+    found: dict[str, str | None] = {}
+    path = branch = None
+    for line in result.stdout.splitlines() + [""]:
+        if line.startswith("worktree "):
+            path, branch = normalize(line[len("worktree ") :]), None
+        elif line.startswith("branch "):
+            branch = line[len("branch ") :].removeprefix("refs/heads/")
+        elif not line and path:
+            found[path] = branch
+            path = None
+    return found
+
+
+def worktree_plan(folder: str, task_id: str, path_arg: str | None) -> tuple[str, str, list[list[str]]]:
+    """The worktree's path, its branch, and the git commands still needed."""
+    repo = repo_root(folder)
+    branch = f"herdr/{task_id}"
+    path = normalize(path_arg) if path_arg else normalize(
+        os.path.join(os.path.dirname(repo), f"{os.path.basename(repo)}-wt", task_id)
+    )
+    existing = registered_worktrees(repo)
+    if path in existing:
+        return path, existing[path] or branch, []
+    if git(repo, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}").returncode == 0:
+        return path, branch, [["git", "-C", repo, "worktree", "add", path, branch]]
+    return path, branch, [["git", "-C", repo, "worktree", "add", "-b", branch, path]]
+
+
+def spawn_argv(args: argparse.Namespace, argv: list[str]) -> list[str]:
+    if not args.keep_open:
+        return argv
+    script = f"{shlex.join(argv)}; exec \"${{SHELL:-sh}}\""
+    return ["sh", "-c", script]
+
+
 def task_spawn(args: argparse.Namespace) -> None:
     folder = folder_for(args.folder)
     _, data = read_list("tasks", "tasks", folder)
@@ -146,19 +202,34 @@ def task_spawn(args: argparse.Namespace) -> None:
         argv.pop(0)
     if not argv:
         raise Fail("spawn needs a program: herdr-task spawn <id> -- <program> [args…]")
+    argv = spawn_argv(args, argv)
+
+    worktree = branch = None
+    git_commands: list[list[str]] = []
+    if args.worktree is not None:
+        worktree, branch, git_commands = worktree_plan(folder, task["id"], args.worktree or None)
+
     command = [
         "hc", "run", "--keep", "--bg", "--json",
         "--label", f"herdr.task={task_key(folder, task['id'])}",
-        "--cwd", args.cwd or folder,
+        "--cwd", args.cwd or worktree or folder,
     ]
     if args.name:
         command += ["--name", args.name]
     command += ["--", *argv]
     if args.dry_run:
+        for git_command in git_commands:
+            print(shlex.join(git_command))
         print(shlex.join(command))
         return
+    for git_command in git_commands:
+        result = subprocess.run(git_command, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise Fail(result.stderr.strip() or f"git worktree add failed ({result.returncode})")
     if not shutil.which("hc"):
         raise Fail("hc (herdr-core) is not on PATH")
+    if args.keep_open and not shutil.which("sh"):
+        raise Fail("--keep-open needs sh on PATH")
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
         raise Fail(result.stderr.strip() or f"hc run failed ({result.returncode})")
@@ -172,6 +243,9 @@ def task_spawn(args: argparse.Namespace) -> None:
     with edit_list("tasks", "tasks", folder) as data:
         task = find(data["tasks"], args.id)
         task["terminal"] = address
+        if worktree:
+            task["worktree"] = worktree
+            task["branch"] = branch
         if task.get("status", "todo") == "todo":
             task["status"] = "doing"
         task["updated"] = now()
@@ -243,9 +317,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="start an agent for a task in a herdr terminal (hc run --keep --bg), labelled so the panel finds it",
     )
     spawn.add_argument("id")
-    spawn.add_argument("--cwd", help="where the agent starts (default: the task's folder)")
+    spawn.add_argument("--cwd", help="where the agent starts (default: the task's worktree, else the task's folder)")
     spawn.add_argument("--name", help="the terminal's name (default: hc's)")
-    spawn.add_argument("--dry-run", action="store_true", help="print the hc command instead of running it")
+    spawn.add_argument(
+        "--keep-open",
+        action="store_true",
+        help="run through sh -c so the terminal survives the program exiting (needs sh)",
+    )
+    spawn.add_argument(
+        "--worktree",
+        nargs="?",
+        const="",
+        metavar="PATH",
+        help="git worktree add -b herdr/<id> PATH and spawn there (default: <repo>-wt/<id> beside the repo)",
+    )
+    spawn.add_argument("--dry-run", action="store_true", help="print the git and hc commands instead of running them")
     spawn.add_argument("argv", nargs="*", help="-- <program> [args…]")
     spawn.set_defaults(handler=task_spawn)
 
