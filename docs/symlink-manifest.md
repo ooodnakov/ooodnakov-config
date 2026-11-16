@@ -81,14 +81,21 @@ OMP deliberately uses explicit child links instead of linking `~/.omp` or
 |-----|----------------|--------|
 | `omp-config` | `home/.omp/agent/config.yml` | `~/.omp/agent/config.yml` |
 | `omp-themes` | `home/.omp/agent/themes/` | `~/.omp/agent/themes` |
-| `omp-skills` | `home/.omp/agent/skills/` | `~/.omp/agent/skills` |
+| `omp-skill-impeccable` | `home/.omp/agent/skills/impeccable/` | `~/.omp/agent/skills/impeccable` |
 | `omp-vibes` | `home/.omp/agent/vibes/` | `~/.omp/agent/vibes` |
 | `omp-rtk` | `home/.omp/extensions/rtk.ts` | `~/.omp/extensions/rtk.ts` |
 | `omp-mcp` | `home/.omp/agent/mcp.json` | `~/.omp/agent/.mcp.json` |
 
 The current OMP settings file is `agent/config.yml`; the legacy
-`agent/settings.json` is not linked. Add custom themes, skills, and vibes to the
-corresponding managed directories.
+`agent/settings.json` is not linked. OMP-only skills live in
+`home/.omp/agent/skills/`. Skills shared by every agent (omp, Claude Code,
+Codex) live once under `home/.config/ooodnakov/agents/skills/` and are **not**
+in this manifest: `oooconf agents skills sync` reads the `installer = "local"`
+specs in `common-data.json` and symlinks each skill folder into the agent's own
+skills directory (`~/.omp/agent/skills`, `~/.claude/skills`,
+`~/.codex/skills`). `--check` reports them as up to date, `--dry-run` prints the
+links, and an existing non-link path is left alone. Add custom themes and vibes
+to the corresponding managed directories.
 
 MCP configuration is layered so every machine can keep its own servers:
 

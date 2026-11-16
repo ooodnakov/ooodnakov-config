@@ -47,10 +47,14 @@ key = "omp-themes"
 source = "home/.omp/agent/themes"
 target = "{HOME}/.omp/agent/themes"
 
+# Skills shared by every agent live under
+# home/.config/ooodnakov/agents/skills/ and are linked by
+# `oooconf agents skills sync` (installer = "local" in common-data.json).
+# OMP-only skills stay in home/.omp/agent/skills/.
 [[links]]
-key = "omp-skills"
-source = "home/.omp/agent/skills"
-target = "{HOME}/.omp/agent/skills"
+key = "omp-skill-impeccable"
+source = "home/.omp/agent/skills/impeccable"
+target = "{HOME}/.omp/agent/skills/impeccable"
 
 [[links]]
 key = "omp-mcp"

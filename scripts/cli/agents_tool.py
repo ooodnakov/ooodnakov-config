@@ -1674,6 +1674,80 @@ def cmd_update(repo_root: Path, config: dict[str, Any], check_only: bool, dry_ru
     return 1 if failed else 0
 
 
+# Agent skills directories for repo-local skills (`installer = "local"`).
+LOCAL_SKILL_DIRS: dict[str, tuple[str, str]] = {
+    "omp": ("omp", "~/.omp/agent/skills"),
+    "claude": ("claude", "~/.claude/skills"),
+    "codex": ("codex", "~/.codex/skills"),
+}
+
+
+def local_skill_links(
+    repo_root: Path, spec: dict[str, Any], wanted: set[str] | None = None
+) -> list[tuple[str, Path, Path]]:
+    """(agent, source dir, target link) for a local skill spec, for installed agents."""
+    source = repo_root / str(spec.get("source", ""))
+    name = str(spec.get("name", ""))
+    agents = [str(agent).lower() for agent in spec.get("agents") or list(LOCAL_SKILL_DIRS)]
+    links: list[tuple[str, Path, Path]] = []
+    for agent in agents:
+        if wanted and agent not in wanted:
+            continue
+        entry = LOCAL_SKILL_DIRS.get(agent)
+        if not entry or not shutil.which(entry[0]):
+            continue
+        links.append((agent, source, Path(entry[1]).expanduser() / name))
+    return links
+
+
+def sync_local_skills(
+    repo_root: Path,
+    specs: list[dict[str, Any]],
+    check_only: bool,
+    dry_run: bool,
+    wanted: set[str] | None = None,
+) -> tuple[int, int, int]:
+    """Link repo-local skill folders into each agent's skills directory."""
+    attempted = skipped = failed = 0
+    for spec in specs:
+        name = str(spec.get("name", "unknown"))
+        source = repo_root / str(spec.get("source", ""))
+        if not source.is_dir():
+            print_status_line("fail", f"Local skill source missing: {source}")
+            failed += 1
+            continue
+        links = local_skill_links(repo_root, spec, wanted)
+        if not links:
+            print_status_line("missing", f"{name}: no configured agent CLI found; skipping.")
+            skipped += 1
+            continue
+        for agent, src, target in links:
+            attempted += 1
+            if target.is_symlink():
+                if target.resolve() == src.resolve():
+                    print_status_line("ok", f"{name}: {agent} up to date ({target})")
+                else:
+                    print_status_line("warn", f"{name}: {target} points elsewhere; leaving it")
+                    skipped += 1
+                continue
+            if target.exists():
+                print_status_line("warn", f"{name}: {target} exists and is not a managed link; leaving it")
+                skipped += 1
+                continue
+            if check_only or dry_run:
+                print_status_line("ok", f"Plan: link {name} into {agent} ({target})")
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                target.symlink_to(src, target_is_directory=True)
+            except OSError as error:
+                print_status_line("fail", f"{name}: cannot link {target}: {error}")
+                failed += 1
+                continue
+            print_status_line("ok", f"{name}: linked into {agent} ({target})")
+    return attempted, skipped, failed
+
+
 def skills_cli_agent_targets(config: dict[str, Any]) -> list[str]:
     mapping = {
         "claude": "claude-code",
@@ -1724,11 +1798,13 @@ def cmd_skills_sync(
         print_error_line("fail", "No skill_specs configured.")
         return 0
 
+    local_specs = [s for s in skill_specs if str(s.get("installer", "")).lower() == "local"]
     cli_specs = [s for s in skill_specs if str(s.get("installer", "")).lower() == "skills"]
-    agent_specs = [s for s in skill_specs if s not in cli_specs]
+    agent_specs = [s for s in skill_specs if s not in cli_specs and s not in local_specs]
 
     # Get unique agent keys from skill specs
-    spec_agents = sorted(set(str(s.get("agent", "")).lower() for s in agent_specs if s.get("agent")))
+    local_agents = {str(agent).lower() for spec in local_specs for agent in (spec.get("agents") or LOCAL_SKILL_DIRS)}
+    spec_agents = sorted(set(str(s.get("agent", "")).lower() for s in agent_specs if s.get("agent")) | local_agents)
     if select and agents is not None:
         print_status_line("fail", "--select cannot be combined with --agents.")
         return 1
@@ -1750,7 +1826,7 @@ def cmd_skills_sync(
         for agent in unmatched:
             print_status_line("warn", f"No skill specs configured for agent '{agent}'.")
         agent_specs = [s for s in agent_specs if str(s.get("agent", "")).lower() in wanted]
-        if not agent_specs and not cli_specs:
+        if not agent_specs and not cli_specs and not local_specs:
             print_status_line("warn", f"No skill specs match agents: {', '.join(agents)}")
             return 1
 
@@ -1852,6 +1928,15 @@ def cmd_skills_sync(
         except subprocess.CalledProcessError as exc:
             print_status_line("fail", f"Failed to sync {name}: {exc}")
             failed += 1
+
+    if local_specs:
+        local_attempted, local_skipped, local_failed = sync_local_skills(
+            repo_root, local_specs, check_only, dry_run, wanted if agents else None
+        )
+        attempted += local_attempted
+        skipped += local_skipped
+        failed += local_failed
+        synced += local_attempted
 
     print_spacer()
     print_status_line("info", f"Summary: synced {synced}/{attempted} attempted; skipped {skipped}; failed {failed}.")

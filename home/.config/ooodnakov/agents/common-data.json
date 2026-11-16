@@ -68,11 +68,19 @@
       "installer": "skills",
       "name": "worktrunk",
       "source": "https://github.com/max-sixty/worktrunk"
+    },
+    {
+      "agents": ["omp", "claude", "codex"],
+      "description": "Herdr task delegation: one task per agent, same harness, every result published as an artifact",
+      "installer": "local",
+      "name": "herdr-tasks",
+      "source": "home/.config/ooodnakov/agents/skills/herdr-tasks"
     }
   ],
   "skills": [
     "context7 (gemini)",
     "graphify",
+    "herdr-tasks (omp, claude, codex)",
     "worktrunk"
   ]
 }
