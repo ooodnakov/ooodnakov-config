@@ -74,6 +74,12 @@ key = "herdr-settings"
 source = "home/.config/herdr-app/settings.json"
 target = "{CONFIG_HOME}/herdr-app/settings.json"
 
+# The managed key bindings (a copy of the live file plus the panel keys).
+[[links]]
+key = "herdr-keys"
+source = "home/.config/herdr-app/keys.json"
+target = "{CONFIG_HOME}/herdr-app/keys.json"
+
 [[links]]
 key = "herdr-theme-gruvbox-dark"
 source = "home/.config/herdr-app/themes/gruvbox-dark.json"

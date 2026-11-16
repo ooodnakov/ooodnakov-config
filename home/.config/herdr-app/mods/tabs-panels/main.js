@@ -1,6 +1,6 @@
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, ScrollHandle } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings, checking } from "herdr";
+import { spaces, panes, run, openOverlay, theme, window, shared, setShared, layout, settings, checking, nextCommand } from "herdr";
 
 function find(node, id) {
   if (node?.id === id) return node;
@@ -28,7 +28,7 @@ function label(tab, lead) {
 }
 
 export default class Tabs extends View {
-  init() {
+  init(_props, cx) {
     this.pressed = null;
     this.scroll = ScrollHandle.new();
     try { this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}"); } catch { this.panels = {}; }
@@ -40,6 +40,26 @@ export default class Tabs extends View {
       const merged = [...new Set([...enabled, "oo-tasks", "oo-artifacts", "oo-agent"])];
       if (merged.length !== enabled.length) setShared("workspace.panels", merged);
     }
+    // One key per panel: keys.json binds "tabs-panels.tasks" and
+    // "tabs-panels.artifacts" because opening a panel takes two commands
+    // (select the stack's child, then show the stack).
+    cx.spawn(async (cx) => {
+      for (;;) {
+        const name = (await nextCommand()).split(/[.:]/).pop();
+        const child = name === "tasks" ? "oo-tasks" : name === "artifacts" ? "oo-artifacts" : null;
+        if (child) this.showPanel(child);
+        cx.notify();
+      }
+    });
+  }
+
+  // The key equivalent of a panel button: select the stack's child, then show
+  // the stack. A layout without the panel (Herdr's `main`) has nothing to open.
+  showPanel(child) {
+    const root = layout();
+    if (!find(root, "panel-body") || !find(root, "panel")) return;
+    run("layout.select", { stack: "panel-body", child });
+    run("layout.show", { id: "panel" });
   }
 
   // One tab per wheel notch. A touchpad or smooth-scrolling mouse sends many

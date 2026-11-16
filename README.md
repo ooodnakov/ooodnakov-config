@@ -612,6 +612,7 @@ The tab/status bar remains local to this repo rather than replacing it wholesale
 The [Herdr app](https://herdr.dev) keeps its whole interface as files in `~/.config/herdr-app`, and Herdr rewrites parts of that folder on every start (`frame/`, `icons/`, `layouts/.state/`, sockets). The manifest therefore excludes the folder from autolink and links only the files this repo owns:
 
 - `home/.config/herdr-app/settings.json` — `theme` names the managed Gruvbox pair
+- `home/.config/herdr-app/keys.json` — the live key map plus `Alt+Shift+T` (Tasks) and `Alt+Shift+A` (Artifacts): a key runs one command, so the tab bar's mod combines the `layout.select` and `layout.show` a panel open needs; both work in `main-panels`
 - `home/.config/herdr-app/themes/gruvbox-{dark,light}.json` — the palettes, selectable in Settings → Look
 - `home/.config/herdr-app/mods/oo-tasks/` — the Tasks panel
 - `home/.config/herdr-app/mods/oo-artifacts/` — the Artifacts panel
@@ -619,7 +620,7 @@ The [Herdr app](https://herdr.dev) keeps its whole interface as files in `~/.con
 - `home/.config/herdr-app/layouts/main-panels.json` (with `main-panels.svg`) — a clone of Herdr's `main` whose right-hand panel stack holds Files, Changes, Tasks, Artifacts and an `oo-agent` terminal block (`{ "agent": "focused" }`); the top-right buttons switch between them and toggle the panel
 - `home/.config/herdr-app/layouts/tasks.json` (with `tasks.svg`) — a focused layout with only Tasks beside Artifacts; `Ctrl+Shift+L` cycles layouts
 
-Both are clones: Herdr never updates clones, so after a Herdr update that changes `main` or the tab bar, duplicate the shipped file again (`layout.clone`, `mod.clone`), re-apply the two edits (the extra `panel-body` children; the two `panelButton` lines and the `workspace.panels` merge in the tab bar's `init`), and copy the result back into the repo.
+Both are clones: Herdr never updates clones, so after a Herdr update that changes `main` or the tab bar, duplicate the shipped file again (`layout.clone`, `mod.clone`), re-apply the two edits (the extra `panel-body` children; the two `panelButton` lines, the `workspace.panels` merge and the `nextCommand()` loop that serves the panel keys in the tab bar's `init`), and copy the result back into the repo.
 
 Panels read the per-folder JSON lists that two commands write, both linked into `~/.local/bin` beside `oooconf`; the only write a panel makes is the Tasks detail's **Delete** (a compare-and-set rewrite of the same list file, or `herdr-task rm` through `hc exec` on a remote machine):
 
