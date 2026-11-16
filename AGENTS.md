@@ -151,13 +151,25 @@ git subtree pull --prefix=third_party/upstream/ezsh https://github.com/jotyGill/
 
 When structure or setup behavior changes, update the relevant docs:
 
-- `README.md`
+- `README.md` (install overview and documentation index; command and configuration
+  detail belongs in the matching `docs/` guide)
+- `docs/install.md`
+- `docs/cli-usage.md`
+- `docs/agents.md`
+- `docs/environment.md`
+- `docs/terminals.md`
+- `docs/herdr-app.md`
+- `docs/agents-config-research.md`
 - `docs/reproducibility.md`
 - `docs/imports/upstream-audit.md`
 - `docs/docker-install.md`
 - `docs/troubleshooting.md`
 - `docs/dependency-decisions.md`
+- `docs/dependency-lock.md`
 - `docs/architecture.md`
+- `docs/profiles.md`
+- `docs/symlink-manifest.md`
+- `docs/snapshots-and-diagnostics.md`
 - `docs/contributing.md`
 - `docs/cli-extension-guide.md`
 - `docs/ci-smoke-checks-terminal.md`

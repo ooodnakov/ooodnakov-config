@@ -4,13 +4,12 @@
 
 # ooodnakov-config
 
-The generated [CLI reference](docs/cli-reference.md) lists every public command,
-option, supported platform, and stable handler ID. Practical examples in this README
-remain hand-authored so regeneration cannot replace operational guidance.
-
-Reproducible personal dotfiles for Linux, Windows, and macOS machines.
+Reproducible personal dotfiles for Linux, Windows, and macOS machines, driven by one
+CLI (`oooconf`, short alias `o`) for install, updates, and recovery.
 
 This repo tracks the opinionated base config and bootstrap logic only. Secrets, tokens, private keys, and host-specific overrides stay outside git in local files.
+
+The generated [CLI reference](docs/cli-reference.md) lists every public command, option, supported platform, and stable handler ID. Operational examples stay hand-authored: in this README for first install, in [the CLI usage guide](docs/cli-usage.md) for day-to-day commands, and in `oooconf help <command>`.
 
 ## What This Repo Manages
 
@@ -26,26 +25,18 @@ Active tracked config lives under `home/` and includes:
 - macOS desktop config for AeroSpace, OmniWM, SketchyBar, and Borders
 - agent policy, MCP, provider, skill, and installer metadata under `home/.config/ooodnakov/agents/`
 
-Bootstrap and maintenance entrypoints live under `scripts/`:
-
-- `scripts/setup/setup.sh`
-- `scripts/setup/setup.ps1`
-- `scripts/setup/ooodnakov.sh`
-- `scripts/setup/ooodnakov.ps1`
-
-The setup and `oooconf` entrypoints intentionally stay stable and thin; focused implementation modules live in `scripts/setup/lib/` for setup UI, optional dependency metadata, installers, linking, doctor checks, completions, summaries, and `oooconf` UI/shell/color/window-manager/bar/help/dispatch helpers.
-
-Generated lock artifacts:
-
-- `deps.lock.json` — pinned upstream refs for setup scripts
+Bootstrap and maintenance entrypoints live under `scripts/`, with the public scripts
+(`scripts/setup/setup.sh`, `setup.ps1`, `ooodnakov.sh`, `ooodnakov.ps1`) staying
+stable and thin while focused implementation modules live in `scripts/setup/lib/`.
+`deps.lock.json` pins upstream refs for setup scripts.
 
 Reference-only material lives under `third_party/` and `docs/imports/`. It is stored for auditability and extraction work, not as active config.
 
-## Repo Layout
+### Repo layout
 
 - `home/`: managed config that gets linked into the user profile
 - `scripts/`: install, update, doctor, delete, and pin-management commands
-- `docs/`: reproducibility notes, architecture docs, CLI extension guidance, and import audits
+- `docs/`: install, usage, architecture, reproducibility, and audit documentation
 - `third_party/`: upstream and local reference trees
 - `fonts/meslo/`: bundled Meslo Nerd Font files used by the prompt and terminal defaults
 
@@ -53,22 +44,15 @@ Reference-only material lives under `third_party/` and `docs/imports/`. It is st
 ## Contents
 
 - [What This Repo Manages](#what-this-repo-manages)
-- [Repo Layout](#repo-layout)
+  - [Repo layout](#repo-layout)
 - [Quick Start](#quick-start)
   - [Preferred install path on Linux or macOS](#preferred-install-path-on-linux-or-macos)
   - [Bootstrap shortcut on Unix-like systems](#bootstrap-shortcut-on-unix-like-systems)
   - [Windows PowerShell](#windows-powershell)
-- [CLI Entry Points](#cli-entry-points)
-- [Developer Automation](#developer-automation)
 - [Prerequisites](#prerequisites)
-- [Install Behavior](#install-behavior)
-  - [Installing Optional Dependencies](#installing-optional-dependencies)
-- [Pinned Dependencies](#pinned-dependencies)
-- [Fonts](#fonts)
-- [Environment and Local Overrides](#environment-and-local-overrides)
-- [WezTerm Workspace Ergonomics](#wezterm-workspace-ergonomics)
+- [CLI Entry Points](#cli-entry-points)
+- [Documentation](#documentation)
 - [CI/CD](#cicd)
-- [Upstream and Audit References](#upstream-and-audit-references)
 - [Development](#development)
 <!-- TOC END -->
 
@@ -104,10 +88,8 @@ bash /tmp/ooodnakov-bootstrap.sh
 ```
 
 One command for a new machine, no prior clone: sparse checkout plus the minimal
-shell profile and the minimal dependency set
-(`[minimal]` in `scripts/optional-deps.toml`: git, zsh, uv, gum, rg, fd, bat,
-delta, jq, unzip, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker,
-lazygit, oh-my-pi; `oh-my-posh` is added on Windows only):
+shell profile and the minimal dependency set (`[minimal]` in
+`scripts/optional-deps.toml`).
 
 ```bash
 curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal --min-dep
@@ -117,27 +99,10 @@ curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodna
 `--min-dep` is an independent flag that installs only the minimal dependency
 set. Use `minimal` alone for config without packages, or `--min-dep` alone to
 install dependencies without touching managed links. Add `--dry-run` to preview.
-The script is intentionally downloaded before execution instead of being piped
-into a shell; `OOODNAKOV_MINIMAL=1` is the equivalent environment form for the
-minimal install.
-
-`minimal` alone installs no packages; `OOODNAKOV_SKIP_DEPS=1` is the explicit
-environment form of that behavior for direct `setup.sh` runs. The partial
-checkout omits the reference snapshots, bundled fonts, and editor/desktop
-configs. Git, Bash, and Zsh are required; Python 3 is used by the link planner,
-with no `uv` environment or repository packages installed.
-
-```bash
-git clone --filter=blob:none --no-checkout https://github.com/ooodnakov/ooodnakov-config.git ~/src/ooodnakov-config
-git -C ~/src/ooodnakov-config sparse-checkout init --cone
-git -C ~/src/ooodnakov-config sparse-checkout set scripts home/.zshrc home/.config/zsh home/.config/ooodnakov home/.config/ohmyposh home/.config/powershell bootstrap.sh LICENSE
-git -C ~/src/ooodnakov-config checkout main
-cd ~/src/ooodnakov-config
-./scripts/setup/minimal-setup.sh
-```
-
-Release archives include `SHA256SUMS`. Verify an archive before extracting it;
-do not pipe a newly downloaded bootstrap script directly into a shell.
+`OOODNAKOV_MINIMAL=1` and `OOODNAKOV_SKIP_DEPS=1` are the equivalent environment
+forms. The script is intentionally downloaded before execution instead of being
+piped into a shell; see [the install guide](docs/install.md) for the manual sparse
+checkout, the dependency list, and `SHA256SUMS` release verification.
 
 ### Windows PowerShell
 
@@ -159,243 +124,6 @@ oooconf doctor
 o doctor
 ```
 
-During `oooconf install` and `oooconf update`, LazyVim plugin sync runs headlessly with progress-only output. Detailed Neovim plugin logs stay hidden unless the sync fails.
-
-## CLI Entry Points
-
-Primary commands:
-
-- `o`: short alias wrapper for `oooconf` with matching completion behavior
-- `oooconf install`: apply managed config and optional dependency installs
-- `oooconf deps`: install optional dependencies only, with a multi-select picker when `gum` is available
-- `oooconf update`: fast-forward pull the repo, then rerun install; pass `--no-deps` to skip optional dependency installation
-- `oooconf dry-run`: preview setup actions without changing the system
-- `oooconf doctor`: validate managed links and key tools; on Linux it also
-  requires `zsh` and `docker` and hints at the minimal toolset
-  (`brew`, `node`, `pnpm`, `bun`, `bat`, `eza`, `zoxide`, `lazydocker`, `lazygit`, `oh-my-pi`)
-- `oooconf plan`: build a validated, side-effect-free operation plan in text or versioned JSON
-- `oooconf apply`: transactionally apply the validated managed-link plan
-- `oooconf rollback --last`: safely reverse the latest eligible managed-link transaction
-- `oooconf doctor --format text|json`: emit stable, actionable health checks
-- `oooconf status --format text|json`: summarize managed state without mutation
-- `oooconf snapshot export|inspect|apply`: move allowlisted preferences and
-  capabilities without exporting secrets or host paths; see
-  [Snapshots and structured diagnostics](docs/snapshots-and-diagnostics.md)
-- `oooconf delete`: remove managed links and restore latest backups when available
-- `oooconf remove`: remove managed links without restoring backups
-- `oooconf bootstrap`: clone/update repo then run install (Unix only)
-- `oooconf lock`: regenerate dependency lock artifacts
-- `oooconf update-pins`: compare pinned refs with upstream HEAD and refresh lock artifacts
-- `oooconf update-pins --apply`: update pinned refs in `scripts/optional-deps.toml`, then regenerate lock artifacts
-- `oooconf link`: create or update symlinks from manifest (also runs automatically during install)
-- `oooconf completions`: regenerate completion files (autogen zsh + `oooconf` command completions + the PowerShell tool-completion cache, Windows hosts only)
-- `oooconf agents detect`: report configured AI agent CLIs available on `PATH`
-- `oooconf agents sync`: write the managed policy block and MCP/skill markers into global agent configs (all targets by default; `--agents`/`--select` narrow the set)
-- `oooconf agents doctor`: verify managed blocks and common MCP/skills content in agent configs
-- `oooconf agents mcp sync|status`: manage tracked MCP server clones/install state (`mcp sync --servers` limits the set)
-- `oooconf agents mcp add`: add one or many MCP JSON entries to shared common-data (`--multi`), with optional `--preview`, and normalize `npx -y` to `pnpm dlx`
-- `oooconf agents rtk init`: run RTK global init for detected agents
-- `oooconf agents provider sync minimax`: configure MiniMax-M2.7 provider backends for Claude Code, OpenCode, and Codex CLI (`--agents`/`--select` narrow the set)
-- `oooconf agents skills sync`: synchronize configured agent skill specs (`--agents`/`--select` narrow the per-agent set; specs with `installer: "skills"` install through `pnpm dlx skills add -g` for every detected supported agent)
-- `oooconf agents skills view`: list the global shared skills catalog via `pnpm dlx skills ls -g` (add `--json` for machine output)
-- `oooconf agents skills add <source>`: add one shared skill source (e.g. `vercel-labs/agent-skills`) and optionally sync
-- `oooconf agents update`: update installed agent CLIs using their preferred package manager (pnpm-based tools are updated via `pnpm`)
-- `oooconf agents install <agent>`: install one specific agent CLI
-- `oooconf agents install-scripts-build`: rebuild standalone install scripts for agents
-- `oooconf fleet sync`: preflight each host, stash, rebase, push, and re-link this repo on SSH fleet hosts (`--all` for every alias in `~/.ssh/config` with per-machine dedupe, plus `--no-push`, `--dry-run`, `--format json`); `--resolve` then repairs hosts left broken in a second phase with one `omp` agent (on the host when a single host needs fixing, locally when several do); hosts that are root, missing the checkout, or on this same machine are reported as `skipped`
-
-The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts will run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`). If `uv` is missing, they fall back to the system `python3`.
-
-Secrets commands:
-
-- `oooconf env KEY VALUE`: safely add or update a machine-local value in the preserved blocks of both `env.zsh` and `env.ps1`
-- `oooconf env`: prompt for a variable name and hidden value, then offer an optional Bitwarden upload (default: no)
-- `oooconf env KEY VALUE --secrets`: update both local files and upload the value to a Bitwarden secure note
-- `oooconf secrets login`: configure Bitwarden/Vaultwarden server, choose login method, start login, then prompt for the master password to unlock the vault and save the session
-- `oooconf secrets unlock --shell zsh`: print shell code to export `BW_SESSION`
-- `oooconf secrets sync`: render local secret env files from the tracked template, creating missing `env.zsh`/`env.ps1`
-- `oooconf secrets sync --dry-run`: preview rendered files without writing
-- `oooconf secrets list`: list secrets from the template (add `--resolved` to resolve `bw://` refs)
-- `oooconf secrets status`: check sync state and vault status
-- `oooconf secrets doctor`: validate prerequisites and rendered files
-- `oooconf secrets logout`: lock vault and revoke the Bitwarden session
-- `oooconf shell status`: print all managed shell preference modes
-- `oooconf shell prompt [p10k|ohmyposh|status]`: switch only the zsh prompt engine between Powerlevel10k and Oh My Posh
-- `oooconf shell prompt-style [verbose|concise|status]`: switch all managed prompts between the full multi-segment layout and a compact layout
-- `oooconf shell forgit-aliases [plain|forgit|status]`: choose whether short git aliases stay plain or switch to upstream `forgit` aliases
-- `oooconf shell typo-handling [silent|suggest|help|status]`: control typo suggestions for mistyped commands
-- `oooconf shell psfzf-tab [enabled|disabled|status]`: toggle PSFzf tab completion integration
-- `oooconf shell psfzf-git [enabled|disabled|status]`: toggle PSFzf Git helper integration
-- `oooconf shell poshgit [enabled|disabled|status]`: toggle posh-git auto-import in PowerShell (opt-in; its prompt status duplicates the oh-my-posh git segment)
-- `oooconf shell auto-uv-env [disabled|existing|enabled|quiet|status]`: control Python virtualenv auto-activation behavior (`existing` is the default and never creates missing `.venv` directories)
-- `oooconf color [status|list|<theme>|dark|light]`: select a unified CLI color theme (`default`, `catppuccin`, `gruvbox`, `nord`, `tokyonight`, `noctalia`) and dark/light mode. When unset, `oooconf` prefers existing tracked tool themes (WezTerm/Neovim) before falling back to `default`; theme changes sync local overrides for Yazi, WezTerm, Komorebi (including bar config), SketchyBar colors, Zebar CSS vars, and a themed Oh My Posh config under `~/.config/ooodnakov/local/ohmyposh/`, and `status` reports detected Neovim/Oh My Posh config state. All command output uses role-colored Nerd Font icons automatically on UTF-8 terminals; redirected output or `OOOCONF_ASCII=1` falls back to ASCII tags. Paths are printed `$HOME`-relative (`~/…`) with muted directories and a highlighted leaf, and long link lists collapse into a grouped tree.
-
-Window manager commands:
-
-- `oooconf wm status`: shows the currently running window manager and bar when detectable
-- `oooconf wm set [komorebi|glazewm|aerospace|omniwm]`: selects the default window manager and starts it
-- `oooconf wm start`: starts the default window manager
-- `oooconf wm stop`: stops the managed window-manager stack for the selected platform
-- `oooconf wm reload`: reloads the active/default window manager
-- `oooconf wm bar status`: shows the running managed bar when detectable
-- `oooconf wm bar set [zebar|yabs|sketchybar]`: sets the default bar in local shell overrides
-- `oooconf wm bar [start|stop|reload]`: controls the default managed bar
-- `oooconf wm komorebi [status|start|stop|reload]`: low-level Komorebi integration commands
-
-The default window-manager and bar choices are stored in ignored local shell overrides (`OOODNAKOV_DEFAULT_WM` and `OOODNAKOV_DEFAULT_BAR`) so host-specific desktop preferences do not enter tracked config.
-
-On Windows, setup also links `oooconf` into `$HOME\.local\bin` and the managed PowerShell profile prepends that directory to `PATH`, so `oooconf install`, `oooconf doctor`, and similar commands work directly in new shell sessions. It also links the tracked PowerShell profile into both `$HOME\.config\powershell\Microsoft.PowerShell_profile.ps1` and the active `$PROFILE.CurrentUserCurrentHost` path, so the XDG-style source of truth and the profile PowerShell actually loads stay in sync.
-The PowerShell setup can also prompt to install missing optional tools via the catalog in `scripts/optional-deps.toml` (using winget, choco, official nodejs.org Node.js archives, corepack/pnpm, PowerShell Gallery, or custom methods). It offers to bootstrap Chocolatey if needed. Replaced files are preserved in timestamped backups under `$HOME\.local\state\ooodnakov-config\backups\`.
-Windows setup runs also write debug logs under `$HOME\.local\state\ooodnakov-config\logs\`, with `setup-latest.log` updated to the latest run.
-
-Shell completion:
-
-- **PowerShell**: argument completion is automatically loaded by the managed profile
-  - Complete commands: `oooconf <Tab>`
-  - Alias completions also work: `o <Tab>`
-  - Complete options: `oooconf install --<Tab>`
-  - Complete secrets subcommands: `oooconf secrets <Tab>`
-  - Complete nested agent subcommands: `oooconf agents mcp <Tab>`
-  - Complete shell values: `oooconf secrets unlock --shell <Tab>`
-- **Zsh**: completion is provided via fzf-tab integration
-  - Regenerate completions: `oooconf completions`
-  - Third-party tool completions come from `scripts/generate/tool-completions.toml` and are emitted only for binaries available on `PATH`.
-  - `oooconf` command metadata comes from the recursive CLI tree in `scripts/cli/oooconf-cli-spec.toml`; shared value sets such as optional dependency keys are referenced by name and expanded by the generator.
-
-Help system:
-
-- `oooconf --help` — shows grouped command categories with common workflow examples
-- `oooconf help <command>` — shows command-specific help with examples and environment overrides
-- `oooconf --print-repo-root`
-- `oooconf --version`
-
-For unattended runs:
-
-```bash
-OOODNAKOV_INTERACTIVE=never oooconf update
-oooconf update --yes-optional
-```
-
-For an automation-safe preview, use the shared planner. `oooconf dry-run` is a
-compatibility alias for the default install plan:
-
-```bash
-oooconf plan
-oooconf plan --scope links
-oooconf plan bat zoxide --format json
-oooconf dry-run --format json
-```
-
-Plan generation validates link sources, duplicate targets, dependency keys, and
-target containment before reporting any operation. It does not create directories,
-resolve secrets, install packages, or otherwise modify the machine. Setup on both
-Unix and Windows consumes the same validated link-plan output.
-
-Managed links are applied as a transaction. Each apply holds an exclusive lock and
-atomically journals completed operations under
-`$XDG_STATE_HOME/ooodnakov-config/transactions/` (falling back to
-`~/.local/state/ooodnakov-config/transactions/`). If a link operation fails, completed
-operations are rolled back automatically. `oooconf rollback --last` can reverse the
-latest completed or interrupted transaction, but refuses to overwrite or remove a
-target changed by the user after apply. Running `oooconf apply` again with an
-identical link state is a no-op and creates neither a journal nor a backup.
-
-Transaction journals and their referenced backups are intentionally retained until
-rollback is no longer needed. Never delete an incomplete or `rollback_failed`
-journal as routine cleanup; follow the
-[recovery and retention procedure](docs/troubleshooting.md#transaction-journal-retention-and-cleanup)
-before removing terminal journals or backups.
-
-`oooconf install` keeps its existing dependency and setup behavior, but delegates its
-managed-link phase to the same transaction engine. Package-manager changes and
-external tool/plugin updates remain explicitly non-reversible.
-
-Portable profiles can limit managed links to a reusable capability bundle:
-
-```bash
-oooconf plan --profile workstation
-oooconf apply --profile terminal
-oooconf install --profile developer
-```
-
-Built-in profiles are `minimal`, `terminal`, `workstation`, and `developer`.
-Precedence is explicit `--profile`, then `OOODNAKOV_PROFILE`, then the ignored local
-`~/.config/ooodnakov/local/profile.toml`; no selection retains the historical
-all-applicable-links behavior. Platform-inapplicable capabilities appear as skipped
-in plan output, and profile dependency lists are recommendations rather than
-automatic installation requests. See `docs/profiles.md` for the schemas and
-extension workflow.
-
-The tested and best-effort operating-system, shell, and architecture combinations
-are listed in the [platform support matrix](docs/reproducibility.md#platform-support-matrix).
-
-Interactive dependency picks:
-
-```bash
-# interactive multi-select picker (requires gum)
-oooconf deps
-# without gum: text prompt lists available keys, type to select
-oooconf deps
-# explicit keys (no prompt)
-oooconf deps <key>
-```
-
-Agent policy management:
-
-```bash
-oooconf agents detect
-oooconf agents sync
-oooconf agents sync --check
-oooconf agents sync --agents claude
-oooconf agents doctor
-oooconf agents mcp sync
-oooconf agents mcp sync --servers context7
-oooconf agents mcp status
-oooconf agents rtk init
-oooconf agents provider sync minimax
-oooconf agents provider sync minimax --agents codex
-oooconf agents skills sync
-oooconf agents skills view
-oooconf agents install --check
-oooconf agents install
-oooconf agents install codex gemini
-oooconf agents install --all
-oooconf agents update
-oooconf agents install-scripts-build
-```
-
-The shared AGENTS policy snippets are configured in:
-
-- `home/.config/ooodnakov/agents/config.json`
-- `home/.config/ooodnakov/agents/common-text.md`
-- `home/.config/ooodnakov/agents/common-data.json` (structured MCP + skills data)
-- `home/.config/ooodnakov/agents/extras/<agent>.md` (per-agent inserts, referenced by `extra_text_file`)
-- `docs/agents-config-research.md` (cross-agent config model comparison and rationale)
-
-An `agent_configs` entry may set `extra_text_file`, a repo-relative Markdown file whose contents are appended inside that target's managed block under `## Agent-specific instructions`. Extras stay inside the `oooconf:agents-common` markers, so they are replaced on every sync and never accumulate; targets without the key render the shared block unchanged. Currently only the Oh My Pi global instructions target carries an extra (`extras/omp.md`: batch independent tool calls, collapse repeated `tool.*` calls into one `eval` cell).
-
-`oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
-`oooconf agents sync` targets every configured global agent config by default and is idempotent. Pass agent keys such as `--agents claude codex` to narrow it, or `--select` to choose interactively. `--check` exits non-zero when any target is stale; `--dry-run` prints the same plan without writing.
-`oooconf agents install` installs missing configured agent CLIs by default. Pass one or more agent keys such as `codex gemini`, `--missing` for explicit missing-only mode, or `--all` to install or upgrade every configured agent CLI. `--check` and `--dry-run` preview the installer commands and post-install steps without running them.
-`oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, routes pnpm-preferred agents through `pnpm add -g <package>@latest` (falling back to `npm install -g` when pnpm is unavailable), and reruns configured post-install steps.
-`oooconf agents sync` understands both stdio entries (`command`/`args`) and remote HTTP entries (`type`/`url`/`headers`) in `common-data.json`, rendering each agent's native shape: `type`+`url` for Claude Code, Oh My Pi, and Pi, `httpUrl` for Gemini CLI, `type = "remote"` for OpenCode, and `[mcp_servers.<name>]` with `http_headers` tables for Codex. MCP `env_vars` shorthands resolve. `{env_var}`/`$env_var` placeholders are kept verbatim unless `--materialize-secrets` is passed, so generated configs stay secret-free by default.
-`oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in the local environment by default for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is intentionally used on private machine config.
-
-## Developer Automation
-
-[`just`](https://just.systems) is the cross-platform task runner for routine repository work. Install it with `oooconf deps just`, then run:
-
-```bash
-just check        # ruff lint + format check + pytest
-just fix          # apply safe ruff fixes and formatting
-just test         # full pytest suite
-just unix         # Bash syntax and smoke checks (Unix only)
-just completions  # regenerate tracked oooconf completions
-just lock         # regenerate dependency lock artifacts
-```
-
-Run `just --list` for all recipes. The recipes wrap existing commands; CI remains authoritative.
-
 ## Prerequisites
 
 The setup scripts intentionally do not try to provision a full workstation from bare metal. Core tools should already exist before first install:
@@ -406,296 +134,83 @@ The setup scripts intentionally do not try to provision a full workstation from 
 | **macOS**   | `git`, `zsh`                        | `wezterm`, `oh-my-posh` |
 | **Windows** | `git`, `pwsh` (for PowerShell Core) | `wezterm`, `oh-my-posh` |
 
-On Windows, `oooconf deps zsh` (from PowerShell) installs the pinned MSYS2 zsh package into the Git for Windows directory and Git Bash windows then start the managed zsh automatically. The bundled Meslo Nerd Font is installed per-user by setup and a managed `~/.minttyrc` pins mintty's `Font=`, so Git Bash windows render the same prompt icons as WezTerm. Set `OOODNAKOV_GITBASH_ZSH=0` to keep plain bash for a session. Ghostty is optional; when installed, its managed config mirrors the WezTerm theme and keybindings.
-
-See [`docs/reproducibility.md`](docs/reproducibility.md) for the full dependency policy and [`docs/architecture.md`](docs/architecture.md) for the symlink, lockfile, and local-override model.
-
-## Install Behavior
-
-Setup symlinks tracked config into standard locations and preserves replaced files by moving them into timestamped backups:
-
-- Unix: `~/.local/state/ooodnakov-config/backups/`
-- Windows: `$HOME\.local\state\ooodnakov-config\backups\`
-
-On Unix, that managed tree includes `~/.config/niri` linked from [`home/.config/niri`](home/.config/niri), `~/.config/umbriel` linked from [`home/.config/umbriel`](home/.config/umbriel), `~/.config/hypr` linked from [`home/.config/hypr`](home/.config/hypr), `~/.config/pypr` linked from [`home/.config/pypr`](home/.config/pypr), and `~/.config/noctalia` linked from [`home/.config/noctalia`](home/.config/noctalia) alongside the existing shell, terminal, editor, and `ooodnakov` config links.
-
-Each install, update, or doctor run also writes logs under:
-
-- Unix: `~/.local/state/ooodnakov-config/logs/`
-- Windows: `$HOME\.local\state\ooodnakov-config\logs\`
-
-`setup-latest.log` points to the latest run.
-
-In interactive terminals, setup can also prompt to install common optional dependencies. The full catalog lives in `scripts/optional-deps.toml`, which both Unix and PowerShell setup scripts read. Each entry defines per-platform install methods (apt, brew, choco, winget, cargo, curl, GitHub release archive, or custom).
-
-### Installing Optional Dependencies
-
-Use `oooconf deps` to install optional tools interactively or specifically:
-
-- `oooconf deps` — Interactive picker (requires `gum`).
-- `oooconf deps --min-dep` — Install only the `[minimal]` dependency set (git, zsh, uv, gum, rg, fd, bat, delta, jq, unzip, bin, topgrade, brew, node, pnpm, bun, eza, zoxide, lazydocker, lazygit, oh-my-pi; `oh-my-posh` on Windows only). `--minimal` remains accepted as an alias for this command.
-- `oooconf deps <key...>` — Install specific tools (e.g., `oooconf deps yazi p7zip`).
-- `oooconf deps --latest <key...>` — Install missing selections, then run Topgrade with bounded retries; its native `bin` step updates tracked GitHub releases. `GITHUB_AUTH_TOKEN` (or `GITHUB_TOKEN`) is forwarded to GitHub release updates.
-- `oooconf deps bin topgrade` — Explicitly install the two primary dependency-management tools; they are also part of the minimal/install bootstrap flow.
-- `oooconf deps docker` — Install Docker Engine on Linux with the distribution's official procedure (apt repo on Ubuntu/Debian, pacman on Arch, dnf repo on Fedora), then enable the Docker/containerd units. macOS/Windows need Docker Desktop; manual steps and fallbacks live in [`docs/docker-install.md`](docs/docker-install.md).
-- `oooconf deps brew` — Install Homebrew on macOS or Linux with Homebrew's official installer.
-- `oooconf deps taskwarrior` — Install Taskwarrior through Homebrew (`task`) on Linux and macOS; Linux apt packages are intentionally avoided. Install Homebrew first if needed.
-- `oooconf deps worktrunk` — Install Worktrunk for parallel Git worktrees (Homebrew on Linux/macOS, winget on Windows). Managed Zsh and PowerShell profiles enable its shell integration when installed; use `git-wt` on Windows to avoid Windows Terminal's `wt` alias.
-- `oooconf deps docker` — On systemd Linux, enable and start existing Docker/containerd units at boot.
-- `oooconf deps --dry-run` — Preview without installing.
-
-All metadata is in `scripts/optional-deps.toml` (sole source of truth). Run `oooconf lock` after editing.
-GitHub release installs select the catalog's platform asset explicitly, avoiding interactive asset-selection prompts from `bin`.
-After dependency setup on Unix and PowerShell, catalog GitHub release binaries in the managed install directories are adopted into `bin` tracking without re-downloading, including tools omitted from the selection. Run `oooconf deps bin` to pick up earlier installs. Adoption reads their installed versions, preserves existing tracking records, and respects `--dry-run`.
-Topgrade runs in the foreground so upgrade progress and prompts remain visible. `--latest` disables Topgrade self-update, retries failed steps twice, and reports remaining manager failures as warnings so completed dependency installs are not discarded. Set `OOODNAKOV_DEPS_LATEST_STRICT=1` to make those orchestration failures fatal.
-
-See [`docs/dependency-decisions.md`](docs/dependency-decisions.md) for the full decision matrix.
-
-## Pinned Dependencies
-
-The repo aims for deterministic setup by pinning third-party shell dependencies and related tooling.
-
-See [`docs/dependency-decisions.md`](docs/dependency-decisions.md) for the full list of automated, optional, and manual dependencies and how they are installed per platform.
-See `deps.lock.json` for the exact pinned git revisions used by the setup scripts.
-Unix setup installs the configured custom Zsh plugins, including `zsh-fzf-history-search` and `s3cmd`; `oooconf doctor` checks their OMZ entrypoints. Autocomplete loads before OMZ completion initialization, and syntax highlighting loads last.
-
-The tracked `oh-my-posh` theme honors `OOOCONF_PROMPT_STYLE` and is regenerated by `oooconf color` with the selected oooconf palette. It uses its own unified `git` segment in [home/.config/ohmyposh/ooodnakov.omp.json](home/.config/ohmyposh/ooodnakov.omp.json). It provides a clean, single-branch status with detailed working and staging information. The PowerShell profile still imports `posh-git` to provide git command completions, but prompt rendering is handled entirely by Oh My Posh for a consistent look.
-
-## Fonts
-
-Bundled Meslo Nerd Font files live in [`fonts/meslo`](fonts/meslo).
-
-On Linux, `oooconf install` installs them into `~/.local/share/fonts/ooodnakov` and refreshes the font cache when `fc-cache` is available.
-
-On Windows, setup installs them per-user and registers them in the Windows font store. `install --dry-run` previews this step without copying fonts, writing registry entries, or notifying applications. On macOS, the bundled font files remain available for manual installation.
-
-## Environment and Local Overrides
-
-Portable tracked environment belongs in:
-
-- `~/.config/ooodnakov/env/common.sh`
-- `~/.config/ooodnakov/env/common.ps1`
-
-Machine-specific or secret values belong in ignored files:
-
-- `~/.config/ooodnakov/local/env.zsh`
-- `~/.config/ooodnakov/local/env.ps1`
-- `~/.ssh/config.local`
-
-Tracked secret references belong in:
-
-- `~/.config/ooodnakov/secrets/env.template`
-
-SSH host aliases come from `~/.ssh/config`, every file it `Include`s (the tracked managed config is `home/.config/ooodnakov/ssh/config`), and `~/.ssh/config.local`. In both zsh and PowerShell, `z <host>` opens an SSH session when `<host>` is one of those aliases; any other argument keeps the zoxide directory jump. In zsh, `z -- <name>` forces the directory jump when an alias shadows a zoxide entry; in PowerShell, `zi` is the interactive directory picker for that case.
-
-In both shells, `y` opens Yazi and changes the shell directory to the directory Yazi exits in. On Windows this also puts Git's `usr\bin` (for `sh`/`file`) on `PATH` and sets `YAZI_FILE_ONE` to Git's `file.exe`.
-
-Tracked shared environment currently covers:
-
-- editor and pager defaults
-- `OOODNAKOV_CONFIG_HOME`
-- `OOODNAKOV_SHARE_HOME`
-- `OOODNAKOV_STATE_HOME`
-- `OOODNAKOV_CACHE_HOME`
-- `PNPM_HOME`
-- `~/.local/bin`
-- `~/.local/share/ooodnakov-config/bin`
-- `~/.cargo/bin`
-- optional `~/.local/bin/env` sourcing when present
-
-Runtime shell artifacts are intentionally not tracked. Zsh history is written under `~/.local/state/ooodnakov-config/zsh/` and the completion dump under `~/.cache/ooodnakov-config/zsh/`.
-
-OMP uses individual links from `home/.omp/`: `agent/config.yml`, `agent/themes/`,
-`agent/skills/`, `agent/vibes/`, `extensions/rtk.ts`, and the MCP base file
-`agent/mcp.json` (linked as `~/.omp/agent/.mcp.json`). `~/.omp` itself is a
-normal local directory, and `~/.omp/agent/mcp.json` is machine-local, so
-credentials, per-host MCP servers, databases, sessions, caches, and installed
-plugins stay on the machine. OMP's settings file is `config.yml`; legacy
-`settings.json` is not managed. See [OMP link migration](docs/symlink-manifest.md#omp-file-and-content-links)
-if your existing setup links the whole directory.
-
-Additional local-only files you may create per machine:
-
-- `~/.config/ooodnakov/local/env.zsh`
-- `~/.config/ooodnakov/local/env.ps1`
-- `~/.config/ooodnakov/local/wezterm.lua`
-- `~/.config/ooodnakov/local/ghostty.conf`
-- `~/.config/task/local/taskrc` for Taskwarrior sync credentials and private overrides
-
-Examples live in [`home/.config/ooodnakov/local`](home/.config/ooodnakov/local). Taskwarrior's local example lives in [`home/.config/task/local/taskrc.example`](home/.config/task/local/taskrc.example).
-
-To sync shared secrets across machines, keep Bitwarden references in the tracked template and render local plaintext files on each machine:
-
-- `oooconf secrets login` (prompts for login type)
-- `eval "$(oooconf secrets unlock --shell zsh)"`
-- `oooconf secrets sync`
-- `oooconf secrets sync --dry-run`
-- `oooconf secrets doctor`
-
-The generated files stay local and ignored:
-
-- `~/.config/ooodnakov/local/env.zsh`
-- `~/.config/ooodnakov/local/env.ps1`
-
-The tracked template supports plain shared values and `bw://item/<item-id>/...` references. The current backend is `Bitwarden CLI` via `bw`, intended for a self-hosted Vaultwarden server such as `https://vaultwarden.ooodnakov.ru`.
-
-Typical Unix flow:
-
-```bash
-oooconf install
-oooconf secrets login
-# or explicitly:
-oooconf secrets login --method apikey
-eval "$(oooconf secrets unlock --shell zsh)"
-oooconf secrets sync
-```
-
-Typical PowerShell flow:
-
-```powershell
-oooconf install
-oooconf secrets login
-# or explicitly:
-oooconf secrets login --method apikey
-oooconf secrets unlock --shell pwsh | Invoke-Expression
-oooconf secrets sync
-```
-
-For non-interactive or automated setups, you can skip the login/unlock step entirely by setting these environment variables before running `oooconf secrets sync`:
-
-```bash
-export BW_CLIENTID="user.xxx"
-export BW_CLIENTSECRET="xxx"
-export BW_PASSWORD="your-vault-password"
-oooconf secrets sync
-```
-
-The sync will auto-unlock the vault, create missing local env files if needed, and render them without any manual interaction.
-
-**LOCAL OVERRIDES**: rendered files (`~/.config/ooodnakov/local/env.zsh`, `env.ps1`) contain a `# --- LOCAL OVERRIDES START/END ---` block. Lines inside this section survive every `oooconf secrets sync`, making it safe to add machine-specific env vars that are not tracked in the template. Anything outside the markers is overwritten on each sync.
-
-## WezTerm Workspace Ergonomics
-
-Set these environment variables to control WezTerm startup defaults without editing tracked config:
-
-- `OOODNAKOV_WEZTERM_WORKSPACE`
-- `OOODNAKOV_WEZTERM_CWD`
-
-Example:
-
-```bash
-OOODNAKOV_WEZTERM_WORKSPACE=project-x OOODNAKOV_WEZTERM_CWD=$HOME/src/project-x wezterm
-```
-
-The managed WezTerm setup also loads a small, cross-platform plugin layer:
-
-- `LEADER Space`: searchable command picker for managed keybindings
-- `LEADER s` / `LEADER S`: smart workspace switching and previous-workspace toggle with zoxide-backed project discovery
-- `LEADER r` / `LEADER R` / `LEADER D`: restore, save, and delete resurrected WezTerm workspace state
-- `LEADER d` / `LEADER v` / `LEADER h`: quick domain attach, vertical split attach, and horizontal split attach
-- `Alt+Shift+X` / `Ctrl+Shift+X` / `Alt+Shift+H` / `Ctrl+Shift+A`: AI Commander command generation, last-results recall, prompt history, and split-pane chat. The chat pane keeps per-pane message context for follow-up questions. It reads API keys from `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`, chooses Anthropic when both are present, and uses `streamdown` for rich markdown rendering when available, falling back to `cat`; set `WEZTERM_AI_COMMANDER_RENDERER` to override the renderer command.
-- pane navigation keeps the existing platform `SUPER+h/j/k/l` shortcuts but routes them through `smart-splits.nvim` so they can cross Neovim and WezTerm pane boundaries; `SUPER_REV+h/j/k/l` resizes panes the same way
-
-The tab/status bar remains local to this repo rather than replacing it wholesale with an external tab plugin. It borrows the useful pieces from the retro/tabline ecosystem: workspace and leader/mode cells, zoom indicators, tab indexes, pane counts, host/current-directory context, battery, and clock.
-
-## Ghostty
-
-[Ghostty](https://ghostty.org) is supported as an optional alternative to WezTerm. Its managed config is [`home/.config/ghostty/config`](home/.config/ghostty/config), linked to `~/.config/ghostty`, and mirrors the WezTerm setup:
-
-- Noctalia palette from [`home/.config/ghostty/themes/Noctalia`](home/.config/ghostty/themes/Noctalia), copied from the managed WezTerm color scheme
-- `MesloLGSDZ Nerd Font Mono`, the same initial 125×30 grid, and matching cursor/padding behavior
-- `ALT` as the SUPER modifier, with `ALT+h/j/k/l` pane navigation and `ALT+Ctrl+h/j/k/l` resizing, matching the WezTerm smart-splits bindings
-- Shell integration with `ssh-env`/`ssh-terminfo`, so `z <host>`/`ssh-forward` sessions get `TERM` propagation and remote terminfo automatically; `ALT+Shift+Up/Down` jumps between prompts
-- Quake-style quick terminal bound to ``Cmd+` `` (macOS global shortcut) with an ``Alt+` `` fallback in-window
-- Command-finish notifications when a long command finishes while unfocused, and a Neovide-like cursor trail shader vendored at [`home/.config/ghostty/shaders/cursor_warp.glsl`](home/.config/ghostty/shaders/cursor_warp.glsl)
-
-`oooconf color` writes the selected theme to `~/.config/ooodnakov/local/ghostty.conf`, which the managed config loads through an optional `config-file` include. Put machine-local font size, opacity, or theme overrides in that file; [`home/.config/ooodnakov/local/ghostty.conf.example`](home/.config/ooodnakov/local/ghostty.conf.example) shows the format.
-
-## Herdr app
-
-The [Herdr app](https://herdr.dev) keeps its whole interface as files in `~/.config/herdr-app`, and Herdr rewrites parts of that folder on every start (`frame/`, `icons/`, `layouts/.state/`, sockets). The manifest therefore excludes the folder from autolink and links only the files this repo owns:
-
-- `home/.config/herdr-app/settings.json` — `theme` names the managed Gruvbox pair
-- `home/.config/herdr-app/keys.json` — the live key map plus `Alt+Shift+T` (Tasks) and `Alt+Shift+A` (Artifacts): a key runs one command, so the tab bar's mod combines the `layout.select` and `layout.show` a panel open needs; both work in `main-panels`
-- `home/.config/herdr-app/themes/gruvbox-{dark,light}.json` — the palettes, selectable in Settings → Look
-- `home/.config/herdr-app/mods/oo-tasks/` — the Tasks panel
-- `home/.config/herdr-app/mods/oo-artifacts/` — the Artifacts panel
-- `home/.config/herdr-app/mods/oo-agent-head/` — the thin header above the agent terminal, naming the selected task and linking back to Tasks
-- `home/.config/herdr-app/mods/tabs-panels/` — a clone of Herdr's tab bar with Tasks and Artifacts buttons beside Files and Changes, top right
-- `home/.config/herdr-app/layouts/main-panels.json` (with `main-panels.svg`) — a clone of Herdr's `main` whose right-hand panel stack holds Files, Changes, Tasks, Artifacts and an `oo-agent` column (the `oo-agent-head` header above a `{ "agent": "focused" }` block); the top-right buttons switch between them and toggle the panel
-- `home/.config/herdr-app/layouts/tasks.json` (with `tasks.svg`) — a focused layout with only Tasks beside Artifacts; `Ctrl+Shift+L` cycles layouts
-
-Both are clones: Herdr never updates clones, so after a Herdr update that changes `main` or the tab bar, duplicate the shipped file again (`layout.clone`, `mod.clone`), re-apply the two edits (the extra `panel-body` children; the two `panelButton` lines, the `workspace.panels` merge and the `nextCommand()` loop that serves the panel keys in the tab bar's `init`), and copy the result back into the repo.
-
-Panels read the per-folder JSON lists that two commands write, both linked into `~/.local/bin` beside `oooconf`. A panel writes only through the same compare-and-set: the Tasks header adds a task (the list and, for a folder the index has no slug for yet, `index.json`; `herdr-task add` through `hc exec` on a remote machine), a task's detail sets its status with a chip per state (`herdr-task set` remotely), offers **Mark done** when its agent finished, and **Delete** removes it (`herdr-task rm` remotely); an artifact's detail has **Copy path**, which copies the latest version's file to the clipboard, and **Delete** (`herdr-artifact rm` remotely; the local compare-and-set leaves that artifact's version files on disk).
-
-- `herdr-task add "Split the importer" --note "Then run the tests" [--after <id>]`, `herdr-task list [--ready]`, `herdr-task set <id> doing|blocked|done`, `herdr-task show <id>`, `herdr-task rm <id>`, `herdr-task dep <id> <blocker>…`, `herdr-task undep <id> <blocker>…` — dependencies are ids a task waits for; `--ready` keeps only tasks whose dependencies are all done, the panel shows `after N` and a DEPENDS ON block, `spawn` refuses while any remains (override with `--force`), cycles and self-references are rejected, and removing a task drops it from everyone's list. The Done group header's **Clear done** deletes the whole group after one confirmation.
-- `herdr-task spawn <id> -- <program> [args…]` — starts the task's agent as a Herdr terminal (`hc run --keep --bg`, labelled `herdr.task=<slug>#<id>`, status becomes `doing`); `--keep-open` leaves the terminal inspectable after the program exits (it runs `sh -c '<command>; exec "${SHELL:-sh}"'`), `--worktree [path]` makes `herdr/<id>` in its own worktree at `path` (default `<repo>-wt/<id>` beside the repo), spawns there and records `branch`, `worktree` and `worktree_tool` on the task, and `--dry-run` prints the worktree and hc commands instead of running them; `herdr-task label <id>` prints that label for a terminal you start yourself, `herdr-task bind <id> <terminal>` attaches one, `herdr-task kill <id>` ends it
-
-`--worktree` goes through [worktrunk](https://github.com/max-sixty/worktrunk) whenever it is installed — `git-wt` on Windows (`wt` there is Windows Terminal), `wt` elsewhere — using `switch --create <branch> --path <path> --no-cd`; otherwise it falls back to `git worktree add -b`. The spawn does not tell the agent about worktrunk: the worktree is a real worktrunk one, so `wt list`/`git-wt list` shows it, `home/.config/ooodnakov/agents/common-text.md` already tells agents to use worktrunk for worktree work, and worktrunk's own agent plugin (`git-wt config plugins oh-my-pi install`) makes detection native.
-- `herdr-artifact add "Weekly report" --from report.md` (or `--text "…"`), `herdr-artifact update <id> --from report.md`, `herdr-artifact list`, `herdr-artifact show <id>`, `herdr-artifact rm <id>`
-
-Both act on `--folder …`, else the current git worktree, else the cwd, and print JSON with `--json`. Data lives under the store root — `$XDG_DATA_HOME/ooodnakov/herdr`, else `~/.local/share/ooodnakov/herdr` (`index.json` maps a folder to its slug; `tasks/` and `artifacts/` hold the lists; artifact versions keep their last 20 contents). On first use a command records the resolved root in `~/.config/ooodnakov/herdr-data`; the mods, which cannot read the environment, read that pointer first and fall back to `~/.local/share/ooodnakov/herdr`. `OODNAKOV_HERDR_DATA` overrides the root for a command without rewriting the pointer, so the mods keep reading the recorded location. Every write takes a lock and replaces the file atomically. A space on another machine reads that machine's lists over the herdr-core link, so the commands and mods must be linked there too (the normal `oooconf link apply` does it); the panels probe once per machine and show `herdr-task missing on <machine>` or `no store yet` instead of an empty list.
-
-A task can carry an agent: the Tasks panel finds it by its `herdr.task` label (or the address bound to the task), shows the terminal's live status and how many sub-agents it started (`parent`), and its detail rewrites the task's status with a chip per state (todo, doing, blocked, done). When the task has a terminal, the detail also has these actions:
-
-- **Panel** — `layout.select` on the stack's `oo-agent` child (the `oo-agent-head` header above a `{ "agent": "focused" }` block), then `agent.focus`: the agent's live terminal fills the panel, keyboard included, while the Tasks list is one tab away. Terminals that report no status (a plain shell) can't sit in an agent block, so Panel falls back to `terminal.peek`.
-- The header names the task whose agent is shown and its **← Tasks** chip selects the `oo-tasks` stack child again. The Tasks panel publishes the selection as shared `oo-tasks.selected` (`{ id, title }`) when a task opens or Panel runs, and clears it on back, delete, or a folder change; `oo-agent-head` only reads it.
-- **Pane** — `terminal.keep`: the agent as an ordinary pane, e.g. beside the tasks list.
-- **Stop** — `terminal.kill`.
-- **Mark done** — only while a live agent reports `done` or `idle` on a `doing` task: the chip moves it to `done` (compare-and-set rewrite with a fresh `updated`). The panel never changes a status on its own, and shows no chip when there is no live agent.
-- **Delete** — asks first, then removes the task; a running agent is left alone (Stop it separately).
-
-Below the agent block, **OUTPUT** shows the tail of that terminal's screen — `hc read <terminal>`, last 120 lines, rendered as Markdown — read once when you open the task and again with the **Read** chip. It works after the agent exits too: a finished terminal stays readable until the core drops it, which is how a finished task shows what its agent ended with. Text is read-only and never written to the task file.
-
-The spawned terminal is an ordinary herdr-core terminal, so `hc read/send/keys/wait <terminal>` work on it too. [`home/.config/ooodnakov/agents/skills/herdr-tasks/SKILL.md`](home/.config/ooodnakov/agents/skills/herdr-tasks/SKILL.md) teaches agents to delegate this way.
-
-Herdr watches `mods/` through the managed symlinks unevenly: after editing a mod in the repo, switch layouts (`Ctrl+Shift+L`) to start it fresh; restarting Herdr is not needed. `herdr-app check ~/.config/herdr-app/mods/oo-tasks` validates a mod before you rely on it.
+On Windows, `oooconf deps zsh` installs a pinned MSYS2 zsh into the Git for Windows tree so Git Bash windows run the managed shell. The bundled Meslo Nerd Font is installed per-user by setup. Details, Ghostty support, and the full dependency policy are in [the install guide](docs/install.md) and [reproducibility notes](docs/reproducibility.md).
+
+## CLI Entry Points
+
+Primary commands:
+
+- `o`: short alias wrapper for `oooconf` with matching completion behavior
+- `oooconf install`: apply managed config and optional dependency installs
+- `oooconf deps`: install optional dependencies only, with a multi-select picker when `gum` is available
+- `oooconf update`: fast-forward pull the repo, then rerun install; pass `--no-deps` to skip optional dependency installation
+- `oooconf dry-run`: preview setup actions without changing the system
+- `oooconf doctor`: validate managed links and key tools; `--format text|json` for stable, actionable health checks
+- `oooconf status --format text|json`: summarize managed state without mutation
+- `oooconf plan`: build a validated, side-effect-free operation plan in text or versioned JSON
+- `oooconf apply`: transactionally apply the validated managed-link plan
+- `oooconf rollback --last`: safely reverse the latest eligible managed-link transaction
+- `oooconf delete`: remove managed links and restore latest backups when available
+- `oooconf remove`: remove managed links without restoring backups
+- `oooconf bootstrap`: clone/update repo then run install (Unix only)
+- `oooconf lock` / `oooconf update-pins`: regenerate or refresh dependency lock artifacts
+- `oooconf link`: create or update symlinks from manifest (also runs automatically during install)
+- `oooconf completions`: regenerate completion files
+- `oooconf snapshot export|inspect|apply`: move allowlisted preferences and capabilities without exporting secrets or host paths
+
+Every remaining command family has a guide of its own:
+
+- secrets, environment, shell preferences, colors, window manager, completions, help, unattended runs, transaction semantics, and profiles: [CLI usage](docs/cli-usage.md)
+- agent policy, MCP, provider, and skill synchronization: [Agent policy management](docs/agents.md)
+- full option and platform matrix: [generated CLI reference](docs/cli-reference.md)
+
+The helper scripts use `uv` for Python version and dependency management. If `uv` is available, scripts run in the pinned Python environment (defined in `.python-version` and `pyproject.toml`); otherwise they fall back to the system `python3`.
+
+## Documentation
+
+Setup and configuration:
+
+- install behavior, optional dependency catalog, pins, fonts, Windows specifics: [docs/install.md](docs/install.md)
+- environment files, local overrides, shell integrations, OMP links, secrets sync: [docs/environment.md](docs/environment.md)
+- WezTerm workspace ergonomics and Ghostty: [docs/terminals.md](docs/terminals.md)
+- Herdr app layouts, panels, and task/artifact commands: [docs/herdr-app.md](docs/herdr-app.md)
+- agent policy, MCP servers, providers, skills: [docs/agents.md](docs/agents.md)
+
+Reference and architecture:
+
+- architecture notes: [docs/architecture.md](docs/architecture.md)
+- symlink manifest and local overrides: [docs/symlink-manifest.md](docs/symlink-manifest.md)
+- reproducibility notes and platform support matrix: [docs/reproducibility.md](docs/reproducibility.md)
+- profiles and capability bundles: [docs/profiles.md](docs/profiles.md)
+- snapshots and structured diagnostics: [docs/snapshots-and-diagnostics.md](docs/snapshots-and-diagnostics.md)
+- dependency decisions: [docs/dependency-decisions.md](docs/dependency-decisions.md)
+- dependency lock artifacts: [docs/dependency-lock.md](docs/dependency-lock.md)
+- Docker Engine install (Ubuntu, Arch): [docs/docker-install.md](docs/docker-install.md)
+- troubleshooting and recovery: [docs/troubleshooting.md](docs/troubleshooting.md)
+- Fleet automation: [docs/fleet-automation.md](docs/fleet-automation.md)
+- CI terminal smoke checks: [docs/ci-smoke-checks-terminal.md](docs/ci-smoke-checks-terminal.md)
+- CLI extension guide: [docs/cli-extension-guide.md](docs/cli-extension-guide.md)
+- agent config model research: [docs/agents-config-research.md](docs/agents-config-research.md)
+- import and comparison notes: [docs/imports/upstream-audit.md](docs/imports/upstream-audit.md)
+- third-party tree notes: [third_party/README.md](third_party/README.md)
+
+Contributing:
+
+- contributing workflow, pre-commit hooks, and validation: [docs/contributing.md](docs/contributing.md)
+- contributor instructions and coding rules: [AGENTS.md](AGENTS.md)
+
+Upstream inspirations: [`jotyGill/ezsh`](https://github.com/jotyGill/ezsh) and [`KevinSilvester/wezterm-config`](https://github.com/KevinSilvester/wezterm-config).
 
 ## CI/CD
 
-- CI runs on pushes to `main` and pull requests
-- Linux and macOS jobs run Python lint/format checks, Bash syntax validation, `shellcheck`, lockfile reproducibility checks, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
-- Windows jobs run Python lint/format checks, PowerShell parser validation, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on fresh HOME, and `lock`)
+- CI runs on pushes to `main` and pull requests: Python lint/format, Bash `shellcheck` on Linux and macOS, PowerShell parser validation on Windows, lockfile reproducibility, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on a fresh HOME, and `lock`)
 - tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases
-- Fleet automation is reproducibly locked, validated without network-backed tests,
-  and preview-only for merges by default; `oooconf fleet sync` then pulls the result
-  onto SSH hosts, dedupes aliases that reach the same machine, and reports root,
-  missing-checkout, local, and duplicate hosts as `skipped` without running git; see
-  [Fleet automation](docs/fleet-automation.md)
-- CI exercises the complete plan/apply/doctor/remove/restore/rollback lifecycle in
-  isolated temporary homes on Linux, macOS, and Windows, with network installs
-  disabled and a ratchetable Python coverage floor.
-
-## Upstream and Audit References
-
-The active config is intentionally smaller than the reference material stored alongside it.
-
-Upstream inspirations:
-
-- [`jotyGill/ezsh`](https://github.com/jotyGill/ezsh)
-- [`KevinSilvester/wezterm-config`](https://github.com/KevinSilvester/wezterm-config)
-
-Reference docs:
-
-- architecture notes: [`docs/architecture.md`](docs/architecture.md)
-- CLI extension guide: [`docs/cli-extension-guide.md`](docs/cli-extension-guide.md)
-- contributing workflow: [`docs/contributing.md`](docs/contributing.md)
-- reproducibility notes: [`docs/reproducibility.md`](docs/reproducibility.md)
-- dependency decisions: [`docs/dependency-decisions.md`](docs/dependency-decisions.md)
-- Docker Engine install (Ubuntu, Arch): [`docs/docker-install.md`](docs/docker-install.md)
-- troubleshooting: [`docs/troubleshooting.md`](docs/troubleshooting.md)
-- Fleet automation: [`docs/fleet-automation.md`](docs/fleet-automation.md)
-- import and comparison notes: [`docs/imports/upstream-audit.md`](docs/imports/upstream-audit.md)
-- third-party tree notes: [`third_party/README.md`](third_party/README.md)
-- contributor instructions and coding rules: [`AGENTS.md`](AGENTS.md)
+- the complete plan/apply/doctor/remove/restore/rollback lifecycle runs in isolated temporary homes on Linux, macOS, and Windows with network installs disabled and a ratchetable coverage floor
+- Fleet automation is locked and preview-only for merges by default; `oooconf fleet sync` then pulls the result onto SSH hosts (see [Fleet automation](docs/fleet-automation.md))
 
 ## Development
 
-If you'd like to make changes to the configuration, testing your changes against the codebase is recommended.
-You can use `pre-commit` to ensure code is formatted properly and passes linting checks before committing.
-
-Install `pre-commit` and run it locally:
+Install `pre-commit` and enable the tracked hooks before committing; they mirror the main local checks (Bash syntax, `shellcheck`, Ruff lint/format, dependency lock reproducibility, and a `gitleaks` scan of staged changes).
 
 ```bash
 uv tool install pre-commit
@@ -703,4 +218,4 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-The pre-commit hooks mirror the main local checks: Bash syntax, `shellcheck`, Ruff lint/format checks, dependency lock reproducibility, and a `gitleaks` scan of staged changes (`just secrets` scans the full git history).
+`just` wraps routine tasks (`just check`, `just unix`, `just test`, `just completions`, `just lock`); see [the contributing workflow](docs/contributing.md) for the full list, validation guidance, and CI expectations.

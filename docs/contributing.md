@@ -38,7 +38,7 @@ just completions
 just lock
 ```
 
-`just check` is cross-platform and wraps Ruff plus pytest. `just unix` deliberately remains separate because it requires Bash.
+`just check` is cross-platform and wraps Ruff plus pytest. `just unix` deliberately remains separate because it requires Bash. Run `just --list` for all recipes; the recipes wrap existing commands and CI remains authoritative.
 
 For Fleet automation changes, use its tracked lockfile and run the complete offline
 validation suite without GitHub or Jules credentials:
@@ -67,6 +67,25 @@ Python 3.12 and 3.13. The isolated lifecycle additionally runs once on each OS. 
 not describe an architecture or shell as tested unless a required CI job executes
 it; update the [support matrix](reproducibility.md#platform-support-matrix) whenever
 the workflow matrix changes.
+
+## Continuous Integration
+
+- CI runs on pushes to `main` and on pull requests.
+- Linux and macOS jobs run Python lint/format checks, Bash syntax validation, `shellcheck`, lockfile reproducibility checks, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on a fresh HOME, and `lock`).
+- Windows jobs run Python lint/format checks, PowerShell parser validation, static Neovim/WezTerm/Ghostty smoke checks, and the same `oooconf` smoke tests.
+- Tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases.
+- Fleet automation is reproducibly locked, validated without network-backed tests, and preview-only for merges by default. `oooconf fleet sync` then pulls the result onto SSH hosts, dedupes aliases that reach the same machine, and reports root, missing-checkout, local, and duplicate hosts as `skipped` without running git; see [Fleet automation](fleet-automation.md).
+- CI exercises the complete plan/apply/doctor/remove/restore/rollback lifecycle in isolated temporary homes on Linux, macOS, and Windows, with network installs disabled and a ratchetable Python coverage floor.
+
+## Pre-commit Hooks
+
+Install `pre-commit` and enable the tracked hooks before committing: they mirror the main local checks (Bash syntax, `shellcheck`, Ruff lint/format, dependency lock reproducibility, and a `gitleaks` scan of staged changes; `just secrets` scans the full git history).
+
+```bash
+uv tool install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
 
 ## Validations After Shell or Bootstrap Changes
 

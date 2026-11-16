@@ -15,7 +15,7 @@ The tracked base config is intended to be safe to clone onto a new machine witho
 - `scripts/generate/`: generated artifact and secrets rendering helpers
 - `scripts/update/`: dependency pin audit/update workflows
 - `scripts/fleet/`: TypeScript/Bun automation for multi-agent GitHub issue workflows
-- `docs/`: reproducibility notes, architecture, CLI extension guidance, and import audit records
+- `docs/`: install, usage, and environment guides plus architecture, reproducibility, and audit records
 - `fonts/meslo/`: bundled prompt and terminal fonts used by the tracked defaults
 - `third_party/`: reference-only upstream trees and local snapshots for audit or extraction work
 
