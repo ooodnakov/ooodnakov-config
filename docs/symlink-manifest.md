@@ -178,9 +178,14 @@ spaces). A task may carry an agent: `herdr-task spawn` starts it with
 mod matches that label (or the stored address) in `terminals()`, counts the
 sub-agents whose `parent` is that terminal, and its detail shows the terminal in
 the panel (`agent.focus`), keeps it as a pane (`terminal.keep`), peeks when it
-reports no status (`terminal.peek`), or stops it (`terminal.kill`). The detail also
-deletes a task after asking: a compare-and-set rewrite of the list file locally,
-`herdr-task rm` through `hc exec` on a remote machine. Those two
+reports no status (`terminal.peek`), or stops it (`terminal.kill`). The list
+header adds a task (`herdr-task add` remotely), the detail rewrites its status
+(`herdr-task set`) and deletes it after asking (`herdr-task rm`): each local
+write is a compare-and-set rewrite of the same list file, and a folder the index
+has no slug for yet is named in `index.json` first; on a remote machine the
+command does the write under its own lock through `hc exec`. The Artifacts detail
+deletes an artifact the same way (`herdr-artifact rm` remotely) and copies its
+latest version's path. Those two
 commands import `home/.config/ooodnakov/bin/_herdr_store.py` by resolving their
 own symlink, so only the commands themselves are linked, not the module.
 

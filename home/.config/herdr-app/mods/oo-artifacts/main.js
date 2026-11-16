@@ -1,13 +1,15 @@
 // Artifacts: reports and notes an agent left for you, written by `herdr-artifact`.
 // One list per folder in ~/.local/share/ooodnakov/herdr/artifacts; click one to
-// read its latest version, ← goes back. The panel only reads those files.
+// read its latest version, ← goes back. The detail copies the version's path and
+// deletes it through the command's compare-and-set (the command itself remotely).
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, theme, home, checking } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, writeTextFile, theme, home, checking } from "herdr";
 
 const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
 const ROOTS = new Map();
 const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
+const textOf = (data) => `${JSON.stringify(data, null, 2)}\n`;
 
 // Each machine keeps its own lists; a space on another machine reads them there.
 async function rootFor(on) {
@@ -36,6 +38,13 @@ function age(iso) {
   return `${Math.round(minutes / (60 * 24))}d`;
 }
 
+function chip(label, action, t, danger = false) {
+  return h_flex().h(22).px(8).rounded(6).flex_none().cursor_pointer().text_size(11).bg(t.chrome)
+    .text_color(danger ? t.blocked : t.muted)
+    .hover((s) => s.bg(t.hover).text_color(danger ? t.blocked : t.foreground))
+    .on_click(action).child(label);
+}
+
 export default class Artifacts extends View {
   init(_props, cx) {
     this.focus = null;
@@ -45,6 +54,8 @@ export default class Artifacts extends View {
     this.content = null;
     this.error = null;
     this.loading = false;
+    this.confirm = null;
+    this.copied = null;
     if (checking()) return;
     cx.timer.every(5000, (cx) => this.reload(cx));
   }
@@ -61,6 +72,8 @@ export default class Artifacts extends View {
     this.selected = null;
     this.content = null;
     this.error = null;
+    this.confirm = null;
+    this.copied = null;
     if (!at.folder) {
       this.error = "No folder";
       return;
@@ -103,6 +116,7 @@ export default class Artifacts extends View {
       const slug = index?.folders?.[this.folder];
       const text = slug ? await readTextFile(`${this.root}/artifacts/${slug}.json`, { on }) : null;
       if (this.focus !== key) return;
+      this.slug = slug ?? null;
       this.data = text ? JSON.parse(text) : { artifacts: [] };
       this.error = null;
     } catch (error) {
@@ -128,6 +142,32 @@ export default class Artifacts extends View {
     });
   }
 
+  // Delete from the panel: the same list the CLI writes, replaced only if nothing
+  // else touched it first. On a remote machine the command does it under its own lock.
+  async remove(artifact, cx) {
+    const path = `${this.root}/artifacts/${this.slug}.json`;
+    try {
+      if (this.on) {
+        const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-artifact", "rm", artifact.id, "--folder", this.folder]);
+        if (result.code !== 0) throw new Error(result.stderr || `herdr-artifact rm failed (${result.code})`);
+      } else {
+        const text = await readTextFile(path);
+        const data = text ? JSON.parse(text) : { artifacts: [] };
+        data.artifacts = (data.artifacts ?? []).filter((item) => item.id !== artifact.id);
+        await writeTextFile(path, textOf(data), text);
+      }
+      this.selected = null;
+      this.content = null;
+      this.confirm = null;
+      this.focus = null;
+      this.data = null;
+    } catch (error) {
+      this.error = String(error);
+      this.confirm = null;
+    }
+    cx.notify();
+  }
+
   rows(artifacts, t) {
     return artifacts.map((artifact) => {
       const version = this.latest(artifact);
@@ -141,16 +181,34 @@ export default class Artifacts extends View {
     });
   }
 
-  detail(artifact, t) {
+  detail(artifact, t, cx) {
+    const version = this.latest(artifact);
+    const path = version ? `${this.root}/${version.path}` : `${this.root}/artifacts/${this.slug}.json`;
     return v_flex().size_full().min_h(0)
       .child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().id("oo-artifact-back").w(20).cursor_pointer().text_color(t.muted)
-          .on_click((_event, cx) => { this.selected = null; this.content = null; cx.notify(); }).child("←"))
+          .on_click((_event, cx) => { this.selected = null; this.content = null; this.confirm = null; cx.notify(); }).child("←"))
         .child(div().flex_1().min_w(0).truncate().font_semibold().child(artifact.title ?? ""))
-        .child(div().text_size(11).text_color(t.dim).child(`v${this.latest(artifact)?.n ?? 0}`)))
+        .child(div().text_size(11).text_color(t.dim).child(`v${version?.n ?? 0}`)))
       .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar().p(12)
         .when(this.content === null, (el) => el.child(div().text_size(12).text_color(t.dim).child("Loading…")))
-        .when(this.content !== null, (el) => el.child(TextView.markdown("oo-artifact-body", this.content).selectable(true))));
+        .when(this.content !== null, (el) => el.child(TextView.markdown("oo-artifact-body", this.content).selectable(true))))
+      .child(h_flex().h(34).flex_none().px(10).gap(6).items_center().border_t(1).border_color(t.border)
+        .child(div().text_size(11).text_color(t.dim).child(`${artifact.id} · v${version?.n ?? 0} · ${age(version?.at)} ago`))
+        .when(Boolean(this.error), (row) => row.child(div().text_size(11).text_color(t.muted).child(this.error)))
+        .child(div().flex_1())
+        .when(this.confirm !== artifact.id, (row) => row
+          .child(chip(this.copied === artifact.id ? "Copied" : "Copy path", () => {
+            cx.write_to_clipboard(path);
+            this.copied = artifact.id;
+            cx.notify();
+            cx.timer.after(1500, () => { if (this.copied === artifact.id) { this.copied = null; cx.notify(); } });
+          }, t))
+          .child(chip("Delete", () => { this.confirm = artifact.id; cx.notify(); }, t)))
+        .when(this.confirm === artifact.id, (row) => row
+          .child(div().text_size(11).text_color(t.dim).child("Delete this artifact?"))
+          .child(chip("Delete", () => this.remove(artifact, cx), t, true))
+          .child(chip("Cancel", () => { this.confirm = null; cx.notify(); }, t))));
   }
 
   render(cx) {
@@ -171,6 +229,6 @@ export default class Artifacts extends View {
             .child(this.loading ? "Loading…" : "No artifacts")
             .child(div().text_size(11).child('Agents add them with herdr-artifact add "…" --from report.md'))))
           .when(Boolean(this.error), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.error)))))
-      .when(Boolean(selected), (el) => el.child(this.detail(selected, t)));
+      .when(Boolean(selected), (el) => el.child(this.detail(selected, t, cx)));
   }
 }
