@@ -44,6 +44,7 @@ from cli_ui import supports_nerd_font_output  # noqa: E402,F401
 
 MANAGED_BEGIN = "<!-- oooconf:agents-common:start -->"
 MANAGED_END = "<!-- oooconf:agents-common:end -->"
+AGENT_EXTRA_HEADING = "## Agent-specific instructions"
 RTK_BEGIN = "<!-- oooconf:rtk:start -->"
 RTK_END = "<!-- oooconf:rtk:end -->"
 DEFAULT_CONFIG_PATH = Path("home/.config/ooodnakov/agents/config.json")
@@ -69,6 +70,7 @@ class AgentConfigTarget:
     mcp_paths: list[str] | None = None
     mcp_skip: bool = False
     agents: tuple[str, ...] = ()
+    extra_text_file: str = ""
 
 
 @dataclass(frozen=True)
@@ -581,6 +583,7 @@ def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
                 mcp_paths=entry.get("mcp_paths"),
                 mcp_skip=entry.get("mcp_skip", False),
                 agents=tuple(raw_agents),
+                extra_text_file=entry.get("extra_text_file", "") or "",
             )
         )
     return targets
@@ -645,7 +648,19 @@ def detect_clis(agent_clis: list[AgentCli]) -> list[dict[str, str | bool]]:
     return rows
 
 
-def render_markdown_block(common_text: str, common_data: dict[str, Any]) -> str:
+def apply_agent_extra(managed_block: str, extra_text: str) -> str:
+    """Insert per-agent instructions directly before ``MANAGED_END``."""
+    body = extra_text.strip()
+    if not body or MANAGED_END not in managed_block:
+        return managed_block
+    marker_index = managed_block.rindex(MANAGED_END)
+    prefix = managed_block[:marker_index].rstrip("\n")
+    suffix = managed_block[marker_index:]
+    section = f"{AGENT_EXTRA_HEADING}\n\n{body}"
+    return f"{prefix}\n\n{section}\n\n{suffix}"
+
+
+def render_markdown_block(common_text: str, common_data: dict[str, Any], extra_text: str = "") -> str:
     mcp_servers: dict[str, dict[str, Any]] = common_data.get("mcp_servers", {})
     skills_entries: list[str] = sorted(common_data.get("skills", []))
 
@@ -666,7 +681,7 @@ def render_markdown_block(common_text: str, common_data: dict[str, Any]) -> str:
     lines.extend(["", "## Common Skills", "<!-- oooconf:skills:start -->"])
     lines.extend([f"- {skill}" for skill in skills_entries])
     lines.extend(["<!-- oooconf:skills:end -->", MANAGED_END, ""])
-    return "\n".join(lines)
+    return apply_agent_extra("\n".join(lines), extra_text)
 
 
 def upsert_managed_block(existing: str, managed_block: str) -> str:
@@ -750,6 +765,8 @@ def check_config_shape(target: AgentConfigTarget, content: str, parsed_obj: dict
         issues.append('expected "mcpServers" object')
     if target.name == "OpenAI Codex CLI" and not has_top_level_key("mcp_servers"):
         issues.append('expected "mcp_servers" tables')
+    if target.format == "markdown" and target.extra_text_file and AGENT_EXTRA_HEADING not in content:
+        issues.append("missing agent-specific instructions section")
     return issues
 
 
@@ -852,6 +869,7 @@ def sync_global_configs(
     managed_block: str,
     check_only: bool,
     materialize_secrets: bool = False,
+    extras: dict[str, str] | None = None,
 ) -> tuple[int, list[Path]]:
     changed: list[Path] = []
 
@@ -910,15 +928,16 @@ def sync_global_configs(
                 continue
 
         if target.format == "markdown":
+            block = apply_agent_extra(managed_block, (extras or {}).get(target.name, ""))
             try:
                 if not existing.exists():
                     changed.append(existing)
                     if not check_only:
-                        write_text_atomic(existing, managed_block)
+                        write_text_atomic(existing, block)
                     continue
 
                 current = existing.read_text(encoding="utf-8")
-                updated = upsert_managed_block(current, managed_block)
+                updated = upsert_managed_block(current, block)
                 if updated != current:
                     changed.append(existing)
                     if not check_only:
@@ -1138,6 +1157,17 @@ def cmd_sync(
         print_status_line("warn", "No agent config targets selected.")
         return 1 if agents or select else 0
 
+    extras: dict[str, str] = {}
+    extra_paths: dict[str, str] = {}
+    for target in targets:
+        if target.format != "markdown" or not target.extra_text_file:
+            continue
+        try:
+            extras[target.name] = read_text(repo_root, target.extra_text_file)
+            extra_paths[target.name] = target.extra_text_file
+        except Exception as exc:
+            print_error_line("warn", f"failed to read extra text for {target.name}: {exc}")
+
     if dry_run:
         print_status_line("hint", f"Targets: {len(targets)}")
         print_status_line("hint", "Managed block preview:")
@@ -1146,6 +1176,14 @@ def cmd_sync(
             print_status_line("hint", f"  {line}")
         if len(preview) > 20:
             print_status_line("hint", "  ...")
+        for name, relative_path in extra_paths.items():
+            print_status_line("hint", f"Extras: {name} -> {relative_path}")
+            print_status_line("hint", f"  {AGENT_EXTRA_HEADING}")
+            extra_lines = extras[name].strip().split("\n") if extras[name].strip() else []
+            for line in extra_lines[:5]:
+                print_status_line("hint", f"  {line}")
+            if len(extra_lines) > 5:
+                print_status_line("hint", "  ...")
 
     g_count, g_files = sync_global_configs(
         repo_root,
@@ -1154,6 +1192,7 @@ def cmd_sync(
         managed_block,
         read_only,
         materialize_secrets=materialize_secrets,
+        extras=extras,
     )
     print_status_line("hint", f"Global configs scanned: {len(targets)}")
     print_status_line("hint", f"Global configs needing updates: {g_count}")

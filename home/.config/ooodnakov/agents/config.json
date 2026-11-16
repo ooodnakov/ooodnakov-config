@@ -119,7 +119,8 @@
       "name": "Oh My Pi Global Instructions",
       "agents": ["omp"],
       "format": "markdown",
-      "default_paths": ["~/.omp/agent/AGENTS.md", "~/.omp/CLAUDE.md", "~/.omp/.claude/CLAUDE.md"]
+      "default_paths": ["~/.omp/agent/AGENTS.md", "~/.omp/CLAUDE.md", "~/.omp/.claude/CLAUDE.md"],
+      "extra_text_file": "home/.config/ooodnakov/agents/extras/omp.md"
     },
     {
       "name": "Command Code",

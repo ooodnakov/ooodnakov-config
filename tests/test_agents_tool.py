@@ -891,3 +891,103 @@ def test_sync_check_defaults_to_global_targets(tmp_path, monkeypatch):
     assert agents_tool.cmd_sync(repo, cfg, check_only=False, agents=["claude"]) == 0
     assert agents_tool.cmd_sync(repo, cfg, check_only=True, agents=["claude"]) == 0
     assert "oooconf shared agent policy" in (home / ".claude/CLAUDE.md").read_text(encoding="utf-8")
+
+
+def test_render_markdown_block_inserts_agent_extra_before_end_marker():
+    common_data = {"mcp_servers": {}, "skills": []}
+
+    block = agents_tool.render_markdown_block("# Policy\n", common_data, extra_text="Use tabs.\n\nBe brief.")
+
+    assert f"\n\n{agents_tool.AGENT_EXTRA_HEADING}\n\nUse tabs.\n\nBe brief.\n\n{agents_tool.MANAGED_END}\n" in block
+    assert block.index("Use tabs.") < block.index(agents_tool.MANAGED_END)
+    assert block.rstrip().endswith(agents_tool.MANAGED_END)
+
+    plain = agents_tool.render_markdown_block("# Policy\n", common_data)
+    assert agents_tool.AGENT_EXTRA_HEADING not in plain
+    assert agents_tool.render_markdown_block("# Policy\n", common_data, extra_text="   \n") == plain
+
+
+def test_sync_global_configs_applies_extras_per_target(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    (home / ".gemini").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
+    targets = [
+        agents_tool.AgentConfigTarget("Claude Global", "markdown", ["~/.claude/CLAUDE.md"]),
+        agents_tool.AgentConfigTarget("Gemini Global", "markdown", ["~/.gemini/GEMINI.md"]),
+    ]
+    common_data = {"mcp_servers": {}, "skills": []}
+    block = agents_tool.render_markdown_block("# Policy\n", common_data)
+    extras = {"Claude Global": "Claude only.\n"}
+
+    count, changed = agents_tool.sync_global_configs(tmp_path, targets, common_data, block, False, extras=extras)
+
+    assert count == 2
+    assert set(changed) == {home / ".claude/CLAUDE.md", home / ".gemini/GEMINI.md"}
+    claude_text = (home / ".claude/CLAUDE.md").read_text(encoding="utf-8")
+    gemini_text = (home / ".gemini/GEMINI.md").read_text(encoding="utf-8")
+    assert agents_tool.AGENT_EXTRA_HEADING in claude_text
+    assert "Claude only." in claude_text
+    assert agents_tool.AGENT_EXTRA_HEADING not in gemini_text
+    assert gemini_text == block
+
+    count, changed = agents_tool.sync_global_configs(tmp_path, targets, common_data, block, False, extras=extras)
+    assert count == 0
+    assert changed == []
+
+
+def _extra_text_config(repo: Path, extra_text_file: str) -> dict:
+    return {
+        "common_text_file": "common.md",
+        "common_data_file": "common.json",
+        "agent_configs": [
+            {
+                "name": "Claude Global Instructions",
+                "agents": ["claude"],
+                "format": "markdown",
+                "default_paths": ["~/.claude/CLAUDE.md"],
+                "extra_text_file": extra_text_file,
+            }
+        ],
+    }
+
+
+def test_cmd_sync_writes_extra_text_file_and_reports_missing(tmp_path, monkeypatch, capsys):
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "common.md").write_text("# Policy\n", encoding="utf-8")
+    (repo / "common.json").write_text('{"mcp_servers":{},"skills":[]}', encoding="utf-8")
+    (repo / "claude-extra.md").write_text("Use CLAUDE.md specific rules.\n", encoding="utf-8")
+    cfg = _extra_text_config(repo, "claude-extra.md")
+    target_file = home / ".claude/CLAUDE.md"
+
+    assert agents_tool.cmd_sync(repo, cfg, check_only=False) == 0
+    text = target_file.read_text(encoding="utf-8")
+    assert agents_tool.AGENT_EXTRA_HEADING in text
+    assert "Use CLAUDE.md specific rules." in text
+    assert agents_tool.cmd_sync(repo, cfg, check_only=True) == 0
+
+    target_file.unlink()
+    (repo / "claude-extra.md").unlink()
+    capsys.readouterr()
+
+    assert agents_tool.cmd_sync(repo, cfg, check_only=False) == 0
+
+    assert "failed to read extra text for Claude Global Instructions" in capsys.readouterr().err
+    text = target_file.read_text(encoding="utf-8")
+    assert "oooconf shared agent policy" in text
+    assert agents_tool.AGENT_EXTRA_HEADING not in text
+
+
+def test_check_config_shape_requires_extra_section_for_markdown():
+    target = agents_tool.AgentConfigTarget("Claude Global", "markdown", [], extra_text_file="claude-extra.md")
+
+    assert agents_tool.check_config_shape(target, "# Policy\n") == ["missing agent-specific instructions section"]
+    content = f"# Policy\n\n{agents_tool.AGENT_EXTRA_HEADING}\n\nUse tabs.\n"
+    assert agents_tool.check_config_shape(target, content) == []

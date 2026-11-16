@@ -180,6 +180,9 @@ Agent-wide shared policy and structured MCP/skills/provider data belongs in:
 - `home/.config/ooodnakov/agents/config.json`
 - `home/.config/ooodnakov/agents/common-text.md`
 - `home/.config/ooodnakov/agents/common-data.json`
+- `home/.config/ooodnakov/agents/extras/<agent>.md` (per-agent inserts, wired through `extra_text_file`)
+
+Per-agent guidance lives in `extras/` and is appended inside the shared managed block under `## Agent-specific instructions`, so one agent can get instructions the others must not see while the rest of the policy stays identical.
 
 The design rule is simple: if a value is secret, internal, machine-only, or not safe across Linux, Windows, and macOS, it belongs in a local override instead of tracked base config.
 
