@@ -178,7 +178,9 @@ spaces). A task may carry an agent: `herdr-task spawn` starts it with
 mod matches that label (or the stored address) in `terminals()`, counts the
 sub-agents whose `parent` is that terminal, and its detail shows the terminal in
 the panel (`agent.focus`), keeps it as a pane (`terminal.keep`), peeks when it
-reports no status (`terminal.peek`), or stops it (`terminal.kill`). Those two
+reports no status (`terminal.peek`), or stops it (`terminal.kill`). The detail also
+deletes a task after asking: a compare-and-set rewrite of the list file locally,
+`herdr-task rm` through `hc exec` on a remote machine. Those two
 commands import `home/.config/ooodnakov/bin/_herdr_store.py` by resolving their
 own symlink, so only the commands themselves are linked, not the module.
 

@@ -4,7 +4,7 @@
 // Click a task to read its note; ← goes back to the list.
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, TextView } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, terminals, run, theme, home, checking } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, writeTextFile, terminals, run, theme, home, checking } from "herdr";
 
 const ROOT = `${home()}/.local/share/ooodnakov/herdr`;
 const ROOTS = new Map();
@@ -42,9 +42,11 @@ function age(iso) {
   return `${Math.round(minutes / (60 * 24))}d`;
 }
 
-function chip(label, action, t) {
+function chip(label, action, t, danger = false) {
   return h_flex().h(22).px(8).rounded(6).flex_none().cursor_pointer().text_size(11).bg(t.chrome)
-    .text_color(t.muted).hover((s) => s.bg(t.hover).text_color(t.foreground)).on_click(action).child(label);
+    .text_color(danger ? t.blocked : t.muted)
+    .hover((s) => s.bg(t.hover).text_color(danger ? t.blocked : t.foreground))
+    .on_click(action).child(label);
 }
 
 // The terminal a task's agent runs in: the one carrying the task's
@@ -74,6 +76,7 @@ export default class Tasks extends View {
     this.slug = null;
     this.data = null;
     this.selected = null;
+    this.confirm = null;
     this.error = null;
     this.loading = false;
     if (checking()) return;
@@ -91,6 +94,7 @@ export default class Tasks extends View {
     this.on = at.on ?? null;
     this.data = null;
     this.selected = null;
+    this.confirm = null;
     this.error = null;
     if (!at.folder) {
       this.error = "No folder";
@@ -142,6 +146,31 @@ export default class Tasks extends View {
     }
   }
 
+  // Delete from the panel: the same file the CLI writes, replaced only if nothing
+  // else touched it first. On a remote machine the command does it under its own lock.
+  async remove(task, cx) {
+    const path = `${this.root}/tasks/${this.slug}.json`;
+    try {
+      if (this.on) {
+        const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-task", "rm", task.id, "--folder", this.folder]);
+        if (result.code !== 0) throw new Error(result.stderr || `herdr-task rm failed (${result.code})`);
+      } else {
+        const text = await readTextFile(path);
+        const data = text ? JSON.parse(text) : { tasks: [] };
+        data.tasks = (data.tasks ?? []).filter((item) => item.id !== task.id);
+        await writeTextFile(path, `${JSON.stringify(data, null, 2)}\n`, text);
+      }
+      this.selected = null;
+      this.confirm = null;
+      this.focus = null;
+      this.data = null;
+    } catch (error) {
+      this.error = String(error);
+      this.confirm = null;
+    }
+    cx.notify();
+  }
+
   rows(tasks, t, all) {
     const out = [];
     for (const status of ORDER) {
@@ -159,7 +188,7 @@ export default class Tasks extends View {
           : t[DOTS[status]];
         out.push(h_flex().id(`oo-task-${task.id}`).h(30).flex_none().mx(6).px(6).gap(8).items_center().rounded(7)
           .cursor_pointer().hover((s) => s.bg(t.hover))
-          .on_click((_event, cx) => { this.selected = task.id; cx.notify(); })
+          .on_click((_event, cx) => { this.selected = task.id; this.confirm = null; cx.notify(); })
           .child(div().w(7).h(7).flex_none().rounded(4).bg(color))
           .child(div().flex_1().min_w(0).truncate().text_color(status === "done" ? t.muted : t.foreground).child(task.title ?? ""))
           .when(Boolean(agent?.children), (el) => el.child(div().text_size(11).text_color(t.dim).child(`+${agent.children}`)))
@@ -170,12 +199,12 @@ export default class Tasks extends View {
     return out;
   }
 
-  detail(task, t, agent) {
+  detail(task, t, agent, cx) {
     const note = (task.note || "").trim();
     return v_flex().size_full().min_h(0)
       .child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().id("oo-task-back").w(20).cursor_pointer().text_color(t.muted)
-          .on_click((_event, cx) => { this.selected = null; cx.notify(); }).child("←"))
+          .on_click((_event, cx) => { this.selected = null; this.confirm = null; cx.notify(); }).child("←"))
         .child(div().flex_1().min_w(0).truncate().font_semibold().child(task.title ?? ""))
         .child(div().text_size(11).text_color(t.dim).child(task.status ?? "todo")))
       .child(v_flex().flex_1().min_h(0).overflow_y_scrollbar().p(12).gap(10)
@@ -202,7 +231,14 @@ export default class Tasks extends View {
               }, t))
               .child(chip("Pane", () => run("terminal.keep", { terminal: agent.root.address }), t))
               .child(chip("Stop", () => run("terminal.kill", { terminal: agent.root.address }), t))))))
-        .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`)));
+        .child(div().text_size(11).text_color(t.dim).child(`${task.id} · updated ${age(task.updated)} ago`))
+        .child(h_flex().gap(6).items_center()
+          .when(this.confirm !== task.id, (row) => row
+            .child(chip("Delete", () => { this.confirm = task.id; cx.notify(); }, t)))
+          .when(this.confirm === task.id, (row) => row
+            .child(div().text_size(11).text_color(t.dim).child("Delete this task?"))
+            .child(chip("Delete", () => this.remove(task, cx), t, true))
+            .child(chip("Cancel", () => { this.confirm = null; cx.notify(); }, t)))));
   }
 
   render(cx) {
@@ -227,6 +263,6 @@ export default class Tasks extends View {
           .when(Boolean(this.error), (el) => el.child(div().p(12).text_size(12).text_color(t.muted).child(this.error))))
         .child(h_flex().h(26).flex_none().px(14).gap(10).items_center().border_t(1).border_color(t.border)
           .children(counts.map((count) => div().text_size(11).text_color(t.dim).child(count)))))
-      .when(Boolean(selected), (el) => el.child(this.detail(selected, t, agentFor(selected, this.slug, all))));
+      .when(Boolean(selected), (el) => el.child(this.detail(selected, t, agentFor(selected, this.slug, all), cx)));
   }
 }
