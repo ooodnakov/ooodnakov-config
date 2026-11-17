@@ -571,7 +571,10 @@ Output:
   --format json prints only the JSON document.
 Transport:
   one persistent ssh session per host (sh -l), so every step shares a single
-  connection; a transient connection error is retried once per call.
+  connection; a transient connection error is retried once per call. Each
+  command prepends ~/.local/bin, ~/.bun/bin, ~/.cargo/bin, ~/.local/share/pnpm
+  and ~/bin to PATH, because a non-interactive login sh often lacks the user
+  bins that hold oooconf, omp, and bun.
 Safety:
   Without --resolve, a conflict keeps the stash in place and stops before update.
   With --resolve the streamed per-host status is followed by the agent, which

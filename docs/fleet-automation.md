@@ -113,6 +113,11 @@ fails the host instead of hanging the run.
 
 ### SSH transport and retries
 
+Every remote script also prepends `~/.local/bin`, `~/.bun/bin`, `~/.cargo/bin`,
+`~/.local/share/pnpm`, and `~/bin` to `PATH`, because a non-interactive login `sh`
+often lacks the user bins that hold `oooconf`, `omp`, and `bun` — without it an agent
+spawn would fail with `omp: command not found`.
+
 Each host gets a single persistent login shell:
 
 ```console

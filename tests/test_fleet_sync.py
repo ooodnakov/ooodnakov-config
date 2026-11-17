@@ -1195,3 +1195,31 @@ def test_apply_fixes_reports_spawn_streams_agent_output_and_waits(monkeypatch) -
     # The agent is waited on and its exit status is recorded before completion runs.
     assert calls[0]["process"].stdout.tell() == len(b"# Fix report\n\n- fixed a.txt\n")
     assert [result.status for result in results] == [fleet_sync.STATUS_OK] * 2
+
+
+def test_remote_scripts_get_the_user_bin_path() -> None:
+    script = fleet_sync._script("git status")
+    assert 'export PATH="$HOME/.local/bin:' in script
+    assert script.index("export PATH=") < script.index("git status")
+
+
+def test_remote_agent_missing_omp_prints_a_hint(monkeypatch) -> None:
+    transport = FakeTransport(
+        handler_for(
+            [
+                ("omp -p", _result(127, "sh: line 60: omp: command not found\n")),
+                ("status --porcelain", _result(0, f" M {CONFLICT_FILE}\n")),
+                ("pull --rebase origin", _result(1, "", "error: could not apply 1234abc\n")),
+                ("--diff-filter=U", _result(0, CONFLICT_FILE + "\n")),
+            ]
+        )
+    )
+    monkeypatch.setattr(fleet_sync.subprocess, "Popen", fake_popen([]))
+    options = fleet_sync.SyncOptions(repo_path=REMOTE_REPO, resolve=True)
+    results = fleet_sync.sync_hosts(["alpha"], options, transport, jobs=1)
+    lines: list[str] = []
+
+    fleet_sync.apply_fixes(results, options, transport, REPO_ROOT, line=lines.append)
+
+    assert any("not on that host's login PATH" in line for line in lines)
+    assert any("omp agent finished (exit 127)" in line for line in lines)

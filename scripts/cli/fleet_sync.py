@@ -271,8 +271,12 @@ class SshTransport:
             self._drop(host)
 
 
+PATH_PREAMBLE = 'export PATH="$HOME/.local/bin:$HOME/.bun/bin:$HOME/.cargo/bin:$HOME/.local/share/pnpm:$HOME/bin:$PATH"'
+
+
 def _script(*commands: str) -> str:
-    return "\n".join(("export GIT_TERMINAL_PROMPT=0", *commands))
+    """Remote preamble: no credential prompts, and the user bins a login sh often lacks."""
+    return "\n".join(("export GIT_TERMINAL_PROMPT=0", PATH_PREAMBLE, *commands))
 
 
 def _quote_repo(repo: str) -> str:
@@ -731,6 +735,11 @@ def apply_fixes(
     if tail:
         write(tail)
     write(f"{cli_ui.colorize(cli_ui.icon('info'), 'info')} omp agent finished (exit {outcome.returncode})")
+    if outcome.returncode == 127 and "not found" in (outcome.stdout + outcome.stderr):
+        write(
+            f"{cli_ui.colorize(cli_ui.icon('warn'), 'warn')} omp is not on that host's login PATH; "
+            "install it or add ~/.local/bin and ~/.bun/bin to the login shell"
+        )
     for result in pending:
         result.fix = mode
 
