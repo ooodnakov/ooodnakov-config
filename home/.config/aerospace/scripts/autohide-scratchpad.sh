@@ -1,44 +1,45 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
-APP_ID="$1"
-CURRENT_WORKSPACE=$(aerospace list-workspaces --focused)
+APP_ID="${1:?Bundle ID required}"
+SCRATCHPAD_WS="NSP"
 
-scratchpad_dot_off() {
-    sketchybar --trigger scratchpad_dot_off >/dev/null 2>&1 || true
-}
+LOCK_DIR="${TMPDIR:-/tmp}/aerospace-scratchpad-${APP_ID}.lock"
+LAST_ID_FILE="${TMPDIR:-/tmp}/aerospace-scratchpad-${APP_ID}.last"
 
-get_app_window_on_current_workspace() {
-    aerospace list-windows --workspace "$CURRENT_WORKSPACE" --format "%{window-id}|%{app-bundle-id}" |
-    awk -F'|' -v app_id="$APP_ID" '
-        $2 == app_id {
-            print $1
-            exit
-        }
-    '
-}
+# Allow native Ghostty tab focus transitions to settle.
+sleep 0.15
 
-is_app_focused() {
-    aerospace list-windows --focused --format "%{app-bundle-id}" |
-    grep -Fxq "$APP_ID"
-}
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    exit 0
+fi
+trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
 
-main() {
-    # If the scratchpad app is still focused, do nothing.
-    if is_app_focused; then
-        exit 0
-    fi
+focused_id="$(
+    aerospace list-windows --focused \
+        --format '%{window-id}|%{app-bundle-id}' |
+        awk -F'|' -v app="$APP_ID" \
+            '$2 == app { print $1; exit }'
+)"
 
-    local app_window_id
-    app_window_id=$(get_app_window_on_current_workspace)
+# Still focused on Ghostty: remember the active tab.
+if [[ -n "$focused_id" ]]; then
+    printf '%s\n' "$focused_id" > "$LAST_ID_FILE"
+    exit 0
+fi
 
-    # If scratchpad app is visible on this workspace but no longer focused,
-    # move it back to NSP and hide the dot.
-    if [[ -n "$app_window_id" ]]; then
-        aerospace move-node-to-workspace NSP --window-id "$app_window_id"
-        scratchpad_dot_off
-    fi
-}
+# Focus moved away: hide all Ghostty tabs outside NSP.
+ids="$(
+    aerospace list-windows --all \
+        --format '%{window-id}|%{app-bundle-id}|%{workspace}' |
+        awk -F'|' -v app="$APP_ID" -v scratch="$SCRATCHPAD_WS" \
+            '$2 == app && $3 != scratch { print $1 }'
+)"
 
-main
+while IFS= read -r id; do
+    [[ -n "$id" ]] || continue
+    aerospace move-node-to-workspace "$SCRATCHPAD_WS" \
+        --window-id "$id"
+done <<< "$ids"
+
+sketchybar --trigger scratchpad_dot_off >/dev/null 2>&1 || true

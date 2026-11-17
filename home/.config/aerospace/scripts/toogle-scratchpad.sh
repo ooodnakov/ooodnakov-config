@@ -1,87 +1,92 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
-APP_ID="$1"
-APP_NAME="$2"
-CURRENT_WORKSPACE=$(aerospace list-workspaces --focused)
+APP_ID="${1:?Bundle ID required}"
+APP_NAME="${2:?Application name required}"
+SCRATCHPAD_WS="NSP"
+CURRENT_WS="$(aerospace list-workspaces --focused)"
 
-scratchpad_dot_on() {
-    sketchybar --trigger scratchpad_dot_on >/dev/null 2>&1 || true
+LOCK_DIR="${TMPDIR:-/tmp}/aerospace-scratchpad-${APP_ID}.lock"
+LAST_ID_FILE="${TMPDIR:-/tmp}/aerospace-scratchpad-${APP_ID}.last"
+
+get_app_ids() {
+    aerospace list-windows --all \
+        --format '%{window-id}|%{app-bundle-id}' |
+        awk -F'|' -v app="$APP_ID" '$2 == app { print $1 }'
 }
 
-scratchpad_dot_off() {
+is_on_current_workspace() {
+    aerospace list-windows --workspace "$CURRENT_WS" \
+        --format '%{app-bundle-id}' |
+        grep -Fxq "$APP_ID"
+}
+
+focused_app_id() {
+    aerospace list-windows --focused \
+        --format '%{window-id}|%{app-bundle-id}' |
+        awk -F'|' -v app="$APP_ID" \
+            '$2 == app { print $1; exit }'
+}
+
+# Prevent concurrent toggle/autohide operations.
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    exit 0
+fi
+trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
+
+ids="$(get_app_ids)"
+launched=false
+
+if [[ -z "$ids" ]]; then
+    open -a "$APP_NAME"
+    launched=true
+
+    # Wait for the initial window to become available.
+    for ((i = 0; i < 30; i++)); do
+        sleep 0.1
+        ids="$(get_app_ids)"
+        [[ -n "$ids" ]] && break
+    done
+
+    if [[ -z "$ids" ]]; then
+        echo "No $APP_NAME windows found after launch" >&2
+        exit 1
+    fi
+fi
+
+if [[ "$launched" == false ]] && is_on_current_workspace; then
+    # Remember the currently selected tab.
+    focused_id="$(focused_app_id)"
+    if [[ -n "$focused_id" ]]; then
+        printf '%s\n' "$focused_id" > "$LAST_ID_FILE"
+    fi
+
+    # Hide ALL tabs.
+    while IFS= read -r id; do
+        [[ -n "$id" ]] || continue
+        aerospace move-node-to-workspace "$SCRATCHPAD_WS" \
+            --window-id "$id"
+    done <<< "$ids"
+
     sketchybar --trigger scratchpad_dot_off >/dev/null 2>&1 || true
-}
+else
+    # Restore the previously selected tab if it still exists.
+    preferred_id="$(cat "$LAST_ID_FILE" 2>/dev/null || true)"
+    target_id="${ids%%$'\n'*}"
 
-get_window_id() {
-    aerospace list-windows --all --format "%{window-id}|%{app-bundle-id}|%{app-name}" |
-    awk -F'|' -v app_id="$APP_ID" -v app_name="$APP_NAME" '
-        $2 == app_id || $3 == app_name {
-            print $1
-            exit
-        }
-    '
-}
-
-get_window_id_in_current_workspace() {
-    aerospace list-windows --workspace "$CURRENT_WORKSPACE" --format "%{window-id}|%{app-bundle-id}|%{app-name}" |
-    awk -F'|' -v app_id="$APP_ID" -v app_name="$APP_NAME" '
-        $2 == app_id || $3 == app_name {
-            print $1
-            exit
-        }
-    '
-}
-
-is_app_closed() {
-    ! aerospace list-windows --all --format "%{app-bundle-id}" | grep -Fxq "$APP_ID"
-}
-
-is_app_on_current_workspace() {
-    aerospace list-windows --workspace "$CURRENT_WORKSPACE" --format "%{app-bundle-id}" |
-    grep -Fxq "$APP_ID"
-}
-
-focus_app() {
-    local app_window_id
-    app_window_id=$(get_window_id)
-
-    if [[ -z "$app_window_id" ]]; then
-        return 1
+    if [[ -n "$preferred_id" ]] &&
+       grep -Fxq "$preferred_id" <<< "$ids"; then
+        target_id="$preferred_id"
     fi
 
-    aerospace move-node-to-workspace "$CURRENT_WORKSPACE" --window-id "$app_window_id"
-    aerospace focus --window-id "$app_window_id"
+    # Show ALL tabs on the current workspace.
+    while IFS= read -r id; do
+        [[ -n "$id" ]] || continue
+        aerospace move-node-to-workspace "$CURRENT_WS" \
+            --window-id "$id"
+    done <<< "$ids"
 
-    # Scratchpad is now open/visible.
-    scratchpad_dot_on
-}
+    aerospace focus --window-id "$target_id"
 
-move_app_to_scratchpad() {
-    local app_window_id
-    app_window_id=$(get_window_id_in_current_workspace)
-
-    if [[ -z "$app_window_id" ]]; then
-        return 1
-    fi
-
-    aerospace move-node-to-workspace NSP --window-id "$app_window_id"
-
-    # Scratchpad is now hidden.
-    scratchpad_dot_off
-}
-
-main() {
-    if is_app_closed; then
-        open -a "$APP_NAME"
-        sleep 0.8
-        focus_app
-    elif is_app_on_current_workspace; then
-        move_app_to_scratchpad
-    else
-        focus_app
-    fi
-}
-
-main
+    sketchybar --trigger scratchpad_dot_on >/dev/null 2>&1 || true
+fi
