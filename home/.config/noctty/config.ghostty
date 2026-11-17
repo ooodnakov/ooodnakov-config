@@ -117,6 +117,7 @@ right-click-action = context-menu
 # WezTerm: audible_bell Disabled + visual_bell on CursorColor. Noctty has no
 # cursor-colour flash; use its visible attention cue and stay silent.
 bell-features = no-system,no-audio,attention,no-title,no-border
+clipboard-paste-protection = false
 
 # --- shell ----------------------------------------------------------------
 

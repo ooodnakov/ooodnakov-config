@@ -67,7 +67,7 @@ selection-clear-on-typing = true
 # Security posture made explicit (these are Ghostty's defaults).
 clipboard-read = ask
 clipboard-write = allow
-clipboard-paste-protection = true
+clipboard-paste-protection = false
 
 # --- Shader --------------------------------------------------------------
 # Neovide-like cursor trail, vendored from sahaj-b/cursor-shaders (MIT).
