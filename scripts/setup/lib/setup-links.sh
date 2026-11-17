@@ -222,6 +222,8 @@ ensure_ssh_include() {
   local include_line
   include_line="Include ~/.config/ooodnakov/ssh/config"
 
+  normalize_managed_ssh_config
+
   run_cmd mkdir -p "$ssh_dir"
   run_cmd touch "$ssh_config"
 
@@ -426,6 +428,21 @@ install_auto_uv_env() {
   TOOL_SUMMARY+=("auto-uv-env: installed to $share_dir and linked into $bin_dir")
 }
 
+normalize_managed_ssh_config() {
+  local managed_config
+  managed_config="$HOME_DIR/.config/ooodnakov/ssh/config"
+
+  # OpenSSH refuses a group/world-writable config ("Bad owner or permissions"),
+  # which also takes git-over-ssh down. A checkout made under umask 002 leaves
+  # the tracked managed config at 0664, so normalize it before any pull or ssh.
+  [ -e "$managed_config" ] || return 0
+  run_cmd chmod 600 "$managed_config" || {
+    record_failure "Normalizing managed SSH config permissions"
+    return 1
+  }
+}
+
 update_repo() {
+  normalize_managed_ssh_config
   run_with_spinner "Pulling latest repository changes" git -C "$REPO_ROOT" pull --ff-only
 }
