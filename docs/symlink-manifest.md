@@ -81,7 +81,6 @@ OMP deliberately uses explicit child links instead of linking `~/.omp` or
 |-----|----------------|--------|
 | `omp-config` | `home/.omp/agent/config.yml` | `~/.omp/agent/config.yml` |
 | `omp-themes` | `home/.omp/agent/themes/` | `~/.omp/agent/themes` |
-| `omp-skill-impeccable` | `home/.omp/agent/skills/impeccable/` | `~/.omp/agent/skills/impeccable` |
 | `omp-vibes` | `home/.omp/agent/vibes/` | `~/.omp/agent/vibes` |
 | `omp-rtk` | `home/.omp/extensions/rtk.ts` | `~/.omp/extensions/rtk.ts` |
 | `omp-mcp` | `home/.omp/agent/mcp.json` | `~/.omp/agent/.mcp.json` |
