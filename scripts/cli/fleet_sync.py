@@ -688,6 +688,7 @@ def _complete_after_fix(result: HostResult, options: SyncOptions, transport: obj
             return _fail(result, "oooconf update --no-deps", link)
     result.linked = True
     result.conflicts = []
+    result.error = None  # the repair cleared the failure that ended the first pass
     result.status = STATUS_OK
     return result
 
