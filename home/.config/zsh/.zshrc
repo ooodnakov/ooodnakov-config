@@ -98,7 +98,7 @@ plugins=(
   python
   web-search
   you-should-use
-  ooodnakov-fzf
+  zsh-fzf-unified
   zsh-autosuggestions
   s3cmd
 )
