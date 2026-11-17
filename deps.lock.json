@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-11-15T12:11:23+00:00",
+  "generated_at_utc": "2026-11-17T19:39:59+00:00",
   "source": "scripts/optional-deps.toml",
   "dependencies": [
     {
@@ -11,11 +11,6 @@
       "name": "forgit",
       "repo": "https://github.com/wfxr/forgit.git",
       "ref": "af6c459f3f2b2a72372ea6c2044b91e45c893573"
-    },
-    {
-      "name": "fzf-tab",
-      "repo": "https://github.com/Aloxaf/fzf-tab.git",
-      "ref": "24105b15714bfec37989ed5c5b6e60f572253019"
     },
     {
       "name": "k",
@@ -63,9 +58,9 @@
       "ref": "85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5"
     },
     {
-      "name": "zsh-fzf-history-search",
-      "repo": "https://github.com/ooodnakov/zsh-fzf-history-search",
-      "ref": "4b8826cfa64d1495237c1f6506f274e4cde1e0b3"
+      "name": "zsh-fzf-unified",
+      "repo": "https://github.com/ooodnakov/zsh-fzf-unified.git",
+      "ref": "6dc5cda6c0e0945bece1cabfc44b0e9b66994e60"
     },
     {
       "name": "zsh-history-substring-search",

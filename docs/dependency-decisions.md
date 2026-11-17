@@ -20,7 +20,7 @@ Run `oooconf lock` after TOML changes to update `deps.lock.json` + docs.
 | `zsh-syntax-highlighting` | zsh-users/zsh-syntax-highlighting | Zsh plugin tracked by `.zshrc` |
 | `zsh-history-substring-search` | zsh-users/zsh-history-substring-search | Zsh plugin tracked by `.zshrc` |
 | `zsh-autocomplete` | marlonrichert/zsh-autocomplete | Zsh plugin tracked by `.zshrc` |
-| `fzf-tab` | Aloxaf/fzf-tab | Zsh plugin tracked by `.zshrc` |
+| `zsh-fzf-unified` | ooodnakov/zsh-fzf-unified | Single fzf integration (Ctrl-R history, fzf-tab, Ctrl-T) tracked by `.zshrc` |
 | `forgit` | wfxr/forgit | Zsh plugin tracked by `.zshrc` |
 | `you-should-use` | MichaelAquilina/zsh-you-should-use | Zsh plugin tracked by `.zshrc` |
 | `auto-uv-env` | ashwch/auto-uv-env | uv environment setup script |

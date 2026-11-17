@@ -2,13 +2,12 @@
 
 Generated from `scripts/optional-deps.toml` managed tool refs.
 
-Generated at (UTC): `2026-11-15T12:11:23+00:00`
+Generated at (UTC): `2026-11-17T19:39:59+00:00`
 
 | Dependency | Repository | Pinned ref |
 | --- | --- | --- |
 | `auto-uv-env` | `https://github.com/ashwch/auto-uv-env.git` | `7bc8c17b4c7e0e34f170c1c940abfd184a3c15f0` |
 | `forgit` | `https://github.com/wfxr/forgit.git` | `af6c459f3f2b2a72372ea6c2044b91e45c893573` |
-| `fzf-tab` | `https://github.com/Aloxaf/fzf-tab.git` | `24105b15714bfec37989ed5c5b6e60f572253019` |
 | `k` | `https://github.com/supercrabtree/k.git` | `e2bfbaf3b8ca92d6ffc4280211805ce4b8a8c19e` |
 | `marker` | `https://github.com/jotyGill/marker.git` | `0f1fad95e9c3268c3077bc9d2c94ec6c58ab76a5` |
 | `oh-my-zsh` | `https://github.com/ohmyzsh/ohmyzsh.git` | `60c9a7a839b790cd905d0fd4419435124fd1bdc0` |
@@ -18,7 +17,7 @@ Generated at (UTC): `2026-11-15T12:11:23+00:00`
 | `you-should-use` | `https://github.com/MichaelAquilina/zsh-you-should-use.git` | `5f3d129864ee4505043d88c3486224f1d75b692e` |
 | `zsh-autocomplete` | `https://github.com/marlonrichert/zsh-autocomplete.git` | `77706d4cf24866bf62b865d97e9ef7d8bc38bd6e` |
 | `zsh-autosuggestions` | `https://github.com/zsh-users/zsh-autosuggestions.git` | `85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5` |
-| `zsh-fzf-history-search` | `https://github.com/ooodnakov/zsh-fzf-history-search` | `4b8826cfa64d1495237c1f6506f274e4cde1e0b3` |
+| `zsh-fzf-unified` | `https://github.com/ooodnakov/zsh-fzf-unified.git` | `6dc5cda6c0e0945bece1cabfc44b0e9b66994e60` |
 | `zsh-history-substring-search` | `https://github.com/zsh-users/zsh-history-substring-search.git` | `a0bdb0d47dbaba31dba2db7af8c48a5d9c74049a` |
 | `zsh-syntax-highlighting` | `https://github.com/zsh-users/zsh-syntax-highlighting.git` | `0bfcb582e71d3abe604ce67bc0fe5a21f377507e` |
 

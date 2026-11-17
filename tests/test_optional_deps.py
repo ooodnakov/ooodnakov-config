@@ -191,7 +191,7 @@ def test_all_managed_tools_present():
         "zsh-syntax-highlighting",
         "zsh-history-substring-search",
         "zsh-autocomplete",
-        "fzf-tab",
+        "zsh-fzf-unified",
         "forgit",
         "you-should-use",
         "auto-uv-env",
