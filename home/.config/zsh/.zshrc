@@ -21,6 +21,7 @@ if [[ -f "$OOODNAKOV_CONFIG_HOME/local/env.zsh" ]]; then
   export OOODNAKOV_LOCAL_ENV_LOADED=1
 fi
 
+export FORGIT_PREVIEW_PAGER=delta
 export OOODNAKOV_FORGIT_ALIAS_MODE="${OOODNAKOV_FORGIT_ALIAS_MODE:-plain}"
 
 case "$OOODNAKOV_FORGIT_ALIAS_MODE" in
@@ -96,9 +97,8 @@ plugins=(
   docker
   python
   web-search
-  zsh-fzf-history-search
   you-should-use
-  fzf-tab
+  ooodnakov-fzf
   zsh-autosuggestions
   s3cmd
 )
@@ -495,9 +495,6 @@ case "$ooodnakov_auto_uv_env_mode" in
 esac
 unset ooodnakov_auto_uv_env_mode
 
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-bindkey '^R' fzf_history_search
-
 [[ -s "$HOME/.local/share/marker/marker.sh" ]] && source "$HOME/.local/share/marker/marker.sh"
 
 # To customize the Powerlevel10k prompt, edit ~/.config/ooodnakov/p10k.zsh.
@@ -521,30 +518,3 @@ function y() {
 	[ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd"
 	rm -f -- "$tmp"
 }
-
-# Up arrow opens the fzf recent-history picker, mirroring the PowerShell
-# profile: newest-first, deduplicated history via zsh-fzf-history-search (the
-# same widget behind Ctrl+R). Plain up-history stays as the fallback when the
-# plugin is not loaded. Oh My Zsh enables application cursor mode, so arrows
-# can send ESC O A/B instead of ESC [ A/B.
-if (( ${+widgets[fzf_history_search]} )); then
-  ZSH_FZF_HISTORY_SEARCH_REMOVE_DUPLICATES=1
-  # Cap the picker at 5 rows (~ = shrink to input size, at most 5).
-  ZSH_FZF_HISTORY_SEARCH_FZF_EXTRA_ARGS="--height=~5"
-  ooodnakov_up_widget=fzf_history_search
-else
-  ooodnakov_up_widget=up-line-or-history
-fi
-for ooodnakov_keymap in emacs viins vicmd; do
-  bindkey -M "$ooodnakov_keymap" '^[[A' "$ooodnakov_up_widget"
-  bindkey -M "$ooodnakov_keymap" '^[OA' "$ooodnakov_up_widget"
-  bindkey -M "$ooodnakov_keymap" '^[[B' down-line-or-history
-  bindkey -M "$ooodnakov_keymap" '^[OB' down-line-or-history
-  if [[ -n "${terminfo[kcuu1]}" ]]; then
-    bindkey -M "$ooodnakov_keymap" "${terminfo[kcuu1]}" "$ooodnakov_up_widget"
-  fi
-  if [[ -n "${terminfo[kcud1]}" ]]; then
-    bindkey -M "$ooodnakov_keymap" "${terminfo[kcud1]}" down-line-or-history
-  fi
-done
-unset ooodnakov_keymap ooodnakov_up_widget
