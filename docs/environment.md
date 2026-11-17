@@ -34,6 +34,8 @@ On Windows, PowerShell pipes a native command's stdout, so `isatty()` is false t
 
 SSH host aliases come from `~/.ssh/config`, every file it `Include`s (the tracked managed config is `home/.config/ooodnakov/ssh/config`), and `~/.ssh/config.local`. In both zsh and PowerShell, `z <host>` opens an SSH session when `<host>` is one of those aliases; any other argument keeps the zoxide directory jump. In zsh, `z -- <name>` forces the directory jump when an alias shadows a zoxide entry; in PowerShell, `zi` is the interactive directory picker for that case.
 
+A checkout made under umask 002 leaves the tracked managed SSH config at 0664, and OpenSSH refuses a group/world-writable config (`Bad owner or permissions`), which takes git-over-ssh down with it. `oooconf update` therefore forces that file to 0600 before its first `git pull`, and setup re-applies the mode when it ensures the `Include` line.
+
 In both shells, `y` opens Yazi and changes the shell directory to the directory Yazi exits in. On Windows this also puts Git's `usr\bin` (for `sh`/`file`) on `PATH` and sets `YAZI_FILE_ONE` to Git's `file.exe`.
 
 Tracked shared environment currently covers:
