@@ -40,17 +40,6 @@ just lock
 
 `just check` is cross-platform and wraps Ruff plus pytest. `just unix` deliberately remains separate because it requires Bash. Run `just --list` for all recipes; the recipes wrap existing commands and CI remains authoritative.
 
-For Fleet automation changes, use its tracked lockfile and run the complete offline
-validation suite without GitHub or Jules credentials:
-
-```bash
-cd scripts/fleet
-bun install --frozen-lockfile
-bun run lint
-bun run typecheck
-bun run test
-```
-
 CI runs the complete Python suite on Python 3.12 and 3.13 with a 50% coverage floor.
 The isolated lifecycle test can be run directly without touching the real home or
 performing network installation:
@@ -74,7 +63,7 @@ the workflow matrix changes.
 - Linux and macOS jobs run Python lint/format checks, Bash syntax validation, `shellcheck`, lockfile reproducibility checks, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on a fresh HOME, and `lock`).
 - Windows jobs run Python lint/format checks, PowerShell parser validation, static Neovim/WezTerm/Ghostty smoke checks, and the same `oooconf` smoke tests.
 - Tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases.
-- Fleet automation is reproducibly locked, validated without network-backed tests, and preview-only for merges by default. `oooconf fleet sync` then pulls the result onto SSH hosts, dedupes aliases that reach the same machine, and reports root, missing-checkout, local, and duplicate hosts as `skipped` without running git; see [Fleet automation](fleet-automation.md).
+- `oooconf fleet sync` pulls repository updates onto SSH hosts, dedupes aliases that reach the same machine, and reports root, missing-checkout, local, and duplicate hosts as `skipped` without running git; see [SSH fleet sync](fleet-automation.md).
 - CI exercises the complete plan/apply/doctor/remove/restore/rollback lifecycle in isolated temporary homes on Linux, macOS, and Windows, with network installs disabled and a ratchetable Python coverage floor.
 
 ## Pre-commit Hooks

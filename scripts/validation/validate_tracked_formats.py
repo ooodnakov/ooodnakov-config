@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-EXCLUDED_PREFIXES = ("third_party/", "scripts/fleet/node_modules/")
+EXCLUDED_PREFIXES = ("third_party/",)
 
 
 def tracked_files(repo_root: Path = REPO_ROOT) -> list[Path]:

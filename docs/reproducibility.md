@@ -186,7 +186,7 @@ Phase-1 setup ergonomics are implemented with:
 - `bootstrap.sh minimal` performs a sparse checkout and links the minimal shell
   profile; `bootstrap.sh --min-dep` installs only the `[minimal]` dependency set.
   Both flags are independent and combinable, so a one-command new-machine setup is:
-  `curl -fsSLo /tmp/ooodnakov-bootstrap.sh <raw bootstrap.sh URL> && bash /tmp/ooodnakov-bootstrap.sh minimal --min-dep`
+  `f=$(mktemp "${TMPDIR:-/tmp}/ooodnakov-bootstrap.XXXXXX") && curl -fsSLo "$f" https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash "$f" minimal --min-dep; rm -f "$f"`
 - `oooconf deps worktrunk` optionally installs Worktrunk via Homebrew on Linux/macOS or winget on Windows; managed shell profiles conditionally enable worktree switching (`wt` in Zsh, `git-wt` on Windows PowerShell).
 - `completions` command to regenerate completion files (autogen zsh + oooconf command completions + the PowerShell tool-completion cache, Windows hosts only)
 - `doctor --format json` and `status --format json` for a stable, secret-free
@@ -214,12 +214,6 @@ Phase-2 dependency audit ergonomics are implemented with:
 - `oooconf` command completions are generated from the canonical recursive CLI spec (`scripts/cli/oooconf-cli-spec.toml`), tracked command list, and optional dependency catalog by `scripts/cli/generate_oooconf_completions.py`. Shared completion definitions, such as dependency keys and provider regions, are referenced by name from command nodes instead of hardcoded in shell-specific generators.
 
 The root `justfile` exposes repeatable developer automation without replacing the underlying commands: `just check` runs Ruff, structured-file validation, and pytest on every platform; `just integration` runs the isolated lifecycle, `just coverage` enforces the current floor, and `just unix` adds Bash syntax and smoke checks on Unix. `just completions` and `just lock` regenerate tracked artifacts. Install the optional task runner with `oooconf deps just`.
-
-Fleet automation uses exact package versions and a tracked `scripts/fleet/bun.lock`.
-CI and both Fleet workflows install with `bun install --frozen-lockfile`, then run
-Biome lint, TypeScript checking, and offline Bun tests. Merge automation defaults to
-preview and requires an explicit manual `apply` input before any repository mutation.
-See [Fleet automation](fleet-automation.md) for its trust and eligibility model.
 
 Transactional journals and their backup files are deliberately outside the tracked
 repository and are not automatically expired. Retain a completed journal for as long

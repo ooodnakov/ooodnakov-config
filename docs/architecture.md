@@ -14,19 +14,11 @@ The tracked base config is intended to be safe to clone onto a new machine witho
 - `scripts/cli/`: recursive CLI spec, completion generation, shared UI helpers, and agent-management tooling
 - `scripts/generate/`: generated artifact and secrets rendering helpers
 - `scripts/update/`: dependency pin audit/update workflows
-- `scripts/fleet/`: TypeScript/Bun automation for multi-agent GitHub issue workflows
 - `docs/`: install, usage, and environment guides plus architecture, reproducibility, and audit records
 - `fonts/meslo/`: bundled prompt and terminal fonts used by the tracked defaults
 - `third_party/`: reference-only upstream trees and local snapshots for audit or extraction work
 
 Only `home/` is treated as managed active config. `third_party/` is kept for comparison and targeted imports, not as a live runtime tree.
-
-Fleet automation is isolated from the setup lifecycle. Its exact dependencies and
-tooling are captured by `scripts/fleet/package.json` and `scripts/fleet/bun.lock`.
-Pure policy functions enforce issue selection, prompt-data boundaries, trusted branch
-names, and merge eligibility without requiring GitHub or Jules in tests. The merge
-workflow has separate read-only preview and explicitly selected mutation jobs;
-repository branch protection remains authoritative.
 
 Cross-platform lifecycle validation copies the repository into a temporary test
 root and assigns every HOME, XDG, state, cache, and backup path beneath the test

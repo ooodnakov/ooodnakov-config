@@ -82,9 +82,11 @@ o doctor
 ### Bootstrap shortcut on Unix-like systems
 
 ```bash
-curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh
-less /tmp/ooodnakov-bootstrap.sh
-bash /tmp/ooodnakov-bootstrap.sh
+f=$(mktemp "${TMPDIR:-/tmp}/ooodnakov-bootstrap.XXXXXX")
+curl -fsSLo "$f" https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh
+less "$f"
+bash "$f"
+rm -f "$f"
 ```
 
 One command for a new machine, no prior clone: sparse checkout plus the minimal
@@ -92,7 +94,7 @@ shell profile and the minimal dependency set (`[minimal]` in
 `scripts/optional-deps.toml`).
 
 ```bash
-curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal --min-dep
+f=$(mktemp "${TMPDIR:-/tmp}/ooodnakov-bootstrap.XXXXXX") && curl -fsSLo "$f" https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash "$f" minimal --min-dep; rm -f "$f"
 ```
 
 `minimal` performs the sparse checkout and links the minimal shell profile;
@@ -188,7 +190,7 @@ Reference and architecture:
 - dependency lock artifacts: [docs/dependency-lock.md](docs/dependency-lock.md)
 - Docker Engine install (Ubuntu, Arch): [docs/docker-install.md](docs/docker-install.md)
 - troubleshooting and recovery: [docs/troubleshooting.md](docs/troubleshooting.md)
-- Fleet automation: [docs/fleet-automation.md](docs/fleet-automation.md)
+- SSH fleet sync: [docs/fleet-automation.md](docs/fleet-automation.md)
 - CI terminal smoke checks: [docs/ci-smoke-checks-terminal.md](docs/ci-smoke-checks-terminal.md)
 - CLI extension guide: [docs/cli-extension-guide.md](docs/cli-extension-guide.md)
 - agent config model research: [docs/agents-config-research.md](docs/agents-config-research.md)
@@ -207,7 +209,7 @@ Upstream inspirations: [`jotyGill/ezsh`](https://github.com/jotyGill/ezsh) and [
 - CI runs on pushes to `main` and pull requests: Python lint/format, Bash `shellcheck` on Linux and macOS, PowerShell parser validation on Windows, lockfile reproducibility, static Neovim/WezTerm/Ghostty smoke checks, and `oooconf` smoke tests (`install --dry-run`, `doctor` expected-failure on a fresh HOME, and `lock`)
 - tags matching `v*` publish `.tar.gz` and `.zip` source archives to GitHub Releases
 - the complete plan/apply/doctor/remove/restore/rollback lifecycle runs in isolated temporary homes on Linux, macOS, and Windows with network installs disabled and a ratchetable coverage floor
-- Fleet automation is locked and preview-only for merges by default; `oooconf fleet sync` then pulls the result onto SSH hosts (one persistent session per host, retried connections, and a progress line per host) (see [Fleet automation](docs/fleet-automation.md))
+- `oooconf fleet sync` pulls repository updates onto SSH hosts over one persistent session per host with retried connections and per-host progress lines (see [SSH fleet sync](docs/fleet-automation.md))
 
 ## Development
 
