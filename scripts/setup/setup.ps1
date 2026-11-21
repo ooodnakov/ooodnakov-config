@@ -154,6 +154,41 @@ try {
                     git -C $RepoRoot pull --ff-only
                 }
             }
+            $privateRootOutput = Run-Python -ScriptPath (Join-Path $RepoRoot "scripts/lib/private_overlay.py") -ScriptArgs @("--repo-root", "$RepoRoot")
+            if ($LASTEXITCODE -eq 0) {
+                $privateRoot = ($privateRootOutput -join "`n").Trim()
+                if (-not [string]::IsNullOrWhiteSpace($privateRoot) -and (Test-Path -LiteralPath (Join-Path $privateRoot ".git"))) {
+                    $hasUpstream = $false
+                    $prevErrorAction = $ErrorActionPreference
+                    $ErrorActionPreference = "Continue"
+                    try {
+                        git -C $privateRoot rev-parse --abbrev-ref --symbolic-full-name "@{u}" *> $null
+                        $hasUpstream = ($LASTEXITCODE -eq 0)
+                    } finally {
+                        $ErrorActionPreference = $prevErrorAction
+                    }
+                    if ($hasUpstream) {
+                        if ($DryRun) {
+                            Write-UiLine -Role hint -Message "[dry-run] git -C $privateRoot pull --ff-only"
+                        } else {
+                            $prevErrorAction = $ErrorActionPreference
+                            $ErrorActionPreference = "Continue"
+                            try {
+                                git -C $privateRoot pull --ff-only *> $null
+                                $pullExit = $LASTEXITCODE
+                            } finally {
+                                $ErrorActionPreference = $prevErrorAction
+                            }
+                            if ($pullExit -eq 0) {
+                                Write-UiLine -Role ok -Message "Pulling private overlay"
+                            } else {
+                                Write-UiLine -Role warn -Message "Private overlay pull failed; continuing with local copy"
+                            }
+                        }
+                    }
+                }
+            }
+            $global:LASTEXITCODE = 0
             Invoke-Install -ContinueProgress
         }
         "doctor" {

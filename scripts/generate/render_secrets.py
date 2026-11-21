@@ -25,7 +25,45 @@ DEFAULT_TEMPLATE_RELATIVE_PATH = Path("home/.config/ooodnakov/secrets/env.templa
 DEFAULT_CONFIG_RELATIVE_PATH = Path(".config/ooodnakov")
 DEFAULT_LOCAL_RELATIVE_PATH = Path(".config/ooodnakov/local")
 DEFAULT_BW_SESSION_RELATIVE_PATH = DEFAULT_LOCAL_RELATIVE_PATH / "bw-session"
-DEFAULT_BW_SERVER = os.environ.get("OOODNAKOV_BW_SERVER", "https://vaultwarden.ooodnakov.ru")
+
+
+def _xdg_data_home() -> Path:
+    if os.name == "nt":
+        return Path.home() / ".local/share"
+    xdg_data = os.environ.get("XDG_DATA_HOME", "").strip()
+    return Path(xdg_data).expanduser() if xdg_data else Path.home() / ".local/share"
+
+
+def _read_first_config_line(path: Path) -> str:
+    if not path.is_file():
+        return ""
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line and not line.startswith("#"):
+            return line
+    return ""
+
+
+def resolve_default_bw_server() -> str:
+    """Resolve Bitwarden/Vaultwarden server URL from env, data-home, local file, or fallback."""
+    env_server = os.environ.get("OOODNAKOV_BW_SERVER", "").strip()
+    if env_server:
+        return env_server
+
+    candidates = (
+        _xdg_data_home() / "ooodnakov-config" / "bw-server",
+        Path.home() / DEFAULT_LOCAL_RELATIVE_PATH / "bw-server",
+    )
+    for candidate in candidates:
+        value = _read_first_config_line(candidate)
+        if value:
+            return value
+
+    # Phase 1 compatibility fallback until private overlay is deployed across hosts.
+    return "https://vaultwarden.ooodnakov.ru"
+
+
+DEFAULT_BW_SERVER = resolve_default_bw_server()
 BWH_CLI_TIMEOUT_SECONDS = 20
 SECRETS_SUBCOMMANDS = ("sync", "doctor", "login", "unlock", "list", "status", "logout", "add", "remove")
 SECRETS_SUBCOMMAND_ALIASES = {
@@ -106,7 +144,7 @@ def parse_args() -> argparse.Namespace:
     login = subparsers.add_parser("login", help="Configure Bitwarden server and start login.")
     login.add_argument(
         "--server",
-        default=DEFAULT_BW_SERVER,
+        default=resolve_default_bw_server(),
         help="Bitwarden or Vaultwarden server URL.",
     )
     login.add_argument(
@@ -990,11 +1028,11 @@ def check_bw_status() -> list[str]:
         return problems
 
     current_server = (status.get("serverUrl") or "").rstrip("/")
-    expected_server = DEFAULT_BW_SERVER.rstrip("/")
+    expected_server = resolve_default_bw_server().rstrip("/")
     if current_server and current_server != expected_server:
         problems.append(
             f"Bitwarden CLI is pointed at {current_server}, expected {expected_server}. "
-            "Run `bw config server https://vaultwarden.ooodnakov.ru` if needed."
+            f"Run `bw config server {expected_server}` if needed."
         )
 
     status_value = status.get("status")

@@ -18,6 +18,14 @@ try:
 except ImportError:
     import tomli as tomllib  # Python < 3.11 fallback
 
+try:
+    from scripts.lib.private_overlay import resolve_private_overlay_root
+except ImportError:
+    _repo_root = Path(__file__).resolve().parent.parent
+    if str(_repo_root) not in sys.path:
+        sys.path.insert(0, str(_repo_root))
+    from scripts.lib.private_overlay import resolve_private_overlay_root
+
 
 def get_platform() -> str:
     """Detect platform from uname or sys.platform.
@@ -55,18 +63,20 @@ def get_platform() -> str:
             return "unknown"
 
 
-def expand_path_template(template: str, platform: str) -> str:
+def expand_path_template(template: str, platform: str, private_root: Path | str | None = None) -> str:
     """Expand path templates in a string.
 
     Templates:
-        {HOME}       -> os.path.expanduser("~")
-        {CONFIG_HOME} -> ~/.config (unix) or ~/.config (windows, same style)
-        {DATA_HOME}  -> ~/.local/share (unix) or ~/.local/share (windows)
-        {LOCAL_BIN}  -> ~/.local/bin (both platforms)
+        {HOME}         -> os.path.expanduser("~")
+        {CONFIG_HOME}  -> ~/.config (unix) or ~/.config (windows, same style)
+        {DATA_HOME}    -> ~/.local/share (unix) or ~/.local/share (windows)
+        {LOCAL_BIN}    -> ~/.local/bin (both platforms)
+        {PRIVATE_ROOT} -> optional private overlay repository root
 
     Args:
         template: Path template string with placeholders.
         platform: Platform string ("linux", "macos", "windows").
+        private_root: Optional private overlay root path.
 
     Returns:
         Expanded path string with all templates replaced.
@@ -102,6 +112,8 @@ def expand_path_template(template: str, platform: str) -> str:
         "{DATA_HOME}": str(data_home),
         "{LOCAL_BIN}": str(local_bin),
     }
+    if private_root:
+        replacements["{PRIVATE_ROOT}"] = str(Path(private_root))
 
     result = template
     for placeholder, value in replacements.items():
@@ -295,17 +307,26 @@ def discover_links(
     return discovered
 
 
-def merge_with_local(links: list[dict], local_toml_path: Path | str | None, platform: str | None = None) -> list[dict]:
-    """Merge explicit links with local overrides.
+def merge_with_local(
+    links: list[dict],
+    local_toml_path: Path | str | None,
+    platform: str | None = None,
+    private_root: Path | str | None = None,
+) -> list[dict]:
+    """Merge explicit links with local or private overlay overrides.
 
     Args:
         links: List of link dicts from manifest.
         local_toml_path: Path to links.local.toml, or None to skip.
-        platform: Platform to use when expanding path templates. Defaults to the
-            current platform when omitted.
+        platform: Platform to use when filtering and expanding path templates.
+            Defaults to the current platform when omitted.
+        private_root: Optional private overlay root for ``{PRIVATE_ROOT}``
+            template expansion.
 
     Returns:
-        Merged list of link dicts.
+        Merged list of link dicts. Entries whose ``only`` / ``except`` tags do
+        not match ``platform`` leave existing base links unchanged and skip new
+        additions.
     """
     if local_toml_path is None:
         return links
@@ -327,13 +348,18 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None, plat
     for link in links:
         key = link.get("key")
         if key and key in local_links:
+            override = local_links[key]
+            if not _platform_matches(override.get("only"), override.get("except"), platform):
+                # Non-matching platform override leaves the base link unchanged.
+                result.append(link)
+                existing_keys.add(key)
+                continue
             # Override source and/or target from local, preserving the manifest
             # values when a field is omitted. Local overrides support the same
             # path templates as scripts/links.toml so machine-local files can
             # remain portable across user accounts.
-            override = local_links[key]
-            source = expand_path_template(override.get("source", link["source"]), platform)
-            target = expand_path_template(override.get("target", link["target"]), platform)
+            source = expand_path_template(override.get("source", link["source"]), platform, private_root=private_root)
+            target = expand_path_template(override.get("target", link["target"]), platform, private_root=private_root)
             result.append(
                 {
                     "key": key,
@@ -350,13 +376,15 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None, plat
     # Add any new keys from local that weren't in original
     for key, override in local_links.items():
         if key not in existing_keys:
+            if not _platform_matches(override.get("only"), override.get("except"), platform):
+                continue
             # This is a new entry from local. Expand any supported path
             # templates before returning the merged manifest.
             result.append(
                 {
                     "key": key,
-                    "source": expand_path_template(override.get("source", ""), platform),
-                    "target": expand_path_template(override.get("target", ""), platform),
+                    "source": expand_path_template(override.get("source", ""), platform, private_root=private_root),
+                    "target": expand_path_template(override.get("target", ""), platform, private_root=private_root),
                 }
             )
 
@@ -364,7 +392,7 @@ def merge_with_local(links: list[dict], local_toml_path: Path | str | None, plat
 
 
 def get_all_links(repo_root: Path | str, platform: str | None = None) -> list[tuple[str, str, str | None]]:
-    """Get all links, merging manifest and local config.
+    """Get all links, merging manifest, private overlay, and local config.
 
     Args:
         repo_root: Root directory of the repository.
@@ -406,12 +434,19 @@ def get_all_links(repo_root: Path | str, platform: str | None = None) -> list[tu
         if key not in explicit_dict:
             all_links.append((link["source"], link["target"], key))
 
-    # Local overrides - use same path pattern as other ooodnakov local files
-    # i.e., repo_root/home/.config/ooodnakov/local/links.local.toml
+    private_root = resolve_private_overlay_root(repo_root)
+    merged = [{"key": key, "source": src, "target": tgt} for src, tgt, key in all_links]
+    if private_root is not None:
+        merged = merge_with_local(
+            merged,
+            private_root / "links.local.toml",
+            platform,
+            private_root=private_root,
+        )
+
+    # Machine-local overrides take highest precedence on top of private overlay.
     local_path = repo_root / "home" / ".config" / "ooodnakov" / "local" / "links.local.toml"
-    merged = merge_with_local(
-        [{"key": key, "source": src, "target": tgt} for src, tgt, key in all_links], local_path, platform
-    )
+    merged = merge_with_local(merged, local_path, platform, private_root=private_root)
 
     return [(link["source"], link["target"], link["key"]) for link in merged]
 

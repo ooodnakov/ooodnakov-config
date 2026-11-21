@@ -20,7 +20,7 @@ These are reference snapshots only. They are not the active config installed by 
 
 Local checkout:
 
-- path: `/mnt/c/Users/coolk/.config/wezterm`
+- path: `<windows-user-home>/.config/wezterm`
 - upstream remote: `https://github.com/KevinSilvester/wezterm-config.git`
 - upstream HEAD inspected: `a4356e1b48fe0cec7b50d330afd309eab66e04cc`
 - local checked-out commit: `25504d5`
@@ -62,7 +62,7 @@ Interpretation:
 
 Inspected host:
 
-- `rem@192.168.1.201`
+- `<user>@<lan-host>`
 
 Portable ideas extracted:
 
@@ -89,7 +89,7 @@ Left out on purpose:
 
 Inspected host:
 
-- `root@45.12.138.163`
+- `<user>@<remote-host>`
 
 Portable ideas extracted:
 

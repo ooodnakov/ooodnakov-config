@@ -846,6 +846,8 @@ def test_transport_command_uses_login_shell_and_keepalive_options() -> None:
     assert transport.command_for("alpha") == [
         "ssh",
         "-o",
+        "BatchMode=yes",
+        "-o",
         "ConnectTimeout=7.5",
         "-o",
         "ServerAliveInterval=15",

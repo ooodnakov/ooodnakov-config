@@ -191,7 +191,8 @@ function New-Symlink {
 
 function Add-SshInclude {
     $configPath = Join-Path $SshDir "config"
-    $includeLine = "Include ~/.config/ooodnakov/ssh/config"
+    $localInclude = "Include ~/.ssh/config.local"
+    $managedInclude = "Include ~/.config/ooodnakov/ssh/config"
 
     if (-not (Ensure-Directory -Path $SshDir)) {
         return $false
@@ -206,12 +207,47 @@ function Add-SshInclude {
     }
 
     $existing = @(Get-Content -Path $configPath -ErrorAction SilentlyContinue)
-    if ($existing -contains $includeLine) {
+    $localIdx = [array]::IndexOf($existing, $localInclude)
+    $managedIdx = [array]::IndexOf($existing, $managedInclude)
+    if ($localIdx -ge 0 -and $managedIdx -ge 0 -and $localIdx -lt $managedIdx) {
         return $true
     }
 
     return (Invoke-Action -Description "Ensure SSH include in $configPath" -Action {
-        @($includeLine, "") + $existing | Set-Content -Path $configPath
+        $updated = New-Object System.Collections.Generic.List[string]
+        if ($managedIdx -ge 0) {
+            # Remove misplaced/duplicate local include lines and insert right above managed include.
+            $inserted = $false
+            foreach ($line in $existing) {
+                if ($line -ceq $localInclude) {
+                    continue
+                }
+                if (-not $inserted -and $line -ceq $managedInclude) {
+                    $updated.Add($localInclude)
+                    $inserted = $true
+                }
+                $updated.Add($line)
+            }
+        } elseif ($localIdx -ge 0) {
+            $inserted = $false
+            foreach ($line in $existing) {
+                $updated.Add($line)
+                if (-not $inserted -and $line -ceq $localInclude) {
+                    $updated.Add($managedInclude)
+                    $inserted = $true
+                }
+            }
+        } else {
+            $updated.Add($localInclude)
+            $updated.Add($managedInclude)
+            if ($existing.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($existing[0])) {
+                $updated.Add("")
+            }
+            foreach ($line in $existing) {
+                $updated.Add($line)
+            }
+        }
+        Set-Content -Path $configPath -Value $updated.ToArray()
     })
 }
 

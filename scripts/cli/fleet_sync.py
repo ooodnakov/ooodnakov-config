@@ -218,6 +218,8 @@ class SshTransport:
         return [
             self.ssh,
             "-o",
+            "BatchMode=yes",
+            "-o",
             f"ConnectTimeout={self.connect_timeout:g}",
             "-o",
             "ServerAliveInterval=15",

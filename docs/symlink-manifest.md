@@ -304,7 +304,35 @@ target = "{CONFIG_HOME}/my-secret"
 target = "/home/alice/.local/share/custom-bin/o"
 ```
 
-Entries in `links.local.toml` take precedence over `links.toml` for matching keys. New `[links.<key>]` tables are also merged in. Platform filters (`only` / `except`) are currently supported in `scripts/links.toml`, not in local overrides.
+Entries in `links.local.toml` take precedence over `links.toml` for matching keys. New `[links.<key>]` tables are also merged in, and optional `only` / `except` platform tags are supported.
+
+## Private overlay repository
+
+An optional private overlay repository can supply personal hostnames, SSH configs, domains, or overrides without storing them in this public repository.
+
+### Discovery order
+
+`scripts/lib/private_overlay.py` (`resolve_private_overlay_root`) checks in order:
+
+1. `OOOCONF_PRIVATE_DIR` environment variable (`""` or `none`, case-insensitive, explicitly disables overlay discovery).
+2. Pointer files (first non-empty, non-`#`-comment line, with `~` expanded and relative paths resolved against the repo root):
+   - `home/.config/ooodnakov/local/private-repo`
+   - `~/.config/ooodnakov/local/private-repo`
+3. Sibling directory `../ooodnakov-config-private` next to the public repository root.
+
+### Overlay manifest and targets
+
+When resolved, `<private_root>/links.local.toml` is merged before `home/.config/ooodnakov/local/links.local.toml`, so precedence is:
+
+```text
+scripts/links.toml + auto-discovery < <private_root>/links.local.toml < home/.config/ooodnakov/local/links.local.toml
+```
+
+Entries in `links.local.toml` can use `{PRIVATE_ROOT}` in `source` or `target` templates alongside `{HOME}`, `{CONFIG_HOME}`, `{DATA_HOME}`, and `{LOCAL_BIN}`.
+
+Overlay targets must live outside the public repository tree (for example `{HOME}/.ssh/config.local`, `{DATA_HOME}/ooodnakov-config/...`, or `{HOME}/.omp/agent/config.yml`). Never target `{CONFIG_HOME}/ooodnakov/local/...`: `home/.config/ooodnakov` is itself symlinked into `{CONFIG_HOME}/ooodnakov`, so targeting inside it would write into the public checkout and is rejected by `scripts/cli/operation_plan.py`.
+
+During `oooconf update`, if a private overlay git checkout has a configured upstream tracking branch, setup pulls it with `--ff-only` (warning only if unreachable).
 
 ## How to Add a New Config Folder
 

@@ -219,8 +219,10 @@ ensure_ssh_include() {
   ssh_dir="$HOME_DIR/.ssh"
   local ssh_config
   ssh_config="$ssh_dir/config"
-  local include_line
-  include_line="Include ~/.config/ooodnakov/ssh/config"
+  local local_include
+  local_include="Include ~/.ssh/config.local"
+  local managed_include
+  managed_include="Include ~/.config/ooodnakov/ssh/config"
 
   normalize_managed_ssh_config
 
@@ -232,10 +234,45 @@ ensure_ssh_include() {
     return 0
   fi
 
-  if ! grep -Fqx "$include_line" "$ssh_config"; then
-    if [ "$DRY_RUN" -eq 1 ]; then
-      ui_line hint "[dry-run] prepend SSH include in $(ui_path "$ssh_config" hint)"
-    elif printf "%s\n\n" "$include_line" | cat - "$ssh_config" >"$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
+  local local_line managed_line
+  local_line="$(grep -Fn -m 1 -x "$local_include" "$ssh_config" | cut -d: -f1 || true)"
+  managed_line="$(grep -Fn -m 1 -x "$managed_include" "$ssh_config" | cut -d: -f1 || true)"
+
+  if [ -n "$local_line" ] && [ -n "$managed_line" ] && [ "$local_line" -lt "$managed_line" ]; then
+    return 0
+  fi
+
+  if [ -n "$managed_line" ]; then
+    if awk -v local_inc="$local_include" -v managed_inc="$managed_include" '
+      BEGIN { inserted = 0 }
+      $0 == local_inc { next }
+      !inserted && $0 == managed_inc { print local_inc; inserted = 1 }
+      { print }
+    ' "$ssh_config" >"$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
+      :
+    else
+      record_failure "Updating SSH include config"
+      return 1
+    fi
+  elif [ -n "$local_line" ]; then
+    if awk -v local_inc="$local_include" -v managed_inc="$managed_include" '
+      BEGIN { inserted = 0 }
+      { print }
+      !inserted && $0 == local_inc { print managed_inc; inserted = 1 }
+    ' "$ssh_config" >"$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
+      :
+    else
+      record_failure "Updating SSH include config"
+      return 1
+    fi
+  else
+    if {
+      printf "%s\n%s\n" "$local_include" "$managed_include"
+      if [ -s "$ssh_config" ]; then
+        printf "\n"
+        cat "$ssh_config"
+      fi
+    } >"$ssh_config.tmp" && mv "$ssh_config.tmp" "$ssh_config"; then
       :
     else
       record_failure "Updating SSH include config"
@@ -423,21 +460,47 @@ install_auto_uv_env() {
   TOOL_SUMMARY+=("auto-uv-env: installed to $share_dir and linked into $bin_dir")
 }
 
-normalize_managed_ssh_config() {
-  local managed_config
-  managed_config="$HOME_DIR/.config/ooodnakov/ssh/config"
+resolve_private_overlay_root() {
+  local resolved
+  resolved="$(run_python "$REPO_ROOT/scripts/lib/private_overlay.py" --repo-root "$REPO_ROOT" 2>/dev/null || true)"
+  printf '%s\n' "${resolved%$'\r'}"
+}
 
-  # OpenSSH refuses a group/world-writable config ("Bad owner or permissions"),
-  # which also takes git-over-ssh down. A checkout made under umask 002 leaves
-  # the tracked managed config at 0664, so normalize it before any pull or ssh.
-  [ -e "$managed_config" ] || return 0
-  run_cmd chmod 600 "$managed_config" || {
-    record_failure "Normalizing managed SSH config permissions"
-    return 1
-  }
+normalize_managed_ssh_config() {
+  local private_root
+  private_root="$(resolve_private_overlay_root)"
+  local -a candidates=(
+    "$HOME_DIR/.config/ooodnakov/ssh/config"
+    "$HOME_DIR/.ssh/config.local"
+  )
+  if [ -n "$private_root" ]; then
+    candidates+=("$private_root/ssh/config")
+  fi
+
+  local path
+  for path in "${candidates[@]}"; do
+    # OpenSSH refuses a group/world-writable config ("Bad owner or permissions"),
+    # which also takes git-over-ssh down. A checkout made under umask 002 leaves
+    # tracked configs at 0664, so normalize them before any pull or ssh.
+    [ -e "$path" ] || continue
+    run_cmd chmod 600 "$path" || {
+      record_failure "Normalizing managed SSH config permissions"
+      return 1
+    }
+  done
 }
 
 update_repo() {
   normalize_managed_ssh_config
   run_with_spinner "Pulling latest repository changes" git -C "$REPO_ROOT" pull --ff-only
+
+  local private_root
+  private_root="$(resolve_private_overlay_root)"
+  if [ -n "$private_root" ] && [ -d "$private_root/.git" ] &&
+    git -C "$private_root" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    OOODNAKOV_RECORD_SPINNER_FAILURES=0 run_with_spinner \
+      "Pulling private overlay changes" \
+      git -C "$private_root" pull --ff-only ||
+      ui_line warn "Private overlay pull failed; continuing with local copy"
+  fi
 }
