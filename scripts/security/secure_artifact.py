@@ -19,10 +19,28 @@ from pathlib import Path, PurePosixPath
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CATALOG = REPO_ROOT / "scripts/optional-deps.toml"
+MAX_DOWNLOAD_BYTES = 512 * 1024 * 1024
+MAX_DECOMPRESSED_BYTES = 1024 * 1024 * 1024
 
 
 class IntegrityError(RuntimeError):
     """Raised when an artifact cannot be trusted or safely extracted."""
+
+
+class _HttpsOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not newurl.startswith("https://"):
+            raise IntegrityError("redirect to non-HTTPS URL is not allowed")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _copy_limited(source, target, limit: int, limit_message: str) -> None:
+    total = 0
+    while chunk := source.read(1024 * 1024):
+        total += len(chunk)
+        if total > limit:
+            raise IntegrityError(limit_message)
+        target.write(chunk)
 
 
 def sha256(path: Path) -> str:
@@ -123,7 +141,13 @@ def extract_tar_zst(archive: Path, destination: Path) -> None:
     intermediate = Path(intermediate_name)
     try:
         with archive.open("rb") as source, intermediate.open("wb") as target:
-            zstandard.ZstdDecompressor().copy_stream(source, target)
+            with zstandard.ZstdDecompressor().stream_reader(source) as reader:
+                _copy_limited(
+                    reader,
+                    target,
+                    MAX_DECOMPRESSED_BYTES,
+                    "decompressed archive exceeds maximum allowed size",
+                )
         _extract_tar_materializing_links(intermediate, destination)
     finally:
         intermediate.unlink(missing_ok=True)
@@ -211,8 +235,14 @@ def download(url: str, output: Path, expected: str) -> None:
     os.close(fd)
     temporary = Path(temporary_name)
     try:
-        with urllib.request.urlopen(url, timeout=60) as response, temporary.open("wb") as stream:  # nosec B310
-            shutil.copyfileobj(response, stream)
+        opener = urllib.request.build_opener(_HttpsOnlyRedirectHandler)
+        with opener.open(url, timeout=60) as response, temporary.open("wb") as stream:  # nosec B310
+            _copy_limited(
+                response,
+                stream,
+                MAX_DOWNLOAD_BYTES,
+                "download exceeds maximum allowed size",
+            )
         verify(temporary, expected)
         os.replace(temporary, output)
     finally:

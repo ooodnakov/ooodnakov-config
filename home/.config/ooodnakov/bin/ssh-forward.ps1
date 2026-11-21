@@ -27,15 +27,36 @@ function Get-SshForwardSocketPath {
         [switch]$Reverse
     )
 
+    $safeHost = $Hostname -replace '[^A-Za-z0-9._-]', '_'
+    $safeHost = $safeHost -replace '\.\.+', '_'
+    if ([string]::IsNullOrWhiteSpace($safeHost) -or $safeHost -eq '.') {
+        $safeHost = '_'
+    }
+
     $tag = if ($Reverse) { 'ssh-fwd-r' } else { 'ssh-fwd' }
-    return Join-Path $script:SshForwardStateDir ($tag + '-' + $Hostname + '-' + $Port + '.json')
+    return Join-Path $script:SshForwardStateDir ($tag + '-' + $safeHost + '-' + $Port + '.json')
 }
 
 function Test-SshForwardTunnelAlive {
-    param([Parameter(Mandatory = $true)][int]$ProcessId)
+    param(
+        [Parameter(Mandatory = $true)][int]$ProcessId,
+        [string]$StartTimeUtc = ''
+    )
 
     $proc = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
-    return [bool]$proc
+    if (-not $proc) { return $false }
+    if ($proc.ProcessName -ine 'ssh' -and $proc.ProcessName -ine 'ssh.exe') { return $false }
+
+    if (-not [string]::IsNullOrWhiteSpace($StartTimeUtc)) {
+        try {
+            $actualStart = $proc.StartTime.ToUniversalTime().ToString('o')
+            if ($actualStart -ne $StartTimeUtc) { return $false }
+        } catch {
+            return $false
+        }
+    }
+
+    return $true
 }
 
 function Write-SshForwardState {
@@ -54,12 +75,13 @@ function Read-SshForwardState {
     try {
         $obj = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
         return @{
-            Host        = [string]$obj.Host
-            LocalPort   = [int]$obj.LocalPort
-            RemotePort  = [int]$obj.RemotePort
-            Reverse     = [bool]$obj.Reverse
-            ProcessId   = [int]$obj.ProcessId
-            User        = if ($obj.PSObject.Properties['User']) { [string]$obj.User } else { '' }
+            Host         = [string]$obj.Host
+            LocalPort    = [int]$obj.LocalPort
+            RemotePort   = [int]$obj.RemotePort
+            Reverse      = [bool]$obj.Reverse
+            ProcessId    = [int]$obj.ProcessId
+            User         = if ($obj.PSObject.Properties['User']) { [string]$obj.User } else { '' }
+            StartTimeUtc = if ($obj.PSObject.Properties['StartTimeUtc']) { [string]$obj.StartTimeUtc } else { '' }
         }
     } catch {
         return $null
@@ -73,7 +95,10 @@ function Remove-SshForwardState {
 }
 
 function Stop-SshForwardTunnel {
-    param([Parameter(Mandatory = $true)][string]$StatePath)
+    param(
+        [Parameter(Mandatory = $true)][string]$StatePath,
+        [string]$StartTimeUtc = ''
+    )
 
     $state = Read-SshForwardState -Path $StatePath
     if (-not $state) {
@@ -81,10 +106,15 @@ function Stop-SshForwardTunnel {
         return $true
     }
 
+    $expectedStartTime = if (-not [string]::IsNullOrWhiteSpace($StartTimeUtc)) {
+        $StartTimeUtc
+    } else {
+        $state.StartTimeUtc
+    }
+
     $alive = $false
     try {
-        $proc = Get-Process -Id $state.ProcessId -ErrorAction SilentlyContinue
-        if ($proc) {
+        if (Test-SshForwardTunnelAlive -ProcessId $state.ProcessId -StartTimeUtc $expectedStartTime) {
             Stop-Process -Id $state.ProcessId -Force -ErrorAction SilentlyContinue
             $alive = $true
         }
@@ -284,6 +314,10 @@ function ssh-forward {
         if ($null -eq $remotePort) { return 1 }
     } else {
         # Direct invocation path.
+        if ($hostname -eq '.' -or $hostname.StartsWith('-') -or $hostname -match '[/\\]|\.\.|[\s\x00-\x1f]') {
+            Write-Error "ssh-forward: invalid host '$hostname'."
+            return 1
+        }
         if ([string]::IsNullOrWhiteSpace($port1)) {
             Write-Error 'ssh-forward: missing port.'
             return 1
@@ -307,6 +341,15 @@ function ssh-forward {
         $userAtHost = $hostname
     }
 
+    if ([string]::IsNullOrWhiteSpace($hostname) -or $hostname -eq '.' -or $hostname.StartsWith('-') -or $hostname -match '[/\\]|\.\.|[\s\x00-\x1f]') {
+        Write-Error "ssh-forward: invalid host '$hostname'."
+        return 1
+    }
+    if ([string]::IsNullOrWhiteSpace($sshHostArg) -or $sshHostArg -eq '.' -or $sshHostArg.StartsWith('-') -or $sshHostArg -match '[/\\]|\.\.|[\s\x00-\x1f]') {
+        Write-Error "ssh-forward: invalid SSH target '$sshHostArg'."
+        return 1
+    }
+
     if (-not (Test-Command 'ssh')) {
         Write-Error 'ssh: command not found. Install OpenSSH for Windows or add it to PATH.'
         return 1
@@ -315,7 +358,7 @@ function ssh-forward {
     $statePath = Get-SshForwardSocketPath -Hostname $hostname -Port $localPort -Reverse:$Reverse
     if (Test-Path -LiteralPath $statePath) {
         $existing = Read-SshForwardState -Path $statePath
-        if ($existing -and (Test-SshForwardTunnelAlive -ProcessId $existing.ProcessId)) {
+        if ($existing -and (Test-SshForwardTunnelAlive -ProcessId $existing.ProcessId -StartTimeUtc $existing.StartTimeUtc)) {
             Write-Error "ssh-forward: tunnel for ${hostname}:${localPort} is already running (PID $($existing.ProcessId)). Use ssh-forward-ls to manage it."
             return 1
         }
@@ -325,11 +368,11 @@ function ssh-forward {
     if ($Reverse) {
         Write-Host "Forwarding remote port ${remotePort} to local http://localhost:${localPort} on ${userAtHost}..."
         $forwardSpec = "${remotePort}:localhost:${localPort}"
-        $sshArgs = @('-N', '-R', $forwardSpec, $sshHostArg)
+        $sshArgs = @('-N', '-R', $forwardSpec, '--', $sshHostArg)
     } else {
         Write-Host "Forwarding local localhost:${localPort} to remote port ${remotePort} on ${userAtHost}..."
         $forwardSpec = "${localPort}:localhost:${remotePort}"
-        $sshArgs = @('-N', '-L', $forwardSpec, $sshHostArg)
+        $sshArgs = @('-N', '-L', $forwardSpec, '--', $sshHostArg)
     }
 
     try {
@@ -344,19 +387,23 @@ function ssh-forward {
         return 1
     }
 
+    $startTimeUtc = ''
+    try { $startTimeUtc = $proc.StartTime.ToUniversalTime().ToString('o') } catch { $startTimeUtc = '' }
+
     Start-Sleep -Milliseconds 250
-    if (-not (Test-SshForwardTunnelAlive -ProcessId $proc.Id)) {
+    if (-not (Test-SshForwardTunnelAlive -ProcessId $proc.Id -StartTimeUtc $startTimeUtc)) {
         Write-Host '✘ Failed to establish tunnel (ssh exited immediately).'
         return 1
     }
 
     $state = @{
-        Host        = $hostname
-        LocalPort   = $localPort
-        RemotePort  = $remotePort
-        Reverse     = [bool]$Reverse
-        ProcessId   = $proc.Id
-        User        = $sshUserResolved
+        Host         = $hostname
+        LocalPort    = $localPort
+        RemotePort   = $remotePort
+        Reverse      = [bool]$Reverse
+        ProcessId    = $proc.Id
+        User         = $sshUserResolved
+        StartTimeUtc = $startTimeUtc
     }
     Write-SshForwardState -Path $statePath -State $state
     Set-SshForwardRecentPort -Hostname $hostname -Port $localPort
@@ -384,18 +431,19 @@ function ssh-forward-ls {
             Remove-SshForwardState -Path $file.FullName
             continue
         }
-        if (-not (Test-SshForwardTunnelAlive -ProcessId $state.ProcessId)) {
+        if (-not (Test-SshForwardTunnelAlive -ProcessId $state.ProcessId -StartTimeUtc $state.StartTimeUtc)) {
             Remove-SshForwardState -Path $file.FullName
             continue
         }
         $live += [pscustomobject]@{
-            Path       = $file.FullName
-            Host       = $state.Host
-            LocalPort  = $state.LocalPort
-            RemotePort = $state.RemotePort
-            Reverse    = $state.Reverse
-            ProcessId  = $state.ProcessId
-            User       = $state.User
+            Path         = $file.FullName
+            Host         = $state.Host
+            LocalPort    = $state.LocalPort
+            RemotePort   = $state.RemotePort
+            Reverse      = $state.Reverse
+            ProcessId    = $state.ProcessId
+            User         = $state.User
+            StartTimeUtc = $state.StartTimeUtc
         }
     }
 
@@ -466,7 +514,8 @@ function ssh-forward-ls {
     $closed = 0
     foreach ($p in ($chosenPaths | Select-Object -Unique)) {
         $state = Read-SshForwardState -Path $p
-        [void](Stop-SshForwardTunnel -StatePath $p)
+        $expectedStart = if ($state) { $state.StartTimeUtc } else { '' }
+        [void](Stop-SshForwardTunnel -StatePath $p -StartTimeUtc $expectedStart)
         if ($state) { Write-Host "Closed tunnel for $($state.Host)." }
         $closed++
     }

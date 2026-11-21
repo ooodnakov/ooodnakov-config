@@ -49,9 +49,9 @@ cheat() {
 
 ipgeo() {
   if [ -n "$1" ]; then
-    curl "http://api.db-ip.com/v2/free/$1"
+    curl "https://api.db-ip.com/v2/free/$1"
   else
-    curl "http://api.db-ip.com/v2/free/$(myip)"
+    curl "https://api.db-ip.com/v2/free/$(myip)"
   fi
 }
 
@@ -123,6 +123,18 @@ _oooconf_z_wrap_zoxide() {
 # Advanced SSH Port Forwarding
 # Usage: ssh-forward [-r] [<host>] [<local-port>] [<remote-port>]
 #        ssh-forward-ls [-a|--all]
+_ssh_forward_socket_dir() {
+    local base="${XDG_RUNTIME_DIR:-$HOME/.ssh/control}"
+    [[ "$base" != "/" ]] && base="${base%/}"
+    local dir="$base/ooodnakov-ssh-fwd"
+    if [[ "${OSTYPE:-}" != (msys|cygwin)* ]] && command -v install >/dev/null 2>&1; then
+        command install -d -m 700 "$dir" || return 1
+    else
+        command mkdir -p "$dir" && command chmod 700 "$dir" || return 1
+    fi
+    print -r -- "$dir"
+}
+
 ssh-forward() {
     local reverse=0
     if [[ "$1" == "-r" ]]; then
@@ -170,20 +182,35 @@ ssh-forward() {
         port2=$remote_port
     fi
 
+    if [[ -z "$host" || "$host" == "." || "$host" == -* || "$host" == */* || "$host" == *\\* || "$host" == *..* || "$host" == *[^]A-Za-z0-9._@:%[-]* ]]; then
+        echo "ssh-forward: invalid host '$host'." >&2
+        return 1
+    fi
+
     if [[ -z "$port1" ]]; then
         echo "ssh-forward: missing port." >&2
         return 1
     fi
 
+    local p
+    for p in "$port1" "$port2"; do
+        if [[ -z "$p" || "$p" == *[^0-9]* || "$p" == 0* || ${#p} -gt 5 ]] || (( p < 1 || p > 65535 )); then
+            echo "ssh-forward: invalid port '$p'. Use an integer between 1 and 65535." >&2
+            return 1
+        fi
+    done
+
     # Generate a unique control socket path for this specific connection
-    local socket="/tmp/ssh-fwd-${host}-${port1}.sock"
+    local sock_dir
+    sock_dir=$(_ssh_forward_socket_dir) || return 1
+    local socket="$sock_dir/ssh-fwd-${host}-${port1}.sock"
 
     if [[ $reverse -eq 1 ]]; then
         echo "Forwarding remote Port ${port1} to local http://localhost:${port2} on ${host}..."
-        ssh -f -N -M -S "$socket" -R "${port1}:localhost:${port2}" "$host"
+        ssh -f -N -M -S "$socket" -R "${port1}:localhost:${port2}" -- "$host"
     else
         echo "Forwarding local localhost:${port1} to remote Port ${port2} on ${host}..."
-        ssh -f -N -M -S "$socket" -L "${port1}:localhost:${port2}" "$host"
+        ssh -f -N -M -S "$socket" -L "${port1}:localhost:${port2}" -- "$host"
     fi
 
     if [ $? -eq 0 ]; then
@@ -199,13 +226,15 @@ _ssh_forward_recent_port() {
     local host="$1"
     local cache="${XDG_CACHE_HOME:-$HOME/.cache}/ooodnakov/ssh-forward-recent.json"
     [[ -f $cache ]] || return 1
-    command python3 -c "
+    command python3 - "$cache" "$host" <<'PY' 2>/dev/null
 import json, sys
-data = json.load(open(r'''$cache'''))
-v = data.get(r'''$host''')
-if v is not None:
-    print(v)
-" 2>/dev/null
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    data = json.load(f)
+if isinstance(data, dict):
+    v = data.get(sys.argv[2])
+    if v is not None:
+        print(v)
+PY
 }
 
 _ssh_forward_save_recent_port() {
@@ -232,11 +261,15 @@ PY
 # List and kill active tunnels created by ssh-forward
 ssh-forward-ls() {
     local close_all=0
+    local sock_dir s details host port selected line answer sock_host
+    local -a sockets lines
+
     if [[ "${1:-}" == "-a" || "${1:-}" == "--all" ]]; then
         close_all=1
     fi
 
-    local sockets=(/tmp/ssh-fwd-*.sock(N))
+    sock_dir=$(_ssh_forward_socket_dir) || return 1
+    sockets=("$sock_dir"/ssh-fwd-*.sock(N))
 
     if [[ ${#sockets} -eq 0 ]]; then
         echo "No active ssh-forward tunnels found."
@@ -244,8 +277,8 @@ ssh-forward-ls() {
     fi
 
     if [[ $close_all -eq 1 ]]; then
-        for s in $sockets; do
-            ssh -S "$s" -O exit dummy-host 2>/dev/null
+        for s in "${sockets[@]}"; do
+            ssh -S "$s" -O exit -- dummy-host 2>/dev/null
             rm -f -- "$s"
         done
         echo "All tunnels closed."
@@ -253,22 +286,19 @@ ssh-forward-ls() {
     fi
 
     if command -v fzf >/dev/null 2>&1; then
-        local lines=()
-        for s in $sockets; do
-            local filename=$(basename "$s")
-            local details=${filename#ssh-fwd-}
-            details=${details%.sock}
-            local host=${details%-*}
-            local port=${details#*-}
+        lines=()
+        for s in "${sockets[@]}"; do
+            details=${${${s:t}#ssh-fwd-}%.sock}
+            host=${details%-*}
+            port=${details##*-}
             lines+=("L  ${host}  ${port}->${port}  ${s}")
         done
-        local selected
         selected=$(printf '%s\n' "${lines[@]}" | fzf --multi --prompt 'tunnel > ' --height 40% --reverse --ansi --header 'TAB to mark, ENTER to close')
         if [[ -n $selected ]]; then
             while IFS= read -r line; do
                 [[ -z $line ]] && continue
-                local s=${line##*  }
-                ssh -S "$s" -O exit dummy-host 2>/dev/null
+                s=${line##*  }
+                ssh -S "$s" -O exit -- dummy-host 2>/dev/null
                 rm -f -- "$s"
                 echo "Closed tunnel."
             done <<< "$selected"
@@ -278,30 +308,32 @@ ssh-forward-ls() {
 
     echo "Active Tunnels:"
     echo "----------------------------------------"
-    for s in $sockets; do
-        local filename=$(basename "$s")
-        local details=${filename#ssh-fwd-}
-        details=${details%.sock}
-        local host=${details%-*}
-        local port=${details#*-}
+    for s in "${sockets[@]}"; do
+        details=${${${s:t}#ssh-fwd-}%.sock}
+        host=${details%-*}
+        port=${details##*-}
 
         echo "Host: $host | Primary Port: $port"
     done
     echo "----------------------------------------"
     echo -n "Would you like to stop a tunnel? (Enter host name or 'all' / 'no'): "
-    read answer
+    read -r answer
 
     if [[ "$answer" == "all" ]]; then
-        for s in $sockets; do
-            ssh -S "$s" -O exit dummy-host 2>/dev/null
+        for s in "${sockets[@]}"; do
+            ssh -S "$s" -O exit -- dummy-host 2>/dev/null
             rm -f -- "$s"
         done
         echo "All tunnels closed."
     elif [[ -n "$answer" && "$answer" != "no" ]]; then
-        for s in /tmp/ssh-fwd-${answer}-*.sock(N); do
-            ssh -S "$s" -O exit dummy-host 2>/dev/null
-            rm -f -- "$s"
-            echo "Closed tunnel for $answer."
+        for s in "${sockets[@]}"; do
+            details=${${${s:t}#ssh-fwd-}%.sock}
+            sock_host=${details%-*}
+            if [[ "$sock_host" == "$answer" ]]; then
+                ssh -S "$s" -O exit -- dummy-host 2>/dev/null
+                rm -f -- "$s"
+                echo "Closed tunnel for $answer."
+            fi
         done
     fi
 }

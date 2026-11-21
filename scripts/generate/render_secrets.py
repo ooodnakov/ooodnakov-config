@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import difflib
 import getpass
 import json
@@ -9,6 +10,7 @@ import os
 import shlex
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -393,7 +395,7 @@ def get_bw_status(env: dict | None = None) -> dict:
 
 def sync_bw_vault(env: dict) -> None:
     """Refresh the Bitwarden CLI cache before resolving secrets."""
-    command = ["bw", "sync", "--session", env["BW_SESSION"]]
+    command = ["bw", "sync"]
     try:
         subprocess.run(
             command,
@@ -419,7 +421,7 @@ def fetch_all_bw_items() -> list[dict]:
     env = _get_session_env()
     _ensure_session_available(env)
     sync_bw_vault(env)
-    command = ["bw", "list", "items", "--session", env["BW_SESSION"]]
+    command = ["bw", "list", "items"]
     try:
         result = subprocess.run(
             command,
@@ -481,7 +483,7 @@ def read_bw_item(item_id: str, key: str, cache: dict[str, dict] | None = None) -
     env = _get_session_env()
     _ensure_session_available(env)
     sync_bw_vault(env)
-    command = ["bw", "get", "item", item_id, "--session", env["BW_SESSION"]]
+    command = ["bw", "get", "item", item_id]
     try:
         result = subprocess.run(
             command,
@@ -541,9 +543,13 @@ def shell_assignment(key: str, value: str) -> str:
     return f"export {key}={shlex.quote(value)}"
 
 
+_PS_UNSAFE_QUOTES = ("\u2018", "\u2019", "\u201a", "\u201b")
+
+
 def powershell_assignment(key: str, value: str) -> str:
-    if "\n" in value:
-        return f"$env:{key} = @'\n{value}\n'@"
+    if "\n" in value or "\r" in value or any(quote in value for quote in _PS_UNSAFE_QUOTES):
+        b64 = base64.b64encode(value.encode("utf-8")).decode("ascii")
+        return f"$env:{key} = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{b64}'))"
     escaped = value.replace("'", "''")
     return f"$env:{key} = '{escaped}'"
 
@@ -628,9 +634,26 @@ def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[t
 
 
 def ensure_private_directory(path: Path) -> None:
-    path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
     if os.name != "nt":
         path.chmod(0o700)
+
+
+def _write_private_atomic(path: Path, content: str) -> None:
+    fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        try:
+            if os.name != "nt":
+                os.fchmod(fd, 0o600)
+        except Exception:
+            os.close(fd)
+            raise
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
+            stream.write(content)
+        os.replace(temp_name, path)
+    finally:
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
 
 
 def session_file_path() -> Path:
@@ -648,9 +671,7 @@ def read_persisted_bw_session() -> str | None:
 def write_persisted_bw_session(token: str) -> Path:
     path = session_file_path()
     ensure_private_directory(path.parent)
-    path.write_text(token + "\n", encoding="utf-8")
-    if os.name != "nt":
-        path.chmod(0o600)
+    _write_private_atomic(path, token + "\n")
     return path
 
 
@@ -662,7 +683,7 @@ def clear_persisted_bw_session() -> None:
 
 def write_file(path: Path, content: str, force: bool) -> str:
     created = not path.exists()
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     if not created:
         existing = path.read_text(encoding="utf-8")
@@ -679,9 +700,7 @@ def write_file(path: Path, content: str, force: bool) -> str:
         content += LOCAL_OVERRIDES_START + "\n"
         content += "# Add machine-specific env vars here. This section is preserved across syncs.\n"
         content += LOCAL_OVERRIDES_END + "\n"
-    path.write_text(content, encoding="utf-8")
-    if os.name != "nt":
-        path.chmod(0o600)
+    _write_private_atomic(path, content)
     return "created" if created else "updated"
 
 
@@ -808,6 +827,13 @@ def login_command(args: argparse.Namespace) -> int:
         status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
         return 1
 
+    if getattr(args, "client_secret", None):
+        status(
+            "warn",
+            "Supplying --client-secret on the command line exposes secrets in process lists; "
+            "use BW_CLIENTSECRET or the interactive prompt instead.",
+        )
+
     server = args.server.rstrip("/")
     config_result = subprocess.run(["bw", "config", "server", server], text=True)
     if config_result.returncode != 0:
@@ -908,6 +934,12 @@ def unlock_command(args: argparse.Namespace) -> int:
             except (EOFError, KeyboardInterrupt):
                 status("warn", "Unlock cancelled.")
                 return 1
+        elif password:
+            status(
+                "warn",
+                "Supplying a password on the command line exposes secrets in process lists; "
+                "use the interactive prompt or BW_PASSWORD instead.",
+            )
         token, error = unlock_with_password(password)
         if token is None:
             status("fail", error)
@@ -943,8 +975,7 @@ def unlock_command(args: argparse.Namespace) -> int:
         return 0
 
     if args.shell == "pwsh":
-        escaped = token.replace("'", "''")
-        print(f"$env:BW_SESSION = '{escaped}'")
+        print(powershell_assignment("BW_SESSION", token))
     else:
         print(f"export BW_SESSION={shlex.quote(token)}")
     return 0

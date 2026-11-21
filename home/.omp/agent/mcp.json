@@ -17,7 +17,7 @@
             "command": "pnpm",
             "args": [
                 "dlx",
-                "xactions-mcp"
+                "xactions-mcp@5.0.0"
             ]
         }
     },

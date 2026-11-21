@@ -1159,7 +1159,7 @@ maybe_install_rtk() {
   else
     # Fallback to cargo if direct download failed
     if command -v cargo >/dev/null 2>&1; then
-      run_with_spinner "Installing rtk via cargo (fallback)" cargo install --git https://github.com/rtk-ai/rtk
+      run_with_spinner "Installing rtk via cargo (fallback)" cargo install --git https://github.com/rtk-ai/rtk --tag "v${rtk_ver}" --locked
       if command -v rtk >/dev/null 2>&1 || [ -x "$HOME_DIR/.cargo/bin/rtk" ]; then
         DEPENDENCY_SUMMARY+=("rtk: installed (via cargo fallback)")
         rm -rf "$tmp_dir"
@@ -1204,7 +1204,7 @@ maybe_install_oh_my_posh() {
 eza_apt_repo_configured() {
   [ -f /etc/apt/keyrings/gierens.gpg ] || return 1
   [ -f /etc/apt/sources.list.d/gierens.list ] || return 1
-  grep -Fq "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" \
+  grep -Fq "deb [signed-by=/etc/apt/keyrings/gierens.gpg] https://deb.gierens.de stable main" \
     /etc/apt/sources.list.d/gierens.list 2>/dev/null
 }
 
@@ -1235,7 +1235,7 @@ setup_eza_apt_repo() {
   run_with_spinner "Installing gierens APT signing key for eza" \
     sh -c 'curl -fsSL https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg' || return 1
   run_with_spinner "Adding gierens APT source for eza" \
-    sh -c 'echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null' || return 1
+    sh -c 'echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] https://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null' || return 1
   APT_UPDATED=0
   return 0
 }

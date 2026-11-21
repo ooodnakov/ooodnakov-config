@@ -395,3 +395,41 @@ def test_spawn_sanitises_the_terminal_name(tmp_path: Path, tools, capsys: pytest
     argv = ["spawn", task_id, "--folder", folder, "--name", "!!!", "--dry-run", "--", "omp", "go"]
     assert task.main(argv) == 0
     assert f"--name {task_id}" in capsys.readouterr().out
+
+
+def test_artifact_rejects_path_traversal(tmp_path: Path, tools, monkeypatch: pytest.MonkeyPatch) -> None:
+    import argparse
+
+    _, artifact_mod = tools
+    root = Path(os.environ["OODNAKOV_HERDR_DATA"])
+    outside_file = tmp_path / "outside.txt"
+    outside_file.write_text("keep me", encoding="utf-8")
+
+    for bad_id in ("../evil", "a/b", "a\\b", ".", "..", ""):
+        with pytest.raises(artifact_mod.Fail):
+            artifact_mod.read_content(root, {"id": bad_id, "versions": [{"n": 1, "path": "artifacts/files/x/v1.md"}]})
+        with pytest.raises(artifact_mod.Fail):
+            artifact_mod.write_version(root, {"id": bad_id, "versions": []}, "markdown", "hello")
+
+    for bad_path in ("../../outside.txt", "/etc/passwd", "../escape/v1.md", ""):
+        with pytest.raises(artifact_mod.Fail):
+            artifact_mod.read_content(root, {"id": "a-safe", "versions": [{"n": 1, "path": bad_path}]})
+
+    old_versions = [
+        {"n": i, "path": f"artifacts/files/a-safe/v{i}.md"} for i in range(1, artifact_mod.KEEP_VERSIONS + 1)
+    ]
+    old_versions[0]["path"] = "../../outside.txt"
+    with pytest.raises(artifact_mod.Fail):
+        artifact_mod.write_version(root, {"id": "a-safe", "versions": old_versions}, "markdown", "new")
+    assert outside_file.read_text(encoding="utf-8") == "keep me"
+
+    folder = str(tmp_path / "repo")
+    with pytest.raises(artifact_mod.Fail):
+        artifact_mod.artifact_rm(argparse.Namespace(id="../outside", folder=folder))
+
+    outside_dir = root / "artifacts" / "outside"
+    outside_dir.mkdir(parents=True)
+    monkeypatch.setattr(artifact_mod, "find", lambda _items, _aid: {"id": "../outside", "versions": []})
+    with pytest.raises(artifact_mod.Fail):
+        artifact_mod.artifact_rm(argparse.Namespace(id="a-safe", folder=folder))
+    assert outside_dir.is_dir()

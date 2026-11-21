@@ -22,7 +22,7 @@ Usage: bootstrap.sh [full|minimal] [--min-dep] [--dry-run]
   --dry-run  preview install actions without changing the machine
 
 One command for a new machine:
-  curl -fsSLo /tmp/ooodnakov-bootstrap.sh https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash /tmp/ooodnakov-bootstrap.sh minimal --min-dep
+  f=$(mktemp "${TMPDIR:-/tmp}/ooodnakov-bootstrap.XXXXXX") && curl -fsSLo "$f" https://raw.githubusercontent.com/ooodnakov/ooodnakov-config/main/bootstrap.sh && bash "$f" minimal --min-dep; rm -f "$f"
 
 The same script can be inspected before running; never pipe it straight into a shell.
 EOF

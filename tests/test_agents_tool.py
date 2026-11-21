@@ -1219,3 +1219,99 @@ def test_repo_config_includes_antigravity_targets():
         "description": "Antigravity-specific context control and tool execution guidelines managed by oooconf.",
     }
     assert (ROOT / agy_instr.extra_text_file).is_file()
+
+
+@pytest.mark.parametrize(
+    "bad_name",
+    ["", "   ", ".", "..", "../evil", "..\\evil", "a/b", "a\\b", "bad\x00name"],
+)
+def test_resolve_mcp_path_rejects_traversal(tmp_path, monkeypatch, bad_name):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
+    with pytest.raises(ValueError):
+        agents_tool.resolve_mcp_path(tmp_path, bad_name)
+
+
+def test_resolve_mcp_path_accepts_valid_name(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
+    resolved = agents_tool.resolve_mcp_path(tmp_path, "context7")
+    assert resolved == (home / ".local/share/ooodnakov-config/mcp/context7").resolve()
+
+
+def test_render_codex_minimax_provider_always_uses_env_var_name():
+    rendered = agents_tool.render_codex_minimax_provider("global", materialize_secrets=True, api_key="secret")
+
+    assert 'env_key = "MINIMAX_API_KEY"' in rendered
+    assert "secret" not in rendered
+
+
+def test_cmd_mcp_sync_rejects_dash_source_and_uses_end_of_options(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    calls: list[list[str]] = []
+
+    def fake_run(command, check=True, **kwargs):
+        calls.append(list(command))
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(agents_tool.subprocess, "run", fake_run)
+
+    (repo / "common.json").write_text(
+        json.dumps({"mcp_servers": {"evil": {"source": "--upload-pack=touch /tmp/pwned"}}}),
+        encoding="utf-8",
+    )
+    rc_bad = agents_tool.cmd_mcp_sync(repo, {"common_data_file": "common.json"}, check_only=False)
+    assert rc_bad == 1
+    assert calls == []
+
+    (repo / "common.json").write_text(
+        json.dumps({"mcp_servers": {"good": {"source": "https://example.com/mcp.git"}}}),
+        encoding="utf-8",
+    )
+    rc_good = agents_tool.cmd_mcp_sync(repo, {"common_data_file": "common.json"}, check_only=False)
+    expected_dir = agents_tool.resolve_mcp_path(repo, "good")
+    assert rc_good == 0
+    assert calls == [["git", "clone", "--", "https://example.com/mcp.git", str(expected_dir)]]
+
+
+@pytest.mark.parametrize("bad_command", ["../evil", "a/b", "a\\b", "bad..cmd", ""])
+def test_cmd_install_scripts_build_rejects_unsafe_command(tmp_path, bad_command):
+    cfg = {
+        "agent_updates": [
+            {"name": "Bad Agent", "command": bad_command, "preferred": "npm", "package": "pkg"},
+        ]
+    }
+    with pytest.raises(ValueError):
+        agents_tool.cmd_install_scripts_build(tmp_path, cfg)
+
+
+def test_cmd_install_scripts_build_escapes_sh_and_ps1_messages(tmp_path):
+    cfg = {
+        "agent_updates": [
+            {
+                "name": "O'Reilly\u2019s Agent $(whoami)",
+                "command": "oreilly-agent",
+                "preferred": "npm",
+                "package": "oreilly-pkg",
+            }
+        ]
+    }
+
+    assert agents_tool.cmd_install_scripts_build(tmp_path, cfg) == 0
+
+    install_dir = tmp_path / "home" / ".config" / "ooodnakov" / "agents" / "install"
+    sh_text = (install_dir / "install-oreilly-agent.sh").read_text(encoding="utf-8")
+    ps1_text = (install_dir / "install-oreilly-agent.ps1").read_text(encoding="utf-8")
+
+    assert "printf '%s\\n' 'Installing O'\"'\"'Reilly\u2019s Agent $(whoami) via pnpm...'" in sh_text
+    assert "Write-Host 'Installing O''Reilly\u2019\u2019s Agent $(whoami) via pnpm...'" in ps1_text
+    assert 'Write-Host "' not in ps1_text

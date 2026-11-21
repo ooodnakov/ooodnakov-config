@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import getpass
 import json
 import os
@@ -25,6 +26,15 @@ START = "# --- LOCAL OVERRIDES START ---"
 END = "# --- LOCAL OVERRIDES END ---"
 KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 BW_TIMEOUT_SECONDS = 30
+_PS_UNSAFE_QUOTES = ("\u2018", "\u2019", "\u201a", "\u201b")
+
+
+def powershell_assignment(key: str, value: str) -> str:
+    if "\n" in value or "\r" in value or any(quote in value for quote in _PS_UNSAFE_QUOTES):
+        b64 = base64.b64encode(value.encode("utf-8")).decode("ascii")
+        return f"$env:{key} = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('{b64}'))"
+    ps_value = value.replace("'", "''")
+    return f"$env:{key} = '{ps_value}'"
 
 
 def parser() -> argparse.ArgumentParser:
@@ -146,8 +156,7 @@ def main() -> int:
 
         local = Path(args.config_home).expanduser() / "ooodnakov" / "local"
         write_override(local / "env.zsh", key, f"export {key}={shlex.quote(value)}")
-        ps_value = value.replace("'", "''")
-        write_override(local / "env.ps1", key, f"$env:{key} = '{ps_value}'")
+        write_override(local / "env.ps1", key, powershell_assignment(key, value))
         status("ok", f"Updated {key} in {ui_path(local / 'env.zsh')} and {ui_path(local / 'env.ps1')}")
         if upload:
             item_id = upload_to_bitwarden(key, value)

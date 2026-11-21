@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from contextlib import contextmanager
@@ -43,7 +44,22 @@ def _redact(value: object) -> str:
         if (
             secret
             and len(secret) >= 4
-            and any(marker in name.upper() for marker in ("KEY", "PASSWORD", "SECRET", "SESSION", "TOKEN"))
+            and any(
+                marker in name.upper()
+                for marker in (
+                    "KEY",
+                    "PASSWORD",
+                    "PASS",
+                    "SECRET",
+                    "SESSION",
+                    "TOKEN",
+                    "COOKIE",
+                    "PSID",
+                    "CT0",
+                    "AUTH",
+                    "CREDENTIAL",
+                )
+            )
         ):
             text = text.replace(secret, "[redacted]")
     return text
@@ -65,17 +81,23 @@ def _journal_root() -> Path:
 
 def _atomic_write(path: Path, data: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    fd, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    temporary = Path(temporary_name)
+    fd_owned = False
     try:
-        with temporary.open("w", encoding="utf-8") as handle:
+        if os.name != "nt":
+            os.fchmod(fd, 0o600)
+        handle = os.fdopen(fd, "w", encoding="utf-8")
+        fd_owned = True
+        with handle:
             json.dump(data, handle, indent=2, sort_keys=True)
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
-        if os.name != "nt":
-            temporary.chmod(0o600)
         os.replace(temporary, path)
     finally:
+        if not fd_owned:
+            os.close(fd)
         temporary.unlink(missing_ok=True)
 
 

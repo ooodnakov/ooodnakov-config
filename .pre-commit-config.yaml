@@ -35,12 +35,12 @@ repos:
         always_run: true
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.1
+    rev: 83d9cd684c87d95d656c1458ef04895a7f1cbd8e  # v8.30.1
     hooks:
       - id: gitleaks
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: c4a0b883114b00d8d76b479c820ce7950211c99b  # v4.5.0
     hooks:
       - id: trailing-whitespace
         exclude: ^third_party/
@@ -50,7 +50,7 @@ repos:
         exclude: ^third_party/
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.41.0
+    rev: f295829140d25717bc79368d3f966fc1f67a824f  # v0.41.0
     hooks:
       - id: markdownlint
         args: ["-c", ".markdownlint.json"]

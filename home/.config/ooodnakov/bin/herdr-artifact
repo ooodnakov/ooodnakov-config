@@ -18,10 +18,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
@@ -39,6 +40,26 @@ from _herdr_store import (  # noqa: E402
 
 KEEP_VERSIONS = 20
 SUFFIX_BY_KIND = {"markdown": "md", "html": "html", "text": "txt"}
+_SAFE_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
+
+
+def _safe_id(artifact_id: str) -> str:
+    if not isinstance(artifact_id, str) or artifact_id in {".", ".."} or not _SAFE_ID_PATTERN.fullmatch(artifact_id):
+        raise Fail(f"invalid artifact id: {artifact_id!r}")
+    return artifact_id
+
+
+def _within_root(root: Path, relative: str) -> Path:
+    if not isinstance(relative, str) or not relative or "\x00" in relative:
+        raise Fail(f"unsafe artifact path: {relative!r}")
+    rel_path = Path(relative)
+    if rel_path.is_absolute() or PurePosixPath(relative.replace("\\", "/")).is_absolute() or rel_path.drive:
+        raise Fail(f"unsafe artifact path: {relative!r}")
+    root_resolved = root.resolve()
+    target = (root_resolved / rel_path).resolve()
+    if target == root_resolved or not target.is_relative_to(root_resolved):
+        raise Fail(f"artifact path escapes store root: {relative!r}")
+    return target
 
 
 def content_for(args: argparse.Namespace) -> tuple[str, str]:
@@ -58,10 +79,14 @@ def content_for(args: argparse.Namespace) -> tuple[str, str]:
 
 def write_version(root: Path, artifact: dict, kind: str, content: str) -> dict:
     """Add this content as the artifact's next version, dropping the oldest past KEEP_VERSIONS."""
+    artifact_id = _safe_id(artifact.get("id", ""))
     versions = artifact.setdefault("versions", [])
+    drop_count = max(0, len(versions) + 1 - KEEP_VERSIONS)
+    for old in versions[:drop_count]:
+        _within_root(root, old.get("path", ""))
     number = (versions[-1]["n"] if versions else 0) + 1
-    relative = f"artifacts/files/{artifact['id']}/v{number}.{SUFFIX_BY_KIND.get(kind, 'txt')}"
-    target = root / relative
+    relative = f"artifacts/files/{artifact_id}/v{number}.{SUFFIX_BY_KIND.get(kind, 'txt')}"
+    target = _within_root(root, relative)
     target.parent.mkdir(parents=True, exist_ok=True)
     handle, temp = tempfile.mkstemp(dir=str(target.parent), prefix=f"{target.name}.", suffix=".tmp")
     try:
@@ -78,8 +103,9 @@ def write_version(root: Path, artifact: dict, kind: str, content: str) -> dict:
     dropped = versions[:-KEEP_VERSIONS]
     del versions[: len(dropped)]
     for old in dropped:
+        old_target = _within_root(root, old.get("path", ""))
         try:
-            (root / old["path"]).unlink()
+            old_target.unlink()
         except OSError:
             pass
     return versions[-1]
@@ -92,7 +118,8 @@ def latest(artifact: dict) -> dict:
 
 
 def read_content(root: Path, artifact: dict) -> str:
-    path = root / latest(artifact)["path"]
+    _safe_id(artifact.get("id", ""))
+    path = _within_root(root, latest(artifact).get("path", ""))
     try:
         return path.read_text(encoding="utf-8")
     except OSError as error:
@@ -153,12 +180,16 @@ def artifact_show(args: argparse.Namespace) -> None:
 
 
 def artifact_rm(args: argparse.Namespace) -> None:
+    _safe_id(args.id)
     folder = folder_for(args.folder)
+    root = data_root()
     with edit_list("artifacts", "artifacts", folder) as data:
         artifact = find(data["artifacts"], args.id)
+        artifact_id = _safe_id(artifact["id"])
+        files_dir = _within_root(root, f"artifacts/files/{artifact_id}")
         data["artifacts"] = [item for item in data["artifacts"] if item is not artifact]
-    shutil.rmtree(data_root() / "artifacts" / "files" / artifact["id"], ignore_errors=True)
-    print(f"removed {artifact['id']}")
+    shutil.rmtree(files_dir, ignore_errors=True)
+    print(f"removed {artifact_id}")
 
 
 def artifact_path(args: argparse.Namespace) -> None:

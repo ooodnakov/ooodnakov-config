@@ -379,3 +379,25 @@ def test_reconcile_omp_mcp_leaves_regular_file_untouched(monkeypatch: pytest.Mon
 
     assert transaction_apply.reconcile_omp_mcp(home, repo) is None
     assert json.loads(local.read_text(encoding="utf-8"))["mcpServers"] == {"mine": {"command": "x"}}
+
+
+@pytest.mark.parametrize(
+    "env_name",
+    ["MY_PASS", "MY_COOKIE", "GOOGLE_PSID", "X_CT0", "SERVICE_AUTH", "DB_CREDENTIAL"],
+)
+def test_redact_masks_expanded_secret_env_markers(monkeypatch: pytest.MonkeyPatch, env_name: str) -> None:
+    secret = f"sensitive-{env_name.lower()}-value"
+    monkeypatch.setenv(env_name, secret)
+
+    assert transaction_apply._redact(f"failed with {secret} in context") == "failed with [redacted] in context"
+
+
+def test_atomic_write_persists_json_without_temp_leftovers(tmp_path: Path) -> None:
+    target = tmp_path / "journal.json"
+    transaction_apply._atomic_write(target, {"step": 1})
+    transaction_apply._atomic_write(target, {"step": 2})
+
+    assert json.loads(target.read_text(encoding="utf-8")) == {"step": 2}
+    assert [path.name for path in tmp_path.iterdir()] == ["journal.json"]
+    if os.name != "nt":
+        assert target.stat().st_mode & 0o777 == 0o600

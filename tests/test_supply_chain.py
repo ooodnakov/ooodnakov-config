@@ -4,6 +4,8 @@ import hashlib
 import io
 import json
 import re
+import shutil
+import subprocess
 import sys
 import tarfile
 import tomllib
@@ -299,3 +301,178 @@ def test_adopt_managed_symlink_and_catalog_version_command(tmp_path, monkeypatch
     assert bin_track.adopt(args) == 0
     entry = json.loads(config.read_text())["bins"][str(binary.resolve())]
     assert entry["selected_asset"] == "s5cmd_2.2.0_Linux-64bit.tar.gz"
+
+
+def _installer_sources() -> dict[Path, str]:
+    paths = sorted((REPO_ROOT / "scripts/setup/lib").glob("setup-installers.*"))
+    assert paths
+    return {path: path.read_text(encoding="utf-8") for path in paths}
+
+
+def test_no_in_memory_remote_script_execution_or_command_substitution() -> None:
+    in_memory_ps = re.compile(
+        r"(?:\b(?:Invoke-RestMethod|Invoke-WebRequest|irm|iwr)\b[^\n|]*\|\s*(?:iex|Invoke-Expression)\b"
+        r"|\b(?:iex|Invoke-Expression)\b[^\n]*\b(?:Invoke-RestMethod|Invoke-WebRequest|irm|iwr)\b"
+        r"|\[ScriptBlock\]::Create\s*\([^\n]*\b(?:Invoke-RestMethod|Invoke-WebRequest|irm|iwr)\b)",
+        re.IGNORECASE,
+    )
+    cmd_subst = re.compile(r"\$\(\s*(?:curl|wget)\b", re.IGNORECASE)
+
+    for path, content in _installer_sources().items():
+        assert not in_memory_ps.search(content), f"in-memory remote script execution in {path}"
+        assert not cmd_subst.search(content), f"command-substitution remote execution in {path}"
+
+
+def test_no_http_apt_repositories() -> None:
+    http_apt = re.compile(
+        r"(?:deb\s+(?:\[[^\]]*\]\s*)?|sources\.list[^\n]*|apt-add-repository[^\n]*)http://",
+        re.IGNORECASE,
+    )
+    http_url = re.compile(r"http://[a-zA-Z0-9.-]+")
+
+    for path, content in _installer_sources().items():
+        assert not http_apt.search(content), f"plaintext http APT repository in {path}"
+        assert not http_url.search(content), f"plaintext http URL in {path}"
+
+
+def test_cargo_git_installs_are_pinned() -> None:
+    combined = "\n".join(_installer_sources().values())
+    cargo_git_calls = re.findall(r"(?:cargo|&\s*\$\w+)\s+install\s+--git[^\n]*", combined)
+    assert cargo_git_calls
+    for call in cargo_git_calls:
+        assert re.search(r"--(?:tag|rev)\b", call), f"unpinned cargo git install: {call}"
+
+
+def test_pnpm_dlx_mcp_servers_are_version_pinned() -> None:
+    configs = (
+        ("home/.omp/agent/mcp.json", "mcpServers"),
+        ("home/.pi/mcp.json", "mcpServers"),
+        ("home/.config/ooodnakov/agents/common-data.json", "mcp_servers"),
+    )
+    checked = 0
+    for rel_path, key in configs:
+        data = json.loads((REPO_ROOT / rel_path).read_text(encoding="utf-8"))
+        servers = data[key]
+        for name, spec in servers.items():
+            if not isinstance(spec, dict) or spec.get("command") != "pnpm":
+                continue
+            args = spec.get("args", [])
+            if "dlx" not in args:
+                continue
+            dlx_index = args.index("dlx")
+            package = next(
+                (arg for arg in args[dlx_index + 1 :] if isinstance(arg, str) and not arg.startswith("-")), None
+            )
+            assert package, f"missing package argument for pnpm dlx in {rel_path}: {name}"
+            assert re.fullmatch(r"(?:@[^/@]+/)?[^/@]+@\d[^\s@]*", package), (
+                f"unpinned pnpm dlx package in {rel_path} ({name}): {package}"
+            )
+            checked += 1
+    assert checked >= 3
+
+
+def test_elevated_gitbash_merge_uses_file_helper_and_validates_reparse_points() -> None:
+    ps1 = (REPO_ROOT / "scripts/setup/lib/setup-installers.ps1").read_text(encoding="utf-8")
+    helper_path = REPO_ROOT / "scripts/setup/lib/merge-gitbash-zsh.ps1"
+    assert helper_path.is_file()
+    helper = helper_path.read_text(encoding="utf-8")
+
+    assert "[IO.FileAttributes]::ReparsePoint" in helper
+    assert "-LiteralPath" in helper
+    assert "-PathType Container" in helper
+
+    assert not re.search(r"-Verb\s+RunAs\b[^\n]*-Command\b|-Command\b[^\n]*-Verb\s+RunAs\b", ps1, re.IGNORECASE)
+    gitbash_fn = re.search(r"function Install-GitBashZshIfMissing\s*\{(?P<body>.*?)\n\}", ps1, re.DOTALL)
+    assert gitbash_fn
+    body = gitbash_fn.group("body")
+    assert '"-File"' in body
+    assert '"-Command"' not in body
+    assert "merge-gitbash-zsh.ps1" in body
+
+
+def test_merge_gitbash_zsh_helper_copies_plain_and_rejects_junctions(tmp_path: Path) -> None:
+    if sys.platform != "win32":
+        pytest.skip("Windows NTFS junction test requires Windows")
+    pwsh = shutil.which("pwsh")
+    if not pwsh:
+        pytest.skip("pwsh not available")
+
+    helper = REPO_ROOT / "scripts/setup/lib/merge-gitbash-zsh.ps1"
+    staging = tmp_path / "staging [test]"
+    git_root = tmp_path / "Git Root"
+    (staging / "usr" / "bin").mkdir(parents=True)
+    (staging / "etc").mkdir(parents=True)
+    (git_root / "usr" / "bin").mkdir(parents=True)
+    (staging / "usr" / "bin" / "zsh.exe").write_bytes(b"zsh-binary")
+    (staging / "usr" / "bin" / "[.exe").write_bytes(b"bracket-binary")
+    (staging / "etc" / "zshrc").write_text("# managed\n", encoding="utf-8")
+
+    ok = subprocess.run(
+        [
+            pwsh,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(helper),
+            "-StagingRoot",
+            str(staging),
+            "-GitRoot",
+            str(git_root),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert ok.returncode == 0, ok.stderr
+    assert (git_root / "usr" / "bin" / "zsh.exe").read_bytes() == b"zsh-binary"
+    assert (git_root / "usr" / "bin" / "[.exe").read_bytes() == b"bracket-binary"
+    assert (git_root / "etc" / "zshrc").read_text(encoding="utf-8") == "# managed\n"
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("do not copy", encoding="utf-8")
+    junction = staging / "usr" / "evil"
+    target_root = tmp_path / "Git Clean"
+    target_root.mkdir()
+    mk = subprocess.run(
+        [
+            pwsh,
+            "-NoProfile",
+            "-Command",
+            f'New-Item -ItemType Junction -Path "{junction}" -Target "{outside}" | Out-Null',
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert mk.returncode == 0, mk.stderr
+    try:
+        rejected = subprocess.run(
+            [
+                pwsh,
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(helper),
+                "-StagingRoot",
+                str(staging),
+                "-GitRoot",
+                str(target_root),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert rejected.returncode != 0
+        assert not (target_root / "usr").exists()
+        assert not (target_root / "etc").exists()
+    finally:
+        subprocess.run(
+            [
+                pwsh,
+                "-NoProfile",
+                "-Command",
+                f'if (Test-Path -LiteralPath "{junction}") {{ (Get-Item -LiteralPath "{junction}" -Force).Delete() }}',
+            ],
+            capture_output=True,
+            text=True,
+        )

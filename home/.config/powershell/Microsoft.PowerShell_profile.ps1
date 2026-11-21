@@ -531,7 +531,7 @@ function ipgeo {
     )
 
     $ip = if ($IpAddress) { $IpAddress } else { (myip).ToString().Trim() }
-    Invoke-RestMethod -Uri "http://api.db-ip.com/v2/free/$ip"
+    Invoke-RestMethod -Uri "https://api.db-ip.com/v2/free/$ip"
 }
 
 # Automatic Python Virtual Environment Activation (Port of auto-uv-env features)

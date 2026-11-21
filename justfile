@@ -56,6 +56,6 @@ secrets:
     @if command -v gitleaks >/dev/null 2>&1; then \
         gitleaks git . --no-banner --redact --log-opts="--all"; \
     else \
-        docker run --rm -v "{{justfile_directory()}}:/repo" zricethezav/gitleaks:latest \
+        docker run --rm -v "{{justfile_directory()}}:/repo" zricethezav/gitleaks:v8.30.1 \
             git /repo --no-banner --redact --log-opts="--all"; \
     fi

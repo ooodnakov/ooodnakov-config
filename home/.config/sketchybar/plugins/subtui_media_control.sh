@@ -27,12 +27,15 @@ has_nowplaying_track() {
 }
 
 open_subtui_in_wezterm() {
+  local log_file="${XDG_STATE_HOME:-$HOME/.local/state}/ooodnakov-config/logs/subtui_wezterm.log"
+  mkdir -p "$(dirname "$log_file")"
+
   if [[ -x "$WEZTERM_BIN" ]]; then
-    "$WEZTERM_BIN" cli spawn -- subtui >/tmp/subtui_wezterm.log 2>&1 || \
-      "$WEZTERM_BIN" start -- subtui >/tmp/subtui_wezterm.log 2>&1 &
+    "$WEZTERM_BIN" cli spawn -- subtui >"$log_file" 2>&1 || \
+      "$WEZTERM_BIN" start -- subtui >"$log_file" 2>&1 &
   else
-    open -na WezTerm --args cli spawn -- subtui >/tmp/subtui_wezterm.log 2>&1 || \
-      open -na WezTerm --args start -- subtui >/tmp/subtui_wezterm.log 2>&1 &
+    open -na WezTerm --args cli spawn -- subtui >"$log_file" 2>&1 || \
+      open -na WezTerm --args start -- subtui >"$log_file" 2>&1 &
   fi
 }
 

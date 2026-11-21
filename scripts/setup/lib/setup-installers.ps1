@@ -151,7 +151,7 @@ function Install-Chocolatey {
         Write-UiLine -Role info -Message "Installing Chocolatey..."
         Set-ExecutionPolicy Bypass -Scope Process -Force
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        $installerPath = Join-Path ([System.IO.Path]::GetTempPath()) "oooconf-chocolatey-install.ps1"
+        $installerPath = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-chocolatey-{0}.ps1" -f [guid]::NewGuid().ToString("N"))
         Invoke-WebRequest -Uri "https://community.chocolatey.org/install.ps1" -OutFile $installerPath
         & $installerPath
         if (Get-Command choco -ErrorAction SilentlyContinue) {
@@ -163,7 +163,7 @@ function Install-Chocolatey {
         Write-Output $_
         Add-Failure "Installing Chocolatey"
     } finally {
-        if ($installerPath -and (Test-Path $installerPath)) {
+        if ($installerPath -and (Test-Path -LiteralPath $installerPath)) {
             Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue
         }
     }
@@ -218,7 +218,18 @@ function Install-HomebrewIfMissing {
     }
 
     $res = Invoke-ActionWithSpinner -Description "Installing Homebrew" -Action {
-        & env NONINTERACTIVE=1 /bin/bash -c '$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)'
+        $installerPath = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-homebrew-{0}.sh" -f [guid]::NewGuid().ToString("N"))
+        try {
+            Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh" -OutFile $installerPath
+            & env NONINTERACTIVE=1 /bin/bash $installerPath
+            if ($LASTEXITCODE -ne 0) {
+                throw "Homebrew installer exited with code $LASTEXITCODE"
+            }
+        } finally {
+            if (Test-Path -LiteralPath $installerPath) {
+                Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 
     if ($DryRun) {
@@ -473,6 +484,18 @@ function Get-GitForWindowsRoot {
     return $null
 }
 
+function Format-WindowsProcessArgument {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]$Value
+    )
+
+    $escaped = [regex]::Replace($Value, '(\\*)"', '$1$1\"')
+    $escaped = [regex]::Replace($escaped, '(\\*)$', '$1$1')
+    return "`"$escaped`""
+}
+
 function Merge-GitBashZshStaging {
     param(
         [Parameter(Mandatory = $true)]
@@ -481,13 +504,8 @@ function Merge-GitBashZshStaging {
         [string]$GitRoot
     )
 
-    foreach ($top in @("usr", "etc")) {
-        $source = Join-Path $StagingRoot $top
-        if (-not (Test-Path $source)) { continue }
-        $target = Join-Path $GitRoot $top
-        New-Item -ItemType Directory -Path $target -Force | Out-Null
-        Copy-Item -Path (Join-Path $source "*") -Destination $target -Recurse -Force
-    }
+    $mergeScript = Join-Path $PSScriptRoot "merge-gitbash-zsh.ps1"
+    & $mergeScript -StagingRoot $StagingRoot -GitRoot $GitRoot
 }
 
 function Install-GitBashZshIfMissing {
@@ -573,16 +591,21 @@ function Install-GitBashZshIfMissing {
             # The archive was downloaded, verified, and guard-extracted in the
             # user context; the elevated step only merges plain files into the
             # Git for Windows tree (no network, no archives).
-            $usrSource = Join-Path $stagingRoot "usr"
-            $etcSource = Join-Path $stagingRoot "etc"
-            $usrTarget = Join-Path $gitRoot "usr"
-            $etcTarget = Join-Path $gitRoot "etc"
-            $copyUsr = if (Test-Path $usrSource) { "Copy-Item -Path '$usrSource\*' -Destination '$usrTarget' -Recurse -Force; " } else { "" }
-            $copyEtc = if (Test-Path $etcSource) { "Copy-Item -Path '$etcSource\*' -Destination '$etcTarget' -Recurse -Force" } else { "" }
-            $mergeCommand = "New-Item -ItemType Directory -Force -Path '$usrTarget','$etcTarget' | Out-Null; $copyUsr$copyEtc"
+            $mergeScript = Join-Path $PSScriptRoot "merge-gitbash-zsh.ps1"
             $shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { (Get-Command pwsh -ErrorAction SilentlyContinue).Source } else { "$PSHOME\powershell.exe" }
             try {
-                $process = Start-Process -FilePath $shell -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $mergeCommand) -Verb RunAs -Wait -PassThru
+                $argumentList = @(
+                    "-NoProfile",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    (Format-WindowsProcessArgument -Value $mergeScript),
+                    "-StagingRoot",
+                    (Format-WindowsProcessArgument -Value $stagingRoot),
+                    "-GitRoot",
+                    (Format-WindowsProcessArgument -Value $gitRoot)
+                )
+                $process = Start-Process -FilePath $shell -ArgumentList $argumentList -Verb RunAs -Wait -PassThru
                 if ($process.ExitCode -ne 0) {
                     throw "elevated merge exited with code $($process.ExitCode)"
                 }
@@ -904,8 +927,15 @@ function Install-BunIfMissing {
 
     Invoke-ActionWithSpinner -Description "Installing Bun $bunVer via official install script" -Action {
         param($version)
-        $installScript = [ScriptBlock]::Create((Invoke-RestMethod "https://bun.sh/install.ps1"))
-        & $installScript -Version $version | Out-Null
+        $installerPath = Join-Path ([System.IO.Path]::GetTempPath()) ("oooconf-bun-install-{0}.ps1" -f [guid]::NewGuid().ToString("N"))
+        try {
+            Invoke-WebRequest -Uri "https://bun.sh/install.ps1" -OutFile $installerPath
+            & $installerPath -Version $version | Out-Null
+        } finally {
+            if (Test-Path -LiteralPath $installerPath) {
+                Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue
+            }
+        }
     } -ArgumentList $bunVer
     Update-SessionEnvironment
 
@@ -1056,9 +1086,9 @@ function Install-RtkIfMissing {
         $cargoCommand = Get-Command cargo -ErrorAction SilentlyContinue
         if ($cargoCommand) {
             Invoke-ActionWithSpinner -Description "Installing rtk via cargo (fallback)" -Action {
-                param($cmd)
-                & $cmd install --git https://github.com/rtk-ai/rtk | Out-Null
-            } -ArgumentList $cargoCommand
+                param($cmd, $ver)
+                & $cmd install --git https://github.com/rtk-ai/rtk --tag "v$ver" --locked | Out-Null
+            } -ArgumentList $cargoCommand, $rtkVer
             if (Get-Command rtk -ErrorAction SilentlyContinue) {
                 Add-DependencySummary "rtk: installed (via cargo fallback)"
                 Add-NewlyAvailableCommand -CommandNames @("rtk")

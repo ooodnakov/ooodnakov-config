@@ -16,7 +16,7 @@
     "xactions": {
       "args": [
         "dlx",
-        "xactions-mcp"
+        "xactions-mcp@5.0.0"
       ],
       "command": "pnpm",
       "description": "X/Twitter automation and scraping toolkit (profiles, tweets, analytics, writes)"

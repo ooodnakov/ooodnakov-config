@@ -17,6 +17,21 @@ const norm = (path) => String(path).replace(/\\/g, "/").replace(/\/+$/, "");
 const pointed = (text) => norm(String(text ?? "").trim());
 const textOf = (data) => `${JSON.stringify(data, null, 2)}\n`;
 
+function safeRelPath(rel) {
+  if (typeof rel !== "string" || !rel || rel.includes("\0")) return null;
+  if (rel.startsWith("/") || rel.startsWith("\\")) return null;
+  const normalized = rel.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  if (parts.some((part) => !part || part === "." || part === "..")) return null;
+  if (parts[0].includes(":")) return null;
+  return normalized;
+}
+
+function safeSlug(slug) {
+  const safe = safeRelPath(slug);
+  return safe && !safe.includes("/") ? safe : null;
+}
+
 // Each machine keeps its own lists; a space on another machine reads them there.
 // The command records the root in `herdr-data`; the mod only reads that file.
 async function rootFor(on) {
@@ -191,7 +206,9 @@ export default class Artifacts extends View {
     try {
       const on = this.on;
       const index = JSON.parse((await readTextFile(`${this.root}/index.json`, { on })) || "{}");
-      const slug = index?.folders?.[this.folder];
+      const rawSlug = index?.folders?.[this.folder];
+      const slug = rawSlug ? safeSlug(rawSlug) : null;
+      if (rawSlug && !slug) throw new Error(`Unsafe artifact slug: ${rawSlug}`);
       const text = slug ? await readTextFile(`${this.root}/artifacts/${slug}.json`, { on }) : null;
       if (this.focus !== key) return;
       this.slug = slug ?? null;
@@ -211,9 +228,14 @@ export default class Artifacts extends View {
     this.selected = artifact.id;
     this.content = null;
     if (!version) return;
+    const relPath = safeRelPath(version.path);
+    if (!relPath) {
+      this.content = "(unsafe version path)";
+      return;
+    }
     const key = this.focus;
     cx.spawn(async (cx) => {
-      const text = await readTextFile(`${this.root}/${version.path}`, { on: this.on }).catch(() => null);
+      const text = await readTextFile(`${this.root}/${relPath}`, { on: this.on }).catch(() => null);
       if (this.focus !== key || this.selected !== artifact.id) return;
       this.content = text ?? "(cannot read this version)";
       cx.notify();
@@ -223,7 +245,14 @@ export default class Artifacts extends View {
   // Delete from the panel: the same list the CLI writes, replaced only if nothing
   // else touched it first. On a remote machine the command does it under its own lock.
   async remove(artifact, cx) {
-    const path = `${this.root}/artifacts/${this.slug}.json`;
+    const slug = safeSlug(this.slug);
+    if (!slug) {
+      this.error = "Unsafe artifact slug";
+      this.confirm = null;
+      cx.notify();
+      return;
+    }
+    const path = `${this.root}/artifacts/${slug}.json`;
     try {
       if (this.on) {
         const result = await exec("hc", ["exec", "--on", this.on, "--", "herdr-artifact", "rm", artifact.id, "--folder", this.folder]);
@@ -261,7 +290,11 @@ export default class Artifacts extends View {
 
   detail(artifact, t, cx) {
     const version = this.latest(artifact);
-    const path = version ? `${this.root}/${version.path}` : `${this.root}/artifacts/${this.slug}.json`;
+    const relPath = version ? safeRelPath(version.path) : null;
+    const slug = safeSlug(this.slug);
+    const path = version
+      ? (relPath ? `${this.root}/${relPath}` : null)
+      : (slug ? `${this.root}/artifacts/${slug}.json` : null);
     return v_flex().size_full().min_h(0)
       .child(h_flex().h(36).flex_none().px(10).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().id("oo-artifact-back").w(20).cursor_pointer().text_color(t.muted)
@@ -277,6 +310,7 @@ export default class Artifacts extends View {
         .child(div().flex_1())
         .when(this.confirm !== artifact.id, (row) => row
           .child(chip(this.copied === artifact.id ? "Copied" : "Copy path", () => {
+            if (!path) return;
             cx.write_to_clipboard(path);
             this.copied = artifact.id;
             cx.notify();

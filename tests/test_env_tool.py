@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 from importlib.util import module_from_spec, spec_from_file_location
@@ -145,6 +146,44 @@ def test_bitwarden_upload_uses_stdin_session_timeout_and_updates_existing(tmp_pa
     assert calls[-1][1]["input"] == "encoded-secret"
     assert all(kwargs["timeout"] == env_tool.BW_TIMEOUT_SECONDS for _, kwargs in calls)
     assert all(kwargs["env"]["BW_SESSION"] == "saved-session" for _, kwargs in calls)
+
+
+def test_env_curly_quotes_use_safe_powershell_assignment(tmp_path: Path) -> None:
+    payload = "before\u2019; $env:PWNED = 'yes'; \u2018after"
+    result = run_env(tmp_path, "CURLY_TOKEN", payload)
+    assert result.returncode == 0, result.stderr
+
+    ps1 = tmp_path / "ooodnakov/local/env.ps1"
+    ps1_text = ps1.read_text(encoding="utf-8")
+    assert "$env:CURLY_TOKEN = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(" in ps1_text
+    assert "$env:PWNED" not in ps1_text
+
+    for quote in ("\u2018", "\u2019", "\u201a", "\u201b"):
+        line = env_tool.powershell_assignment("TEST_CURLY", f"v{quote}; $env:PWNED = 'yes'")
+        assert "[System.Convert]::FromBase64String(" in line
+        assert "$env:PWNED" not in line
+
+    pwsh = shutil.which("pwsh")
+    if pwsh is not None:
+        script = (
+            "Remove-Item Env:PWNED -ErrorAction SilentlyContinue\n"
+            f"{ps1_text}\n"
+            "if (Test-Path Env:PWNED) { exit 42 }\n"
+            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n"
+            "[Console]::Write($env:CURLY_TOKEN)\n"
+        )
+        proc = subprocess.run(
+            [pwsh, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "-"],
+            input=script.encode("utf-8"),
+            capture_output=True,
+            check=False,
+        )
+        assert proc.returncode == 0, proc.stderr.decode("utf-8", errors="replace")
+        assert proc.stdout.decode("utf-8") == payload
+
+    updated = run_env(tmp_path, "CURLY_TOKEN", "plain")
+    assert updated.returncode == 0, updated.stderr
+    assert ps1.read_text(encoding="utf-8").count("$env:CURLY_TOKEN = ") == 1
 
 
 START = "# --- LOCAL OVERRIDES START ---"
