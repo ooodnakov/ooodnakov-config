@@ -157,7 +157,7 @@ function Get-OooconfCompletions {
             Values = @()
             Subcommands = @()
             OptionValues = @{
-                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code')
+                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
                 '--region' = @('global', 'china')
             }
         }
@@ -199,7 +199,7 @@ function Get-OooconfCompletions {
             Values = @()
             Subcommands = @()
             OptionValues = @{
-                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code')
+                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
             }
         }
         'agents:skills:view' = @{
@@ -224,7 +224,7 @@ function Get-OooconfCompletions {
             Values = @()
             Subcommands = @()
             OptionValues = @{
-                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code')
+                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
             }
         }
         'agents:update' = @{

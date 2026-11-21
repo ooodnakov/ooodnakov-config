@@ -155,6 +155,7 @@ _oooconf_values_agent_keys=(
   'pi:Pi Agent'
   'omp:Oh My Pi'
   'command-code:Command Code'
+  'antigravity:Antigravity'
 )
 
 typeset -ga _oooconf_values_secret_shells
@@ -753,7 +754,7 @@ _oooconf_agents_sync() {
     '--check[check only]' \
     '--dry-run[preview without changing files]' \
     '--materialize-secrets[materialize env placeholders]' \
-    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code)' \
+    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code antigravity)' \
     '--select[pick agents interactively]' \
     '*:arg:->args'
 
@@ -998,7 +999,7 @@ _oooconf_agents_provider_sync() {
     '--dry-run[preview without changing files]' \
     '--materialize-secrets[materialize secret-backed values]' \
     '--region[provider region]:value:(global china)' \
-    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code)' \
+    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code antigravity)' \
     '--select[pick agents interactively]' \
     '*:arg:->args'
 
@@ -1134,7 +1135,7 @@ _oooconf_agents_skills_sync() {
   _arguments -C \
     '--check[check only]' \
     '--dry-run[preview without installing]' \
-    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code)' \
+    '--agents[filter to specific agents]:value:(codex claude gemini aider qwen cursor-agent opencode pi omp command-code antigravity)' \
     '--select[pick agents interactively]' \
     '*:arg:->args'
 

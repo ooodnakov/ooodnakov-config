@@ -12,7 +12,8 @@
     { "name": "OpenCode", "command": "opencode" },
     { "name": "Pi Agent", "command": "pi" },
     { "name": "Oh My Pi", "command": "omp" },
-    { "name": "Command Code", "command": "command-code" }
+    { "name": "Command Code", "command": "command-code" },
+    { "name": "Antigravity", "command": "agy" }
   ],
   "agent_updates": [
     { "name": "OpenAI Codex CLI", "command": "codex", "preferred": "npm", "package": "@openai/codex" },
@@ -69,7 +70,7 @@
     },
     {
       "name": "Gemini Global Instructions",
-      "agents": ["gemini"],
+      "agents": ["gemini", "antigravity", "agy"],
       "format": "markdown",
       "default_paths": ["~/.gemini/AGENTS.md"]
     },
@@ -135,6 +136,31 @@
       "agents": ["command-code"],
       "format": "markdown",
       "default_paths": ["~/.commandcode/AGENTS.md"]
+    },
+    {
+      "name": "Antigravity",
+      "agents": ["antigravity", "agy"],
+      "format": "json",
+      "default_paths": [
+        "~/.gemini/config/config.json",
+        "~/.gemini/antigravity-cli/settings.json",
+        "~/.gemini/config/mcp_config.json"
+      ],
+      "mcp_paths": ["~/.gemini/config/mcp_config.json"],
+      "docs_url": "https://antigravity.google/docs/mcp"
+    },
+    {
+      "name": "Antigravity Global Instructions",
+      "agents": ["antigravity", "agy"],
+      "format": "markdown",
+      "default_paths": ["~/.gemini/config/rules/antigravity.md"],
+      "extra_text_file": "home/.config/ooodnakov/agents/extras/antigravity.md",
+      "extra_only": true,
+      "create_if_dir_exists": "~/.gemini/config",
+      "frontmatter": {
+        "trigger": "always_on",
+        "description": "Antigravity-specific context control and tool execution guidelines managed by oooconf."
+      }
     }
   ]
 }

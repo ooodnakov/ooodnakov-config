@@ -24,6 +24,7 @@ opencode = "OpenCode"
 pi = "Pi Agent"
 omp = "Oh My Pi"
 command-code = "Command Code"
+antigravity = "Antigravity"
 
 [definitions.secret_shells]
 sh = "sh"

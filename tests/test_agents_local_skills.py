@@ -21,9 +21,7 @@ def _symlinks_work(path: Path) -> bool:
         return False
 
 
-def test_local_skill_links_each_agent_and_is_idempotent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_local_skill_links_each_agent_and_is_idempotent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     if not _symlinks_work(tmp_path):
         pytest.skip("this platform cannot create symlinks without extra privileges")
 
@@ -49,9 +47,7 @@ def test_local_skill_links_each_agent_and_is_idempotent(
     assert agents_tool.sync_local_skills(repo, [spec], check_only=False, dry_run=False) == (2, 0, 0)
 
 
-def test_check_mode_only_plans_and_missing_source_fails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_check_mode_only_plans_and_missing_source_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     if not _symlinks_work(tmp_path):
         pytest.skip("this platform cannot create symlinks without extra privileges")
 
@@ -68,3 +64,7 @@ def test_check_mode_only_plans_and_missing_source_fails(
 
     missing = {"name": "gone", "installer": "local", "source": "skills/gone", "agents": ["codex"]}
     assert agents_tool.sync_local_skills(repo, [missing], check_only=False, dry_run=False) == (0, 0, 1)
+
+
+def test_local_skill_dirs_includes_antigravity() -> None:
+    assert agents_tool.LOCAL_SKILL_DIRS["antigravity"] == ("agy", "~/.gemini/config/skills")

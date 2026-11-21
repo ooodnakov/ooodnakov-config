@@ -71,6 +71,9 @@ class AgentConfigTarget:
     mcp_skip: bool = False
     agents: tuple[str, ...] = ()
     extra_text_file: str = ""
+    extra_only: bool = False
+    create_if_dir_exists: str = ""
+    frontmatter: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
@@ -574,6 +577,10 @@ def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
         raw_agents = entry.get("agents") or ()
         if isinstance(raw_agents, str):
             raw_agents = [raw_agents]
+        raw_frontmatter = entry.get("frontmatter")
+        frontmatter = (
+            {str(k): str(v) for k, v in raw_frontmatter.items()} if isinstance(raw_frontmatter, dict) else None
+        )
         targets.append(
             AgentConfigTarget(
                 name=entry["name"],
@@ -584,6 +591,9 @@ def parse_agent_targets(raw: list[dict[str, Any]]) -> list[AgentConfigTarget]:
                 mcp_skip=entry.get("mcp_skip", False),
                 agents=tuple(raw_agents),
                 extra_text_file=entry.get("extra_text_file", "") or "",
+                extra_only=bool(entry.get("extra_only", False)),
+                create_if_dir_exists=str(entry.get("create_if_dir_exists", "") or ""),
+                frontmatter=frontmatter,
             )
         )
     return targets
@@ -658,6 +668,40 @@ def apply_agent_extra(managed_block: str, extra_text: str) -> str:
     suffix = managed_block[marker_index:]
     section = f"{AGENT_EXTRA_HEADING}\n\n{body}"
     return f"{prefix}\n\n{section}\n\n{suffix}"
+
+
+def render_frontmatter(frontmatter: dict[str, str] | None) -> str:
+    """Render YAML frontmatter for modular rule files such as Antigravity rules."""
+    if not frontmatter:
+        return ""
+    lines = ["---"]
+    for key, value in frontmatter.items():
+        text = str(value)
+        rendered_val = text if key == "trigger" else json.dumps(text)
+        lines.append(f"{key}: {rendered_val}")
+    lines.append("---")
+    return "\n".join(lines) + "\n"
+
+
+def render_extra_only_block(extra_text: str) -> str:
+    """Render a standalone managed block containing only per-agent instructions."""
+    body = extra_text.strip()
+    if not body:
+        return ""
+    return f"{MANAGED_BEGIN}\n{AGENT_EXTRA_HEADING}\n\n{body}\n\n{MANAGED_END}\n"
+
+
+def ensure_frontmatter(content: str, frontmatter: dict[str, str] | None) -> str:
+    """Prepend YAML frontmatter if configured and not already present."""
+    rendered = render_frontmatter(frontmatter)
+    if not rendered:
+        return content
+    if content.startswith("---\n") or content.startswith("---\r\n"):
+        return content
+    stripped = content.lstrip("\r\n")
+    if not stripped:
+        return rendered
+    return f"{rendered}\n{stripped}"
 
 
 def render_markdown_block(common_text: str, common_data: dict[str, Any], extra_text: str = "") -> str:
@@ -767,6 +811,10 @@ def check_config_shape(target: AgentConfigTarget, content: str, parsed_obj: dict
         issues.append('expected "mcp_servers" tables')
     if target.format == "markdown" and target.extra_text_file and AGENT_EXTRA_HEADING not in content:
         issues.append("missing agent-specific instructions section")
+    if target.format == "markdown" and target.frontmatter:
+        fm_match = re.match(r"^---\r?\n(.*?)\r?\n---(?:\r?\n|\Z)", content, flags=re.DOTALL)
+        if not fm_match or not re.search(r"^\s*trigger\s*:\s*\S+", fm_match.group(1), flags=re.MULTILINE):
+            issues.append("missing YAML frontmatter with trigger")
     return issues
 
 
@@ -804,7 +852,10 @@ def inspect_agent_configs(
             has_failures = True
             continue
 
-        missing_mcp, missing_skills = check_common_entries(search_space, common_data, target.format)
+        if target.extra_only:
+            missing_mcp, missing_skills = [], []
+        else:
+            missing_mcp, missing_skills = check_common_entries(search_space, common_data, target.format)
 
         # If mcp_skip is True, MCP is CLI-managed — skip MCP checks
         mcp_file_path: Path | None = None
@@ -877,10 +928,11 @@ def sync_global_configs(
         existing = existing_default_path(target.default_paths)
 
         if existing is None and target.format == "markdown":
-            # If no file exists, try to create the first path if its parent exists
+            # If no file exists, try to create the first path if its parent (or anchor dir) exists
+            anchor = Path(target.create_if_dir_exists).expanduser() if target.create_if_dir_exists else None
             for p in target.default_paths:
                 candidate = Path(p).expanduser()
-                if candidate.parent.exists():
+                if candidate.parent.exists() or (anchor is not None and anchor.is_dir()):
                     existing = candidate
                     break
 
@@ -928,16 +980,23 @@ def sync_global_configs(
                 continue
 
         if target.format == "markdown":
-            block = apply_agent_extra(managed_block, (extras or {}).get(target.name, ""))
+            extra_text = (extras or {}).get(target.name, "")
+            if target.extra_only:
+                block = render_extra_only_block(extra_text)
+                if not block:
+                    continue
+            else:
+                block = apply_agent_extra(managed_block, extra_text)
             try:
                 if not existing.exists():
+                    rendered = ensure_frontmatter(block, target.frontmatter)
                     changed.append(existing)
                     if not check_only:
-                        write_text_atomic(existing, block)
+                        write_text_atomic(existing, rendered)
                     continue
 
                 current = existing.read_text(encoding="utf-8")
-                updated = upsert_managed_block(current, block)
+                updated = ensure_frontmatter(upsert_managed_block(current, block), target.frontmatter)
                 if updated != current:
                     changed.append(existing)
                     if not check_only:
@@ -1718,6 +1777,7 @@ LOCAL_SKILL_DIRS: dict[str, tuple[str, str]] = {
     "omp": ("omp", "~/.omp/agent/skills"),
     "claude": ("claude", "~/.claude/skills"),
     "codex": ("codex", "~/.codex/skills"),
+    "antigravity": ("agy", "~/.gemini/config/skills"),
 }
 
 
@@ -1792,6 +1852,7 @@ def skills_cli_agent_targets(config: dict[str, Any]) -> list[str]:
         "claude": "claude-code",
         "codex": "codex",
         "gemini": "gemini-cli",
+        "agy": "antigravity",
         "pi": "pi",
         "opencode": "opencode",
         "cursor-agent": "cursor",
@@ -2233,6 +2294,9 @@ def render_remote_mcp_entry(
     if target.name == "Gemini CLI":
         # Gemini distinguishes streamable HTTP (httpUrl) from legacy SSE (url).
         entry: dict[str, Any] = {"httpUrl": url} if transport == "http" else {"url": url}
+    elif target.name == "Antigravity":
+        # Antigravity Streamable HTTP uses serverUrl without a transport type field.
+        entry = {"serverUrl": url}
     elif target.name == "Pi Agent":
         # Pi infers the remote transport from url; it has no separate type field.
         entry = {"url": url}

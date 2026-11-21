@@ -45,6 +45,19 @@ Why this matters for `oooconf`:
 - Skill sync remains implemented through `gemini skills install <source>` for declarative `skill_specs`.
 - Global JSON MCP sync remains compatible with Gemini's documented `mcpServers` model.
 
+## Antigravity (App / CLI / IDE)
+
+Top 3 config settings to care about first:
+
+1. Global rules are loaded **cumulatively** from `~/.gemini/AGENTS.md`, `~/.gemini/GEMINI.md`, and modular `~/.gemini/config/rules/*.md` (which require YAML frontmatter with `trigger: always_on | model_decision | glob | manual`).
+2. Global MCP servers live in `~/.gemini/config/mcp_config.json` under `mcpServers` (`command`/`args`/`env` for stdio, `serverUrl`/`headers` for Streamable HTTP — no `type` or `httpUrl`).
+3. Personal skills live in `~/.gemini/config/skills/<name>/SKILL.md` (and `skills` CLI targets `-a antigravity`).
+
+Why this matters for `oooconf`:
+
+- Because Antigravity cumulatively loads `~/.gemini/AGENTS.md` alongside `~/.gemini/config/rules/*.md`, keeping the shared policy in `~/.gemini/AGENTS.md` (shared with Gemini CLI) and syncing `extras/antigravity.md` as an `extra_only` modular rule in `~/.gemini/config/rules/antigravity.md` (with `trigger: always_on` frontmatter) avoids duplicating the ~300-line shared block in Antigravity while keeping Antigravity-only rules out of Gemini CLI.
+- `agy` is detected via `agent_clis`, but installs and self-updates via Google's native installer (`agy update`), not npm/uv `agent_updates`.
+
 ## OpenCode
 
 Top 3 config settings to care about first:
@@ -76,6 +89,9 @@ Why this matters for `oooconf`:
 - Claude directory layout: https://code.claude.com/docs/en/claude-directory
 - Gemini CLI settings docs: https://geminicli.com/docs/cli/settings/
 - Gemini CLI MCP docs: https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md
+- Antigravity rules docs: https://antigravity.google/docs/rules
+- Antigravity MCP docs: https://antigravity.google/docs/mcp
+- Antigravity customization discovery docs: https://antigravity.google/docs/customization-discovery
 - OpenCode provider docs: https://opencode.ai/docs/providers
 - MiniMax coding tools guide: https://platform.minimax.io/docs/guides/text-ai-coding-tools
 

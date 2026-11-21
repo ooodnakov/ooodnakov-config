@@ -36,7 +36,10 @@ The shared AGENTS policy snippets are configured in:
 - `home/.config/ooodnakov/agents/extras/<agent>.md` (per-agent inserts, referenced by `extra_text_file`)
 - `docs/agents-config-research.md` (cross-agent config model comparison and rationale)
 
-An `agent_configs` entry may set `extra_text_file`, a repo-relative Markdown file whose contents are appended inside that target's managed block under `## Agent-specific instructions`. Extras stay inside the `oooconf:agents-common` markers, so they are replaced on every sync and never accumulate; targets without the key render the shared block unchanged. Currently only the Oh My Pi global instructions target carries an extra (`extras/omp.md`: independent batching, scoped delegation, native tooling, evidence-based recovery, asynchronous execution, persistent state, and focused output).
+An `agent_configs` entry may set `extra_text_file`, a repo-relative Markdown file whose contents are appended inside that target's managed block under `## Agent-specific instructions`. Extras stay inside the `oooconf:agents-common` markers, so they are replaced on every sync and never accumulate; targets without the key render the shared block unchanged. Markdown targets may also set `extra_only: true`, `create_if_dir_exists`, and `frontmatter` to emit a standalone modular rule containing only `## Agent-specific instructions` (preventing duplication when an agent cumulatively reads another managed shared file). Currently two targets carry extras:
+
+- Oh My Pi (`extras/omp.md`): independent batching, scoped delegation, native tooling, evidence-based recovery, asynchronous execution, persistent state, and focused output.
+- Antigravity (`extras/antigravity.md`, synced as an `extra_only` modular rule in `~/.gemini/config/rules/antigravity.md` while sharing `~/.gemini/AGENTS.md`): narrow-first search, large-file slicing, bounded command output, prefix-cache-aware subagent use, and asynchronous completion.
 
 ## Sync behavior
 
@@ -47,5 +50,5 @@ An `agent_configs` entry may set `extra_text_file`, a repo-relative Markdown fil
 
 ## Providers
 
-`oooconf agents sync` understands both stdio entries (`command`/`args`) and remote HTTP entries (`type`/`url`/`headers`) in `common-data.json`, rendering each agent's native shape: `type`+`url` for Claude Code, Oh My Pi, and Pi, `httpUrl` for Gemini CLI, `type = "remote"` for OpenCode, and `[mcp_servers.<name>]` with `http_headers` tables for Codex. MCP `env_vars` shorthands resolve. `{env_var}`/`$env_var` placeholders are kept verbatim unless `--materialize-secrets` is passed, so generated configs stay secret-free by default.
+`oooconf agents sync` understands both stdio entries (`command`/`args`) and remote HTTP entries (`type`/`url`/`headers`) in `common-data.json`, rendering each agent's native shape: `type`+`url` for Claude Code, Oh My Pi, and Pi, `httpUrl` for Gemini CLI, `serverUrl` for Antigravity (`~/.gemini/config/mcp_config.json`), `type = "remote"` for OpenCode, and `[mcp_servers.<name>]` with `http_headers` tables for Codex. MCP `env_vars` shorthands resolve. `{env_var}`/`$env_var` placeholders are kept verbatim unless `--materialize-secrets` is passed, so generated configs stay secret-free by default.
 `oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in the local environment by default for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is intentionally used on private machine config.

@@ -991,3 +991,231 @@ def test_check_config_shape_requires_extra_section_for_markdown():
     assert agents_tool.check_config_shape(target, "# Policy\n") == ["missing agent-specific instructions section"]
     content = f"# Policy\n\n{agents_tool.AGENT_EXTRA_HEADING}\n\nUse tabs.\n"
     assert agents_tool.check_config_shape(target, content) == []
+
+
+def test_render_mcp_server_entry_antigravity_remote_and_stdio(monkeypatch):
+    monkeypatch.setenv("CTX_KEY", "secret-123")
+    target = agents_tool.AgentConfigTarget("Antigravity", "json", [], "")
+    remote = agents_tool.render_mcp_server_entry(
+        target,
+        "context7",
+        {
+            "type": "http",
+            "url": "https://mcp.context7.com/mcp",
+            "headers": {"Authorization": "Bearer {CTX_KEY}"},
+        },
+        Path("/tmp/repo"),
+        materialize_secrets=True,
+    )
+    assert remote == {
+        "serverUrl": "https://mcp.context7.com/mcp",
+        "headers": {"Authorization": "Bearer secret-123"},
+    }
+    assert "type" not in remote
+    assert "httpUrl" not in remote
+
+    stdio = agents_tool.render_mcp_server_entry(
+        target,
+        "xactions",
+        {"command": "pnpm", "args": ["dlx", "xactions-mcp"]},
+        Path("/tmp/repo"),
+    )
+    assert stdio == {"command": "pnpm", "args": ["dlx", "xactions-mcp"]}
+
+
+def test_sync_global_configs_antigravity_mcp_preserves_existing(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    cfg_dir = home / ".gemini/config"
+    cfg_dir.mkdir(parents=True)
+    (cfg_dir / "config.json").write_text('{"plugins": {}}', encoding="utf-8")
+    mcp_path = cfg_dir / "mcp_config.json"
+    mcp_path.write_text(
+        json.dumps({"mcpServers": {"blender": {"command": "uvx", "args": ["mcp-for-blender"]}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
+    targets = agents_tool.parse_agent_targets(
+        [
+            {
+                "name": "Antigravity",
+                "agents": ["antigravity", "agy"],
+                "format": "json",
+                "default_paths": [
+                    "~/.gemini/config/config.json",
+                    "~/.gemini/antigravity-cli/settings.json",
+                    "~/.gemini/config/mcp_config.json",
+                ],
+                "mcp_paths": ["~/.gemini/config/mcp_config.json"],
+            }
+        ]
+    )
+    common_data = {
+        "mcp_servers": {
+            "context7": {
+                "type": "http",
+                "url": "https://mcp.context7.com/mcp",
+                "headers": {"Authorization": "Bearer {CTX_KEY}"},
+            },
+            "blender": {"command": "other", "args": []},
+        },
+        "skills": [],
+    }
+
+    count, changed = agents_tool.sync_global_configs(tmp_path, targets, common_data, "", check_only=False)
+    assert count == 1
+    assert changed == [mcp_path]
+
+    data = json.loads(mcp_path.read_text(encoding="utf-8"))
+    assert data["mcpServers"]["blender"] == {"command": "uvx", "args": ["mcp-for-blender"]}
+    assert data["mcpServers"]["context7"] == {
+        "serverUrl": "https://mcp.context7.com/mcp",
+        "headers": {"Authorization": "Bearer {CTX_KEY}"},
+    }
+
+    # Idempotent on re-run
+    assert agents_tool.sync_global_configs(tmp_path, targets, common_data, "", check_only=False) == (0, [])
+
+
+def test_sync_global_configs_extra_only_with_frontmatter_and_anchor(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "common.md").write_text("# Shared Policy\n", encoding="utf-8")
+    (repo / "common.json").write_text(
+        '{"mcp_servers":{"context7":{"type":"http","url":"https://x"}},"skills":["worktrunk"]}', encoding="utf-8"
+    )
+    (repo / "agy-extra.md").write_text("### Antigravity (agy)\n\n- Search narrowly.\n", encoding="utf-8")
+
+    target_spec = {
+        "name": "Antigravity Global Instructions",
+        "agents": ["antigravity", "agy"],
+        "format": "markdown",
+        "default_paths": ["~/.gemini/config/rules/antigravity.md"],
+        "extra_text_file": "agy-extra.md",
+        "extra_only": True,
+        "create_if_dir_exists": "~/.gemini/config",
+        "frontmatter": {
+            "trigger": "always_on",
+            "description": "Antigravity extra guidelines.",
+        },
+    }
+    cfg = {
+        "common_text_file": "common.md",
+        "common_data_file": "common.json",
+        "agent_configs": [target_spec],
+        "agent_clis": [],
+    }
+    rule_path = home / ".gemini/config/rules/antigravity.md"
+
+    # Skips creation when anchor directory (~/.gemini/config) does not exist
+    assert agents_tool.cmd_sync(repo, cfg, check_only=False) == 0
+    assert not rule_path.exists()
+
+    # Creates rule file when anchor dir exists even if rules/ subdir does not yet exist
+    (home / ".gemini/config").mkdir(parents=True)
+    assert agents_tool.cmd_sync(repo, cfg, check_only=True) == 1
+    assert agents_tool.cmd_sync(repo, cfg, check_only=False) == 0
+    assert rule_path.exists()
+
+    text = rule_path.read_text(encoding="utf-8")
+    assert text.startswith('---\ntrigger: always_on\ndescription: "Antigravity extra guidelines."\n---\n')
+    assert agents_tool.AGENT_EXTRA_HEADING in text
+    assert "### Antigravity (agy)" in text
+    assert "# Shared Policy" not in text
+    assert agents_tool.MANAGED_BEGIN in text
+    assert agents_tool.MANAGED_END in text
+
+    # Idempotent
+    assert agents_tool.cmd_sync(repo, cfg, check_only=True) == 0
+
+    # Preserves user notes outside markers & restores missing frontmatter
+    body_without_fm = text.split("---\n\n", 1)[1] + "\n# User Note\nKeep me.\n"
+    rule_path.write_text(body_without_fm, encoding="utf-8")
+    assert agents_tool.cmd_sync(repo, cfg, check_only=False) == 0
+    restored = rule_path.read_text(encoding="utf-8")
+    assert restored.startswith("---\ntrigger: always_on\n")
+    assert "# User Note\nKeep me." in restored
+
+    # Skips writing when extra_only target has empty/missing extra text
+    rule_path.unlink()
+    (repo / "agy-extra.md").write_text("   \n", encoding="utf-8")
+    assert agents_tool.cmd_sync(repo, cfg, check_only=False) == 0
+    assert not rule_path.exists()
+
+
+def test_inspect_agent_configs_and_shape_for_extra_only_frontmatter(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    rules_dir = home / ".gemini/config/rules"
+    rules_dir.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+
+    target = agents_tool.AgentConfigTarget(
+        name="Antigravity Global Instructions",
+        format="markdown",
+        default_paths=["~/.gemini/config/rules/antigravity.md"],
+        extra_text_file="agy-extra.md",
+        extra_only=True,
+        frontmatter={"trigger": "always_on", "description": "desc"},
+    )
+    common_data = {"mcp_servers": {"context7": {"type": "http", "url": "https://x"}}, "skills": ["worktrunk"]}
+    rule_path = rules_dir / "antigravity.md"
+
+    # Valid rule passes without MCP/skills markers
+    rule_path.write_text(
+        f'---\ntrigger: always_on\ndescription: "desc"\n---\n\n{agents_tool.AGENT_EXTRA_HEADING}\n\nBody.\n',
+        encoding="utf-8",
+    )
+    results, failed = agents_tool.inspect_agent_configs([target], common_data)
+    assert not failed
+    assert results[0].missing_mcp == []
+    assert results[0].missing_skills == []
+    assert results[0].shape_issues == []
+
+    # Missing frontmatter / trigger fails shape check
+    assert "missing YAML frontmatter with trigger" in agents_tool.check_config_shape(
+        target, f"{agents_tool.AGENT_EXTRA_HEADING}\n\nBody.\n"
+    )
+    assert "missing YAML frontmatter with trigger" in agents_tool.check_config_shape(
+        target, f'---\ndescription: "no trigger"\n---\n\n{agents_tool.AGENT_EXTRA_HEADING}\n'
+    )
+
+
+def test_skills_cli_agent_targets_maps_agy(monkeypatch):
+    monkeypatch.setattr(agents_tool.shutil, "which", lambda cmd: f"/bin/{cmd}" if cmd in {"agy", "claude"} else None)
+    cfg = {
+        "agent_clis": [
+            {"name": "Claude Code", "command": "claude"},
+            {"name": "Antigravity", "command": "agy"},
+        ]
+    }
+    assert agents_tool.skills_cli_agent_targets(cfg) == ["claude-code", "antigravity"]
+
+
+def test_repo_config_includes_antigravity_targets():
+    cfg = agents_tool.load_config(ROOT / "home/.config/ooodnakov/agents/config.json")
+    assert any(cli["command"] == "agy" for cli in cfg["agent_clis"])
+
+    targets = agents_tool.parse_agent_targets(cfg["agent_configs"])
+    updates = agents_tool.parse_agent_update_specs(cfg.get("agent_updates", []))
+    for query in ("antigravity", "agy"):
+        selected, unmatched = agents_tool.select_agent_targets(targets, updates, [query])
+        assert unmatched == []
+        assert [t.name for t in selected] == [
+            "Gemini Global Instructions",
+            "Antigravity",
+            "Antigravity Global Instructions",
+        ]
+
+    agy_instr = next(t for t in targets if t.name == "Antigravity Global Instructions")
+    assert agy_instr.extra_only is True
+    assert agy_instr.frontmatter == {
+        "trigger": "always_on",
+        "description": "Antigravity-specific context control and tool execution guidelines managed by oooconf.",
+    }
+    assert (ROOT / agy_instr.extra_text_file).is_file()
