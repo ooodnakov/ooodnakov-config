@@ -45,7 +45,7 @@ def _read_first_config_line(path: Path) -> str:
 
 
 def resolve_default_bw_server() -> str:
-    """Resolve Bitwarden/Vaultwarden server URL from env, data-home, local file, or fallback."""
+    """Resolve Bitwarden/Vaultwarden server URL from env, data-home, local file, or empty string."""
     env_server = os.environ.get("OOODNAKOV_BW_SERVER", "").strip()
     if env_server:
         return env_server
@@ -59,8 +59,7 @@ def resolve_default_bw_server() -> str:
         if value:
             return value
 
-    # Phase 1 compatibility fallback until private overlay is deployed across hosts.
-    return "https://vaultwarden.ooodnakov.ru"
+    return ""
 
 
 DEFAULT_BW_SERVER = resolve_default_bw_server()
@@ -872,7 +871,15 @@ def login_command(args: argparse.Namespace) -> int:
             "use BW_CLIENTSECRET or the interactive prompt instead.",
         )
 
-    server = args.server.rstrip("/")
+    server = (args.server or "").strip().rstrip("/")
+    if not server:
+        status(
+            "fail",
+            "No Bitwarden/Vaultwarden server URL is configured. Pass `--server URL`, "
+            "set `OOODNAKOV_BW_SERVER`, or configure `{DATA_HOME}/ooodnakov-config/bw-server` "
+            "or `~/.config/ooodnakov/local/bw-server`.",
+        )
+        return 1
     config_result = subprocess.run(["bw", "config", "server", server], text=True)
     if config_result.returncode != 0:
         return config_result.returncode
@@ -1029,7 +1036,7 @@ def check_bw_status() -> list[str]:
 
     current_server = (status.get("serverUrl") or "").rstrip("/")
     expected_server = resolve_default_bw_server().rstrip("/")
-    if current_server and current_server != expected_server:
+    if expected_server and current_server and current_server != expected_server:
         problems.append(
             f"Bitwarden CLI is pointed at {current_server}, expected {expected_server}. "
             f"Run `bw config server {expected_server}` if needed."

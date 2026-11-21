@@ -217,7 +217,7 @@ def test_resolve_default_bw_server_precedence(isolated_env: tuple[Path, Path], m
 
     # 4) Fallback when nothing configured.
     fallback = render_secrets.resolve_default_bw_server()
-    assert fallback.startswith("https://")
+    assert fallback == ""
 
     # 3) Machine-local file.
     local_file = home / ".config/ooodnakov/local/bw-server"

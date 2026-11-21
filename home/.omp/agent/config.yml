@@ -97,7 +97,7 @@ mnemopi:
   autoRecall: true
   embeddingVariant: multilingual
 hindsight:
-  apiUrl: https://hs.ooodnakov.ru
+  apiUrl: ""
   bankId: Main
   scoping: per-project-tagged
 dev: null

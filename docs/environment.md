@@ -89,7 +89,7 @@ The generated files stay local and ignored:
 - `~/.config/ooodnakov/local/env.zsh`
 - `~/.config/ooodnakov/local/env.ps1`
 
-The tracked template supports plain shared values and `bw://item/<item-id>/...` references. The current backend is `Bitwarden CLI` via `bw`, intended for a self-hosted Vaultwarden server such as `https://vaultwarden.ooodnakov.ru`.
+The tracked template supports plain shared values and `bw://item/<item-id>/...` references. The current backend is `Bitwarden CLI` via `bw`, intended for a self-hosted Vaultwarden server such as `https://vault.example.com` (resolved from `OOODNAKOV_BW_SERVER`, `{DATA_HOME}/ooodnakov-config/bw-server`, or `~/.config/ooodnakov/local/bw-server`).
 
 Typical Unix flow:
 

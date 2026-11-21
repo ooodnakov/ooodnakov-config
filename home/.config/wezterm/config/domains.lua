@@ -2,12 +2,10 @@ local wezterm = require("wezterm")
 local platform = require("utils.platform")
 
 local options = {
-	ssh_domains = {
-		{ name = "site",   remote_address = "dnakov.ooo",  username = "fr" },
-		{ name = "orange", remote_address = "orangepi",    username = "rem" },
-		{ name = "router", remote_address = "openwrt.lan", username = "root" },
-		{ name = "think",  remote_address = "tc",          username = "th" },
-	},
+	-- Personal SSH domains are loaded from the optional local/private overlay
+	-- ({DATA_HOME}/ooodnakov-config/wezterm-domains.lua or
+	-- ~/.config/ooodnakov/local/wezterm-domains.lua).
+	ssh_domains = {},
 	unix_domains = {},
 	wsl_domains = {},
 }
