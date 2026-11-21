@@ -279,6 +279,11 @@ ensure_ssh_include() {
       return 1
     fi
   fi
+
+  run_cmd chmod 600 "$ssh_config" || {
+    record_failure "Normalizing SSH config permissions"
+    return 1
+  }
 }
 
 install_fonts() {
@@ -470,6 +475,7 @@ normalize_managed_ssh_config() {
   local private_root
   private_root="$(resolve_private_overlay_root)"
   local -a candidates=(
+    "$HOME_DIR/.ssh/config"
     "$HOME_DIR/.config/ooodnakov/ssh/config"
     "$HOME_DIR/.ssh/config.local"
   )
