@@ -165,21 +165,22 @@ def test_env_curly_quotes_use_safe_powershell_assignment(tmp_path: Path) -> None
 
     pwsh = shutil.which("pwsh")
     if pwsh is not None:
-        script = (
+        verify_script = tmp_path / "verify.ps1"
+        out_file = tmp_path / "out.txt"
+        verify_script.write_text(
             "Remove-Item Env:PWNED -ErrorAction SilentlyContinue\n"
             f"{ps1_text}\n"
             "if (Test-Path Env:PWNED) { exit 42 }\n"
-            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n"
-            "[Console]::Write($env:CURLY_TOKEN)\n"
+            "[System.IO.File]::WriteAllText($args[0], $env:CURLY_TOKEN, [System.Text.UTF8Encoding]::new($false))\n",
+            encoding="utf-8",
         )
         proc = subprocess.run(
-            [pwsh, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "-"],
-            input=script.encode("utf-8"),
+            [pwsh, "-NoLogo", "-NoProfile", "-NonInteractive", "-File", str(verify_script), str(out_file)],
             capture_output=True,
             check=False,
         )
         assert proc.returncode == 0, proc.stderr.decode("utf-8", errors="replace")
-        assert proc.stdout.decode("utf-8") == payload
+        assert out_file.read_bytes().decode("utf-8") == payload
 
     updated = run_env(tmp_path, "CURLY_TOKEN", "plain")
     assert updated.returncode == 0, updated.stderr

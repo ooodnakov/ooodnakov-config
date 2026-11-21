@@ -207,7 +207,7 @@ def test_bw_session_passed_via_env_never_argv(monkeypatch) -> None:
         assert kwargs["env"]["BW_SESSION"] == token
 
 
-def test_powershell_assignment_prevents_injection_and_roundtrips() -> None:
+def test_powershell_assignment_prevents_injection_and_roundtrips(tmp_path: Path) -> None:
     unsafe_payloads = [
         "line1\n'@\n$env:PWNED = 'yes'\n$x = @'\nline2",
         "line1\r'@; $env:PWNED = 'yes'",
@@ -227,23 +227,24 @@ def test_powershell_assignment_prevents_injection_and_roundtrips() -> None:
 
     pwsh = shutil.which("pwsh")
     if pwsh is not None:
-        for payload in [*unsafe_payloads, normal_payload]:
+        for idx, payload in enumerate([*unsafe_payloads, normal_payload]):
             rendered = secrets.powershell_assignment("TEST_SECRET", payload)
-            script = (
+            verify_script = tmp_path / f"verify_{idx}.ps1"
+            out_file = tmp_path / f"out_{idx}.txt"
+            verify_script.write_text(
                 "Remove-Item Env:PWNED -ErrorAction SilentlyContinue\n"
                 f"{rendered}\n"
                 "if (Test-Path Env:PWNED) { exit 42 }\n"
-                "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\n"
-                "[Console]::Write($env:TEST_SECRET)\n"
+                "[System.IO.File]::WriteAllText($args[0], $env:TEST_SECRET, [System.Text.UTF8Encoding]::new($false))\n",
+                encoding="utf-8",
             )
             proc = subprocess.run(
-                [pwsh, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "-"],
-                input=script.encode("utf-8"),
+                [pwsh, "-NoLogo", "-NoProfile", "-NonInteractive", "-File", str(verify_script), str(out_file)],
                 capture_output=True,
                 check=False,
             )
             assert proc.returncode == 0, proc.stderr.decode("utf-8", errors="replace")
-            assert proc.stdout.decode("utf-8") == payload
+            assert out_file.read_bytes().decode("utf-8") == payload
 
 
 def test_unlock_pwsh_uses_safe_powershell_assignment(monkeypatch, capsys) -> None:
