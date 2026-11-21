@@ -10,7 +10,6 @@ import urllib.request
 from pathlib import Path
 
 import pytest
-import zstandard
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -103,6 +102,7 @@ def test_download_allows_exact_max_download_bytes(monkeypatch: pytest.MonkeyPatc
 
 
 def test_extract_tar_zst_enforces_max_decompressed_bytes(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    zstandard = pytest.importorskip("zstandard")
     tar_buffer = io.BytesIO()
     data = b"a" * 2048
     with tarfile.open(fileobj=tar_buffer, mode="w") as bundle:

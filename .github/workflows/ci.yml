@@ -247,4 +247,4 @@ jobs:
       - name: Optional deps parser/drift tests
         shell: pwsh
         run: |
-          uv run pytest tests/test_operation_plan.py tests/test_profiles.py tests/test_transaction_apply.py tests/test_lifecycle_tool.py tests/test_supply_chain.py tests/test_optional_deps.py tests/test_optional_deps_drift.py tests/test_repository_hygiene.py tests/test_static_smoke.py
+          uv run pytest tests/test_operation_plan.py tests/test_profiles.py tests/test_transaction_apply.py tests/test_lifecycle_tool.py tests/test_supply_chain.py tests/test_optional_deps.py tests/test_optional_deps_drift.py tests/test_repository_hygiene.py tests/test_static_smoke.py tests/test_secure_artifact_hardening.py
