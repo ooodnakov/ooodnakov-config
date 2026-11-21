@@ -51,6 +51,14 @@ completions:
 lock:
     @uv run python scripts/generate/generate_dependency_lock.py
 
+# Build the static GitHub Pages site into _site/.
+site:
+    @uv run python scripts/site/build_site.py --output _site
+
+# Build and serve the static GitHub Pages site locally.
+site-serve:
+    @uv run python scripts/site/build_site.py --output _site --serve
+
 # Scan tracked files and full git history for secrets with gitleaks.
 secrets:
     @if command -v gitleaks >/dev/null 2>&1; then \

@@ -9,6 +9,8 @@ CLI (`oooconf`, short alias `o`) for install, updates, and recovery.
 
 This repo tracks the opinionated base config and bootstrap logic only. Secrets, tokens, private keys, and host-specific overrides stay outside git in local files.
 
+Browse the interactive project site and searchable docs at [ooodnakov.github.io/ooodnakov-config](https://ooodnakov.github.io/ooodnakov-config/).
+
 The generated [CLI reference](docs/cli-reference.md) lists every public command, option, supported platform, and stable handler ID. Operational examples stay hand-authored: in this README for first install, in [the CLI usage guide](docs/cli-usage.md) for day-to-day commands, and in `oooconf help <command>`.
 
 ## What This Repo Manages

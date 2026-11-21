@@ -11,7 +11,13 @@ dependencies = [
 [tool.uv]
 
 [dependency-groups]
-dev = ["pyyaml>=6.0.3", "pytest>=9.0.3", "pytest-cov>=7.0.0", "ruff>=0.15.11"]
+dev = [
+    "pyyaml>=6.0.3",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.15.11",
+    "markdown>=3.11.3",
+]
 
 [tool.ruff]
 target-version = "py312"

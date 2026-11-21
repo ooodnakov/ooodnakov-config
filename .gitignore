@@ -113,3 +113,6 @@ home/.config/ooodnakov/herdr-data
 .coverage
 .coverage.*
 htmlcov/
+
+# Static site build output
+_site/
