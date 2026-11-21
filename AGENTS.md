@@ -523,16 +523,6 @@ Use [Worktrunk](https://github.com/max-sixty/worktrunk) (`wt`) for git worktree 
 <!-- oooconf:mcp-servers:start -->
 - `context7`: documentation search and code examples for thousands of libraries
 - `dynadot`: Dynadot domain management (availability, registration, DNS, transfers) via OAuth
-- `gemini-webapi`: Unofficial Gemini Web API access
-- `github`: GitHub API access (repositories, issues, PRs)
-- `godot`: Godot engine editor interaction
-- `grok_mcp`: xAI Grok API access
-- `playwright`: headless browser automation and web testing
-- `ssh-mcp-openwrt`: No description
-- `ssh-mcp-orange`: No description
-- `ssh-openwrt`: local OpenWrt router access
-- `ssh-orange`: local Orange Pi access
-- `ssh-site`: remote production site access
 - `xactions`: X/Twitter automation and scraping toolkit (profiles, tweets, analytics, writes)
 <!-- oooconf:mcp-servers:end -->
 

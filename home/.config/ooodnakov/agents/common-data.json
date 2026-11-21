@@ -13,48 +13,6 @@
       "type": "http",
       "url": "https://mcp.dynadot.com/mcp"
     },
-    "github": {
-      "args": [
-        "dlx",
-        "@modelcontextprotocol/server-github"
-      ],
-      "command": "pnpm",
-      "description": "GitHub API access (repositories, issues, PRs)"
-    },
-    "playwright": {
-      "args": [
-        "dlx",
-        "@playwright/mcp@latest"
-      ],
-      "command": "pnpm",
-      "description": "headless browser automation and web testing"
-    },
-    "ssh-mcp-openwrt": {
-      "args": [
-        "dlx",
-        "ssh-mcp",
-        "-y",
-        "--",
-        "--host=192.168.1.1",
-        "--user=root",
-        "--timeout=30000",
-        "--maxChars=none"
-      ],
-      "command": "pnpm"
-    },
-    "ssh-mcp-orange": {
-      "args": [
-        "dlx",
-        "ssh-mcp",
-        "-y",
-        "--",
-        "--host=192.168.1.201",
-        "--user=rem",
-        "--timeout=30000",
-        "--maxChars=none"
-      ],
-      "command": "pnpm"
-    },
     "xactions": {
       "args": [
         "dlx",
