@@ -12,6 +12,13 @@
         "dynadot": {
             "type": "http",
             "url": "https://mcp.dynadot.com/mcp"
+        },
+        "xactions": {
+            "command": "pnpm",
+            "args": [
+                "dlx",
+                "xactions-mcp"
+            ]
         }
     },
     "disabledServers": [

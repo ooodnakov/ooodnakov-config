@@ -54,6 +54,14 @@
         "--maxChars=none"
       ],
       "command": "pnpm"
+    },
+    "xactions": {
+      "args": [
+        "dlx",
+        "xactions-mcp"
+      ],
+      "command": "pnpm",
+      "description": "X/Twitter automation and scraping toolkit (profiles, tweets, analytics, writes)"
     }
   },
   "skill_specs": [

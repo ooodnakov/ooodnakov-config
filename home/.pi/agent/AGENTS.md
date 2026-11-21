@@ -316,6 +316,7 @@ Use [Worktrunk](https://github.com/max-sixty/worktrunk) (`wt`) for git worktree 
 - `ssh-openwrt`: local OpenWrt router access
 - `ssh-orange`: local Orange Pi access
 - `ssh-site`: remote production site access
+- `xactions`: X/Twitter automation and scraping toolkit (profiles, tweets, analytics, writes)
 <!-- oooconf:mcp-servers:end -->
 
 ## Common Skills

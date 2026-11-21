@@ -8,6 +8,13 @@
     },
     "dynadot": {
       "url": "https://mcp.dynadot.com/mcp"
+    },
+    "xactions": {
+      "command": "pnpm",
+      "args": [
+        "dlx",
+        "xactions-mcp"
+      ]
     }
   }
 }
