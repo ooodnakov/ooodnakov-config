@@ -36,6 +36,12 @@
       "source": "https://github.com/max-sixty/worktrunk"
     },
     {
+      "description": "Frontend design, UX review, critique, audit, and UI polish guidance",
+      "installer": "skills",
+      "name": "impeccable",
+      "source": "https://github.com/pbakaus/impeccable"
+    },
+    {
       "agents": ["omp", "claude", "codex"],
       "description": "Herdr task delegation: one task per agent, same harness, every result published as an artifact",
       "installer": "local",
@@ -47,6 +53,7 @@
     "context7 (gemini)",
     "graphify",
     "herdr-tasks (omp, claude, codex)",
+    "impeccable",
     "worktrunk"
   ]
 }

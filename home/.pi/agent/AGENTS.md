@@ -314,6 +314,7 @@ Use [Worktrunk](https://github.com/max-sixty/worktrunk) (`wt`) for git worktree 
 - context7 (gemini)
 - graphify
 - herdr-tasks (omp, claude, codex)
+- impeccable
 - worktrunk
 <!-- oooconf:skills:end -->
 <!-- oooconf:agents-common:end -->
