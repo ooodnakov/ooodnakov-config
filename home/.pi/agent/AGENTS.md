@@ -306,7 +306,6 @@ Use [Worktrunk](https://github.com/max-sixty/worktrunk) (`wt`) for git worktree 
 <!-- oooconf:mcp-servers:start -->
 - `context7`: documentation search and code examples for thousands of libraries
 - `dynadot`: Dynadot domain management (availability, registration, DNS, transfers) via OAuth
-- `xactions`: X/Twitter automation and scraping toolkit (profiles, tweets, analytics, writes)
 <!-- oooconf:mcp-servers:end -->
 
 ## Common Skills

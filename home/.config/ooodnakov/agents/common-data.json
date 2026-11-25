@@ -12,14 +12,6 @@
       "description": "Dynadot domain management (availability, registration, DNS, transfers) via OAuth",
       "type": "http",
       "url": "https://mcp.dynadot.com/mcp"
-    },
-    "xactions": {
-      "args": [
-        "dlx",
-        "xactions-mcp@5.0.0"
-      ],
-      "command": "pnpm",
-      "description": "X/Twitter automation and scraping toolkit (profiles, tweets, analytics, writes)"
     }
   },
   "skill_specs": [

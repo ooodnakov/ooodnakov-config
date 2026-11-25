@@ -1016,11 +1016,11 @@ def test_render_mcp_server_entry_antigravity_remote_and_stdio(monkeypatch):
 
     stdio = agents_tool.render_mcp_server_entry(
         target,
-        "xactions",
-        {"command": "pnpm", "args": ["dlx", "xactions-mcp"]},
+        "example-stdio",
+        {"command": "pnpm", "args": ["dlx", "example-mcp"]},
         Path("/tmp/repo"),
     )
-    assert stdio == {"command": "pnpm", "args": ["dlx", "xactions-mcp"]}
+    assert stdio == {"command": "pnpm", "args": ["dlx", "example-mcp"]}
 
 
 def test_sync_global_configs_antigravity_mcp_preserves_existing(tmp_path, monkeypatch):
