@@ -12,6 +12,10 @@
         "dynadot": {
             "type": "http",
             "url": "https://mcp.dynadot.com/mcp"
+        },
+        "emusks": {
+            "command": "emusks-mcp-run",
+            "args": []
         }
     },
     "disabledServers": [

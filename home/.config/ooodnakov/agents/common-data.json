@@ -12,6 +12,12 @@
       "description": "Dynadot domain management (availability, registration, DNS, transfers) via OAuth",
       "type": "http",
       "url": "https://mcp.dynadot.com/mcp"
+    },
+    "emusks": {
+      "args": [],
+      "command": "emusks-mcp-run",
+      "description": "X/Twitter read and write toolkit (timelines, search, DMs, articles, posts) with cookie bootstrap and approval gate",
+      "type": "stdio"
     }
   },
   "skill_specs": [

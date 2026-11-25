@@ -8,6 +8,10 @@
     },
     "dynadot": {
       "url": "https://mcp.dynadot.com/mcp"
+    },
+    "emusks": {
+      "command": "emusks-mcp-run",
+      "args": []
     }
   }
 }
