@@ -10,7 +10,6 @@ import json
 import os
 import re
 import shlex
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -19,13 +18,13 @@ SCRIPTS_CLI_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
 
+import bitwarden_cli as bw_cli  # noqa: E402
 from cli_ui import error, status  # noqa: E402
 from cli_ui import path as ui_path  # noqa: E402
 
 START = "# --- LOCAL OVERRIDES START ---"
 END = "# --- LOCAL OVERRIDES END ---"
 KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-BW_TIMEOUT_SECONDS = 30
 _PS_UNSAFE_QUOTES = ("\u2018", "\u2019", "\u201a", "\u201b")
 
 
@@ -87,31 +86,8 @@ def write_override(path: Path, key: str, line: str) -> None:
             os.unlink(temp_name)
 
 
-def bitwarden_env() -> dict[str, str]:
-    env = os.environ.copy()
-    if not env.get("BW_SESSION"):
-        session_path = Path.home() / ".config/ooodnakov/local/bw-session"
-        if session_path.exists():
-            session = session_path.read_text(encoding="utf-8").strip()
-            if session:
-                env["BW_SESSION"] = session
-    return env
-
-
-def run_bw(args: list[str], *, env: dict[str, str], input_value: str | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["bw", *args],
-        input=input_value,
-        text=True,
-        capture_output=True,
-        check=True,
-        env=env,
-        timeout=BW_TIMEOUT_SECONDS,
-    )
-
-
 def upload_to_bitwarden(key: str, value: str) -> str:
-    env = bitwarden_env()
+    env = bw_cli.session_env()
     name = f"oooconf env: {key}"
     item = {
         "type": 2,
@@ -119,13 +95,10 @@ def upload_to_bitwarden(key: str, value: str) -> str:
         "secureNote": {"type": 0},
         "notes": value,
     }
-    listed = run_bw(["list", "items", "--search", name], env=env)
-    matches = [candidate for candidate in json.loads(listed.stdout) if candidate.get("name") == name]
+    matches = [candidate for candidate in bw_cli.list_items(env=env, search=name) if candidate.get("name") == name]
     item_id = str(matches[0]["id"]) if matches else None
-    encoded = run_bw(["encode"], env=env, input_value=json.dumps(item)).stdout.strip()
-    command = ["edit", "item", item_id] if item_id else ["create", "item"]
-    saved = run_bw(command, env=env, input_value=encoded)
-    return str(json.loads(saved.stdout)["id"])
+    encoded = bw_cli.encode(json.dumps(item), env=env)
+    return str(bw_cli.save_item(item_id, encoded, env=env)["id"])
 
 
 def prompt_missing(args: argparse.Namespace) -> tuple[str, str, bool]:
@@ -162,15 +135,8 @@ def main() -> int:
             item_id = upload_to_bitwarden(key, value)
             status("ok", f"Uploaded {key} to Bitwarden item {item_id}")
         return 0
-    except (
-        ValueError,
-        FileNotFoundError,
-        subprocess.CalledProcessError,
-        subprocess.TimeoutExpired,
-        json.JSONDecodeError,
-    ) as exc:
-        detail = exc.stderr.strip() if isinstance(exc, subprocess.CalledProcessError) and exc.stderr else str(exc)
-        error("fail", f"oooconf env: {detail}")
+    except (ValueError, OSError, bw_cli.BitwardenError) as exc:
+        error("fail", f"oooconf env: {exc}")
         return 1
 
 

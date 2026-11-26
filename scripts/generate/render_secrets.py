@@ -5,12 +5,9 @@ import argparse
 import base64
 import difflib
 import getpass
-import json
 import os
 import shlex
-import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,13 +15,14 @@ SCRIPTS_CLI_DIR = Path(__file__).resolve().parents[1] / "cli"
 if str(SCRIPTS_CLI_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_CLI_DIR))
 
+import bitwarden_cli as bw_cli  # noqa: E402
 from cli_ui import bullet, section, spacer, status  # noqa: E402
 from cli_ui import path as ui_path  # noqa: E402
+from private_files import ensure_private_directory, write_private_atomic  # noqa: E402
 
 DEFAULT_TEMPLATE_RELATIVE_PATH = Path("home/.config/ooodnakov/secrets/env.template")
 DEFAULT_CONFIG_RELATIVE_PATH = Path(".config/ooodnakov")
 DEFAULT_LOCAL_RELATIVE_PATH = Path(".config/ooodnakov/local")
-DEFAULT_BW_SESSION_RELATIVE_PATH = DEFAULT_LOCAL_RELATIVE_PATH / "bw-session"
 
 
 def _xdg_data_home() -> Path:
@@ -63,27 +61,12 @@ def resolve_default_bw_server() -> str:
 
 
 DEFAULT_BW_SERVER = resolve_default_bw_server()
-BWH_CLI_TIMEOUT_SECONDS = 20
 SECRETS_SUBCOMMANDS = ("sync", "doctor", "login", "unlock", "list", "status", "logout", "add", "remove")
 SECRETS_SUBCOMMAND_ALIASES = {
     "ls": "list",
     "rm": "remove",
     "del": "remove",
 }
-
-
-def shutil_which(name: str) -> str | None:
-    for directory in os.environ.get("PATH", "").split(os.pathsep):
-        if not directory:
-            continue
-        candidate = Path(directory) / name
-        if candidate.exists() and os.access(candidate, os.X_OK):
-            return str(candidate)
-        if os.name == "nt":
-            candidate_exe = Path(directory) / f"{name}.exe"
-            if candidate_exe.exists() and os.access(candidate_exe, os.X_OK):
-                return str(candidate_exe)
-    return None
 
 
 @dataclass
@@ -314,188 +297,8 @@ def resolve_value(entry: SecretEntry, backend: str, cache: dict[str, dict] | Non
     if entry.value.startswith("bw://"):
         if backend != "bw":
             raise ValueError(f"unsupported backend for secret reference: {backend}")
-        return read_bw_secret(entry.value, entry.key, cache)
+        return bw_cli.resolve_reference(entry.value, entry.key, cache)
     return entry.value
-
-
-def read_bw_secret(reference: str, key: str, cache: dict[str, dict] | None = None) -> str:
-    item_id, selector = parse_bw_reference(reference)
-    item = read_bw_item(item_id, key, cache)
-    return select_bw_value(item, selector, key)
-
-
-def parse_bw_reference(reference: str) -> tuple[str, str]:
-    prefix = "bw://item/"
-    if not reference.startswith(prefix):
-        raise ValueError(
-            f"unsupported Bitwarden reference: {reference}. "
-            "Use bw://item/<item-id>/(password|username|notes|uri|field/<field-name>)."
-        )
-
-    remainder = reference[len(prefix) :]
-    parts = [part for part in remainder.split("/") if part]
-    if len(parts) < 2:
-        raise ValueError(f"invalid Bitwarden reference: {reference}. Expected bw://item/<item-id>/<selector>.")
-
-    item_id = parts[0]
-    if parts[1] == "field":
-        if len(parts) < 3:
-            raise ValueError(
-                f"invalid Bitwarden field reference: {reference}. Expected bw://item/<item-id>/field/<field-name>."
-            )
-        selector = "field/" + "/".join(parts[2:])
-    else:
-        selector = parts[1]
-
-    return item_id, selector
-
-
-def ensure_bw_unlocked(env: dict) -> None:
-    """Auto-login and unlock if BW_PASSWORD/BW_CLIENTID/BW_CLIENTSECRET are available."""
-    bw_password = env.get("BW_PASSWORD")
-    bw_clientid = env.get("BW_CLIENTID")
-    bw_clientsecret = env.get("BW_CLIENTSECRET")
-
-    if bw_password and bw_clientid and bw_clientsecret:
-        if shutil_which("bw") is None:
-            raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.")
-        try:
-            result = subprocess.run(
-                ["bw", "unlock", "--raw", "--passwordenv", "BW_PASSWORD"],
-                check=True,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                env=env,
-                timeout=BWH_CLI_TIMEOUT_SECONDS,
-            )
-            token = result.stdout.strip()
-            if token:
-                env["BW_SESSION"] = token
-                return
-        except subprocess.CalledProcessError:
-            pass  # fall through to manual error
-        except subprocess.TimeoutExpired as exc:
-            raise RuntimeError(
-                f"`bw unlock` timed out after {BWH_CLI_TIMEOUT_SECONDS}s. "
-                "Check Bitwarden connectivity and CLI auth state."
-            ) from exc
-
-    raise RuntimeError(
-        'BW_SESSION is not set. Unlock Bitwarden first, for example with `export BW_SESSION="$(bw unlock --raw)"` '
-        "or the PowerShell equivalent. "
-        "Alternatively, set BW_CLIENTID, BW_CLIENTSECRET, and BW_PASSWORD for auto-unlock."
-    )
-
-
-def _get_session_env() -> dict:
-    """Return a copy of os.environ with BW_SESSION set if available."""
-    env = os.environ.copy()
-    session = env.get("BW_SESSION") or read_persisted_bw_session()
-    if session:
-        env["BW_SESSION"] = session
-    return env
-
-
-def _ensure_session_available(env: dict) -> None:
-    """Ensure BW_SESSION is set in env, auto-unlocking if needed."""
-    if not env.get("BW_SESSION"):
-        ensure_bw_unlocked(env)
-        if not env.get("BW_SESSION"):
-            raise RuntimeError("Failed to auto-unlock vault. Check BW_CLIENTID/BW_CLIENTSECRET/BW_PASSWORD.")
-
-
-def get_bw_status(env: dict | None = None) -> dict:
-    """Return parsed `bw status` output using the provided session-aware env."""
-    status_env = env.copy() if env is not None else _get_session_env()
-    try:
-        status_result = subprocess.run(
-            ["bw", "status"],
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=status_env,
-            timeout=BWH_CLI_TIMEOUT_SECONDS,
-        )
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr.strip()
-        raise RuntimeError(stderr or "`bw status` failed") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"`bw status` timed out after {BWH_CLI_TIMEOUT_SECONDS}s") from exc
-
-    try:
-        return json.loads(status_result.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("`bw status` did not return valid JSON") from exc
-
-
-def sync_bw_vault(env: dict) -> None:
-    """Refresh the Bitwarden CLI cache before resolving secrets."""
-    command = ["bw", "sync"]
-    try:
-        subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=env,
-            timeout=BWH_CLI_TIMEOUT_SECONDS,
-        )
-    except FileNotFoundError as exc:
-        raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"`bw sync` timed out after {BWH_CLI_TIMEOUT_SECONDS}s") from exc
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr.strip()
-        message = stderr or f"`{' '.join(command)}` failed"
-        raise RuntimeError(f"failed to sync Bitwarden vault: {message}") from exc
-
-
-def fetch_all_bw_items() -> list[dict]:
-    """Fetch all Bitwarden items in a single call and return parsed JSON list."""
-    env = _get_session_env()
-    _ensure_session_available(env)
-    sync_bw_vault(env)
-    command = ["bw", "list", "items"]
-    try:
-        result = subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=env,
-            timeout=BWH_CLI_TIMEOUT_SECONDS,
-        )
-    except FileNotFoundError as exc:
-        raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(f"timed out fetching Bitwarden items after {BWH_CLI_TIMEOUT_SECONDS}s") from exc
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr.strip()
-        message = stderr or f"`{' '.join(command)}` failed"
-        raise RuntimeError(f"failed to fetch Bitwarden items: {message}") from exc
-
-    try:
-        return json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("Bitwarden returned invalid JSON for items list.") from exc
-
-
-def build_item_cache(item_ids: set[str]) -> dict[str, dict]:
-    """Build a lookup dict for the requested item IDs, using batch fetch when possible."""
-    cache: dict[str, dict] = {}
-    if not item_ids:
-        return cache
-
-    all_items = fetch_all_bw_items()
-    for item in all_items:
-        item_id = item.get("id")
-        if item_id in item_ids:
-            cache[item_id] = item
-    return cache
 
 
 def format_missing_bw_references(
@@ -510,70 +313,6 @@ def format_missing_bw_references(
         lines.append(f"  - {keys}: {item_id}")
     lines.append("Update the `bw://item/...` references in the template or log into the intended vault.")
     return "\n".join(lines)
-
-
-def read_bw_item(item_id: str, key: str, cache: dict[str, dict] | None = None) -> dict:
-    if cache is not None and item_id in cache:
-        return cache[item_id]
-
-    # Fallback: individual fetch (for callers outside sync context)
-    env = _get_session_env()
-    _ensure_session_available(env)
-    sync_bw_vault(env)
-    command = ["bw", "get", "item", item_id]
-    try:
-        result = subprocess.run(
-            command,
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=env,
-            timeout=BWH_CLI_TIMEOUT_SECONDS,
-        )
-    except FileNotFoundError as exc:
-        raise RuntimeError("Bitwarden CLI (`bw`) is not installed or not on PATH.") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
-            f"timed out resolving {key} from Bitwarden after {BWH_CLI_TIMEOUT_SECONDS}s (item {item_id})"
-        ) from exc
-    except subprocess.CalledProcessError as exc:
-        stderr = exc.stderr.strip()
-        message = stderr or f"`{' '.join(command)}` failed"
-        raise RuntimeError(f"failed to resolve {key} from Bitwarden: {message}") from exc
-
-    try:
-        return json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Bitwarden returned invalid JSON for {key}.") from exc
-
-
-def select_bw_value(item: dict, selector: str, key: str) -> str:
-    if selector == "password":
-        value = (item.get("login") or {}).get("password")
-    elif selector == "username":
-        value = (item.get("login") or {}).get("username")
-    elif selector == "notes":
-        value = item.get("notes")
-    elif selector == "uri":
-        uris = ((item.get("login") or {}).get("uris")) or []
-        value = uris[0].get("uri") if uris else None
-    elif selector.startswith("field/"):
-        field_name = selector.split("/", 1)[1]
-        value = None
-        for field in item.get("fields") or []:
-            if field.get("name") == field_name:
-                value = field.get("value")
-                break
-    else:
-        raise ValueError(
-            f"unsupported Bitwarden selector for {key}: {selector}. "
-            "Use password, username, notes, uri, or field/<field-name>."
-        )
-
-    if value is None:
-        raise RuntimeError(f"Bitwarden item does not contain `{selector}` for {key}.")
-    return str(value)
 
 
 def shell_assignment(key: str, value: str) -> str:
@@ -649,7 +388,7 @@ def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[t
         for entry in entries:
             if entry.value.startswith("bw://"):
                 try:
-                    item_id, _ = parse_bw_reference(entry.value)
+                    item_id, _ = bw_cli.parse_reference(entry.value)
                     item_ids.add(item_id)
                     references_by_item_id.setdefault(item_id, []).append(entry.key)
                 except (ValueError, RuntimeError):
@@ -657,7 +396,7 @@ def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[t
         if item_ids:
             total_ids = len(item_ids)
             status("hint", f"Fetching {total_ids} Bitwarden item(s) in batch...")
-            cache = build_item_cache(item_ids)
+            cache = bw_cli.fetch_items(item_ids)
             missing_item_ids = item_ids - set(cache.keys())
             if missing_item_ids:
                 raise RuntimeError(format_missing_bw_references(missing_item_ids, references_by_item_id))
@@ -668,54 +407,6 @@ def resolve_entries_for_sync(entries: list[SecretEntry], backend: str) -> list[t
         status("hint", f"Resolving {index}/{total}: {entry.key}")
         resolved_entries.append((entry.key, resolve_value(entry, backend, cache)))
     return resolved_entries
-
-
-def ensure_private_directory(path: Path) -> None:
-    path.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if os.name != "nt":
-        path.chmod(0o700)
-
-
-def _write_private_atomic(path: Path, content: str) -> None:
-    fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
-    try:
-        try:
-            if os.name != "nt":
-                os.fchmod(fd, 0o600)
-        except Exception:
-            os.close(fd)
-            raise
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
-            stream.write(content)
-        os.replace(temp_name, path)
-    finally:
-        if os.path.exists(temp_name):
-            os.unlink(temp_name)
-
-
-def session_file_path() -> Path:
-    return Path.home() / DEFAULT_BW_SESSION_RELATIVE_PATH
-
-
-def read_persisted_bw_session() -> str | None:
-    path = session_file_path()
-    if not path.exists():
-        return None
-    token = path.read_text(encoding="utf-8").strip()
-    return token or None
-
-
-def write_persisted_bw_session(token: str) -> Path:
-    path = session_file_path()
-    ensure_private_directory(path.parent)
-    _write_private_atomic(path, token + "\n")
-    return path
-
-
-def clear_persisted_bw_session() -> None:
-    path = session_file_path()
-    if path.exists():
-        path.unlink()
 
 
 def write_file(path: Path, content: str, force: bool) -> str:
@@ -737,7 +428,7 @@ def write_file(path: Path, content: str, force: bool) -> str:
         content += LOCAL_OVERRIDES_START + "\n"
         content += "# Add machine-specific env vars here. This section is preserved across syncs.\n"
         content += LOCAL_OVERRIDES_END + "\n"
-    _write_private_atomic(path, content)
+    write_private_atomic(path, content)
     return "created" if created else "updated"
 
 
@@ -795,7 +486,7 @@ def doctor_command(args: argparse.Namespace, repo_root: Path) -> int:
             problems.append(f"plaintext local env file is present in the repo tree: {tracked_path}")
 
     if args.backend == "bw":
-        if shutil_which("bw") is None:
+        if bw_cli.which_bw() is None:
             problems.append("Bitwarden CLI `bw` is not installed or not on PATH")
         else:
             problems.extend(check_bw_status())
@@ -817,28 +508,6 @@ def doctor_command(args: argparse.Namespace, repo_root: Path) -> int:
     return 0
 
 
-def unlock_with_password(password: str) -> tuple[str | None, str]:
-    env = os.environ.copy()
-    env["BW_PASSWORD"] = password
-    try:
-        result = subprocess.run(
-            ["bw", "unlock", "--raw", "--passwordenv", "BW_PASSWORD"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=env,
-            timeout=BWH_CLI_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired:
-        return None, f"`bw unlock` timed out after {BWH_CLI_TIMEOUT_SECONDS}s."
-    if result.returncode != 0:
-        return None, result.stderr.strip() or "`bw unlock` failed."
-    token = result.stdout.strip()
-    if not token:
-        return None, "`bw unlock --raw` returned an empty session token."
-    return token, ""
-
-
 def unlock_after_login() -> bool:
     """Logging in leaves the vault locked; prompt once and persist the session."""
     try:
@@ -848,19 +517,20 @@ def unlock_after_login() -> bool:
         status("warn", "Vault unlock skipped. Run `oooconf secrets unlock` when ready.")
         return False
 
-    token, error = unlock_with_password(password)
-    if token is None:
-        status("fail", error)
+    try:
+        token = bw_cli.unlock_raw(password)
+    except bw_cli.BitwardenError as exc:
+        status("fail", str(exc))
         status("hint", "Login succeeded, but the vault stays locked. Run `oooconf secrets unlock`.")
         return False
 
-    path = write_persisted_bw_session(token)
+    path = bw_cli.write_session(token)
     status("ok", f"Vault unlocked; BW_SESSION saved to {ui_path(path)}")
     return True
 
 
 def login_command(args: argparse.Namespace) -> int:
-    if shutil_which("bw") is None:
+    if bw_cli.which_bw() is None:
         status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
         return 1
 
@@ -880,9 +550,9 @@ def login_command(args: argparse.Namespace) -> int:
             "or `~/.config/ooodnakov/local/bw-server`.",
         )
         return 1
-    config_result = subprocess.run(["bw", "config", "server", server], text=True)
-    if config_result.returncode != 0:
-        return config_result.returncode
+    config_result = bw_cli.config_server(server)
+    if config_result != 0:
+        return config_result
 
     interactive = sys.stdin.isatty() and sys.stdout.isatty()
     env = os.environ.copy()
@@ -917,13 +587,13 @@ def login_command(args: argparse.Namespace) -> int:
         env["BW_CLIENTID"] = client_id
         env["BW_CLIENTSECRET"] = client_secret
         status("info", "Attempting Bitwarden API key login...")
-        login_result = subprocess.run(["bw", "login", "--apikey"], env=env, text=True)
+        login_result = bw_cli.login_apikey(env)
     else:
         status("info", "Attempting Bitwarden email/password login...")
-        login_result = subprocess.run(["bw", "login"], text=True)
+        login_result = bw_cli.login_password()
 
-    if login_result.returncode != 0:
-        return login_result.returncode
+    if login_result != 0:
+        return login_result
 
     if interactive:
         unlock_after_login()
@@ -966,7 +636,7 @@ def prompt_login_method(default_method: str) -> str:
 
 
 def unlock_command(args: argparse.Namespace) -> int:
-    if shutil_which("bw") is None:
+    if bw_cli.which_bw() is None:
         status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
         return 1
 
@@ -985,34 +655,19 @@ def unlock_command(args: argparse.Namespace) -> int:
                 "Supplying a password on the command line exposes secrets in process lists; "
                 "use the interactive prompt or BW_PASSWORD instead.",
             )
-        token, error = unlock_with_password(password)
-        if token is None:
-            status("fail", error)
+        try:
+            token = bw_cli.unlock_raw(password)
+        except bw_cli.BitwardenError as exc:
+            status("fail", str(exc))
             return 1
-        path = write_persisted_bw_session(token)
+        path = bw_cli.write_session(token)
         status("ok", f"Saved BW_SESSION to {ui_path(path)}")
         return 0
 
     try:
-        result = subprocess.run(
-            ["bw", "unlock", "--raw"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=BWH_CLI_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired:
-        status("fail", f"`bw unlock` timed out after {BWH_CLI_TIMEOUT_SECONDS}s.")
-        return 1
-    if result.returncode != 0:
-        stderr = result.stderr.strip()
-        if stderr:
-            status("fail", stderr)
-        return result.returncode
-
-    token = result.stdout.strip()
-    if not token:
-        status("fail", "`bw unlock --raw` returned an empty session token.")
+        token = bw_cli.unlock_raw()
+    except bw_cli.BitwardenError as exc:
+        status("fail", str(exc))
         return 1
 
     if args.raw:
@@ -1029,12 +684,12 @@ def unlock_command(args: argparse.Namespace) -> int:
 def check_bw_status() -> list[str]:
     problems: list[str] = []
     try:
-        status = get_bw_status()
+        state = bw_cli.status()
     except RuntimeError as exc:
         problems.append(str(exc))
         return problems
 
-    current_server = (status.get("serverUrl") or "").rstrip("/")
+    current_server = (state.get("serverUrl") or "").rstrip("/")
     expected_server = resolve_default_bw_server().rstrip("/")
     if expected_server and current_server and current_server != expected_server:
         problems.append(
@@ -1042,8 +697,8 @@ def check_bw_status() -> list[str]:
             f"Run `bw config server {expected_server}` if needed."
         )
 
-    status_value = status.get("status")
-    session_available = bool(os.environ.get("BW_SESSION") or read_persisted_bw_session())
+    status_value = state.get("status")
+    session_available = bool(os.environ.get("BW_SESSION") or bw_cli.read_session())
     if status_value == "unauthenticated":
         problems.append("Bitwarden CLI is not logged in. Run `bw login`.")
     elif status_value == "locked" and not session_available:
@@ -1117,11 +772,11 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
             else:
                 status("ok", f"{ui_path(local_path)}: up to date")
 
-    session_available = bool(os.environ.get("BW_SESSION") or read_persisted_bw_session())
+    session_available = bool(os.environ.get("BW_SESSION") or bw_cli.read_session())
     if session_available:
-        if shutil_which("bw"):
+        if bw_cli.which_bw():
             try:
-                vault_state = get_bw_status()
+                vault_state = bw_cli.status()
                 vault_status = vault_state.get("status", "unknown")
                 status("info", f"Vault status: {vault_status}")
                 if vault_status == "locked":
@@ -1148,17 +803,17 @@ def status_command(args: argparse.Namespace, repo_root: Path) -> int:
 
 
 def logout_command() -> int:
-    if shutil_which("bw") is None:
+    if bw_cli.which_bw() is None:
         status("fail", "Bitwarden CLI (`bw`) is not installed or not on PATH.")
         return 1
 
-    lock_result = subprocess.run(["bw", "lock"], text=True)
-    if lock_result.returncode != 0:
-        return lock_result.returncode
+    lock_result = bw_cli.lock()
+    if lock_result != 0:
+        return lock_result
 
-    logout_result = subprocess.run(["bw", "logout"], text=True)
-    clear_persisted_bw_session()
-    return logout_result.returncode
+    logout_result = bw_cli.logout()
+    bw_cli.clear_session()
+    return logout_result
 
 
 def add_command(args: argparse.Namespace, repo_root: Path) -> int:

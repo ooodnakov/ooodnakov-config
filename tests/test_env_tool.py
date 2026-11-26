@@ -15,6 +15,8 @@ assert SPEC and SPEC.loader
 env_tool = module_from_spec(SPEC)
 SPEC.loader.exec_module(env_tool)
 
+import bitwarden_cli as bw_cli  # noqa: E402
+
 
 def run_env(config_home: Path, *args: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
@@ -76,6 +78,7 @@ def test_env_rejects_multiline_values_before_writing(tmp_path: Path) -> None:
 def test_empty_xdg_config_home_uses_home_config(tmp_path: Path) -> None:
     env = os.environ.copy()
     env["HOME"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
     env["XDG_CONFIG_HOME"] = ""
     result = subprocess.run(
         [sys.executable, str(TOOL), "EMPTY_XDG", "value"],
@@ -137,14 +140,14 @@ def test_bitwarden_upload_uses_stdin_session_timeout_and_updates_existing(tmp_pa
 
     with (
         patch.object(env_tool.Path, "home", return_value=tmp_path),
-        patch.object(env_tool.subprocess, "run", side_effect=fake_run),
+        patch.object(bw_cli.subprocess, "run", side_effect=fake_run),
     ):
         assert env_tool.upload_to_bitwarden("TOKEN", "plaintext") == "existing"
 
     assert calls[-1][0] == ["bw", "edit", "item", "existing"]
     assert all("plaintext" not in argument for command, _ in calls for argument in command)
     assert calls[-1][1]["input"] == "encoded-secret"
-    assert all(kwargs["timeout"] == env_tool.BW_TIMEOUT_SECONDS for _, kwargs in calls)
+    assert all(kwargs["timeout"] == bw_cli.BW_TIMEOUT_SECONDS for _, kwargs in calls)
     assert all(kwargs["env"]["BW_SESSION"] == "saved-session" for _, kwargs in calls)
 
 

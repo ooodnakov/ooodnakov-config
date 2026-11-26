@@ -19,6 +19,8 @@ secrets = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = secrets
 _spec.loader.exec_module(secrets)
 
+import bitwarden_cli as bw_cli  # noqa: E402
+
 SUCCESS = 0
 
 
@@ -81,10 +83,11 @@ def _interactive(monkeypatch) -> None:
 
 def test_login_prompts_for_unlock_and_persists_session(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setattr(secrets, "shutil_which", lambda name: "/usr/bin/bw")
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.setattr(bw_cli, "which_bw", lambda: "/usr/bin/bw")
     _interactive(monkeypatch)
     calls: list[tuple[list[str], dict]] = []
-    monkeypatch.setattr(secrets.subprocess, "run", _fake_run(calls))
+    monkeypatch.setattr(bw_cli.subprocess, "run", _fake_run(calls))
 
     prompts: list[str] = []
 
@@ -107,10 +110,11 @@ def test_login_prompts_for_unlock_and_persists_session(monkeypatch, tmp_path: Pa
 
 def test_login_failure_does_not_prompt(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setattr(secrets, "shutil_which", lambda name: "/usr/bin/bw")
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.setattr(bw_cli, "which_bw", lambda: "/usr/bin/bw")
     _interactive(monkeypatch)
     calls: list[tuple[list[str], dict]] = []
-    monkeypatch.setattr(secrets.subprocess, "run", _fake_run(calls, login_rc=1))
+    monkeypatch.setattr(bw_cli.subprocess, "run", _fake_run(calls, login_rc=1))
     monkeypatch.setattr(
         secrets.getpass,
         "getpass",
@@ -124,10 +128,11 @@ def test_login_failure_does_not_prompt(monkeypatch, tmp_path: Path) -> None:
 
 def test_cancelled_unlock_keeps_login_successful(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setattr(secrets, "shutil_which", lambda name: "/usr/bin/bw")
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.setattr(bw_cli, "which_bw", lambda: "/usr/bin/bw")
     _interactive(monkeypatch)
     calls: list[tuple[list[str], dict]] = []
-    monkeypatch.setattr(secrets.subprocess, "run", _fake_run(calls))
+    monkeypatch.setattr(bw_cli.subprocess, "run", _fake_run(calls))
 
     def cancel(prompt=""):
         raise KeyboardInterrupt
@@ -140,10 +145,11 @@ def test_cancelled_unlock_keeps_login_successful(monkeypatch, tmp_path: Path) ->
 
 def test_wrong_password_keeps_login_successful_without_session(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setattr(secrets, "shutil_which", lambda name: "/usr/bin/bw")
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.setattr(bw_cli, "which_bw", lambda: "/usr/bin/bw")
     _interactive(monkeypatch)
     calls: list[tuple[list[str], dict]] = []
-    monkeypatch.setattr(secrets.subprocess, "run", _fake_run(calls, unlock_rc=1))
+    monkeypatch.setattr(bw_cli.subprocess, "run", _fake_run(calls, unlock_rc=1))
     monkeypatch.setattr(secrets.getpass, "getpass", lambda prompt="": "wrong-password")
 
     assert secrets.login_command(_args()) == SUCCESS
@@ -152,11 +158,12 @@ def test_wrong_password_keeps_login_successful_without_session(monkeypatch, tmp_
 
 def test_non_interactive_login_does_not_prompt(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setattr(secrets, "shutil_which", lambda name: "/usr/bin/bw")
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.setattr(bw_cli, "which_bw", lambda: "/usr/bin/bw")
     monkeypatch.setattr(secrets.sys, "stdin", _Tty())  # isatty but stdout redirected
     monkeypatch.setattr(secrets.sys, "stdout", _Tty())
     calls: list[tuple[list[str], dict]] = []
-    monkeypatch.setattr(secrets.subprocess, "run", _fake_run(calls))
+    monkeypatch.setattr(bw_cli.subprocess, "run", _fake_run(calls))
     monkeypatch.setattr(
         secrets.getpass,
         "getpass",
@@ -188,11 +195,11 @@ def test_bw_session_passed_via_env_never_argv(monkeypatch) -> None:
             return _Result(stdout='{"id": "item-123", "notes": "val"}')
         raise AssertionError(f"unexpected command: {command}")
 
-    monkeypatch.setattr(secrets.subprocess, "run", fake_run)
+    monkeypatch.setattr(bw_cli.subprocess, "run", fake_run)
 
-    secrets.sync_bw_vault({"BW_SESSION": token})
-    assert secrets.fetch_all_bw_items() == [{"id": "item-123"}]
-    assert secrets.read_bw_item("item-123", "MY_KEY") == {"id": "item-123", "notes": "val"}
+    bw_cli.sync({"BW_SESSION": token})
+    assert bw_cli.fetch_items({"item-123"}) == {"item-123": {"id": "item-123"}}
+    assert bw_cli.get_item("item-123", "MY_KEY") == {"id": "item-123", "notes": "val"}
 
     assert [cmd for cmd, _ in calls] == [
         ["bw", "sync"],
@@ -249,9 +256,9 @@ def test_powershell_assignment_prevents_injection_and_roundtrips(tmp_path: Path)
 
 def test_unlock_pwsh_uses_safe_powershell_assignment(monkeypatch, capsys) -> None:
     token = "tok\u2019; $env:PWNED = 'yes'"
-    monkeypatch.setattr(secrets, "shutil_which", lambda name: "/usr/bin/bw")
+    monkeypatch.setattr(bw_cli, "which_bw", lambda: "/usr/bin/bw")
     monkeypatch.setattr(
-        secrets.subprocess,
+        bw_cli.subprocess,
         "run",
         lambda command, **kwargs: _Result(stdout=f"{token}\n"),
     )
@@ -265,12 +272,12 @@ def test_unlock_pwsh_uses_safe_powershell_assignment(monkeypatch, capsys) -> Non
     assert "$env:PWNED" not in out
 
 
-def test_write_persisted_bw_session_and_write_file_atomic(monkeypatch, tmp_path: Path) -> None:
+def test_write_session_and_write_file_atomic(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(secrets.Path, "home", lambda: tmp_path)
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
 
-    session_path = secrets.write_persisted_bw_session("session-1")
+    session_path = bw_cli.write_session("session-1")
     assert session_path == tmp_path / ".config/ooodnakov/local/bw-session"
     assert session_path.read_text(encoding="utf-8") == "session-1\n"
     assert list(session_path.parent.iterdir()) == [session_path]
@@ -285,7 +292,7 @@ def test_write_persisted_bw_session_and_write_file_atomic(monkeypatch, tmp_path:
 
         mp.setattr(secrets.os, "replace", fail_replace)
         with pytest.raises(OSError, match="simulated replace failure"):
-            secrets.write_persisted_bw_session("session-2")
+            bw_cli.write_session("session-2")
 
     assert session_path.read_text(encoding="utf-8") == "session-1\n"
     assert list(session_path.parent.iterdir()) == [session_path]
@@ -311,9 +318,9 @@ def test_cli_secret_args_warn_and_preserve_behavior(monkeypatch, tmp_path: Path,
     monkeypatch.setattr(secrets.Path, "home", lambda: tmp_path)
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.setattr(secrets, "shutil_which", lambda name: "/usr/bin/bw")
+    monkeypatch.setattr(bw_cli, "which_bw", lambda: "/usr/bin/bw")
     calls: list[tuple[list[str], dict]] = []
-    monkeypatch.setattr(secrets.subprocess, "run", _fake_run(calls, token="cli-unlock-token"))
+    monkeypatch.setattr(bw_cli.subprocess, "run", _fake_run(calls, token="cli-unlock-token"))
 
     rc_unlock = secrets.unlock_command(
         argparse.Namespace(password="cli-pw", shell="sh", raw=False, explicit_shell=False, explicit_raw=False)
