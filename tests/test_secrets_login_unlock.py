@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -212,6 +213,24 @@ def test_bw_session_passed_via_env_never_argv(monkeypatch) -> None:
         assert "--session" not in command
         assert token not in command
         assert kwargs["env"]["BW_SESSION"] == token
+
+
+def test_bw_output_is_decoded_as_utf8(monkeypatch) -> None:
+    """Windows defaults to the ANSI code page; vault data is UTF-8 and must be decoded as such."""
+    items = [{"id": "item-123", "name": "Пароль 🔑", "notes": "naïve"}]
+    calls: list[dict] = []
+
+    def fake_run(command, **kwargs):
+        calls.append(kwargs)
+        if command[1:3] == ["list", "items"]:
+            return _Result(stdout=json.dumps(items, ensure_ascii=False))
+        return _Result(stdout='{"status": "unlocked"}')
+
+    monkeypatch.setattr(bw_cli.subprocess, "run", fake_run)
+
+    assert bw_cli.list_items(env={"BW_SESSION": "session"}) == items
+    assert bw_cli.status(env={"BW_SESSION": "session"}) == {"status": "unlocked"}
+    assert all(kwargs.get("encoding") == "utf-8" for kwargs in calls)
 
 
 def test_powershell_assignment_prevents_injection_and_roundtrips(tmp_path: Path) -> None:

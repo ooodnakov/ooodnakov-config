@@ -59,6 +59,7 @@ def _run(
             ["bw", *args],
             input=input_value,
             text=True,
+            encoding="utf-8",
             capture_output=not stream,
             env=env if env is not None else os.environ.copy(),
             timeout=BW_TIMEOUT_SECONDS,
