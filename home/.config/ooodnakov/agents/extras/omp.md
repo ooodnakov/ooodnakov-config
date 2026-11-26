@@ -18,6 +18,13 @@
   Use bash for execution and pipelines. Set bash.cwd rather than
   repeatedly prefixing local commands with cd; never assume cwd persists.
 
+- **Know which shell you get on Windows.**
+  Tool calls always run in omp's embedded bash 5.3, which runs
+  non-binaries as shell scripts and ignores shebangs; `shellPath` only
+  changes services and `!`. Run extensionless Python CLIs
+  (`herdr-task`, `herdr-artifact`) as `python <path>` or through their
+  `.ps1`/`.cmd` wrappers, or define a function once per session.
+
 - **Recover from evidence.**
   Follow the currently mounted tool schemas. After failure, inspect the
   error and correct its cause; do not repeat unchanged failing calls.

@@ -58,6 +58,15 @@ herdr-task set t-20261024-ab12cd done
 
 Write the report to a temp file, never into the repo. Include what changed and how it was verified; keep it short. The artifact appears in the Artifacts panel beside the tasks list.
 
+## Windows
+
+`herdr-task` and `herdr-artifact` are extensionless Python scripts. PowerShell and cmd resolve the `.ps1`/`.cmd` wrappers linked beside them, so plain `herdr-task …` works there. A bash on Windows that runs non-binaries as shell scripts (omp's embedded bash, which ignores shebangs) cannot: call `python "$HOME/.local/bin/herdr-task" …`, or define the names once in the session:
+
+```sh
+herdr-task() { python "$HOME/.local/bin/herdr-task" "$@"; }
+herdr-artifact() { python "$HOME/.local/bin/herdr-artifact" "$@"; }
+```
+
 ## Rules
 
 - One task per delegated piece of work, with a note the agent can act on.
