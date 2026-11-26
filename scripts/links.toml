@@ -145,6 +145,32 @@ key = "herdr-artifact"
 source = "home/.config/ooodnakov/bin/herdr-artifact"
 target = "{LOCAL_BIN}/herdr-artifact"
 
+# Windows cannot execute the extensionless Python scripts above, so PowerShell
+# and cmd wrappers sit beside them and run them with Python.
+[[links]]
+key = "herdr-task-ps1"
+source = "home/.config/ooodnakov/bin/herdr-task.ps1"
+target = "{LOCAL_BIN}/herdr-task.ps1"
+only = "windows"
+
+[[links]]
+key = "herdr-task-cmd"
+source = "home/.config/ooodnakov/bin/herdr-task.cmd"
+target = "{LOCAL_BIN}/herdr-task.cmd"
+only = "windows"
+
+[[links]]
+key = "herdr-artifact-ps1"
+source = "home/.config/ooodnakov/bin/herdr-artifact.ps1"
+target = "{LOCAL_BIN}/herdr-artifact.ps1"
+only = "windows"
+
+[[links]]
+key = "herdr-artifact-cmd"
+source = "home/.config/ooodnakov/bin/herdr-artifact.cmd"
+target = "{LOCAL_BIN}/herdr-artifact.cmd"
+only = "windows"
+
 # --- linux-only ---
 
 [[links]]

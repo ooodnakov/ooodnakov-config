@@ -164,6 +164,10 @@ are linked:
 | `herdr-layout-main-panels-preview` | `home/.config/herdr-app/layouts/main-panels.svg` | `~/.config/herdr-app/layouts/main-panels.svg` |
 | `herdr-task` | `home/.config/ooodnakov/bin/herdr-task` | `~/.local/bin/herdr-task` |
 | `herdr-artifact` | `home/.config/ooodnakov/bin/herdr-artifact` | `~/.local/bin/herdr-artifact` |
+| `herdr-task-ps1` (windows) | `home/.config/ooodnakov/bin/herdr-task.ps1` | `~/.local/bin/herdr-task.ps1` |
+| `herdr-task-cmd` (windows) | `home/.config/ooodnakov/bin/herdr-task.cmd` | `~/.local/bin/herdr-task.cmd` |
+| `herdr-artifact-ps1` (windows) | `home/.config/ooodnakov/bin/herdr-artifact.ps1` | `~/.local/bin/herdr-artifact.ps1` |
+| `herdr-artifact-cmd` (windows) | `home/.config/ooodnakov/bin/herdr-artifact.cmd` | `~/.local/bin/herdr-artifact.cmd` |
 
 Any `themes/<name>.json` Herdr finds becomes selectable in Settings → Look;
 `settings.json`'s `"theme": {"light": "<name>", "dark": "<name>"}` is the default
