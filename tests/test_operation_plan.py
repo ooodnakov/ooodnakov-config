@@ -10,10 +10,9 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
+from scripts.cli import operation_plan
 
-from scripts.cli import operation_plan  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _plan_env(home: Path) -> dict[str, str]:

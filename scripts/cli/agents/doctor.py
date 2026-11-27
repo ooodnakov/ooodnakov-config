@@ -5,16 +5,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-try:
-    import tomllib
-except ModuleNotFoundError:  # pragma: no cover
-    tomllib = None
-
-try:
-    import yaml as _yaml
-except ModuleNotFoundError:  # pragma: no cover
-    _yaml = None
-
 from .config import (
     detect_clis,
     existing_default_path,
@@ -32,6 +22,17 @@ from .models import (
     print_status_line,
     resolve_collab,
 )
+
+tomllib: Any
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover
+    tomllib = None
+
+try:
+    import yaml as _yaml
+except ModuleNotFoundError:  # pragma: no cover
+    _yaml = None
 
 
 def extract_search_space(path: Path, fmt: str) -> str:
@@ -141,7 +142,8 @@ def inspect_agent_configs(
             continue
 
         if target.extra_only:
-            missing_mcp, missing_skills = [], []
+            missing_mcp: list[str] = []
+            missing_skills: list[str] = []
         else:
             missing_mcp, missing_skills = check_common_entries(search_space, common_data, target.format)
 

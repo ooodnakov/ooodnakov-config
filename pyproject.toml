@@ -17,6 +17,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.15.11",
     "markdown>=3.11.3",
+    "mypy>=2.4.1",
 ]
 
 [tool.ruff]
@@ -25,10 +26,19 @@ line-length = 120
 extend-exclude = ["third_party"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "B", "UP", "SIM", "C4", "PIE", "PT", "RUF"]
 ignore = ["E501"]
 
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+explicit_package_bases = true
+exclude = ["third_party"]
+warn_unused_ignores = true
+no_implicit_optional = true
+
 [tool.pytest.ini_options]
+pythonpath = ["."]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-q --tb=no"

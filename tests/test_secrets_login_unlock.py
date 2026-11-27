@@ -15,7 +15,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("render_secrets_login_test", ROOT / "scripts/generate/render_secrets.py")
-assert _spec is not None and _spec.loader is not None
+assert _spec is not None
+assert _spec.loader is not None
 secrets = importlib.util.module_from_spec(_spec)
 sys.modules[_spec.name] = secrets
 _spec.loader.exec_module(secrets)

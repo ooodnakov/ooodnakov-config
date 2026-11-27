@@ -25,9 +25,10 @@ import secrets
 import subprocess
 import tempfile
 import time
-from contextlib import contextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 FORMAT = 1
 TASK_STATUSES = ("todo", "doing", "blocked", "done")
@@ -130,10 +131,8 @@ def write_json(path: Path, data: Any) -> None:
             stream.write("\n")
         os.replace(temp, path)
     except BaseException:
-        try:
+        with suppress(OSError):
             os.unlink(temp)
-        except OSError:
-            pass
         raise
 
 
@@ -141,8 +140,7 @@ def write_json(path: Path, data: Any) -> None:
 def locked(path: Path) -> Iterator[None]:
     """An exclusive lock beside `path`; other writers wait."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    stream = open(path, "a+b")
-    try:
+    with open(path, "a+b") as stream:
         if os.name == "nt":
             import msvcrt
 
@@ -157,9 +155,9 @@ def locked(path: Path) -> Iterator[None]:
             import fcntl
 
             fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
-        yield
-    finally:
         try:
+            yield
+        finally:
             if os.name == "nt":
                 import msvcrt
 
@@ -169,8 +167,6 @@ def locked(path: Path) -> Iterator[None]:
                 import fcntl
 
                 fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
-        finally:
-            stream.close()
 
 
 def _slug_base(folder: str) -> str:

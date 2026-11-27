@@ -9,11 +9,9 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from scripts.generate import render_secrets
 
-from scripts.generate import render_secrets  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _isolate_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
@@ -263,7 +261,7 @@ def test_list_status_add_remove_and_doctor_commands(
     assert render_secrets.status_command(argparse.Namespace(template=None), repo) == 1
 
     # Doctor checks: plaintext in repo fails, clean state passes
-    monkeypatch.setattr(render_secrets, "check_bw_status", lambda: [])
+    monkeypatch.setattr(render_secrets, "check_bw_status", list)
     assert render_secrets.doctor_command(argparse.Namespace(backend="bw", template=None), repo) == 0
 
     tracked_leak = repo / "home/.config/ooodnakov/local/env.zsh"

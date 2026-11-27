@@ -17,7 +17,8 @@ PYTHON_UI = ROOT / "scripts/cli/cli_ui.py"
 
 def _load_cli_ui():
     spec = importlib.util.spec_from_file_location("cli_ui_path_test", PYTHON_UI)
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

@@ -9,8 +9,6 @@ from pathlib import Path
 
 import pytest
 
-# Make scripts importable
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.cli.read_optional_deps import load_deps, output_catalog, output_json
 
 SUBPROCESS_TIMEOUT_SECONDS = int(os.environ.get("OOOCONF_TEST_TIMEOUT", "180"))
@@ -206,7 +204,7 @@ def test_url_substitution_for_multiple_tools():
     """Test template substitution works for tools with 'ver' and 'url'."""
     data = load_deps()
     for dep in data["deps"]:
-        if dep.get("ver") and any("url" in str(k).lower() for k in dep.keys()):
+        if dep.get("ver") and any("url" in str(k).lower() for k in dep):
             urls = [v for k, v in dep.items() if isinstance(v, str) and "url" in str(k).lower()]
             for url in urls:
                 if "${ver}" in url:
@@ -271,7 +269,7 @@ def test_minimal_keys_command_and_legacy_alias(capsys):
 
         sys.argv = ["read_optional_deps.py", "minimal", "windows"]
         assert main() == 0
-        assert capsys.readouterr().out.split() == shared + ["oh-my-posh"]
+        assert capsys.readouterr().out.split() == [*shared, "oh-my-posh"]
     finally:
         sys.argv = original_argv
 
@@ -325,7 +323,7 @@ def test_linux_toolset_command_outputs_requirement_lines(capsys):
     parsed = [line.split("|") for line in output]
     assert all(len(parts) == 4 for parts in parsed)
     assert [parts[0] for parts in parsed if parts[1] == "required"] == ["zsh", "docker"]
-    assert dict((parts[0], parts[3]) for parts in parsed)["oh-my-pi"] == "omp"
+    assert {parts[0]: parts[3] for parts in parsed}["oh-my-pi"] == "omp"
 
 
 def test_invalid_key_handling():

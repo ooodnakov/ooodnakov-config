@@ -8,6 +8,10 @@ default:
 lint:
     @uv run ruff check
 
+# Run Python type checks.
+typecheck:
+    @uv run mypy scripts/
+
 # Verify Python formatting without changing files.
 format-check:
     @uv run ruff format --check
@@ -34,7 +38,7 @@ formats:
     @uv run python scripts/validation/validate_tracked_formats.py
 
 # Run cross-platform checks.
-check: lint format-check formats test
+check: lint format-check typecheck formats test
     @echo Cross-platform checks passed.
 
 # Run Unix shell syntax and smoke tests. Requires Bash.

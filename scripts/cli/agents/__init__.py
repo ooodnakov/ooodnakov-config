@@ -139,13 +139,9 @@ from .sync import (
 )
 
 __all__ = [
-    "AGENT_EXTRA_HEADING",
     "AGENTS_EPILOG",
-    "AgentCli",
-    "AgentConfigTarget",
-    "AgentUpdateSpec",
+    "AGENT_EXTRA_HEADING",
     "DEFAULT_CONFIG_PATH",
-    "DoctorConfigResult",
     "ENV_PLACEHOLDER_PATTERN",
     "ENV_REFERENCE_PATTERN",
     "LOCAL_SKILL_DIRS",
@@ -159,6 +155,10 @@ __all__ = [
     "SCRIPTS_CLI_DIR",
     "TOML_BARE_KEY_PATTERN",
     "_JSON_TRAILING_COMMA_PATTERN",
+    "AgentCli",
+    "AgentConfigTarget",
+    "AgentUpdateSpec",
+    "DoctorConfigResult",
     "_json_object_candidates",
     "_load_json_object",
     "_post_install_script",

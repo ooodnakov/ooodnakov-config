@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT))
+from scripts.cli import lifecycle_tool
 
-from scripts.cli import lifecycle_tool  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 SENTINEL = "SUPER_SECRET_SENTINEL_7f29"
 
@@ -110,11 +108,11 @@ def test_snapshot_round_trip_contains_only_allowlisted_portable_values(
 
 @pytest.mark.parametrize(
     "change",
-    (
+    [
         '\nsecret = "bad"\n',
         '\n[preferences]\nunknown = "bad"\n',
         '\n[preferences]\ntheme = "../../private-key"\n',
-    ),
+    ],
 )
 def test_snapshot_rejects_non_allowlisted_content(tmp_path: Path, change: str) -> None:
     base = 'version = 1\nprofile = "minimal"\ncapabilities = ["shell"]\n'

@@ -14,10 +14,9 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT))
+from scripts.security import bin_track, secure_artifact
 
-from scripts.security import bin_track, secure_artifact  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _catalog() -> dict[str, object]:
@@ -35,7 +34,8 @@ def test_direct_release_archives_have_valid_sha256_metadata() -> None:
         )
         if direct:
             integrity = dependency.get("integrity")
-            assert isinstance(integrity, dict) and integrity, dependency["key"]
+            assert isinstance(integrity, dict), dependency["key"]
+            assert integrity, dependency["key"]
             assert all(re.fullmatch(r"[0-9a-f]{64}", value) for value in integrity.values())
 
 
@@ -77,7 +77,7 @@ def test_verified_standalone_executable_can_be_staged(tmp_path: Path) -> None:
     assert (destination / "tool").read_bytes() == b"verified executable"
 
 
-@pytest.mark.parametrize("kind", ("zip", "tar"))
+@pytest.mark.parametrize("kind", ["zip", "tar"])
 def test_archive_path_traversal_is_rejected(tmp_path: Path, kind: str) -> None:
     archive = tmp_path / f"payload.{kind}"
     if kind == "zip":
@@ -268,7 +268,7 @@ def test_bin_tracking_rejects_corrupt_config_without_overwriting(tmp_path, monke
     config = tmp_path / "tracking.json"
     config.write_text('{"bins": broken')
     monkeypatch.setenv("BIN_CONFIG", str(config))
-    with pytest.raises(ValueError):
+    with pytest.raises(json.JSONDecodeError):
         bin_track.load(config)
     assert config.read_text() == '{"bins": broken'
 
@@ -395,7 +395,8 @@ def test_pnpm_dlx_mcp_servers_are_version_pinned() -> None:
         data = json.loads((REPO_ROOT / rel_path).read_text(encoding="utf-8"))
         assert isinstance(data, dict), f"expected JSON object in {rel_path}"
         servers = data.get(key)
-        assert isinstance(servers, dict) and servers, f"missing or empty {key} in {rel_path}"
+        assert isinstance(servers, dict), f"missing or invalid {key} in {rel_path}"
+        assert servers, f"empty {key} in {rel_path}"
         for name, spec in servers.items():
             if not isinstance(spec, dict):
                 continue

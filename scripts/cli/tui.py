@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
+from typing import Any
 
+curses: Any
 try:
     import curses
 
@@ -32,9 +35,7 @@ def is_interactive() -> bool:
     if hasattr(sys.stdout, "fileno") and os.isatty(sys.stdout.fileno()):
         return True
     # Fallback: stdin TTY for direct terminal prompts with redirected stdout.
-    if hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
-        return True
-    return False
+    return bool(hasattr(sys.stdin, "isatty") and sys.stdin.isatty())
 
 
 # Terminals send arrows either as SS3 (\x1bOA) or CSI (\x1b[A) sequences.
@@ -50,7 +51,7 @@ def _arrow_key(final: int) -> int | None:
     return getattr(curses, name) if name else None
 
 
-def _read_key(win: "curses.window") -> int:
+def _read_key(win: curses.window) -> int:
     """Read one key, decoding CSI/SS3 arrow sequences into curses KEY_* codes."""
     key = win.getch()
     if key != 27:
@@ -116,10 +117,8 @@ def _curses_select(
                     break
                 prefix = "[x]" if i in selected else "[ ]"
                 attr = curses.A_REVERSE if cursor == i else curses.A_NORMAL
-                try:
+                with contextlib.suppress(curses.error):
                     win.addstr(y, 2, f"{prefix} {item}", attr)
-                except curses.error:
-                    pass
 
             # Instructions
             instr_y = height - 2
@@ -202,9 +201,7 @@ def _curses_confirm(prompt: str, default: bool) -> bool | None:
             except curses.error:
                 key = -1
 
-            if key in (curses.KEY_LEFT, ord("h")):
-                default = not default
-            elif key in (curses.KEY_RIGHT, ord("l")):
+            if key in (curses.KEY_LEFT, ord("h"), curses.KEY_RIGHT, ord("l")):
                 default = not default
             elif key in (ord("\n"), ord("\r")):
                 choice = 0 if default else 1

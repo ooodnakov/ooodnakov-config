@@ -4,17 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import io
-import sys
 import tarfile
 import urllib.request
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
-
-from scripts.security import secure_artifact  # noqa: E402
+from scripts.security import secure_artifact
 
 
 class _FakeResponse:

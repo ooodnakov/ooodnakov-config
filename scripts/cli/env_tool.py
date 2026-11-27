@@ -76,8 +76,9 @@ def write_override(path: Path, key: str, line: str) -> None:
     fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     try:
         # Windows has no os.fchmod; the local profile inherits its directory ACL.
-        if os.name != "nt":
-            os.fchmod(fd, 0o600)
+        fchmod = getattr(os, "fchmod", None)
+        if os.name != "nt" and fchmod is not None:
+            fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
             stream.write(rendered)
         os.replace(temp_name, path)

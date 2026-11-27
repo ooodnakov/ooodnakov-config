@@ -11,10 +11,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
-
-from scripts.generate.generate_tool_completions import (  # noqa: E402
+from scripts.generate.generate_tool_completions import (
     GeneratedCompletion,
     ZshCompletion,
     ZshConfig,
@@ -22,6 +19,8 @@ from scripts.generate.generate_tool_completions import (  # noqa: E402
     resolved_argv,
     validate_zsh_files,
 )
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def make_spec(

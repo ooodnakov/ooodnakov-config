@@ -15,6 +15,7 @@ import tempfile
 import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
@@ -109,7 +110,7 @@ def _generated_drift(repo_root: Path) -> bool:
     return result.returncode != 0
 
 
-def diagnostics(repo_root: Path, platform: str, profile_name: str | None, mode: str) -> dict[str, object]:
+def diagnostics(repo_root: Path, platform: str, profile_name: str | None, mode: str) -> dict[str, Any]:
     """Return a stable, secret-free diagnostic document."""
     repo_root = repo_root.resolve()
     profile = resolve_profile(repo_root, platform, profile_name)
@@ -242,7 +243,7 @@ def diagnostics(repo_root: Path, platform: str, profile_name: str | None, mode: 
     }
 
 
-def render_diagnostics(document: dict[str, object], output_format: str) -> str:
+def render_diagnostics(document: dict[str, Any], output_format: str) -> str:
     if output_format == "json":
         return json.dumps(document, indent=2, sort_keys=True)
     role_by_status = {"pass": "ok", "warning": "warn", "error": "fail", "skipped": "hint"}
@@ -266,7 +267,7 @@ def _safe_preferences() -> dict[str, str]:
     return result
 
 
-def _snapshot_document(repo_root: Path, platform: str, profile_name: str | None) -> dict[str, object]:
+def _snapshot_document(repo_root: Path, platform: str, profile_name: str | None) -> dict[str, Any]:
     profile = resolve_profile(repo_root, platform, profile_name)
     if profile is None:
         raise LifecycleError("snapshot export requires --profile or a machine-local default profile")
@@ -282,7 +283,7 @@ def _toml_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
-def render_snapshot(document: dict[str, object]) -> str:
+def render_snapshot(document: dict[str, Any]) -> str:
     capabilities = document["capabilities"]
     preferences = document["preferences"]
     lines = [
@@ -300,8 +301,9 @@ def _atomic_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
-        if os.name != "nt":
-            os.fchmod(fd, 0o600)
+        fchmod = getattr(os, "fchmod", None)
+        if os.name != "nt" and fchmod is not None:
+            fchmod(fd, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
             stream.write(content)
         os.replace(temporary, path)
@@ -309,7 +311,7 @@ def _atomic_text(path: Path, content: str) -> None:
         Path(temporary).unlink(missing_ok=True)
 
 
-def load_snapshot(path: Path, repo_root: Path, platform: str) -> dict[str, object]:
+def load_snapshot(path: Path, repo_root: Path, platform: str) -> dict[str, Any]:
     try:
         with path.open("rb") as stream:
             document = tomllib.load(stream)
@@ -326,7 +328,7 @@ def load_snapshot(path: Path, repo_root: Path, platform: str) -> dict[str, objec
     if not isinstance(profile_name, str) or not profile_name:
         raise LifecycleError("snapshot profile must be a non-empty string")
     profile = resolve_profile(repo_root, platform, profile_name)
-    if not isinstance(capabilities, list) or capabilities != list(profile.capabilities):
+    if profile is None or not isinstance(capabilities, list) or capabilities != list(profile.capabilities):
         raise LifecycleError("snapshot capabilities do not match the declared profile")
     if not isinstance(preferences, dict) or set(preferences) - PREFERENCES.keys():
         raise LifecycleError("snapshot contains an unknown preference")
@@ -336,19 +338,21 @@ def load_snapshot(path: Path, repo_root: Path, platform: str) -> dict[str, objec
     return document
 
 
-def snapshot_preview(document: dict[str, object], repo_root: Path, platform: str) -> dict[str, object]:
+def snapshot_preview(document: dict[str, Any], repo_root: Path, platform: str) -> dict[str, Any]:
     plan = build_plan(repo_root, platform, scope="links", profile_name=str(document["profile"]))
+    operations = plan["operations"]
+    assert isinstance(operations, list)
     return {
         "schema_version": SNAPSHOT_VERSION,
         "valid": True,
         "profile": document["profile"],
         "capabilities": document["capabilities"],
         "preferences": document["preferences"],
-        "planned_operations": len(plan["operations"]),
+        "planned_operations": len(operations),
     }
 
 
-def apply_snapshot(document: dict[str, object], repo_root: Path, platform: str) -> int:
+def apply_snapshot(document: dict[str, Any], repo_root: Path, platform: str) -> int:
     profile_name = str(document["profile"])
     build_plan(repo_root, platform, scope="links", profile_name=profile_name)
     _path, status = apply(repo_root, platform, profile_name)

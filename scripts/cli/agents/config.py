@@ -73,10 +73,10 @@ def write_text_atomic(path: Path, text: str, *, mode: int | None = None) -> None
             os.chmod(tmp_name, mode)
         os.replace(tmp_name, path)
     except BaseException:
-        try:
+        from contextlib import suppress
+
+        with suppress(OSError):
             os.unlink(tmp_name)
-        except OSError:
-            pass
         raise
 
 
@@ -308,11 +308,10 @@ def get_platform_common_text(repo_root: Path, config: dict[str, Any]) -> str:
     """Load shared instruction text, stripping Windows-only RTK notes off Windows."""
     common_text = read_text(repo_root, config["common_text_file"])
 
-    if os.name != "nt":
-        if RTK_BEGIN in common_text and RTK_END in common_text:
-            start = common_text.index(RTK_BEGIN)
-            end = common_text.index(RTK_END) + len(RTK_END)
-            common_text = common_text[:start].rstrip() + "\n" + common_text[end:].lstrip()
+    if os.name != "nt" and RTK_BEGIN in common_text and RTK_END in common_text:
+        start = common_text.index(RTK_BEGIN)
+        end = common_text.index(RTK_END) + len(RTK_END)
+        common_text = common_text[:start].rstrip() + "\n" + common_text[end:].lstrip()
     return common_text
 
 

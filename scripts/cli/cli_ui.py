@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import atexit
+import contextlib
 import os
 import re
 import sys
@@ -179,11 +181,19 @@ def console_stream():
     if sys.platform != "win32" or _console_disabled():
         return sys.stdout
     if _CONSOLE_STREAM is None:
+        stack = contextlib.ExitStack()
         try:
-            candidate = open("CONOUT$", "w", encoding="utf-8", errors="replace", newline="\n", buffering=1)
+            candidate = stack.enter_context(
+                open("CONOUT$", "w", encoding="utf-8", errors="replace", newline="\n", buffering=1)  # noqa: SIM115
+            )
         except OSError:
             candidate = None
-        _CONSOLE_STREAM = candidate if candidate is not None and candidate.isatty() else False
+        if candidate is not None and candidate.isatty():
+            atexit.register(stack.close)
+            _CONSOLE_STREAM = candidate
+        else:
+            stack.close()
+            _CONSOLE_STREAM = False
     return _CONSOLE_STREAM or sys.stdout
 
 
@@ -331,7 +341,7 @@ def path(value: object, role: str = "info") -> str:
     home = str(Path.home())
     if text == home:
         text = "~"
-    elif text.startswith(home + os.sep) or text.startswith(home + "/"):
+    elif text.startswith((home + os.sep, home + "/")):
         text = "~" + text[len(home) :]
     trimmed = text.rstrip("/\\") or text
     index = max(trimmed.rfind("/"), trimmed.rfind("\\"))
@@ -428,7 +438,7 @@ class MarkdownStream:
             self._blank = True
             return prefix + "\n"
         self._blank = False
-        if stripped.startswith("```") or stripped.startswith("~~~"):
+        if stripped.startswith(("```", "~~~")):
             self._fence = stripped[:3]
             return prefix
         if stripped.startswith("|") and stripped.endswith("|") and len(stripped) > 1:

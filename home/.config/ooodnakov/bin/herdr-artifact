@@ -22,11 +22,12 @@ import re
 import shutil
 import sys
 import tempfile
+from contextlib import suppress
 from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-from _herdr_store import (  # noqa: E402
+from _herdr_store import (
     Fail,
     data_root,
     edit_list,
@@ -94,20 +95,16 @@ def write_version(root: Path, artifact: dict, kind: str, content: str) -> dict:
             stream.write(content)
         os.replace(temp, target)
     except BaseException:
-        try:
+        with suppress(OSError):
             os.unlink(temp)
-        except OSError:
-            pass
         raise
     versions.append({"n": number, "path": relative, "at": now()})
     dropped = versions[:-KEEP_VERSIONS]
     del versions[: len(dropped)]
     for old in dropped:
         old_target = _within_root(root, old.get("path", ""))
-        try:
+        with suppress(OSError):
             old_target.unlink()
-        except OSError:
-            pass
     return versions[-1]
 
 
@@ -139,7 +136,11 @@ def artifact_add(args: argparse.Namespace) -> None:
         artifact["versions"] = [version]
         data["artifacts"].append(artifact)
     artifact["updated"] = version["at"]
-    print(json.dumps(artifact, indent=2, ensure_ascii=False) if args.json else f"{artifact['id']}  v{version['n']}  {artifact['title']}")
+    print(
+        json.dumps(artifact, indent=2, ensure_ascii=False)
+        if args.json
+        else f"{artifact['id']}  v{version['n']}  {artifact['title']}"
+    )
 
 
 def artifact_update(args: argparse.Namespace) -> None:
@@ -159,7 +160,11 @@ def artifact_list(args: argparse.Namespace) -> None:
     _, data = read_list("artifacts", "artifacts", folder)
     artifacts = sorted(data["artifacts"], key=lambda artifact: artifact.get("created", ""))
     if args.json:
-        print(json.dumps({"format": data.get("format"), "folder": folder, "artifacts": artifacts}, indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                {"format": data.get("format"), "folder": folder, "artifacts": artifacts}, indent=2, ensure_ascii=False
+            )
+        )
         return
     for artifact in artifacts:
         version = latest(artifact)["n"] if artifact.get("versions") else 0
@@ -174,7 +179,9 @@ def artifact_show(args: argparse.Namespace) -> None:
     artifact = find(data["artifacts"], args.id)
     content = read_content(data_root(), artifact)
     if args.json:
-        print(json.dumps({**artifact, "version": latest(artifact)["n"], "content": content}, indent=2, ensure_ascii=False))
+        print(
+            json.dumps({**artifact, "version": latest(artifact)["n"], "content": content}, indent=2, ensure_ascii=False)
+        )
     else:
         sys.stdout.write(content if content.endswith("\n") else content + "\n")
 
@@ -198,10 +205,14 @@ def artifact_path(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="herdr-artifact", description="Reports and notes per folder for Herdr's artifacts panel.")
+    parser = argparse.ArgumentParser(
+        prog="herdr-artifact", description="Reports and notes per folder for Herdr's artifacts panel."
+    )
     # Also accepted after the command; SUPPRESS keeps the top-level value when it comes first.
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--folder", default=argparse.SUPPRESS, help="the folder's list (default: this git worktree, else this folder)")
+    common.add_argument(
+        "--folder", default=argparse.SUPPRESS, help="the folder's list (default: this git worktree, else this folder)"
+    )
     common.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="print JSON")
     parser.add_argument("--folder", help="the folder's list (default: this git worktree, else this folder)")
     parser.add_argument("--json", action="store_true", help="print JSON")

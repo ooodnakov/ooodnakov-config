@@ -3,18 +3,15 @@
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from scripts.generate import render_secrets
+from scripts.lib import private_overlay
+from scripts.link_manager import expand_path_template, get_all_links, merge_with_local
 
-from scripts.generate import render_secrets  # noqa: E402
-from scripts.lib import private_overlay  # noqa: E402
-from scripts.link_manager import expand_path_template, get_all_links, merge_with_local  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.fixture

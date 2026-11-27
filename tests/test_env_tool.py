@@ -13,7 +13,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = REPO_ROOT / "scripts/cli/env_tool.py"
 SPEC = spec_from_file_location("env_tool", TOOL)
-assert SPEC and SPEC.loader
+assert SPEC is not None
+assert SPEC.loader is not None
 env_tool = module_from_spec(SPEC)
 SPEC.loader.exec_module(env_tool)
 

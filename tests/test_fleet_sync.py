@@ -8,16 +8,14 @@ from __future__ import annotations
 import io
 import json
 import re
-import sys
 import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
+from scripts.cli import fleet_sync
 
-from scripts.cli import fleet_sync  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 REMOTE_REPO = "/home/tester/src/ooodnakov-config"
 CONFLICT_FILE = "home/.config/zsh/.zshrc"
@@ -755,7 +753,7 @@ def test_main_applies_two_phase_fixes_after_the_fan_out(monkeypatch, capsys) -> 
 class _FakeStdin:
     """Binary stdin that answers each written script with the next scripted reply."""
 
-    def __init__(self, process: "_FakeProcess") -> None:
+    def __init__(self, process: _FakeProcess) -> None:
         self._process = process
         self.closed = False
 

@@ -87,7 +87,7 @@ def ensure_frontmatter(content: str, frontmatter: dict[str, str] | None) -> str:
     rendered = render_frontmatter(frontmatter)
     if not rendered:
         return content
-    if content.startswith("---\n") or content.startswith("---\r\n"):
+    if content.startswith(("---\n", "---\r\n")):
         return content
     stripped = content.lstrip("\r\n")
     if not stripped:

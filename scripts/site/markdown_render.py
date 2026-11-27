@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
+from typing import Any
 
 import markdown
 
@@ -58,7 +59,7 @@ def github_slugify(value: str, separator: str = "-") -> str:
     return re.sub(r"\s", separator, cleaned)
 
 
-def _flatten_toc(tokens: list[dict[str, object]]) -> list[TocItem]:
+def _flatten_toc(tokens: list[dict[str, Any]]) -> list[TocItem]:
     items: list[TocItem] = []
     for token in tokens:
         level = int(token.get("level", 0))

@@ -12,10 +12,10 @@ import sys
 import tempfile
 import time
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
@@ -85,8 +85,9 @@ def _atomic_write(path: Path, data: dict[str, object]) -> None:
     temporary = Path(temporary_name)
     fd_owned = False
     try:
-        if os.name != "nt":
-            os.fchmod(fd, 0o600)
+        fchmod = getattr(os, "fchmod", None)
+        if os.name != "nt" and fchmod is not None:
+            fchmod(fd, 0o600)
         handle = os.fdopen(fd, "w", encoding="utf-8")
         fd_owned = True
         with handle:
@@ -114,7 +115,7 @@ def _process_alive(pid: int) -> bool:
 
         process_query_limited_information = 0x1000
         still_active = 259
-        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        kernel32 = ctypes.windll.kernel32
         handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
         if not handle:
             return False
@@ -292,9 +293,7 @@ def reconcile_omp_mcp(home: Path, repo_root: Path) -> Path | None:
         if resolved is not None:
             current = _read_json_object(local_path) or {}
         local_path.unlink()
-    elif local_path.exists():
-        return None
-    elif not base_path.exists():
+    elif local_path.exists() or not base_path.exists():
         return None
 
     base = _tracked_mcp_base(repo_root) if current else _read_json_object(base_path)

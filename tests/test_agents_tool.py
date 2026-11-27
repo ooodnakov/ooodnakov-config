@@ -9,17 +9,25 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("agents_tool", ROOT / "scripts/cli/agents_tool.py")
-agents_tool = importlib.util.module_from_spec(spec)
-assert spec is not None and spec.loader is not None
-sys.modules["agents_tool"] = agents_tool
-spec.loader.exec_module(agents_tool)
+if "agents_tool" in sys.modules:
+    agents_tool = sys.modules["agents_tool"]
+else:
+    spec = importlib.util.spec_from_file_location("agents_tool", ROOT / "scripts/cli/agents_tool.py")
+    assert spec is not None
+    assert spec.loader is not None
+    agents_tool = importlib.util.module_from_spec(spec)
+    sys.modules["agents_tool"] = agents_tool
+    spec.loader.exec_module(agents_tool)
 
-cli_ui_spec = importlib.util.spec_from_file_location("cli_ui", ROOT / "scripts/cli/cli_ui.py")
-cli_ui = importlib.util.module_from_spec(cli_ui_spec)
-assert cli_ui_spec is not None and cli_ui_spec.loader is not None
-sys.modules["cli_ui"] = cli_ui
-cli_ui_spec.loader.exec_module(cli_ui)
+if "cli_ui" in sys.modules:
+    cli_ui = sys.modules["cli_ui"]
+else:
+    cli_ui_spec = importlib.util.spec_from_file_location("cli_ui", ROOT / "scripts/cli/cli_ui.py")
+    assert cli_ui_spec is not None
+    assert cli_ui_spec.loader is not None
+    cli_ui = importlib.util.module_from_spec(cli_ui_spec)
+    sys.modules["cli_ui"] = cli_ui
+    cli_ui_spec.loader.exec_module(cli_ui)
 
 
 def test_render_opencode_entry_shape_and_env_materialization(monkeypatch):
@@ -180,9 +188,9 @@ def test_parse_and_validate_url_mcp_entry():
     assert name == "dynadot"
     agents_tool.validate_mcp_entry(name, cfg)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"http\(s\) URL"):
         agents_tool.validate_mcp_entry("bad", {"url": "ftp://example.com"})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="cannot combine"):
         agents_tool.validate_mcp_entry("bad", {"url": "https://example.com", "command": "x"})
 
 
@@ -1230,7 +1238,7 @@ def test_resolve_mcp_path_rejects_traversal(tmp_path, monkeypatch, bad_name):
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="invalid MCP server name"):
         agents_tool.resolve_mcp_path(tmp_path, bad_name)
 
 
@@ -1290,7 +1298,7 @@ def test_cmd_install_scripts_build_rejects_unsafe_command(tmp_path, bad_command)
             {"name": "Bad Agent", "command": bad_command, "preferred": "npm", "package": "pkg"},
         ]
     }
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="invalid agent command name"):
         agents_tool.cmd_install_scripts_build(tmp_path, cfg)
 
 

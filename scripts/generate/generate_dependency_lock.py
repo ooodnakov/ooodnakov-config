@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import sys
 import tomllib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Make local scripts importable (cli_ui, etc.)
@@ -132,7 +132,7 @@ def main() -> int:
     pins = parse_managed_tools()
     artifacts, exceptions = parse_artifact_integrity()
 
-    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    generated_at = datetime.now(UTC).replace(microsecond=0).isoformat()
     if JSON_LOCK.exists():
         try:
             old_lock = json.loads(JSON_LOCK.read_text(encoding="utf-8"))

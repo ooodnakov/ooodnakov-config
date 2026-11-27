@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import functools
 import html
 import http.server
@@ -1241,10 +1242,8 @@ def _serve(directory: Path, port: int) -> None:
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
     with http.server.ThreadingHTTPServer(("127.0.0.1", port), handler) as server:
         print(f"Serving {directory} at http://127.0.0.1:{port}/ (Ctrl+C to stop)")
-        try:
+        with contextlib.suppress(KeyboardInterrupt):
             server.serve_forever()
-        except KeyboardInterrupt:
-            pass
 
 
 def main(argv: list[str] | None = None) -> int:

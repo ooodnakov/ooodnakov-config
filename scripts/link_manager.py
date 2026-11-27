@@ -11,12 +11,9 @@ import argparse
 import json
 import os
 import sys
+import tomllib
 from pathlib import Path
-
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib  # Python < 3.11 fallback
+from typing import Any
 
 try:
     from scripts.lib.private_overlay import resolve_private_overlay_root
@@ -63,7 +60,7 @@ def get_platform() -> str:
             return "unknown"
 
 
-def expand_path_template(template: str, platform: str, private_root: Path | str | None = None) -> str:
+def expand_path_template(template: str, platform: str | None, private_root: Path | str | None = None) -> str:
     """Expand path templates in a string.
 
     Templates:
@@ -88,20 +85,14 @@ def expand_path_template(template: str, platform: str, private_root: Path | str 
         config_home = home / ".config"
     else:
         xdg_config = os.environ.get("XDG_CONFIG_HOME")
-        if xdg_config:
-            config_home = Path(xdg_config)
-        else:
-            config_home = home / ".config"
+        config_home = Path(xdg_config) if xdg_config else home / ".config"
 
     # DATA_HOME: Unix XDG_DATA_HOME or ~/.local/share; Windows ~/.local/share
     if platform == "windows":
         data_home = home / ".local" / "share"
     else:
         xdg_data = os.environ.get("XDG_DATA_HOME")
-        if xdg_data:
-            data_home = Path(xdg_data)
-        else:
-            data_home = home / ".local" / "share"
+        data_home = Path(xdg_data) if xdg_data else home / ".local" / "share"
 
     # LOCAL_BIN: ~/.local/bin (both platforms)
     local_bin = home / ".local" / "bin"
@@ -121,12 +112,7 @@ def expand_path_template(template: str, platform: str, private_root: Path | str 
 
     # Normalize paths to forward slashes for cross-platform consistency
     # os.path operations use native separators, but we want consistent output
-    if platform == "windows":
-        result = result.replace("\\", "/")
-    else:
-        result = result.replace("\\", "/")
-
-    return result
+    return result.replace("\\", "/")
 
 
 def _platform_matches(entry_platform: str | None, entry_except: str | None, platform: str) -> bool:
@@ -152,7 +138,7 @@ def _platform_matches(entry_platform: str | None, entry_except: str | None, plat
     return True
 
 
-def read_links_manifest(repo_root: Path | str, platform: str) -> list[dict]:
+def read_links_manifest(repo_root: Path | str, platform: str | None) -> list[dict[str, Any]]:
     """Parse scripts/links.toml from repo_root.
 
     Args:
@@ -241,8 +227,11 @@ def _matches_exclude(path: Path, exclude_patterns: list[str]) -> bool:
 
 
 def discover_links(
-    repo_root: Path | str, manifest: dict, platform: str = "linux", explicit_links: list = None
-) -> list[dict]:
+    repo_root: Path | str,
+    manifest: dict[str, Any],
+    platform: str = "linux",
+    explicit_links: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """Discover symlinks by scanning configured directories.
 
     Args:
@@ -407,7 +396,7 @@ def get_all_links(repo_root: Path | str, platform: str | None = None) -> list[tu
     all_explicit_links = read_links_manifest(repo_root, None)  # None = no platform filter, returns all
 
     # Build manifest dict for discovery
-    manifest = {"discovery": {}}
+    manifest: dict[str, Any] = {"discovery": {}}
     manifest_path = repo_root / "scripts" / "links.toml"
     if manifest_path.exists():
         with open(manifest_path, "rb") as f:
@@ -490,7 +479,7 @@ def cli() -> int:
 
     # Validate sources exist (for dry-run reporting)
     missing_sources = []
-    for source, target, key in links:
+    for source, _target, _key in links:
         source_path = Path(source)
         if not source_path.exists():
             print(f"Warning: source not found: {source}", file=sys.stderr)

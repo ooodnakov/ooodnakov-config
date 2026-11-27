@@ -129,7 +129,7 @@ def extract_tar(archive: Path, destination: Path) -> None:
 
 def extract_tar_zst(archive: Path, destination: Path) -> None:
     try:
-        import zstandard  # type: ignore[import-not-found]
+        import zstandard
     except ImportError as error:  # pragma: no cover - depends on environment
         raise IntegrityError(
             "extracting .tar.zst archives requires the 'zstandard' package; "
@@ -140,14 +140,17 @@ def extract_tar_zst(archive: Path, destination: Path) -> None:
     os.close(handle)
     intermediate = Path(intermediate_name)
     try:
-        with archive.open("rb") as source, intermediate.open("wb") as target:
-            with zstandard.ZstdDecompressor().stream_reader(source) as reader:
-                _copy_limited(
-                    reader,
-                    target,
-                    MAX_DECOMPRESSED_BYTES,
-                    "decompressed archive exceeds maximum allowed size",
-                )
+        with (
+            archive.open("rb") as source,
+            intermediate.open("wb") as target,
+            zstandard.ZstdDecompressor().stream_reader(source) as reader,
+        ):
+            _copy_limited(
+                reader,
+                target,
+                MAX_DECOMPRESSED_BYTES,
+                "decompressed archive exceeds maximum allowed size",
+            )
         _extract_tar_materializing_links(intermediate, destination)
     finally:
         intermediate.unlink(missing_ok=True)

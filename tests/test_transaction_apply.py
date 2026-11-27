@@ -10,10 +10,9 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
+from scripts.cli import transaction_apply
 
-from scripts.cli import transaction_apply  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _repo(tmp_path: Path) -> tuple[Path, Path]:

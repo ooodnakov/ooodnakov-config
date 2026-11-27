@@ -79,7 +79,7 @@ def apply_updates(catalog_text: str, rows: list[dict[str, str]]) -> tuple[str, i
 
 
 def pin_check_markdown(rows: list[dict[str, str]]) -> str:
-    stamp = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+    stamp = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
     lines = [
         AUTOMATED_SECTION_HEADER,
         "",

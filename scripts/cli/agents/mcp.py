@@ -507,9 +507,8 @@ def cmd_mcp_sync(
                 print_status_line("hint", "  No install needed")
             continue
 
-        if not mcp_dir.parent.exists():
-            if not check_only:
-                mcp_dir.parent.mkdir(parents=True, exist_ok=True)
+        if not mcp_dir.parent.exists() and not check_only:
+            mcp_dir.parent.mkdir(parents=True, exist_ok=True)
 
         if not mcp_dir.exists():
             print_status_line("hint", f"  Cloning into {print_path(mcp_dir)}...")

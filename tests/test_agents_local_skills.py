@@ -7,10 +7,9 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts" / "cli"))
 
-import agents_tool  # noqa: E402
+import agents_tool
 
 
 def _symlinks_work(path: Path) -> bool:

@@ -17,8 +17,9 @@ def write_private_atomic(path: Path, content: str) -> None:
     fd, temp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
     try:
         try:
-            if os.name != "nt":
-                os.fchmod(fd, 0o600)
+            fchmod = getattr(os, "fchmod", None)
+            if os.name != "nt" and fchmod is not None:
+                fchmod(fd, 0o600)
         except Exception:
             os.close(fd)
             raise

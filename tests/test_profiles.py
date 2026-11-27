@@ -10,12 +10,11 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
+from scripts.cli.operation_plan import build_plan
+from scripts.cli.profile_manager import ProfileError, resolve_profile
+from scripts.link_manager import get_all_links
 
-from scripts.cli.operation_plan import build_plan  # noqa: E402
-from scripts.cli.profile_manager import ProfileError, resolve_profile  # noqa: E402
-from scripts.link_manager import get_all_links  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _profile_repo(tmp_path: Path) -> Path:

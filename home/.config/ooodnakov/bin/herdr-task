@@ -27,7 +27,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-from _herdr_store import (  # noqa: E402
+from _herdr_store import (
     TASK_STATUSES,
     Fail,
     data_root,
@@ -54,7 +54,9 @@ def task_list(args: argparse.Namespace) -> None:
         tasks = [task for task in tasks if not waiting_on(task, data["tasks"])]
     tasks.sort(key=lambda task: task.get("created", ""))
     if args.json:
-        print(json.dumps({"format": data.get("format"), "folder": folder, "tasks": tasks}, indent=2, ensure_ascii=False))
+        print(
+            json.dumps({"format": data.get("format"), "folder": folder, "tasks": tasks}, indent=2, ensure_ascii=False)
+        )
         return
     for task in tasks:
         open_deps = len(waiting_on(task, data["tasks"]))
@@ -100,6 +102,7 @@ def task_set(args: argparse.Namespace) -> None:
 
 def terminal_name(text: str, fallback: str) -> str:
     """hc's names: 1-32 of a-z 0-9 - _ . starting with a letter or digit."""
+
     def shaped(value: str) -> str:
         name = re.sub(r"[^a-z0-9._-]+", "-", str(value).lower())
         name = re.sub(r"^[^a-z0-9]+", "", name)
@@ -248,7 +251,7 @@ def registered_worktrees(repo: str) -> dict[str, str | None]:
         raise Fail(result.stderr.strip() or "git worktree list failed")
     found: dict[str, str | None] = {}
     path = branch = None
-    for line in result.stdout.splitlines() + [""]:
+    for line in [*result.stdout.splitlines(), ""]:
         if line.startswith("worktree "):
             path, branch = normalize(line[len("worktree ") :]), None
         elif line.startswith("branch "):
@@ -277,14 +280,14 @@ def worktrunk() -> str | None:
     return found if "worktrunk" in f"{result.stdout}{result.stderr}".lower() else None
 
 
-def worktree_plan(
-    folder: str, task_id: str, path_arg: str | None
-) -> tuple[str, str, list[list[str]], str]:
+def worktree_plan(folder: str, task_id: str, path_arg: str | None) -> tuple[str, str, list[list[str]], str]:
     """The worktree's path, its branch, the commands still needed, and the tool that makes it."""
     repo = repo_root(folder)
     branch = f"herdr/{task_id}"
-    path = normalize(path_arg) if path_arg else normalize(
-        os.path.join(os.path.dirname(repo), f"{os.path.basename(repo)}-wt", task_id)
+    path = (
+        normalize(path_arg)
+        if path_arg
+        else normalize(os.path.join(os.path.dirname(repo), f"{os.path.basename(repo)}-wt", task_id))
     )
     existing = registered_worktrees(repo)
     if path in existing:
@@ -303,7 +306,7 @@ def worktree_plan(
 def spawn_argv(args: argparse.Namespace, argv: list[str]) -> list[str]:
     if not args.keep_open:
         return argv
-    script = f"{shlex.join(argv)}; exec \"${{SHELL:-sh}}\""
+    script = f'{shlex.join(argv)}; exec "${{SHELL:-sh}}"'
     return ["sh", "-c", script]
 
 
@@ -327,9 +330,15 @@ def task_spawn(args: argparse.Namespace) -> None:
         worktree, branch, git_commands, tool = worktree_plan(folder, task["id"], args.worktree or None)
 
     command = [
-        "hc", "run", "--keep", "--bg", "--json",
-        "--label", f"herdr.task={task_key(folder, task['id'])}",
-        "--cwd", args.cwd or worktree or folder,
+        "hc",
+        "run",
+        "--keep",
+        "--bg",
+        "--json",
+        "--label",
+        f"herdr.task={task_key(folder, task['id'])}",
+        "--cwd",
+        args.cwd or worktree or folder,
     ]
     if args.name:
         command += ["--name", terminal_name(args.name, task["id"])]
@@ -392,7 +401,9 @@ def build_parser() -> argparse.ArgumentParser:
     # Also accepted after the command (`herdr-task list --folder …`); SUPPRESS keeps
     # the top-level value when the flag comes before it.
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--folder", default=argparse.SUPPRESS, help="the folder's list (default: this git worktree, else this folder)")
+    common.add_argument(
+        "--folder", default=argparse.SUPPRESS, help="the folder's list (default: this git worktree, else this folder)"
+    )
     common.add_argument("--json", action="store_true", default=argparse.SUPPRESS, help="print JSON")
     parser.add_argument("--folder", help="the folder's list (default: this git worktree, else this folder)")
     parser.add_argument("--json", action="store_true", help="print JSON")
@@ -433,11 +444,15 @@ def build_parser() -> argparse.ArgumentParser:
     undepend.add_argument("ids", nargs="+")
     undepend.set_defaults(handler=task_undepend)
 
-    label = commands.add_parser("label", parents=[common], help="print the herdr.task label a terminal carries for this task")
+    label = commands.add_parser(
+        "label", parents=[common], help="print the herdr.task label a terminal carries for this task"
+    )
     label.add_argument("id")
     label.set_defaults(handler=task_label)
 
-    bind = commands.add_parser("bind", parents=[common], help="attach a task to a terminal started elsewhere (omit the address to detach)")
+    bind = commands.add_parser(
+        "bind", parents=[common], help="attach a task to a terminal started elsewhere (omit the address to detach)"
+    )
     bind.add_argument("id")
     bind.add_argument("terminal", nargs="?")
     bind.set_defaults(handler=task_bind)

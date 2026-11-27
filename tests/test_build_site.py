@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 import json
-import sys
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from scripts.site.build_site import DOC_SECTIONS, build_site, collect_repo_data, normalize_base_url
+from scripts.site.markdown_render import github_slugify
 
-from scripts.site.build_site import DOC_SECTIONS, build_site, collect_repo_data, normalize_base_url  # noqa: E402
-from scripts.site.markdown_render import github_slugify  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class _HtmlInspector(HTMLParser):

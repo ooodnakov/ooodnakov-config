@@ -20,10 +20,12 @@ import sys
 import threading
 import time
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 _CLI_DIR = str(Path(__file__).resolve().parent)
 if _CLI_DIR not in sys.path:
@@ -146,11 +148,11 @@ def _is_connection_error(text: str) -> bool:
 class _SshSession:
     """One persistent `ssh <host> sh`, reused for every remote call to that host."""
 
-    def __init__(self, transport: "SshTransport", host: str) -> None:
+    def __init__(self, transport: SshTransport, host: str) -> None:
         self.token = f"__OOOCONF_FLEET_DONE_{uuid.uuid4().hex}__ "
         self.process = transport.spawn(host)
 
-    def execute(self, script: str, on_line: object | None = None) -> CommandResult:
+    def execute(self, script: str, on_line: Callable[[str], None] | None = None) -> CommandResult:
         process = self.process
         if process is None or process.stdin is None or process.stdout is None:
             return CommandResult(255, "", "ssh session closed")
@@ -180,7 +182,7 @@ class _SshSession:
                 return CommandResult(status, "".join(lines), "")
             lines.append(line)
             if on_line is not None:
-                on_line(line.rstrip("\n"))  # type: ignore[operator]
+                on_line(line.rstrip("\n"))
 
     def close(self) -> None:
         process, self.process = self.process, None
@@ -205,12 +207,12 @@ class SshTransport:
         connect_timeout: float = 10.0,
         ssh: str | None = None,
         retries: int = 1,
-        popen: object | None = None,
+        popen: Callable[..., Any] | None = None,
     ) -> None:
         self.connect_timeout = connect_timeout
         self.ssh = ssh or _ssh_executable()
         self.retries = max(0, retries)
-        self.popen = popen or subprocess.Popen
+        self.popen: Callable[..., Any] = popen or subprocess.Popen
         self._sessions: dict[str, _SshSession] = {}
         self._lock = threading.Lock()
 
@@ -231,7 +233,7 @@ class SshTransport:
             "-l",
         ]
 
-    def spawn(self, host: str) -> object:
+    def spawn(self, host: str) -> Any:
         return self.popen(
             self.command_for(host),
             stdin=subprocess.PIPE,
@@ -254,7 +256,7 @@ class SshTransport:
         if session is not None:
             session.close()
 
-    def run(self, host: str, script: str, on_line: object | None = None) -> CommandResult:
+    def run(self, host: str, script: str, on_line: Callable[[str], None] | None = None) -> CommandResult:
         result = CommandResult(255, "", "ssh session closed")
         for attempt in range(self.retries + 1):
             try:
@@ -700,16 +702,16 @@ def apply_fixes(
     options: SyncOptions,
     transport: object,
     repo_root: Path,
-    on_result: object | None = None,
-    on_event: object | None = None,
-    line: object | None = None,
+    on_result: Callable[[HostResult], None] | None = None,
+    on_event: Callable[[str, str], None] | None = None,
+    line: Callable[[str], None] | None = None,
 ) -> list[HostResult]:
     """Spawn one omp agent on the single broken host, or one local agent for several, then finish them."""
     pending = needs_fix(results)
     if not pending or not options.resolve or options.dry_run:
         return results
 
-    write = line or _write
+    write: Callable[[str], None] = line or _write
     markdown = cli_ui.MarkdownStream()
 
     def agent_line(text: str) -> None:
@@ -752,7 +754,7 @@ def apply_fixes(
         if result.status == STATUS_OK:
             result.resolved = True
         if on_result is not None:
-            on_result(result)  # type: ignore[operator]
+            on_result(result)
     return results
 
 
@@ -797,7 +799,7 @@ def sync_host(
     host: str,
     options: SyncOptions,
     transport: object,
-    on_event: object | None = None,
+    on_event: Callable[[str], None] | None = None,
 ) -> HostResult:
     def step(message: str) -> None:
         _notify(on_event, message)
@@ -852,7 +854,7 @@ def sync_host(
 
     if result.dirty:
         step("stashing local changes")
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         message = shlex.quote(f"{STASH_PREFIX}{stamp} {host}")
         stash = _run(transport, host, _script(_git(repo, "stash", "push", "-u", "-m", message)))
         if stash.returncode != 0:
@@ -921,8 +923,8 @@ def sync_hosts(
     options: SyncOptions,
     transport: object,
     jobs: int = DEFAULT_JOBS,
-    on_result: object | None = None,
-    on_event: object | None = None,
+    on_result: Callable[[HostResult], None] | None = None,
+    on_event: Callable[[str, str], None] | None = None,
 ) -> list[HostResult]:
     """Sync hosts in parallel, reporting each as it finishes; the returned list keeps input order."""
     if not hosts:
@@ -935,10 +937,10 @@ def sync_hosts(
             host,
             options,
             transport,
-            on_event=(lambda message: on_event(host, message)) if on_event is not None else None,  # type: ignore[operator]
+            on_event=(lambda message: on_event(host, message)) if on_event is not None else None,
         )
         if on_result is not None:
-            on_result(results[index])  # type: ignore[operator]
+            on_result(results[index])
 
     if workers == 1 or len(hosts) == 1:
         for index, host in enumerate(hosts):
@@ -1025,15 +1027,15 @@ SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇",
 ASCII_SPINNER_FRAMES = ("|", "/", "-", "\\")
 
 
-def _notify(on_event: object | None, *event: object) -> None:
+def _notify(on_event: Callable[..., None] | None, *event: Any) -> None:
     if on_event is not None:
-        on_event(*event)  # type: ignore[operator]
+        on_event(*event)
 
 
 class ProgressReporter:
     """Per-step activity while hosts run: an animated spinner on a TTY, plain step lines otherwise."""
 
-    def __init__(self, stream: object | None = None) -> None:
+    def __init__(self, stream: Any = None) -> None:
         self.stream = stream or cli_ui.console_stream()
         self._interactive = bool(getattr(self.stream, "isatty", lambda: False)())
         self._frames = SPINNER_FRAMES if cli_ui.can_encode(SPINNER_FRAMES[0]) else ASCII_SPINNER_FRAMES

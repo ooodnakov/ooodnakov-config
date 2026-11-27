@@ -19,7 +19,8 @@ BIN = Path(__file__).resolve().parent.parent / "home" / ".config" / "ooodnakov" 
 def load(module_name: str, filename: str):
     path = BIN / filename
     spec = importlib.util.spec_from_loader(module_name, importlib.machinery.SourceFileLoader(module_name, str(path)))
-    assert spec and spec.loader
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -153,7 +154,8 @@ def test_folders_with_the_same_name_get_their_own_lists(
     assert "First" in capsys.readouterr().out
     assert task.main(["list", "--folder", second]) == 0
     out = capsys.readouterr().out
-    assert "Second" in out and "First" not in out
+    assert "Second" in out
+    assert "First" not in out
 
 
 def test_artifact_versions_and_content(tmp_path: Path, tools, capsys: pytest.CaptureFixture[str]) -> None:
@@ -278,7 +280,8 @@ def test_spawn_worktree_dry_run_prints_git_then_hc(
     assert not (repo.parent / "repo-wt").exists()
     assert task.main(["show", "--json", task_id, "--folder", str(repo)]) == 0
     shown = json.loads(capsys.readouterr().out)
-    assert shown.get("worktree") is None and shown.get("branch") is None
+    assert shown.get("worktree") is None
+    assert shown.get("branch") is None
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git is needed to resolve the repo")

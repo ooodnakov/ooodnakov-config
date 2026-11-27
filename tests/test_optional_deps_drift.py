@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import re
-import sys
 import tomllib
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT))
+from scripts.cli.read_optional_deps import load_deps, normalized_deps
+from scripts.generate.generate_tool_completions import ZshCompletion, apply_filter
 
-from scripts.cli.read_optional_deps import load_deps, normalized_deps  # noqa: E402
-from scripts.generate.generate_tool_completions import ZshCompletion, apply_filter  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _catalog_keys() -> list[str]:
@@ -358,7 +356,8 @@ def test_setup_fast_path_only_applies_to_default_dependency_check() -> None:
 
     assert 'check_cmd="$(optional_dependency_check_command "$command_name")"' in check_fn
     assert '[ "$check_cmd" = "command -v $command_name" ] && command -v "$command_name"' in check_fn
-    assert "Richer" in check_fn and "node+npm" in check_fn
+    assert "Richer" in check_fn
+    assert "node+npm" in check_fn
 
 
 def test_documented_optional_dependency_examples_exist_in_catalog() -> None:
@@ -370,7 +369,7 @@ def test_documented_optional_dependency_examples_exist_in_catalog() -> None:
     for match in re.finditer(r"oooconf deps (?P<args>[^`\n]+)", readme):
         args = match.group("args").split()
         for arg in args:
-            if arg.startswith("-") or arg.startswith("<") or arg.endswith("..."):
+            if arg.startswith(("-", "<")) or arg.endswith("..."):
                 continue
             documented.add(arg.strip(",."))
 

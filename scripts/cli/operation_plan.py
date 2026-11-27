@@ -10,7 +10,7 @@ import re
 import sys
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
@@ -168,7 +168,6 @@ def build_link_operations(
     planned_parents: set[Path] = set()
 
     for source, target, operation_key in links:
-        common = {"platform": platform, "profile": profile, "requires_elevation": False, "requires_network": False}
         parent = target.parent
         if not parent.exists() and parent not in planned_parents:
             planned_parents.add(parent)
@@ -186,7 +185,10 @@ def build_link_operations(
                     postconditions=("directory exists",),
                     summary=f"Create parent directory for {operation_key}",
                     rollback="remove directory if empty",
-                    **common,
+                    platform=platform,
+                    profile=profile,
+                    requires_elevation=False,
+                    requires_network=False,
                 )
             )
 
@@ -203,7 +205,10 @@ def build_link_operations(
                     postconditions=("target is preserved in managed backup storage",),
                     summary=f"Back up existing target for {operation_key}",
                     rollback="restore backup if the replacement link is removed",
-                    **common,
+                    platform=platform,
+                    profile=profile,
+                    requires_elevation=False,
+                    requires_network=False,
                 )
             )
         operations.append(
@@ -216,7 +221,10 @@ def build_link_operations(
                 postconditions=("target is a symbolic link to source",),
                 summary=f"Link managed config {operation_key}",
                 rollback="remove link; restore preceding backup when present",
-                **common,
+                platform=platform,
+                profile=profile,
+                requires_elevation=False,
+                requires_network=False,
             )
         )
     return operations
@@ -442,7 +450,7 @@ def build_plan(
     }
 
 
-def _render_text(plan: dict[str, object]) -> str:
+def _render_text(plan: dict[str, Any]) -> str:
     operations = plan["operations"]
     assert isinstance(operations, list)
     lines = [f"oooconf {plan['command']} plan ({plan['platform']}, schema v{plan['schema_version']})"]
@@ -459,7 +467,7 @@ def _render_text(plan: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
-def _render_links(plan: dict[str, object]) -> str:
+def _render_links(plan: dict[str, Any]) -> str:
     rows = []
     for operation in plan["operations"]:
         if operation["kind"] != "link":

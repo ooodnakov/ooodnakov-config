@@ -79,8 +79,10 @@ def test_tables_render_without_the_alignment_row(monkeypatch) -> None:
     text = render(["| host | status |", "| --- | --- |", "| a | ok |", "| b | fail |"], color=False)
     lines = text.splitlines()
     assert len(lines) == 3
-    assert "host" in lines[0] and "status" in lines[0]
-    assert "| a" in lines[1] and "ok" in lines[1]
+    assert "host" in lines[0]
+    assert "status" in lines[0]
+    assert "| a" in lines[1]
+    assert "ok" in lines[1]
     assert "--- |" not in text
 
 

@@ -292,8 +292,5 @@ def select_value(item: dict, selector: str, key: str) -> str:
 
 def resolve_reference(reference: str, key: str, cache: dict[str, dict] | None = None) -> str:
     item_id, selector = parse_reference(reference)
-    if cache is not None and item_id in cache:
-        item = cache[item_id]
-    else:
-        item = get_item(item_id, key)
+    item = cache[item_id] if cache is not None and item_id in cache else get_item(item_id, key)
     return select_value(item, selector, key)

@@ -175,7 +175,7 @@ def cmd_skills_sync(
 
     skill_dirs = resolve_collab("LOCAL_SKILL_DIRS", LOCAL_SKILL_DIRS)
     local_agents = {str(agent).lower() for spec in local_specs for agent in (spec.get("agents") or skill_dirs)}
-    spec_agents = sorted(set(str(s.get("agent", "")).lower() for s in agent_specs if s.get("agent")) | local_agents)
+    spec_agents = sorted({str(s.get("agent", "")).lower() for s in agent_specs if s.get("agent")} | local_agents)
     if select and agents is not None:
         print_status_line("fail", "--select cannot be combined with --agents.")
         return 1
