@@ -54,7 +54,7 @@ machine-local default belongs in the ignored
 Reference-only material lives in:
 
 - `third_party/upstream/ezsh`
-- `third_party/local-snapshots/wezterm-current`
+- historical WezTerm snapshot archived at git tag `archive/wezterm-current-snapshot` (previously checked out at `third_party/local-snapshots/wezterm-current`)
 
 Do not treat `third_party/` as active config unless the user explicitly asks to extract or merge something from it.
 
@@ -112,7 +112,7 @@ The local overrides file is at `home/.config/ooodnakov/local/links.local.toml` (
 ## WezTerm policy
 
 - Active WezTerm config is the smaller reproducible setup in `home/.config/wezterm/`.
-- The large local fork snapshot in `third_party/local-snapshots/wezterm-current` is for audit/reference only.
+- The large local fork snapshot previously at `third_party/local-snapshots/wezterm-current` is archived at git tag `archive/wezterm-current-snapshot` for audit/reference only rather than checked out in the working tree.
 - If borrowing features from the snapshot, port them intentionally into the active config instead of replacing the active tree wholesale.
 
 ## Python and uv

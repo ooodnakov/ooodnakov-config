@@ -8,9 +8,9 @@ Upstream reference trees:
 
 - `third_party/upstream/ezsh` managed as a `git subtree`
 
-Your current local WezTerm checkout was also preserved as:
+Your current local WezTerm checkout was also preserved at git tag `archive/wezterm-current-snapshot` (archived from `third_party/local-snapshots/wezterm-current` and removed from the working tree):
 
-- `third_party/local-snapshots/wezterm-current`
+- git tag `archive/wezterm-current-snapshot` (formerly `third_party/local-snapshots/wezterm-current`)
 
 These are reference snapshots only. They are not the active config installed by `scripts/setup/setup.sh`.
 
@@ -34,7 +34,7 @@ Observed divergence:
 Interpretation:
 
 - the local WezTerm tree is effectively a personal fork
-- keeping a reference copy in `third_party/local-snapshots/wezterm-current` is justified
+- keeping a reference copy was justified; it was originally stored in `third_party/local-snapshots/wezterm-current` and later archived at git tag `archive/wezterm-current-snapshot` (removed from the working tree) to keep repo size down
 - the vendored upstream snapshot was later removed to keep repo size down; upstream provenance remains documented here
 - the active tracked config in `home/.config/wezterm` should stay smaller and more reproducible than this fork
 

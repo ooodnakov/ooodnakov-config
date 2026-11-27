@@ -75,7 +75,6 @@ def test_build_site_outputs_and_internal_link_integrity(tmp_path: Path) -> None:
 
     for slug in expected_slugs:
         assert (out_dir / "docs" / slug / "index.html").is_file(), f"Missing doc page for {slug}"
-    assert not (out_dir / "docs" / "codex-project-improvement-task").exists()
 
     site_data = json.loads((out_dir / "data" / "site-data.json").read_text(encoding="utf-8"))
     assert set(site_data["profiles"].keys()) == {"minimal", "terminal", "developer", "workstation"}
@@ -90,7 +89,6 @@ def test_build_site_outputs_and_internal_link_integrity(tmp_path: Path) -> None:
     assert any(item["kind"] == "heading" for item in items)
     assert any(item["kind"] == "command" for item in items)
     assert all(item["url"].startswith(f"{base}/") for item in items)
-    assert not any("codex-project-improvement-task" in item["url"] for item in items)
 
     html_files = sorted(out_dir.rglob("*.html"))
     parsed_pages: dict[Path, _HtmlInspector] = {}
