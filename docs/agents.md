@@ -20,7 +20,7 @@ oooconf agents skills sync
 oooconf agents skills view
 oooconf agents install --check
 oooconf agents install
-oooconf agents install codex gemini
+oooconf agents install codex qwen
 oooconf agents install --all
 oooconf agents update
 oooconf agents install-scripts-build
@@ -45,10 +45,10 @@ An `agent_configs` entry may set `extra_text_file`, a repo-relative Markdown fil
 
 `oooconf agents doctor` also checks common MCP/skills markers against default agent config paths by format (JSON, TOML, YAML). Use `oooconf agents doctor --strict-config-paths` to fail when none of an agent's documented default config paths exist locally.
 `oooconf agents sync` targets every configured global agent config by default and is idempotent. Pass agent keys such as `--agents claude codex` to narrow it, or `--select` to choose interactively. `--check` exits non-zero when any target is stale; `--dry-run` prints the same plan without writing.
-`oooconf agents install` installs missing configured agent CLIs by default. Pass one or more agent keys such as `codex gemini`, `--missing` for explicit missing-only mode, or `--all` to install or upgrade every configured agent CLI. `--check` and `--dry-run` preview the installer commands and post-install steps without running them.
+`oooconf agents install` installs missing configured agent CLIs by default. Pass one or more agent keys such as `codex qwen`, `--missing` for explicit missing-only mode, or `--all` to install or upgrade every configured agent CLI. `--check` and `--dry-run` preview the installer commands and post-install steps without running them.
 `oooconf agents update` updates only agent CLIs that are currently installed on `PATH`, routes pnpm-preferred agents through `pnpm add -g <package>@latest` (falling back to `npm install -g` when pnpm is unavailable), and reruns configured post-install steps.
 
 ## Providers
 
-`oooconf agents sync` understands both stdio entries (`command`/`args`) and remote HTTP entries (`type`/`url`/`headers`) in `common-data.json`, rendering each agent's native shape: `type`+`url` for Claude Code, Oh My Pi, and Pi, `httpUrl` for Gemini CLI, `serverUrl` for Antigravity (`~/.gemini/config/mcp_config.json`), `type = "remote"` for OpenCode, and `[mcp_servers.<name>]` with `http_headers` tables for Codex. MCP `env_vars` shorthands resolve. `{env_var}`/`$env_var` placeholders are kept verbatim unless `--materialize-secrets` is passed, so generated configs stay secret-free by default.
+`oooconf agents sync` understands both stdio entries (`command`/`args`) and remote HTTP entries (`type`/`url`/`headers`) in `common-data.json`, rendering each agent's native shape: `type`+`url` for Claude Code, Oh My Pi, and Pi, `serverUrl` for Antigravity (`~/.gemini/config/mcp_config.json`), `type = "remote"` for OpenCode, and `[mcp_servers.<name>]` with `http_headers` tables for Codex. MCP `env_vars` shorthands resolve. `{env_var}`/`$env_var` placeholders are kept verbatim unless `--materialize-secrets` is passed, so generated configs stay secret-free by default.
 `oooconf agents provider sync minimax` configures MiniMax-M2.7 backends for Claude Code (`~/.claude/settings.json`), OpenCode (`~/.config/opencode/opencode.json`), and Codex CLI (`~/.codex/config.toml`) while keeping `MINIMAX_API_KEY` in the local environment by default for Codex/OpenCode; Claude Code also needs `ANTHROPIC_AUTH_TOKEN` exported to the MiniMax key unless `--materialize-secrets` is intentionally used on private machine config.

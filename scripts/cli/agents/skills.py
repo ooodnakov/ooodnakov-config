@@ -15,7 +15,6 @@ from .config import (
     write_common_data,
 )
 from .models import (
-    AgentCli,
     interactive_select,
     is_interactive,
     print_error_line,
@@ -38,9 +37,9 @@ def windows_launcher(name: str, which: Any = None) -> str:
     """Return ``name`` resolved to a path Windows can actually launch.
 
     ``shutil.which`` returns the extensionless POSIX shim first on Windows
-    (pnpm and gemini both ship one) and ``CreateProcess`` cannot run it, so
-    prefer a PATHEXT variant. Returns ``name`` unchanged when no such variant
-    exists or on non-Windows platforms.
+    (pnpm ships one) and ``CreateProcess`` cannot run it, so prefer a PATHEXT
+    variant. Returns ``name`` unchanged when no such variant exists or on
+    non-Windows platforms.
     """
     if os.name != "nt":
         return name
@@ -143,7 +142,6 @@ def skills_cli_agent_targets(config: dict[str, Any]) -> list[str]:
     mapping = {
         "claude": "claude-code",
         "codex": "codex",
-        "gemini": "gemini-cli",
         "agy": "antigravity",
         "pi": "pi",
         "opencode": "opencode",
@@ -195,11 +193,10 @@ def cmd_skills_sync(
 
     local_specs = [s for s in skill_specs if str(s.get("installer", "")).lower() == "local"]
     cli_specs = [s for s in skill_specs if str(s.get("installer", "")).lower() == "skills"]
-    agent_specs = [s for s in skill_specs if s not in cli_specs and s not in local_specs]
+    unknown_specs = [s for s in skill_specs if s not in cli_specs and s not in local_specs]
 
     skill_dirs = resolve_collab("LOCAL_SKILL_DIRS", LOCAL_SKILL_DIRS)
-    local_agents = {str(agent).lower() for spec in local_specs for agent in (spec.get("agents") or skill_dirs)}
-    spec_agents = sorted({str(s.get("agent", "")).lower() for s in agent_specs if s.get("agent")} | local_agents)
+    spec_agents = sorted({str(agent).lower() for spec in local_specs for agent in (spec.get("agents") or skill_dirs)})
     if select and agents is not None:
         print_status_line("fail", "--select cannot be combined with --agents.")
         return 1
@@ -223,8 +220,7 @@ def cmd_skills_sync(
         unmatched = sorted(wanted - set(spec_agents))
         for agent in unmatched:
             print_status_line("warn", f"No skill specs configured for agent '{agent}'.")
-        agent_specs = [s for s in agent_specs if str(s.get("agent", "")).lower() in wanted]
-        if not agent_specs and not cli_specs and not local_specs:
+        if not cli_specs and not local_specs:
             print_status_line("warn", f"No skill specs match agents: {', '.join(agents)}")
             return 1
 
@@ -241,67 +237,13 @@ def cmd_skills_sync(
     skipped = 0
     synced = 0
 
-    for spec in agent_specs:
-        name = spec.get("name", "unknown")
-        agent_key = spec.get("agent", "").lower()
-        source = spec.get("source", "")
-        if not agent_key or not source:
-            print_status_line("fail", f"Invalid skill spec: {name} (missing agent or source)")
-            failed += 1
-            continue
-
-        agent_cli = next(
-            (
-                a
-                for a in parse_agent_clis(config["agent_clis"])
-                if a.command == agent_key or a.name.lower() == agent_key
-            ),
-            None,
-        )
-        if not agent_cli:
-            agent_cli = AgentCli(name=agent_key.capitalize(), command=agent_key)
-
-        installed_path = shutil_mod.which(agent_cli.command)
-        if not installed_path:
-            print_status_line("missing", f"{agent_cli.name} ({agent_cli.command}) not found; skipping skill {name}.")
-            skipped += 1
-            continue
-
-        command: list[str] = []
-        if agent_cli.command == "gemini":
-            command = ["gemini", "skills", "install", source]
-        elif agent_cli.command == "claude":
-            print_status_line("warn", f"Automated plugin install for {agent_cli.name} not yet supported; skip {name}.")
-            skipped += 1
-            continue
-        else:
-            print_status_line("warn", f"Skill sync for {agent_cli.name} not yet implemented; skip {name}.")
-            skipped += 1
-            continue
-
+    for spec in unknown_specs:
         attempted += 1
-        command_display = shlex.join(command)
-        if check_only or dry_run:
-            print_status_line("ok", f"Plan: {name} for {agent_cli.name}")
-            print_status_line("hint", f"  command: {command_display}")
-            continue
-
-        print_status_line("ok", f"Syncing {name} for {agent_cli.name}...")
-        print_status_line("hint", f"  command: {command_display}")
-        command[0] = windows_launcher(command[0], shutil_mod.which)
-        try:
-            subprocess_mod.run(command, check=True)
-            print_status_line("ok", f"Successfully synced {name}")
-            synced += 1
-        except subprocess.CalledProcessError as exc:
-            print_status_line("fail", f"Failed to sync {name}: {exc}")
-            failed += 1
-        except OSError as exc:
-            print_status_line(
-                "missing",
-                f"Cannot execute '{command[0]}' ({exc}); skipping skill {name}.",
-            )
-            skipped += 1
+        failed += 1
+        print_status_line(
+            "fail",
+            f"Unsupported skill spec '{spec.get('name', 'unknown')}': set installer to 'skills' or 'local'.",
+        )
 
     for spec in cli_specs:
         name = str(spec.get("name", "unknown"))
@@ -387,35 +329,33 @@ def cmd_skills_view(json_output: bool, check_only: bool) -> int:
     return 0
 
 
-def cmd_skills_add(
-    repo_root: Path, config: dict[str, Any], source: str, agent: str, check_only: bool, sync_now: bool
-) -> int:
+def cmd_skills_add(repo_root: Path, config: dict[str, Any], source: str, check_only: bool, sync_now: bool) -> int:
     """Add a shared skill source entry to ``common-data.json``."""
     data = read_json(repo_root, config["common_data_file"])
     skill_specs = data.setdefault("skill_specs", [])
     source_url = canonicalize_skill_source(source)
     name = source.rstrip("/").split("/")[-1]
     spec = {
+        "installer": "skills",
         "name": name,
-        "agent": agent,
         "source": source_url,
         "description": f"Added via oooconf agents skills add ({source})",
     }
     exists = any(
-        canonicalize_skill_source(str(s.get("source", ""))) == source_url and s.get("agent") == agent
+        str(s.get("installer", "")).lower() == "skills"
+        and canonicalize_skill_source(str(s.get("source", ""))) == source_url
         for s in skill_specs
     )
     if not exists:
         skill_specs.append(spec)
     skills = data.setdefault("skills", [])
-    label = f"{name} ({agent})"
-    if label not in skills:
-        skills.append(label)
+    if name not in skills:
+        skills.append(name)
     if check_only:
-        print_status_line("ok", f"Plan: add skill spec '{source_url}' for {agent}")
+        print_status_line("ok", f"Plan: add skill spec '{source_url}'")
         return 0
     write_common_data(repo_root, config, data)
-    print_status_line("ok", f"Added skill spec '{source_url}' for {agent}")
+    print_status_line("ok", f"Added skill spec '{source_url}'")
     prompt_fn = resolve_collab("prompt_yes_no", prompt_yes_no)
     should_sync = sync_now or prompt_fn("Sync skills to local agents now?")
     if should_sync:

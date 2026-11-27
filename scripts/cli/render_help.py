@@ -541,14 +541,14 @@ Subcommands:
                          sync configured skill specs across agents
   skills view [--check] [--json]
                          list global shared skills catalog via pnpm dlx
-  skills add <source> [--agent gemini] [--sync-now]
+  skills add <source> [--sync-now]
                          add one shared skill source
 Examples:
   oooconf agents detect
   oooconf agents sync --check
   oooconf agents sync --agents claude
   oooconf agents install --check
-  oooconf agents install codex gemini
+  oooconf agents install codex qwen
   oooconf agents mcp status
   oooconf agents provider sync minimax --agents codex
   oooconf agents skills view --json""",

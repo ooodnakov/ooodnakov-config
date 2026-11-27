@@ -58,15 +58,15 @@ def test_render_mcp_env_uses_placeholder_without_materialize(monkeypatch):
 
 def test_check_config_shape_rules():
     opencode = agents_tool.AgentConfigTarget("OpenCode", "json", [], "")
-    gemini = agents_tool.AgentConfigTarget("Gemini CLI", "json", [], "")
+    antigravity = agents_tool.AgentConfigTarget("Antigravity", "json", [], "")
     codex = agents_tool.AgentConfigTarget("OpenAI Codex CLI", "toml", [], "")
 
     assert agents_tool.check_config_shape(opencode, '{"mcp": {}}') == []
-    assert agents_tool.check_config_shape(gemini, '{"mcpServers": {}}') == []
+    assert agents_tool.check_config_shape(antigravity, '{"mcpServers": {}}') == []
     assert agents_tool.check_config_shape(codex, "[mcp_servers.test]\ncommand='x'") == []
 
     assert agents_tool.check_config_shape(opencode, '{"mcpServers": {}}')
-    assert agents_tool.check_config_shape(gemini, '{"mcp": {}}')
+    assert agents_tool.check_config_shape(antigravity, '{"mcp": {}}')
 
 
 def test_parse_and_normalize_mcp_json():
@@ -101,7 +101,7 @@ def test_skills_add_check_mode(tmp_path):
     common_data = repo / "common.json"
     common_data.write_text('{"mcp_servers":{},"skills":[],"skill_specs":[]}', encoding="utf-8")
     cfg = {"common_data_file": "common.json"}
-    rc = agents_tool.cmd_skills_add(repo, cfg, "vercel-labs/agent-skills", "gemini", check_only=True, sync_now=False)
+    rc = agents_tool.cmd_skills_add(repo, cfg, "vercel-labs/agent-skills", check_only=True, sync_now=False)
     assert rc == 0
     data = common_data.read_text(encoding="utf-8")
     assert "vercel-labs/agent-skills" not in data
@@ -178,7 +178,7 @@ def test_skills_view_check_mode_uses_global_ls(capsys):
 
 
 def test_windows_launcher_prefers_pathext_variant(monkeypatch):
-    # pnpm and gemini ship extensionless POSIX shims that CreateProcess cannot launch.
+    # pnpm ships an extensionless POSIX shim that CreateProcess cannot launch.
     paths = {"pnpm": "C:\\pnpm\\pnpm", "pnpm.CMD": "C:\\pnpm\\pnpm.CMD"}
     monkeypatch.setattr(agents_tool.os, "name", "nt")
     monkeypatch.setenv("PATHEXT", ".COM;.EXE;.BAT;.CMD")
@@ -244,11 +244,11 @@ def test_render_remote_mcp_entries_use_native_shapes(monkeypatch):
     )
     assert verbatim["headers"]["Authorization"] == "Bearer {CTX_KEY}"
 
-    gemini = agents_tool.render_mcp_server_entry(
-        agents_tool.AgentConfigTarget("Gemini CLI", "json", [], ""), "context7", cfg, repo
+    antigravity = agents_tool.render_mcp_server_entry(
+        agents_tool.AgentConfigTarget("Antigravity", "json", [], ""), "context7", cfg, repo
     )
-    assert gemini["httpUrl"] == "https://mcp.context7.com/mcp"
-    assert "url" not in gemini
+    assert antigravity["serverUrl"] == "https://mcp.context7.com/mcp"
+    assert "url" not in antigravity
 
     pi = agents_tool.render_mcp_server_entry(
         agents_tool.AgentConfigTarget("Pi Agent", "json", [], ""), "context7", cfg, repo
@@ -284,16 +284,16 @@ def test_sync_global_configs_writes_remote_mcp_entries(tmp_path, monkeypatch):
     (home / ".codex").mkdir(parents=True)
     codex_path = home / ".codex/config.toml"
     codex_path.write_text('[projects."/x"]\ntrust_level = "trusted"\n', encoding="utf-8")
-    (home / ".gemini").mkdir()
-    gemini_path = home / ".gemini/settings.json"
-    gemini_path.write_text('{"mcpServers": {}}', encoding="utf-8")
+    (home / ".claude").mkdir()
+    claude_path = home / ".claude/settings.json"
+    claude_path.write_text('{"mcpServers": {}}', encoding="utf-8")
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
 
     config = {
         "agent_configs": [
             {"name": "OpenAI Codex CLI", "format": "toml", "default_paths": ["~/.codex/config.toml"]},
-            {"name": "Gemini CLI", "format": "json", "default_paths": ["~/.gemini/settings.json"]},
+            {"name": "Claude Code", "format": "json", "default_paths": ["~/.claude/settings.json"]},
         ]
     }
     targets = agents_tool.parse_agent_targets(config["agent_configs"])
@@ -321,9 +321,10 @@ def test_sync_global_configs_writes_remote_mcp_entries(tmp_path, monkeypatch):
     assert parsed["mcp_servers"]["dynadot"]["url"] == "https://mcp.dynadot.com/mcp"
     assert "command" not in context7
 
-    gemini = json.loads(gemini_path.read_text(encoding="utf-8"))
-    assert gemini["mcpServers"]["context7"]["httpUrl"] == "https://mcp.context7.com/mcp"
-    assert gemini["mcpServers"]["dynadot"]["httpUrl"] == "https://mcp.dynadot.com/mcp"
+    claude = json.loads(claude_path.read_text(encoding="utf-8"))
+    assert claude["mcpServers"]["context7"]["type"] == "http"
+    assert claude["mcpServers"]["context7"]["url"] == "https://mcp.context7.com/mcp"
+    assert claude["mcpServers"]["dynadot"]["url"] == "https://mcp.dynadot.com/mcp"
 
 
 def test_canonicalize_skill_source():
@@ -464,42 +465,42 @@ def test_provider_sync_minimax_handles_empty_json_and_updates_existing_codex(tmp
 def test_select_install_specs_defaults_to_missing(monkeypatch):
     specs = [
         agents_tool.AgentUpdateSpec("OpenAI Codex CLI", "codex", "npm", "@openai/codex"),
-        agents_tool.AgentUpdateSpec("Gemini CLI", "gemini", "npm", "@google/gemini-cli"),
+        agents_tool.AgentUpdateSpec("Qwen Code", "qwen", "npm", "@qwen-code/qwen-code"),
     ]
     monkeypatch.setattr(agents_tool.shutil, "which", lambda cmd: "/bin/codex" if cmd == "codex" else None)
 
     selected, errors = agents_tool.select_install_specs(specs, [], install_all=False, missing_only=False)
 
     assert errors == []
-    assert [spec.command for spec in selected] == ["gemini"]
+    assert [spec.command for spec in selected] == ["qwen"]
 
 
 def test_select_install_specs_supports_multiple_explicit_agents():
     specs = [
         agents_tool.AgentUpdateSpec("OpenAI Codex CLI", "codex", "npm", "@openai/codex"),
-        agents_tool.AgentUpdateSpec("Gemini CLI", "gemini", "npm", "@google/gemini-cli"),
+        agents_tool.AgentUpdateSpec("Qwen Code", "qwen", "npm", "@qwen-code/qwen-code"),
     ]
 
     selected, errors = agents_tool.select_install_specs(
-        specs, ["codex", "Gemini CLI"], install_all=False, missing_only=False
+        specs, ["codex", "Qwen Code"], install_all=False, missing_only=False
     )
 
     assert errors == []
-    assert [spec.command for spec in selected] == ["codex", "gemini"]
+    assert [spec.command for spec in selected] == ["codex", "qwen"]
 
 
 def test_cmd_install_check_mode_can_plan_selected_agents(tmp_path, capsys):
     cfg = {
         "agent_updates": [
             {"name": "OpenAI Codex CLI", "command": "codex", "preferred": "npm", "package": "@openai/codex"},
-            {"name": "Gemini CLI", "command": "gemini", "preferred": "npm", "package": "@google/gemini-cli"},
+            {"name": "Qwen Code", "command": "qwen", "preferred": "npm", "package": "@qwen-code/qwen-code"},
         ]
     }
 
     rc = agents_tool.cmd_install(
         tmp_path,
         cfg,
-        ["codex", "gemini"],
+        ["codex", "qwen"],
         check_only=True,
         install_all=False,
         missing_only=False,
@@ -508,7 +509,7 @@ def test_cmd_install_check_mode_can_plan_selected_agents(tmp_path, capsys):
     out = capsys.readouterr().out
     assert rc == 0
     assert "Plan: install OpenAI Codex CLI via pnpm" in out
-    assert "Plan: install Gemini CLI via pnpm" in out
+    assert "Plan: install Qwen Code via pnpm" in out
 
 
 def test_supports_nerd_font_output(monkeypatch):
@@ -731,7 +732,7 @@ def test_tui_select_enables_window_keypad_and_navigates_with_arrows(monkeypatch)
     monkeypatch.setattr(tui, "_CURSES_AVAILABLE", True)
     monkeypatch.setattr(tui, "curses", _fake_curses(window))
 
-    assert tui._curses_select(["Claude Code", "Gemini CLI", "OpenCode"], "Select agents", "hint") == ["Gemini CLI"]
+    assert tui._curses_select(["Claude Code", "Qwen Code", "OpenCode"], "Select agents", "hint") == ["Qwen Code"]
     assert window.keypad_calls == [True]
     assert 100 in window.timeout_calls
 
@@ -947,7 +948,7 @@ def test_sync_global_configs_applies_extras_per_target(tmp_path, monkeypatch):
 
     targets = [
         agents_tool.AgentConfigTarget("Claude Global", "markdown", ["~/.claude/CLAUDE.md"]),
-        agents_tool.AgentConfigTarget("Gemini Global", "markdown", ["~/.gemini/GEMINI.md"]),
+        agents_tool.AgentConfigTarget("Antigravity Global", "markdown", ["~/.gemini/AGENTS.md"]),
     ]
     common_data = {"mcp_servers": {}, "skills": []}
     block = agents_tool.render_markdown_block("# Policy\n", common_data)
@@ -956,13 +957,13 @@ def test_sync_global_configs_applies_extras_per_target(tmp_path, monkeypatch):
     count, changed = agents_tool.sync_global_configs(tmp_path, targets, common_data, block, False, extras=extras)
 
     assert count == 2
-    assert set(changed) == {home / ".claude/CLAUDE.md", home / ".gemini/GEMINI.md"}
+    assert set(changed) == {home / ".claude/CLAUDE.md", home / ".gemini/AGENTS.md"}
     claude_text = (home / ".claude/CLAUDE.md").read_text(encoding="utf-8")
-    gemini_text = (home / ".gemini/GEMINI.md").read_text(encoding="utf-8")
+    antigravity_text = (home / ".gemini/AGENTS.md").read_text(encoding="utf-8")
     assert agents_tool.AGENT_EXTRA_HEADING in claude_text
     assert "Claude only." in claude_text
-    assert agents_tool.AGENT_EXTRA_HEADING not in gemini_text
-    assert gemini_text == block
+    assert agents_tool.AGENT_EXTRA_HEADING not in antigravity_text
+    assert antigravity_text == block
 
     count, changed = agents_tool.sync_global_configs(tmp_path, targets, common_data, block, False, extras=extras)
     assert count == 0
@@ -1238,7 +1239,7 @@ def test_repo_config_includes_antigravity_targets():
         selected, unmatched = agents_tool.select_agent_targets(targets, updates, [query])
         assert unmatched == []
         assert [t.name for t in selected] == [
-            "Gemini Global Instructions",
+            "Antigravity Shared Instructions",
             "Antigravity",
             "Antigravity Global Instructions",
         ]

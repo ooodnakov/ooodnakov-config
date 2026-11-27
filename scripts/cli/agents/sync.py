@@ -291,24 +291,6 @@ def _sync_json_target(
                     )
                     needs_update = True
 
-        if target.name == "Gemini CLI":
-            if "context" not in data:
-                data["context"] = {}
-                needs_update = True
-            required_files = ["AGENTS.md", "GEMINI.md"]
-            current_files = data["context"].get("fileName", [])
-            if not isinstance(current_files, list):
-                current_files = [current_files] if current_files else []
-            updated_files = list(current_files)
-            file_needs_update = False
-            for fname in required_files:
-                if fname not in updated_files:
-                    updated_files.append(fname)
-                    file_needs_update = True
-            if file_needs_update:
-                data["context"]["fileName"] = updated_files
-                needs_update = True
-
         if needs_update:
             if not check_only:
                 write_json_atomic(existing, data)
@@ -708,7 +690,6 @@ def cmd_rtk_init(repo_root: Path, config: dict[str, Any], check_only: bool, dry_
 
     agent_map = {
         "claude": ["--auto-patch", "--agent", "claude"],
-        "gemini": ["--auto-patch", "--gemini"],
         "codex": ["--codex"],
         "opencode": ["--auto-patch", "--opencode"],
         "cursor-agent": ["--auto-patch", "--agent", "cursor"],

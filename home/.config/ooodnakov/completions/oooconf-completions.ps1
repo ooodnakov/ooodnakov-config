@@ -98,7 +98,7 @@ function Get-OooconfCompletions {
         'agents:install' = @{
             Options = @('--repo-root', '--config', '--all', '--missing', '--check', '--dry-run')
             OptionsWithArgs = @('--repo-root', '--config')
-            Values = @('codex', 'claude', 'gemini', 'qwen', 'cursor-agent', 'opencode', 'aider', 'pi', 'omp', 'command-code')
+            Values = @('codex', 'claude', 'qwen', 'cursor-agent', 'opencode', 'aider', 'pi', 'omp', 'command-code')
             Subcommands = @()
             OptionValues = @{
             }
@@ -157,7 +157,7 @@ function Get-OooconfCompletions {
             Values = @()
             Subcommands = @()
             OptionValues = @{
-                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
+                '--agents' = @('codex', 'claude', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
                 '--region' = @('global', 'china')
             }
         }
@@ -186,7 +186,7 @@ function Get-OooconfCompletions {
             }
         }
         'agents:skills:add' = @{
-            Options = @('--agent', '--sync-now', '--check')
+            Options = @('--sync-now', '--check')
             OptionsWithArgs = @()
             Values = @()
             Subcommands = @()
@@ -199,7 +199,7 @@ function Get-OooconfCompletions {
             Values = @()
             Subcommands = @()
             OptionValues = @{
-                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
+                '--agents' = @('codex', 'claude', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
             }
         }
         'agents:skills:view' = @{
@@ -224,7 +224,7 @@ function Get-OooconfCompletions {
             Values = @()
             Subcommands = @()
             OptionValues = @{
-                '--agents' = @('codex', 'claude', 'gemini', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
+                '--agents' = @('codex', 'claude', 'aider', 'qwen', 'cursor-agent', 'opencode', 'pi', 'omp', 'command-code', 'antigravity')
             }
         }
         'agents:update' = @{

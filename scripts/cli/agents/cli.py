@@ -146,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
     install_parser.add_argument(
         "agents",
         nargs="*",
-        help="Agent keys or names to install (e.g., claude, gemini, aider). Defaults to missing agents.",
+        help="Agent keys or names to install (e.g., claude, codex, aider). Defaults to missing agents.",
     )
     install_parser.add_argument(
         "--all",
@@ -234,7 +234,6 @@ def build_parser() -> argparse.ArgumentParser:
     skills_view_parser.add_argument("--check", action="store_true", help="Print planned command without executing.")
     skills_add_parser = skills_subparsers.add_parser("add", help="Add a shared skill source to common-data.json.")
     skills_add_parser.add_argument("source", help="Skill source (e.g. vercel-labs/agent-skills).")
-    skills_add_parser.add_argument("--agent", default="gemini", help="Agent sync target for this skill spec.")
     skills_add_parser.add_argument("--sync-now", action="store_true", help="Run agents skills sync after adding.")
     skills_add_parser.add_argument("--check", action="store_true", help="Validate and print changes without writing.")
 
@@ -807,7 +806,6 @@ def main(argv: list[str] | None = None) -> int:
                 root,
                 cfg,
                 source=args.source,
-                agent=args.agent,
                 check_only=args.check,
                 sync_now=args.sync_now,
             )

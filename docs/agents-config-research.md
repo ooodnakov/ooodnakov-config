@@ -32,19 +32,6 @@ Why this matters for `oooconf`:
 - The repo keeps `AGENTS.md` as cross-agent policy source and mirrors policy text into global instruction files where applicable.
 - Claude MCP sync remains JSON-based and additive.
 
-## Gemini CLI
-
-Top 3 config settings to care about first:
-
-1. `settings.json` model/provider + behavior defaults.
-2. `mcpServers` entries and global `mcp` toggles.
-3. `context.fileName` instruction discovery list (`AGENTS.md`, `GEMINI.md`, etc.).
-
-Why this matters for `oooconf`:
-
-- Skill sync remains implemented through `gemini skills install <source>` for declarative `skill_specs`.
-- Global JSON MCP sync remains compatible with Gemini's documented `mcpServers` model.
-
 ## Antigravity (App / CLI / IDE)
 
 Top 3 config settings to care about first:
@@ -55,7 +42,7 @@ Top 3 config settings to care about first:
 
 Why this matters for `oooconf`:
 
-- Because Antigravity cumulatively loads `~/.gemini/AGENTS.md` alongside `~/.gemini/config/rules/*.md`, keeping the shared policy in `~/.gemini/AGENTS.md` (shared with Gemini CLI) and syncing `extras/antigravity.md` as an `extra_only` modular rule in `~/.gemini/config/rules/antigravity.md` (with `trigger: always_on` frontmatter) avoids duplicating the ~300-line shared block in Antigravity while keeping Antigravity-only rules out of Gemini CLI.
+- Because Antigravity cumulatively loads `~/.gemini/AGENTS.md` alongside `~/.gemini/config/rules/*.md`, keeping the shared policy in `~/.gemini/AGENTS.md` and syncing `extras/antigravity.md` as an `extra_only` modular rule in `~/.gemini/config/rules/antigravity.md` (with `trigger: always_on` frontmatter) avoids duplicating the ~300-line shared block while keeping Antigravity-only rules separate.
 - `agy` is detected via `agent_clis`, but installs and self-updates via Google's native installer (`agy update`), not npm/uv `agent_updates`.
 
 ## OpenCode
@@ -79,16 +66,15 @@ Why this matters for `oooconf`:
 3. Fixed OpenCode global sync to use `mcp` object format instead of generic `mcpServers`.
 4. Added MCP add workflow safeguards (`--multi`, `--preview`, validation, command normalization) before writing shared data.
 5. Extended generated completions/spec so new agent subcommands/options are discoverable in shell completion.
-6. Added remote MCP support (`type`/`url`/`headers`) to `common-data.json` entries and per-agent rendering: Codex `http_headers` tables, Gemini `httpUrl`, OpenCode `type: "remote"`, Pi `url` with `${VAR}` interpolation, Claude/Oh My Pi `type` + `url`.
-7. Moved the graphify skill out of the OMP-only tree into the shared `~/.agents/skills` registry (the skills CLI / Agent Skills location read by OMP, Claude Code, Codex, Gemini, and Pi) and added Worktrunk as a managed skill installed via `pnpm dlx skills add -g` (`installer: "skills"` specs).
+6. Added remote MCP support (`type`/`url`/`headers`) to `common-data.json` entries and per-agent rendering: Codex `http_headers` tables, OpenCode `type: "remote"`, Antigravity `serverUrl`, Pi `url` with `${VAR}` interpolation, Claude/Oh My Pi `type` + `url`.
+7. Moved the graphify skill out of the OMP-only tree into the shared `~/.agents/skills` registry (the skills CLI / Agent Skills location read by OMP, Claude Code, Codex, and Pi) and added Worktrunk as a managed skill installed via `pnpm dlx skills add -g` (`installer: "skills"` specs).
+8. Removed Gemini CLI support: the CLI is deprecated upstream, and the declarative `agent` skill-spec installer existed only to run `gemini skills install`, so `skill_specs` now require `installer: "skills"` or `installer: "local"` and `oooconf agents skills add` writes skills-CLI specs.
 
 ## Reference docs (official)
 
 - OpenAI Codex docs: https://developers.openai.com/codex/
 - Claude Code configuration docs: https://code.claude.com/docs/en/configuration
 - Claude directory layout: https://code.claude.com/docs/en/claude-directory
-- Gemini CLI settings docs: https://geminicli.com/docs/cli/settings/
-- Gemini CLI MCP docs: https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md
 - Antigravity rules docs: https://antigravity.google/docs/rules
 - Antigravity MCP docs: https://antigravity.google/docs/mcp
 - Antigravity customization discovery docs: https://antigravity.google/docs/customization-discovery

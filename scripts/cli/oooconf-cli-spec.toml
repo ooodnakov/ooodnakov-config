@@ -16,7 +16,6 @@ china = "china"
 [definitions.agent_keys]
 codex = "OpenAI Codex CLI"
 claude = "Claude Code"
-gemini = "Gemini CLI"
 aider = "Aider"
 qwen = "Qwen Code"
 cursor-agent = "Cursor Agent"
@@ -290,7 +289,7 @@ platforms = ["linux", "macos", "windows"]
 description = "install one specific agent CLI"
 options = { "--repo-root" = "set repo root path", "--config" = "config path", "--all" = "install all agents", "--missing" = "install missing agents", "--check" = "check only", "--dry-run" = "preview without installing" }
 completers = { "--repo-root" = "_files -/", "--config" = "_files" }
-values = { "codex" = "Codex", "claude" = "Claude", "gemini" = "Gemini", "qwen" = "Qwen", "cursor-agent" = "Cursor Agent", "opencode" = "OpenCode", "aider" = "Aider", "pi" = "Pi Agent", "omp" = "Oh My Pi", "command-code" = "Command Code" }
+values = { "codex" = "Codex", "claude" = "Claude", "qwen" = "Qwen", "cursor-agent" = "Cursor Agent", "opencode" = "OpenCode", "aider" = "Aider", "pi" = "Pi Agent", "omp" = "Oh My Pi", "command-code" = "Command Code" }
 
 [commands.agents.subcommands.install-scripts-build]
 handler_id = "oooconf.agents.install-scripts-build"
@@ -319,7 +318,7 @@ options = { "--check" = "check only", "--json" = "emit JSON" }
 handler_id = "oooconf.agents.skills.add"
 platforms = ["linux", "macos", "windows"]
 description = "add one shared skill source and optionally sync"
-options = { "--agent" = "target agent", "--sync-now" = "sync after adding", "--check" = "check only" }
+options = { "--sync-now" = "sync after adding", "--check" = "check only" }
 
 [commands.fleet]
 handler_id = "oooconf.fleet"

@@ -517,7 +517,7 @@ Optimize for correct, complete outcomes with minimal unnecessary overhead.
 
 ## Git Worktrees (Worktrunk)
 
-Use [Worktrunk](https://github.com/max-sixty/worktrunk) (`wt`) for git worktree work. Prefer `wt switch --create <branch>` over `git worktree add`, inspect with `wt list`, and clean up with `wt remove`. Load the `worktrunk` skill for hooks, config, and LLM commit-message guidance. Per-agent integrations: `wt config plugins <agent> install` (Claude Code, Codex, OpenCode, Pi, oh-my-pi) or `gemini extensions install https://github.com/max-sixty/worktrunk` for Gemini CLI.
+Use [Worktrunk](https://github.com/max-sixty/worktrunk) (`wt`) for git worktree work. Prefer `wt switch --create <branch>` over `git worktree add`, inspect with `wt list`, and clean up with `wt remove`. Load the `worktrunk` skill for hooks, config, and LLM commit-message guidance. Per-agent integrations: `wt config plugins <agent> install` (Claude Code, Codex, OpenCode, Pi, oh-my-pi).
 
 ## Common MCP servers
 <!-- oooconf:mcp-servers:start -->

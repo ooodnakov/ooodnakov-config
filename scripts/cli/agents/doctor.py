@@ -93,7 +93,7 @@ def check_config_shape(target: AgentConfigTarget, content: str, parsed_obj: dict
 
     if target.name == "OpenCode" and not has_top_level_key("mcp"):
         issues.append('expected top-level "mcp" object')
-    if target.name in {"Gemini CLI", "Claude Code"} and not has_top_level_key("mcpServers"):
+    if target.name in {"Antigravity", "Claude Code"} and not has_top_level_key("mcpServers"):
         issues.append('expected "mcpServers" object')
     if target.name == "OpenAI Codex CLI" and not has_top_level_key("mcp_servers"):
         issues.append('expected "mcp_servers" tables')

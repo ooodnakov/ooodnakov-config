@@ -268,12 +268,9 @@ def render_remote_mcp_entry(
             for key, value in headers.items()
         }
 
-    if target.name == "Gemini CLI":
-        # Gemini distinguishes streamable HTTP (httpUrl) from legacy SSE (url).
-        entry: dict[str, Any] = {"httpUrl": url} if transport == "http" else {"url": url}
-    elif target.name == "Antigravity":
+    if target.name == "Antigravity":
         # Antigravity Streamable HTTP uses serverUrl without a transport type field.
-        entry = {"serverUrl": url}
+        entry: dict[str, Any] = {"serverUrl": url}
     elif target.name == "Pi Agent":
         # Pi infers the remote transport from url; it has no separate type field.
         entry = {"url": url}
