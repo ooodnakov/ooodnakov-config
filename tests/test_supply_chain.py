@@ -343,32 +343,72 @@ def test_cargo_git_installs_are_pinned() -> None:
         assert re.search(r"--(?:tag|rev)\b", call), f"unpinned cargo git install: {call}"
 
 
+def _extract_runner_package(command: str, args: list[object]) -> str | None:
+    """Return the package specifier passed to pnpm dlx, npx, or uvx."""
+    if command == "pnpm":
+        if "dlx" not in args:
+            return None
+        start = args.index("dlx") + 1
+        value_flags: tuple[str, ...] = ()
+    elif command == "npx":
+        start = 0
+        value_flags = ("-p", "--package")
+    elif command == "uvx":
+        start = 0
+        value_flags = ("--from", "--python", "-p", "--with")
+    else:
+        return None
+
+    idx = start
+    while idx < len(args):
+        arg = args[idx]
+        if not isinstance(arg, str):
+            idx += 1
+            continue
+        if command == "npx" and arg.startswith("--package="):
+            return arg.split("=", 1)[1]
+        if command == "uvx" and arg.startswith("--from="):
+            return arg.split("=", 1)[1]
+        if arg in value_flags:
+            if command in {"npx", "uvx"} and arg in {"-p", "--package", "--from"}:
+                next_arg = args[idx + 1] if idx + 1 < len(args) else None
+                return next_arg if isinstance(next_arg, str) else None
+            idx += 2
+            continue
+        if arg.startswith("-"):
+            idx += 1
+            continue
+        return arg
+    return None
+
+
 def test_pnpm_dlx_mcp_servers_are_version_pinned() -> None:
     configs = (
         ("home/.omp/agent/mcp.json", "mcpServers"),
         ("home/.pi/mcp.json", "mcpServers"),
         ("home/.config/ooodnakov/agents/common-data.json", "mcp_servers"),
     )
-    checked = 0
+    npm_pin_re = re.compile(r"(?:@[^/@]+/)?[^/@]+@\d[^\s@]*")
+    uvx_pin_re = re.compile(r"[A-Za-z0-9._-]+(?:==\d[^\s=]*|@\d[^\s@]*|@[^\s@]+@[0-9a-f]{40})")
+
     for rel_path, key in configs:
         data = json.loads((REPO_ROOT / rel_path).read_text(encoding="utf-8"))
-        servers = data[key]
+        assert isinstance(data, dict), f"expected JSON object in {rel_path}"
+        servers = data.get(key)
+        assert isinstance(servers, dict) and servers, f"missing or empty {key} in {rel_path}"
         for name, spec in servers.items():
-            if not isinstance(spec, dict) or spec.get("command") != "pnpm":
+            if not isinstance(spec, dict):
                 continue
+            command = spec.get("command")
             args = spec.get("args", [])
-            if "dlx" not in args:
+            if command not in {"pnpm", "npx", "uvx"} or not isinstance(args, list):
                 continue
-            dlx_index = args.index("dlx")
-            package = next(
-                (arg for arg in args[dlx_index + 1 :] if isinstance(arg, str) and not arg.startswith("-")), None
-            )
-            assert package, f"missing package argument for pnpm dlx in {rel_path}: {name}"
-            assert re.fullmatch(r"(?:@[^/@]+/)?[^/@]+@\d[^\s@]*", package), (
-                f"unpinned pnpm dlx package in {rel_path} ({name}): {package}"
-            )
-            checked += 1
-    assert checked >= 3
+            if command == "pnpm" and "dlx" not in args:
+                continue
+            package = _extract_runner_package(command, args)
+            assert package, f"missing package argument for {command} in {rel_path}: {name}"
+            pattern = uvx_pin_re if command == "uvx" else npm_pin_re
+            assert pattern.fullmatch(package), f"unpinned {command} package in {rel_path} ({name}): {package}"
 
 
 def test_elevated_gitbash_merge_uses_file_helper_and_validates_reparse_points() -> None:

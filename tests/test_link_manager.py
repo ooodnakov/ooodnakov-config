@@ -37,16 +37,17 @@ target = "{LOCAL_BIN}/oooconf"
         platform="linux",
     )
 
+    base = tmp_path.as_posix()
     assert merged == [
         {
             "key": "wezterm",
             "source": "/repo/home/.config/wezterm",
-            "target": f"{tmp_path}/xdg-config/wezterm-work",
+            "target": f"{base}/xdg-config/wezterm-work",
         },
         {
             "key": "custom-bin",
-            "source": f"{tmp_path}/home/bin/oooconf",
-            "target": f"{tmp_path}/home/.local/bin/oooconf",
+            "source": f"{base}/home/bin/oooconf",
+            "target": f"{base}/home/.local/bin/oooconf",
         },
     ]
 

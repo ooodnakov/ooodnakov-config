@@ -25,9 +25,9 @@ test:
 integration:
     @uv run pytest tests/test_cross_platform_lifecycle.py
 
-# Enforce the initial Python coverage floor.
+# Enforce the Python coverage floor.
 coverage:
-    @uv run pytest --cov=scripts --cov-report=term --cov-fail-under=50
+    @uv run pytest --cov=scripts --cov-report=term --cov-fail-under=65
 
 # Parse or smoke-check tracked structured configuration.
 formats:
@@ -41,6 +41,21 @@ check: lint format-check formats test
 [unix]
 unix:
     @bash tests/test_shell.sh
+
+# Run PowerShell smoke tests.
+[windows]
+test-ps1:
+    @pwsh -NoProfile -File tests/test_powershell.ps1
+
+# Parse all active PowerShell scripts for syntax errors.
+[windows]
+parse-ps1:
+    @pwsh -NoProfile -Command 'Get-ChildItem scripts/setup -Recurse -File -Filter *.ps1 | ForEach-Object { $e = $null; [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$e) | Out-Null; if ($e.Count) { $e | ForEach-Object { Write-Error $_.Message }; exit 1 } }; Get-ChildItem home/.config/ooodnakov/bin,tests -File -Filter *.ps1 | ForEach-Object { $e = $null; [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$e) | Out-Null; if ($e.Count) { $e | ForEach-Object { Write-Error $_.Message }; exit 1 } }'
+
+# Run static security analysis and supply-chain policy checks.
+security:
+    @uv run --with bandit==1.9.4 bandit -q -ll -r scripts/ home/.config/ooodnakov/bin/ home/.config/ooodnakov/bin/herdr-task home/.config/ooodnakov/bin/herdr-artifact
+    @uv run pytest tests/test_supply_chain.py
 
 # Regenerate tracked oooconf shell completions and command reference.
 completions:

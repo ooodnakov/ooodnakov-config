@@ -8,6 +8,8 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = REPO_ROOT / "scripts/cli/env_tool.py"
 SPEC = spec_from_file_location("env_tool", TOOL)
@@ -92,6 +94,7 @@ def test_empty_xdg_config_home_uses_home_config(tmp_path: Path) -> None:
     assert (tmp_path / ".config/ooodnakov/local/env.zsh").exists()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Bash entrypoint is Unix-only")
 def test_global_dry_run_rejects_env_without_writing(tmp_path: Path) -> None:
     env = os.environ.copy()
     env["XDG_CONFIG_HOME"] = str(tmp_path)
@@ -116,7 +119,7 @@ def test_powershell_dispatch_rejects_global_dry_run_for_env() -> None:
 
 
 def test_windows_write_does_not_call_fchmod(tmp_path: Path) -> None:
-    with patch.object(env_tool.os, "name", "nt"), patch.object(env_tool.os, "fchmod") as fchmod:
+    with patch.object(env_tool.os, "name", "nt"), patch.object(env_tool.os, "fchmod", create=True) as fchmod:
         env_tool.write_override(tmp_path / "env.zsh", "KEY", "export KEY=value")
 
     fchmod.assert_not_called()

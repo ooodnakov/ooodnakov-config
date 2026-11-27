@@ -32,11 +32,12 @@ jobs:
       - name: Install zsh (Ubuntu)
         run: sudo apt-get update && sudo apt-get install -y zsh
       - name: Test with coverage floor
-        run: uv run --python "${{ matrix.python-version }}" pytest --cov=scripts --cov-report=term --cov-fail-under=50
+        run: uv run --python "${{ matrix.python-version }}" pytest --cov=scripts --cov-report=term --cov-fail-under=65
 
   shell-validation:
     name: Shell validation (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -133,6 +134,7 @@ jobs:
   powershell-validation:
     name: PowerShell validation (windows-latest)
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
@@ -244,7 +246,10 @@ jobs:
           uv run python scripts/cli/generate_cli_reference.py
           git diff --exit-code -- deps.lock.json docs/dependency-lock.md docs/cli-reference.md scripts/cli/oooconf-commands.txt home/.config/ooodnakov/completions/oooconf-completions.ps1 home/.config/ooodnakov/zsh/completions/_oooconf
 
-      - name: Optional deps parser/drift tests
+      - name: PowerShell test suite
         shell: pwsh
-        run: |
-          uv run pytest tests/test_operation_plan.py tests/test_profiles.py tests/test_transaction_apply.py tests/test_lifecycle_tool.py tests/test_supply_chain.py tests/test_optional_deps.py tests/test_optional_deps_drift.py tests/test_repository_hygiene.py tests/test_static_smoke.py tests/test_secure_artifact_hardening.py
+        run: pwsh -NoProfile -File tests/test_powershell.ps1
+
+      - name: Python test suite
+        shell: pwsh
+        run: uv run pytest

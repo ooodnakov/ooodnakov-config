@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 BASH_UI = ROOT / "scripts/setup/lib/oooconf-ui.sh"
@@ -21,6 +25,7 @@ def _load_cli_ui():
 
 def _plain(monkeypatch, home: Path) -> None:
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setenv("OOOCONF_COLOR", "never")
     monkeypatch.delenv("NO_COLOR", raising=False)
     monkeypatch.delenv("FORCE_COLOR", raising=False)
@@ -30,14 +35,14 @@ def test_home_is_abbreviated(monkeypatch, tmp_path: Path) -> None:
     _plain(monkeypatch, tmp_path)
     cli_ui = _load_cli_ui()
     assert cli_ui.path(tmp_path) == "~"
-    assert cli_ui.path(tmp_path / ".config" / "nvim") == "~/.config/nvim"
+    assert cli_ui.path(tmp_path / ".config" / "nvim") == f"~{os.sep}.config{os.sep}nvim"
 
 
 def test_foreign_and_relative_paths_are_untouched(monkeypatch, tmp_path: Path) -> None:
     _plain(monkeypatch, tmp_path / "home")
     cli_ui = _load_cli_ui()
-    assert cli_ui.path(Path("/etc/hosts")) == "/etc/hosts"
-    assert cli_ui.path(Path("home/.config/nvim")) == "home/.config/nvim"
+    assert cli_ui.path(Path("/etc/hosts")) == str(Path("/etc/hosts"))
+    assert cli_ui.path(Path("home/.config/nvim")) == str(Path("home/.config/nvim"))
 
 
 def test_leaf_is_colored_and_directories_are_muted(monkeypatch, tmp_path: Path) -> None:
@@ -49,9 +54,10 @@ def test_leaf_is_colored_and_directories_are_muted(monkeypatch, tmp_path: Path) 
     assert "b.txt" in rendered
     assert rendered.endswith("\033[0m")
     plain = cli_ui.path(tmp_path / "a" / "b.txt").replace("\033", "")
-    assert "~/" in plain
+    assert f"~{os.sep}" in plain
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Bash UI parity test is Unix-only")
 def test_bash_and_python_agree(monkeypatch, tmp_path: Path) -> None:
     _plain(monkeypatch, tmp_path)
     cli_ui = _load_cli_ui()
