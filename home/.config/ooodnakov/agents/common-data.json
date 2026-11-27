@@ -22,12 +22,6 @@
   },
   "skill_specs": [
     {
-      "agent": "gemini",
-      "description": "Added via oooconf agents skills add (context7)",
-      "name": "context7",
-      "source": "https://github.com/context7"
-    },
-    {
       "description": "Worktrunk (wt) git worktree guidance",
       "installer": "skills",
       "name": "worktrunk",
@@ -48,7 +42,6 @@
     }
   ],
   "skills": [
-    "context7 (gemini)",
     "graphify",
     "herdr-tasks (omp, claude, codex)",
     "impeccable",

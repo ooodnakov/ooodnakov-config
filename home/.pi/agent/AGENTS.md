@@ -310,7 +310,6 @@ Use [Worktrunk](https://github.com/max-sixty/worktrunk) (`wt`) for git worktree 
 
 ## Common Skills
 <!-- oooconf:skills:start -->
-- context7 (gemini)
 - graphify
 - herdr-tasks (omp, claude, codex)
 - impeccable
