@@ -177,6 +177,29 @@ def test_skills_view_check_mode_uses_global_ls(capsys):
     assert "skills view" not in output
 
 
+def test_windows_launcher_prefers_pathext_variant(monkeypatch):
+    # pnpm and gemini ship extensionless POSIX shims that CreateProcess cannot launch.
+    paths = {"pnpm": "C:\\pnpm\\pnpm", "pnpm.CMD": "C:\\pnpm\\pnpm.CMD"}
+    monkeypatch.setattr(agents_tool.os, "name", "nt")
+    monkeypatch.setenv("PATHEXT", ".COM;.EXE;.BAT;.CMD")
+
+    assert agents_tool.windows_launcher("pnpm", paths.get) == "C:\\pnpm\\pnpm.CMD"
+
+
+def test_windows_launcher_keeps_name_without_executable_variant(monkeypatch):
+    monkeypatch.setattr(agents_tool.os, "name", "nt")
+    monkeypatch.setenv("PATHEXT", ".COM;.EXE;.BAT;.CMD")
+
+    which = lambda command: "C:\\pnpm\\pnpm" if command == "pnpm" else None  # noqa: E731
+    assert agents_tool.windows_launcher("pnpm", which) == "pnpm"
+
+
+def test_windows_launcher_is_identity_off_windows(monkeypatch):
+    monkeypatch.setattr(agents_tool.os, "name", "posix")
+
+    assert agents_tool.windows_launcher("pnpm", lambda _command: "/usr/bin/pnpm") == "pnpm"
+
+
 def test_parse_mcp_json_inputs_multi():
     payload = '{"one":{"command":"pnpm","args":["dlx","a"]},"two":{"command":"pnpm","args":["dlx","b"]}}'
     result = agents_tool.parse_mcp_json_inputs(payload, allow_multi=True)

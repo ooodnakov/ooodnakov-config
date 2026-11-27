@@ -115,6 +115,7 @@ from .skills import (
     local_skill_links,
     skills_cli_agent_targets,
     sync_local_skills,
+    windows_launcher,
 )
 from .sync import (
     MINIMAX_CODEX_MODEL,
@@ -259,6 +260,7 @@ __all__ = [
     "upsert_nested_dict",
     "upsert_opencode_minimax_config",
     "validate_mcp_entry",
+    "windows_launcher",
     "write_common_data",
     "write_json_atomic",
     "write_text_atomic",

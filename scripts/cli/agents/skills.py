@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shlex
 import shutil
 import subprocess
@@ -31,6 +32,29 @@ LOCAL_SKILL_DIRS: dict[str, tuple[str, str]] = {
     "codex": ("codex", "~/.codex/skills"),
     "antigravity": ("agy", "~/.gemini/config/skills"),
 }
+
+
+def windows_launcher(name: str, which: Any = None) -> str:
+    """Return ``name`` resolved to a path Windows can actually launch.
+
+    ``shutil.which`` returns the extensionless POSIX shim first on Windows
+    (pnpm and gemini both ship one) and ``CreateProcess`` cannot run it, so
+    prefer a PATHEXT variant. Returns ``name`` unchanged when no such variant
+    exists or on non-Windows platforms.
+    """
+    if os.name != "nt":
+        return name
+    finder = which or shutil.which
+    extensions = [ext.strip() for ext in os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if ext.strip()]
+    lowered = {ext.lower() for ext in extensions}
+    found = finder(name)
+    if found and Path(found).suffix.lower() in lowered:
+        return found
+    for ext in extensions:
+        candidate = finder(name + ext)
+        if candidate:
+            return candidate
+    return name
 
 
 def canonicalize_skill_source(source: str) -> str:
@@ -264,6 +288,7 @@ def cmd_skills_sync(
 
         print_status_line("ok", f"Syncing {name} for {agent_cli.name}...")
         print_status_line("hint", f"  command: {command_display}")
+        command[0] = windows_launcher(command[0], shutil_mod.which)
         try:
             subprocess_mod.run(command, check=True)
             print_status_line("ok", f"Successfully synced {name}")
@@ -271,6 +296,12 @@ def cmd_skills_sync(
         except subprocess.CalledProcessError as exc:
             print_status_line("fail", f"Failed to sync {name}: {exc}")
             failed += 1
+        except OSError as exc:
+            print_status_line(
+                "missing",
+                f"Cannot execute '{command[0]}' ({exc}); skipping skill {name}.",
+            )
+            skipped += 1
 
     for spec in cli_specs:
         name = str(spec.get("name", "unknown"))
@@ -295,6 +326,7 @@ def cmd_skills_sync(
 
         print_status_line("ok", f"Syncing {name} via skills CLI...")
         print_status_line("hint", f"  command: {command_display}")
+        command[0] = windows_launcher(command[0], shutil_mod.which)
         try:
             subprocess_mod.run(command, check=True)
             print_status_line("ok", f"Successfully synced {name}")
@@ -302,6 +334,12 @@ def cmd_skills_sync(
         except subprocess.CalledProcessError as exc:
             print_status_line("fail", f"Failed to sync {name}: {exc}")
             failed += 1
+        except OSError as exc:
+            print_status_line(
+                "missing",
+                f"Cannot execute '{command[0]}' ({exc}); skipping skill {name}.",
+            )
+            skipped += 1
 
     if local_specs:
         sync_local_fn = resolve_collab("sync_local_skills", sync_local_skills)
@@ -340,6 +378,7 @@ def cmd_skills_view(json_output: bool, check_only: bool) -> int:
 
     print_status_line("info", "Listing global shared skills catalog via pnpm dlx")
     print_status_line("hint", f"  command: {command_display}")
+    command[0] = windows_launcher(command[0], shutil_mod.which)
     result = subprocess_mod.run(command)
     if result.returncode != 0:
         print_status_line("fail", "skills list command failed.")
