@@ -54,8 +54,9 @@ set_default_bar() {
       return 1
       ;;
   esac
-  local env_zsh="$(shell_local_env_zsh_path)"
-  local env_ps1="$(shell_local_env_ps1_path)"
+  local env_zsh env_ps1
+  env_zsh="$(shell_local_env_zsh_path)"
+  env_ps1="$(shell_local_env_ps1_path)"
   upsert_override_line "$env_zsh" "OOODNAKOV_DEFAULT_BAR" "export OOODNAKOV_DEFAULT_BAR=\"$bar\""
   upsert_override_line "$env_ps1" "OOODNAKOV_DEFAULT_BAR" "\$env:OOODNAKOV_DEFAULT_BAR = '$bar'"
   ui_line ok "default bar set to $bar"

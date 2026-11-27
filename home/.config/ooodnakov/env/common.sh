@@ -3,7 +3,8 @@ if [ -z "$EDITOR" ]; then
   if [ -x "$HOME/.local/share/ooodnakov-config/bin/nvim" ]; then
     export EDITOR="$HOME/.local/share/ooodnakov-config/bin/nvim"
   else
-    export EDITOR="$(command -v nvim 2>/dev/null || echo '/usr/bin/nvim')"
+    EDITOR="$(command -v nvim 2>/dev/null || echo '/usr/bin/nvim')"
+    export EDITOR
   fi
 fi
 export VISUAL="${VISUAL:-$EDITOR}"

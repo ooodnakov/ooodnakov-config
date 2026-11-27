@@ -584,6 +584,7 @@ install_optional_dependencies() {
   local manager
   local key label description
   manager="$(detect_package_manager)"
+  # shellcheck disable=SC2034  # Read by setup-installers.sh and setup-links.sh when sourced by setup.sh.
   PACKAGE_MANAGER="$manager"
 
   if [ "$manager" != "none" ] && [ "$manager" != "brew" ] && is_interactive; then

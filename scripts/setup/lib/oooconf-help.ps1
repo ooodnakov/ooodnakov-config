@@ -1,5 +1,22 @@
 # Dot-sourced by scripts/setup/ooodnakov.ps1; do not execute directly.
 
+function Test-HelpPythonAvailable {
+    $renderHelp = Join-Path $RepoRoot "scripts/cli/render_help.py"
+    if (-not (Test-Path -LiteralPath $renderHelp)) {
+        return $false
+    }
+    $pyprojectPath = Join-Path $RepoRoot "pyproject.toml"
+    if ((Get-Command uv -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath $pyprojectPath)) {
+        return $true
+    }
+    foreach ($candidate in @("python3", "python", "py")) {
+        if (Get-Command $candidate -ErrorAction SilentlyContinue) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Get-KnownCommands {
     $fallback = @("install", "deps", "update", "doctor", "status", "snapshot", "dry-run", "delete", "remove", "lock", "update-pins", "completions", "agents", "fleet", "secrets", "shell", "color", "delta", "version", "check", "preview", "upgrade")
     if (-not (Test-Path $CommandsFile)) {
@@ -44,8 +61,8 @@ function Write-UnknownCommandMessage {
             if ($Suggestion) {
                 Write-UiLine -Role hint -Message "Did you mean: $Suggestion"
             }
-            if ($Scope -eq "shell") {
-                Show-CommandUsage "shell"
+            if ($Scope -in @("shell", "wm", "wm bar", "color", "delta")) {
+                Show-CommandUsage $Scope
             } else {
                 Show-Usage
             }
@@ -76,33 +93,24 @@ function Get-EditDistance {
         [string]$Right
     )
 
-    $Left = [string]$Left
-    $Right = [string]$Right
+    if ($Left -ceq $Right) { return 0 }
+    return [Math]::Abs($Left.Length - $Right.Length) + 1
+}
 
-    $rightLength = $Right.Length
-    $previous = New-Object int[] ($rightLength + 1)
-    for ($j = 0; $j -le $rightLength; $j++) {
-        $previous[$j] = $j
+function Get-FallbackSuggestion {
+    param(
+        [string]$InputValue,
+        [string[]]$Candidates
+    )
+
+    if ([string]::IsNullOrWhiteSpace($InputValue)) { return $null }
+    foreach ($candidate in @($Candidates | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
+        if ([string]$candidate -ceq $InputValue) { return [string]$candidate }
     }
-
-    for ($i = 1; $i -le $Left.Length; $i++) {
-        $current = New-Object int[] ($rightLength + 1)
-        $current[0] = $i
-        $leftChar = $Left.Substring($i - 1, 1)
-
-        for ($j = 1; $j -le $rightLength; $j++) {
-            $rightChar = $Right.Substring($j - 1, 1)
-            $cost = if ($leftChar -ceq $rightChar) { 0 } else { 1 }
-            $deletion = $previous[$j] + 1
-            $insertion = $current[($j - 1)] + 1
-            $substitution = $previous[($j - 1)] + $cost
-            $current[$j] = [Math]::Min([Math]::Min($deletion, $insertion), $substitution)
-        }
-
-        $previous = $current
+    foreach ($candidate in @($Candidates | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
+        if (([string]$candidate).StartsWith($InputValue)) { return [string]$candidate }
     }
-
-    return $previous[$rightLength]
+    return $null
 }
 
 function Get-CommandSuggestion {
@@ -111,24 +119,17 @@ function Get-CommandSuggestion {
         [string]$InputCommand
     )
 
-    $bestCommand = $null
-    $bestDistance = [int]::MaxValue
-
-    foreach ($candidate in @($KnownCommands | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
-        $candidateText = [string]$candidate
-        $distance = Get-EditDistance -Left $InputCommand -Right $candidateText
-        if ($distance -lt $bestDistance) {
-            $bestDistance = $distance
-            $bestCommand = $candidateText
+    if (-not [string]::IsNullOrWhiteSpace($InputCommand) -and (Test-HelpPythonAvailable)) {
+        $renderHelp = Join-Path $RepoRoot "scripts/cli/render_help.py"
+        $result = Run-Python -ScriptPath $renderHelp -ScriptArgs @("--mode", "suggest", "--repo-root", $RepoRoot, "--platform", "windows", "--input", $InputCommand)
+        if ($global:LASTEXITCODE -eq 0) {
+            $text = (($result | Out-String).Trim())
+            if ($text) { return $text }
+            return $null
         }
     }
 
-    $threshold = if ($InputCommand.Length -le 4) { 2 } else { 3 }
-    if ($bestDistance -le $threshold) {
-        return $bestCommand
-    }
-
-    return $null
+    return Get-FallbackSuggestion -InputValue $InputCommand -Candidates $KnownCommands
 }
 
 function Get-SuggestionFromList {
@@ -139,24 +140,18 @@ function Get-SuggestionFromList {
         [string[]]$Candidates
     )
 
-    $bestMatch = $null
-    $bestDistance = [int]::MaxValue
-
-    foreach ($candidate in @($Candidates | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) })) {
-        $candidateText = [string]$candidate
-        $distance = Get-EditDistance -Left $InputValue -Right $candidateText
-        if ($distance -lt $bestDistance) {
-            $bestDistance = $distance
-            $bestMatch = $candidateText
+    if (-not [string]::IsNullOrWhiteSpace($InputValue) -and $Candidates.Count -gt 0 -and (Test-HelpPythonAvailable)) {
+        $renderHelp = Join-Path $RepoRoot "scripts/cli/render_help.py"
+        $scriptArgs = @("--mode", "suggest", "--repo-root", $RepoRoot, "--input", $InputValue, "--candidates") + $Candidates
+        $result = Run-Python -ScriptPath $renderHelp -ScriptArgs $scriptArgs
+        if ($global:LASTEXITCODE -eq 0) {
+            $text = (($result | Out-String).Trim())
+            if ($text) { return $text }
+            return $null
         }
     }
 
-    $threshold = if ($InputValue.Length -le 4) { 2 } else { 3 }
-    if ($bestDistance -le $threshold) {
-        return $bestMatch
-    }
-
-    return $null
+    return Get-FallbackSuggestion -InputValue $InputValue -Candidates $Candidates
 }
 
 function Get-Version {
@@ -181,604 +176,79 @@ function Get-Version {
     return "unknown"
 }
 
-function Show-Usage {
-    Write-UiBanner
-    Write-UiSpacer
-    Write-Output (Format-UiText -Text "Usage: oooconf [global options] <command> [command options]" -Role "section" -Bold)
-    Write-Output (Format-UiText -Text "A reproducible cross-platform dotfiles manager with setup, health checks, secrets, and shell tooling." -Role "muted")
+function Get-RenderHelpCommonArgs {
+    $argsList = @("--repo-root", $RepoRoot, "--platform", "windows")
+    if ((Test-UiInteractive) -and (${env:OOOCONF_UI} -notin @("stdout", "off", "never"))) {
+        $argsList += "--interactive"
+    }
+    return $argsList
+}
 
-    Write-UiSpacer
-    Write-UiSeparator
-    Write-UiSectionFancy -IconName "version" -Title "Global options"
+function Show-UsageFallback {
     Write-Output @"
-  -C, --repo-root PATH  run against a specific repo checkout
-      --profile NAME    select minimal, terminal, workstation, or developer
-  -h, --help            show this help
-  -n, --dry-run         add --dry-run to install or update
-      --yes-optional    auto-accept optional dependency installs
-      --skip-deps       skip dependency installation
-  -V, --version         show CLI version information
-      --print-repo-root print the resolved repo root and exit
-"@
+Usage: oooconf [global options] <command> [command options]
 
-    Write-UiSpacer
-    Write-UiSeparator
-    Write-UiSectionFancy -IconName "install" -Title "Setup"
-    Write-UiCommandRow -CommandName "bootstrap" -Description "clone/update repo then run install"
-    Write-UiCommandRow -CommandName "install" -Description "apply managed config and optional dependency installs"
-    Write-UiCommandRow -CommandName "deps" -Description "install optional dependencies only"
-    Write-UiCommandRow -CommandName "update" -Description "pull repo with --ff-only, then re-run install"
-
-    Write-UiSpacer
-    Write-UiSectionFancy -IconName "doctor" -Title "Inspect & Validate"
-    Write-UiCommandRow -CommandName "doctor" -Description "validate managed symlinks and required commands"
-    Write-UiCommandRow -CommandName "status" -Description "summarize profile, links, dependencies, transactions, and drift"
-    Write-UiCommandRow -CommandName "snapshot" -Description "export, inspect, or apply portable settings"
-    Write-UiCommandRow -CommandName "plan" -Description "build a validated text or JSON operation plan"
-    Write-UiCommandRow -CommandName "apply" -Description "transactionally apply managed links"
-    Write-UiCommandRow -CommandName "rollback" -Description "roll back the latest eligible link transaction"
-    Write-UiCommandRow -CommandName "dry-run" -Description "preview install flow without mutating filesystem"
-    Write-UiCommandRow -CommandName "version" -Description "print CLI version and repo root"
-
-    Write-UiSpacer
-    Write-UiSectionFancy -IconName "lock" -Title "Manage State"
-    Write-UiCommandRow -CommandName "delete" -Description "remove managed links and restore latest backups"
-    Write-UiCommandRow -CommandName "remove" -Description "remove managed links only (no backup restore)"
-    Write-UiCommandRow -CommandName "lock" -Description "regenerate dependency lock artifacts from pinned refs"
-    Write-UiCommandRow -CommandName "update-pins" -Description "compare/update pinned refs and refresh lock artifacts"
-    Write-UiCommandRow -CommandName "completions" -Description "regenerate tracked shell completions (autogen + oooconf)"
-    Write-UiCommandRow -CommandName "link" -Description "inspect or manage links from the symlink manifest"
-
-    Write-UiSpacer
-    Write-UiSectionFancy -IconName "shell" -Title "Shell / Secrets / Agents"
-    Write-UiCommandRow -CommandName "shell" -Description "manage local shell preferences such as forgit aliases"
-    Write-UiCommandRow -CommandName "color" -Description "set a unified oooconf CLI color theme"
-    Write-UiCommandRow -CommandName "delta" -Description "inject or manage git-delta gitconfig"
-    Write-UiCommandRow -CommandName "secrets" -Description "sync or validate local secret env files"
-    Write-UiCommandRow -CommandName "env" -Description "set machine-local environment variables"
-    Write-UiCommandRow -CommandName "agents" -Description "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
-    Write-UiCommandRow -CommandName "fleet" -Description "sync this repo across SSH fleet hosts"
-    Write-UiCommandRow -CommandName "wm" -Description "switch between or manage window managers (komorebi/glazewm)"
-
-    Write-UiSpacer
-    Write-UiSeparator
-    Write-UiHelpBlock @"
-Aliases:
-  check -> doctor
-  preview -> dry-run
-  upgrade -> update
-Note:
-  bootstrap is Unix-only in this wrapper.
-  On Windows, run ``scripts/setup/setup.ps1 install`` for initial setup.
-Getting help:
-  oooconf --help                     show this message
-  oooconf help <command>             show command-specific help
-  oooconf help secrets               show secrets subcommand help
-UI controls:
-  `$env:OOOCONF_COLOR='always'       override color output
-  `$env:OOOCONF_ASCII='1'            force ASCII icons and borders
-  `$env:OOOCONF_THEME='<theme>'      set the CLI color theme for this run
-  Nerd Font icons render automatically on UTF-8 terminals; ASCII tags are
-  used when output is redirected or the glyphs are unavailable.
-Common workflows:
-  # Initial setup on Windows:
-  ./scripts/setup/setup.ps1 install
-  # Preview what install would do:
-  oooconf dry-run
-  # Apply config and install dependencies:
-  oooconf install
-  oooconf deps
+Setup: bootstrap (Unix), install, deps, update
+Inspect: doctor, status, snapshot, plan, apply, rollback, dry-run, version
+Manage: delete, remove, lock, update-pins, completions, link
+Tools: shell, color, delta, secrets, env, agents, fleet, wm
+Aliases: check -> doctor, preview -> dry-run, upgrade -> update
+Repo root: $RepoRoot
 "@
 }
 
-function Show-CommandUsage {
-    param($command)
-    switch ($command) {
-        "install" {
-            Write-UiHelpBlock @"
-Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps] [--profile NAME] [--minimal] [--min-dep]
-
-Apply managed config and optional dependency installation.
-Creates symlinks from tracked config in home/ to their target locations,
-backing up any replaced files. Optionally installs dependencies when
-allowed.
-Examples:
-  oooconf install                      # interactive dependency prompts
-  oooconf install --yes-optional       # auto-accept all optional installs
-  oooconf install --skip-deps          # apply config without dependency installs
-  oooconf install --profile terminal   # apply only terminal-profile managed links
-  oooconf install --minimal            # minimal profile links (sparse checkout safe)
-  oooconf install --minimal --min-dep  # minimal links plus minimal dependencies
-  oooconf install --dry-run            # preview without making changes
-"@
-        }
-        "deps" {
-            Write-UiHelpBlock @"
-Usage: oooconf deps [--dry-run] [--all] [--latest] [--min-dep] [dependency-key...]
-
-Install optional dependencies only. Without dependency keys, an interactive
-picker is shown (using gum if available).
-
-Use --latest to run Topgrade with bounded retries and update bin-managed GitHub
-releases. GitHub auth uses GITHUB_AUTH_TOKEN, falling back to GITHUB_TOKEN.
-Individual manager failures are warnings by default; set
-OOODNAKOV_DEPS_LATEST_STRICT=1 to fail instead.
-
-All dependency metadata (including versions, URLs, and install methods) lives exclusively in scripts/optional-deps.toml.
-Examples:
-  oooconf deps                         # interactive picker (when gum available)
-  oooconf deps key1 key2               # install specific dependency keys
-  oooconf deps --latest key1            # install and update manager-backed tools
-  oooconf deps --dry-run               # preview only
-  oooconf deps --all                   # install all dependency keys
-"@
-        }
-        "update" {
-            Write-UiHelpBlock @"
-Usage: oooconf update [--dry-run] [--yes-optional] [--no-deps] [--profile NAME]
-
-Pull the repo with --ff-only, then re-run the install flow.
-Use this to update your config to the latest tracked state. It performs
-a fast-forward pull only, failing if local changes would prevent it.
-Examples:
-  oooconf update                       # pull and reinstall
-  oooconf update --yes-optional        # also install missing dependencies
-  oooconf update --no-deps             # skip optional dependency installation
-  oooconf update --dry-run             # preview pull and install
-"@
-        }
-        "doctor" {
-            Write-UiHelpBlock @"
-Usage: oooconf doctor [--format text|json] [--profile NAME]
-
-Emit stable, versioned checks with severity and remediation. Exits non-zero when
-one or more checks have error status.
-Examples:
-  oooconf doctor                       # run all checks
-  oooconf doctor --format json         # machine-readable contract
-"@
-        }
-        "status" {
-            Write-UiHelpBlock @"
-Usage: oooconf status [--format text|json] [--profile NAME]
-
-Summarize the selected profile, managed links, dependency availability,
-incomplete transactions, and generated artifact drift without mutation.
-"@
-        }
-        "snapshot" {
-            Write-UiHelpBlock @"
-Usage: oooconf snapshot <export|inspect|apply> [options]
-
-Export only allowlisted portable preferences and capabilities to TOML, validate
-and preview an import, or apply it through the planner and transaction executor.
-Examples:
-  oooconf snapshot export --profile terminal --output terminal.toml
-  oooconf snapshot inspect terminal.toml --format json
-  oooconf snapshot apply terminal.toml
-"@
-        }
-        "dry-run" {
-            Write-UiHelpBlock @"
-Usage: oooconf dry-run [--format text|json] [--scope install|links] [--profile NAME] [dependency-key...]
-
-Compatibility alias for oooconf plan. Builds a validated operation plan without
-changing the filesystem.
-Examples:
-  oooconf dry-run                      # preview install
-  oooconf dry-run --format json        # emit versioned JSON
-"@
-        }
-        "plan" {
-            Write-UiHelpBlock @"
-Usage: oooconf plan [--format text|json] [--scope install|links] [--profile NAME] [dependency-key...]
-
-Build a deterministic, validated operation plan without changing the filesystem.
-JSON output is versioned for automation. Dependency keys are validated against the
-shared optional dependency catalog.
-
-Examples:
-  oooconf plan
-  oooconf plan --format json
-  oooconf plan --scope links
-  oooconf plan --profile workstation
-  oooconf plan bat zoxide --format json
-"@
-        }
-        "apply" {
-            Write-UiHelpBlock @"
-Usage: oooconf apply [--platform linux|macos|windows] [--profile NAME]
-
-Validate and transactionally apply managed links. The command uses an exclusive
-cross-process lock and writes an atomic journal under the oooconf state directory.
-An identical second apply is a no-op.
-
-Examples:
-  oooconf apply
-  oooconf apply --platform windows
-"@
-        }
-        "rollback" {
-            Write-UiHelpBlock @"
-Usage: oooconf rollback --last
-
-Reverse the latest eligible managed-link transaction. Rollback removes only links
-created by that transaction, restores its backups, and refuses to delete or replace
-user-modified targets.
-
-Examples:
-  oooconf rollback --last
-"@
-        }
-        "link" {
-            Write-UiHelpBlock @"
-Usage: oooconf link [--dry-run]
-
-Create or update symlinks from tracked config in home/ to their target
-locations, backing up any replaced files. Reads from links.toml manifest
-with auto-discovery for home/.config, home/.local, and home/.glzr.
-Examples:
-  oooconf link                       # create/update all manifest links
-  oooconf link --dry-run            # preview without making changes
-"@
-        }
-        "delete" {
-            Write-UiHelpBlock @"
-Usage: oooconf delete
-
-Remove managed links and restore the latest backups when available.
-Use this to undo the managed config and return to your previous state.
-Backup files are stored in ~/.local/state/ooodnakov-config/backups/.
-Examples:
-  oooconf delete                       # restore from backups
-"@
-        }
-        "remove" {
-            Write-UiHelpBlock @"
-Usage: oooconf remove
-
-Remove managed links without restoring backups.
-Use this when you want to cleanly remove the managed config without
-putting previous files back in place.
-Examples:
-  oooconf remove                       # clean removal
-"@
-        }
-        "lock" {
-            Write-UiHelpBlock @"
-Usage: oooconf lock
-
-Regenerate dependency lock artifacts from managed tool refs.
-Reads pinned versions from scripts/optional-deps.toml and writes
-the resolved lock file to deps.lock.json.
-Examples:
-  oooconf lock                         # regenerate lock artifact
-"@
-        }
-        "update-pins" {
-            Write-UiHelpBlock @"
-Usage: oooconf update-pins [--apply] [--offline] [--dry-run]
-
-Compare pinned git refs in scripts/optional-deps.toml to upstream HEAD.
-Without --apply, reports differences and refreshes lock artifacts. With --apply,
-updates pinned refs in the catalog and regenerates lock artifacts.
-Examples:
-  oooconf update-pins                  # check for pin drift
-  oooconf update-pins --apply          # update pins and regenerate lock
-  oooconf update-pins --offline --dry-run # validate local catalog parsing
-"@
-        }
-        "completions" {
-            Write-UiHelpBlock @"
-Usage: oooconf completions [--dry-run]
-
-Regenerate completion files:
-  - autogen zsh completions under home/.config/ooodnakov/zsh/completions/autogen
-  - oooconf command completions for zsh and PowerShell
-  - PowerShell tool-completion cache under ~/.cache/ooodnakov-config/completions
-This does not install dependencies; it only rebuilds completion files.
-Examples:
-  oooconf completions                  # rebuild tracked completion files
-  oooconf completions --dry-run        # preview generation actions
-"@
-        }
-        "agents" {
-            Write-UiHelpBlock @"
-
-Usage: oooconf agents <detect|sync|doctor|install|provider|update|mcp|rtk|skills> [options]
-
-Manage shared AGENTS.md instructions and validate configured agent tooling.
-Subcommands:
-  detect [--json]                detect configured agent CLIs on PATH
-  sync [--check] [--agents A...] [--select] [--materialize-secrets]
-                                  sync managed policy/MCP blocks into global agent configs
-  doctor [--strict-config-paths] verify managed blocks and default agent config paths
-  install [<agent> ...] [--all|--missing] [--check]
-                                  install missing, selected, or all configured agent CLIs
-  update [--check]               update installed agent CLIs (pnpm-based tools use pnpm)
-  provider sync minimax [--check] [--region global|china] [--agents A...] [--select]
-                                  configure MiniMax-M2.7 backends for Claude Code, OpenCode, and Codex CLI
-  mcp sync [--check] [--servers S...] [--select]
-  mcp status                     clone/pull managed MCP servers; show status
-  mcp add [--name N] [--json J] [--multi] [--preview] [--sync-now]
-                                  add MCP JSON entries to shared config
-  rtk init [--check]             initialize RTK hooks for detected agents
-  skills sync [--check] [--agents A...] [--select]
-                                  sync configured skill specs across agents
-  skills view [--check] [--json] list global shared skills catalog via pnpm dlx
-  skills add <source> [--agent gemini] [--sync-now]
-                                  add one shared skill source
-Examples:
-  oooconf agents detect
-  oooconf agents sync --check
-  oooconf agents sync --agents claude
-  oooconf agents install --check
-  oooconf agents install codex gemini
-  oooconf agents mcp status
-  oooconf agents provider sync minimax --agents codex
-  oooconf agents skills view --json
-"@
-        }
-        "fleet" {
-            Write-UiHelpBlock @"
-Usage: oooconf fleet sync [HOST...] [--all] [--repo-path PATH] [--branch NAME]
-                         [--jobs N] [--resolve] [--no-push] [--format text|json]
-                         [--dry-run]
-
-Pull this repo's latest changes on SSH fleet hosts.
-Per host: stash local work, rebase onto the remote branch, restore the stash,
-push commits that exist only on that host, then run oooconf update --no-deps.
-An omp agent is only spawned when --resolve is passed.
-Hosts:
-  HOST...                SSH config aliases from ~/.ssh/config and included files
-  --all                  select every host alias; wildcard patterns are skipped
-Checks (per host, before anything else runs):
-  ssh reachable, user is not root, the repo path exists, the machine is not
-  this one; aliases sharing a HostName and Port are deduped and skipped.
-Options:
-  --repo-path PATH       remote repo path (default: oooconf --print-repo-root)
-  --branch NAME          remote branch (default: checked-out branch's upstream)
-  --jobs N               parallel hosts (default: 4)
-  --resolve              after the run, let omp fix unfinished hosts: one host
-                         gets a remote agent, several get one local agent that
-                         ssh's out; the agent receives each host's status
-  --no-push              never push commits that exist only on the host
-  --format text|json     output format (default: text)
-  --dry-run              inspect repo/branch/dirty/ahead/behind only
-Output:
-  live per-step activity (connecting, preflight, repo, fetch, stash, pull,
-  push, link refresh) as an in-place spinner with oooconf colors and Nerd
-  Font icons; when stdout is piped (or OOOCONF_UI=stdout) each step prints on
-  its own line. PowerShell pipes native output, so an attached console still
-  gets live colored output. Then one status line per host, then the summary.
-  --format json prints only the JSON document.
-Transport:
-  one persistent ssh session per host (sh -l), so every step shares a single
-  connection; a transient connection error is retried once per call. Each
-  command prepends ~/.local/bin, ~/.bun/bin, ~/.cargo/bin, ~/.local/share/pnpm
-  and ~/bin to PATH, because a non-interactive login sh often lacks the user
-  bins that hold oooconf, omp, and bun.
-Safety:
-  Without --resolve, a conflict keeps the stash in place and stops before update.
-  With --resolve the streamed per-host status is followed by the agent, which
-  fixes conflicts; the sync then restores the stash, pushes host-only commits,
-  and re-runs the links.
-  --dry-run performs no fetch, stash, pull, push, or link refresh.
-  A spawned omp agent is announced, its output is streamed and rendered as
-  Markdown (headings, lists, tables, fenced code, emphasis), and the command
-  waits for it to finish before continuing.
-Exit codes:
-  0 ok, dry-run, and skipped hosts       2 at least one conflict       1 failure
-Examples:
-  oooconf fleet sync --all --format json
-  oooconf fleet sync orange site
-  oooconf fleet sync --all --resolve
-  oooconf fleet sync site --dry-run
-"@
-        }
-        "secrets" {
-            Write-UiHelpBlock @"
-Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> [options]
-
-Render or validate local secret env files from the tracked template.
-Examples:
-  oooconf secrets                      # show current sync/session status
-  oooconf secrets login                # choose login method, then unlock prompt
-  oooconf secrets login --method apikey
-  oooconf secrets unlock               # prompt for password and save session
-  oooconf secrets unlock 'your-password'
-  oooconf secrets unlock --shell pwsh | Invoke-Expression
-  oooconf secrets sync
-  oooconf secrets sync --dry-run
-  oooconf secrets ls                   # alias for list
-  oooconf secrets list
-  oooconf secrets list --resolved
-  oooconf secrets status
-  oooconf secrets doctor
-  oooconf secrets logout
-  oooconf secrets add GITHUB_TOKEN bw://item/abc123/password
-  oooconf secrets add SOME_URL https://example.com
-  oooconf secrets rm GITHUB_TOKEN      # alias for remove
-  oooconf secrets remove GITHUB_TOKEN
-Environment overrides:
-  OOODNAKOV_SECRETS_BACKEND
-  OOODNAKOV_BW_SERVER
-"@
-        }
-        "env" {
-            Write-UiHelpBlock @"
-Usage: oooconf env [KEY VALUE] [--secrets]
-
-Add or update KEY in the preserved LOCAL OVERRIDES blocks of env.zsh and env.ps1.
-With no arguments, prompt for the name and hidden value, then optionally upload it
-to Bitwarden (the default is no).
-Examples:
-  oooconf env SUPER_TOKEN dsadadasasdasddas
-  oooconf env SUPER_TOKEN dsadadasasdasddas --secrets
-  oooconf env                            # interactive flow
-  oooconf env help
-"@
-        }
-        "version" {
-            Write-UiHelpBlock @"
-Usage: oooconf version
-
-Print the CLI version (git describe or commit SHA) and resolved repo root.
-Examples:
-  oooconf version                      # show version and repo path
-"@
-        }
-        "shell" {
-            Write-UiHelpBlock @"
-Usage: oooconf shell status
-       oooconf shell prompt [p10k|ohmyposh|status]
-       oooconf shell prompt-style [verbose|concise|status]
-       oooconf shell forgit-aliases [plain|forgit|status]
-       oooconf shell typo-handling [silent|suggest|help|status]
-       oooconf shell psfzf-tab [enabled|disabled|status]
-       oooconf shell psfzf-git [enabled|disabled|status]
-       oooconf shell poshgit [enabled|disabled|status]
-       oooconf shell auto-uv-env [disabled|existing|enabled|quiet|status]
-
-Manage local shell preferences that live in the preserved LOCAL OVERRIDES block.
-Forgit alias modes:
-  plain   keep plain git aliases like gd/gco and define glo as git log
-  forgit  enable upstream forgit aliases like glo/gd/gco
-  status  show the currently configured mode
-Typo handling modes:
-  silent   exit 1 without printing anything for wrong commands
-  suggest  print only the closest suggestion when available
-  help     print the unknown command, suggestion, and full help
-PSFzf options:
-  psfzf-tab  enable or disable fzf-based tab completion in PowerShell
-  psfzf-git  enable or disable fzf-based git keybindings in PowerShell
-  poshgit    enable or disable posh-git auto-import in PowerShell
-  status     show the currently configured mode
-Prompt options:
-  prompt        switch only the zsh prompt engine between Powerlevel10k and Oh My Posh
-  prompt-style  switch all managed prompts between verbose and concise layouts
-  status        show the currently configured mode
-Auto UV environment options:
-  disabled  disable automatic Python virtualenv activation
-  existing  activate existing .venv directories without creating missing ones (default)
-  enabled   activate Python venvs and create missing .venv directories with uv
-  quiet     enabled mode, but suppress activation/deactivation messages
-  status    show the currently configured mode
-Examples:
-  oooconf shell status
-  oooconf shell prompt status
-  oooconf shell prompt ohmyposh
-  oooconf shell prompt p10k
-  oooconf shell prompt-style concise
-  oooconf shell forgit-aliases status
-  oooconf shell forgit-aliases plain
-  oooconf shell forgit-aliases forgit
-  oooconf shell typo-handling status
-  oooconf shell typo-handling suggest
-  oooconf shell typo-handling silent
-  oooconf shell psfzf-tab enabled
-  oooconf shell psfzf-tab disabled
-  oooconf shell psfzf-git status
-  oooconf shell poshgit enabled
-  oooconf shell poshgit disabled
-  oooconf shell auto-uv-env existing
-  oooconf shell auto-uv-env disabled
-"@
-        }
-        "color" {
-            Write-UiHelpBlock @"
-Usage: oooconf color [status|list|<theme>|dark|light]
-
-Set or inspect the oooconf CLI color theme and dark/light mode.
-Themes:
-  default, catppuccin, gruvbox, nord, tokyonight, noctalia
-Modes:
-  dark, light
-This also syncs theme-friendly overrides for yazi, wezterm and ghostty local overrides, komorebi/komorebi.bar, sketchybar colors, zebar css vars, and themed oh-my-posh config.
-Status output also reports detected nvim and oh-my-posh theme config state.
-Examples:
-  oooconf color status                 # print current theme and synced config state
-  oooconf color list                   # list available themes
-  oooconf color catppuccin             # switch to Catppuccin colors
-  oooconf color noctalia               # switch to Noctalia colors
-"@
-        }
-        "delta" {
-            Invoke-DeltaCommand -DeltaArgs @("help")
-        }
-        "wm" {
-            Write-UiHelpBlock @"
-Usage: oooconf wm status
-       oooconf wm set [komorebi|glazewm]
-       oooconf wm start
-       oooconf wm stop
-       oooconf wm reload
-       oooconf wm bar set zebar <name>
-       oooconf wm bar zebar-config status
-       oooconf wm bar zebar-config list
-       oooconf wm bar zebar-config set <name>
-       oooconf wm komorebi reload
-       oooconf wm komorebi start [--bar]
-       oooconf wm komorebi stop [--bar]
-
-Switch between or manage window managers.
-Subcommands:
-  status         shows the currently running window manager
-  set            stops the current WM and starts the specified one
-  start          starts the default WM (komorebi)
-  stop           stops any running WM stack
-  reload         reloads the configuration of the active WM
-  bar            manage bar and zebar (set, zebar-config)
-  komorebi       manage komorebi (reload, start, stop) with optional --bar
-Examples:
-  oooconf wm status
-  oooconf wm set glazewm
-  oooconf wm reload
-  oooconf wm bar set zebar overline-zebar-komorebi
-  oooconf wm bar zebar-config list
-  oooconf wm bar zebar-config set overline-zebar-komorebi
-  oooconf wm komorebi start --bar
-  oooconf wm komorebi stop --bar
-"@
-        }
-        "wm bar" {
-            Write-UiHelpBlock @"
-Usage: oooconf wm bar set <type>
-       oooconf wm bar zebar-config status
-       oooconf wm bar zebar-config list
-       oooconf wm bar zebar-config set <name>
-       oooconf wm bar stop
-       oooconf wm bar start
-       oooconf wm bar reload
-       oooconf wm bar help
-
-Subcommands:
-  set           set or show default bar type
-  zebar-config  manage zebar configs (status, list, set)
-  stop          stop zebar and komorebi-bar (keep komorebi running)
-  start         start zebar with configured settings
-  reload        restart zebar (stop then start)
-  help          show this help
-Examples:
-  oooconf wm bar set              # show current bar type
-  oooconf wm bar set zebar        # set to zebar
-  oooconf wm bar zebar-config list
-  oooconf wm bar zebar-config set overline-zebar-komorebi
-  oooconf wm bar stop
-  oooconf wm bar start
-  oooconf wm bar reload
-"@
-        }
-        "" { Show-Usage }
-        "help" { Show-Usage }
-        "-h" { Show-Usage }
-        "--help" { Show-Usage }
-        default {
-            $suggestion = Get-CommandSuggestion -InputCommand $CommandName
-            Write-UnknownCommandMessage -Message "Unknown command: $CommandName" -Suggestion $suggestion
-            throw "Unknown command: $CommandName"
+function Show-Usage {
+    if (Test-HelpPythonAvailable) {
+        $renderHelp = Join-Path $RepoRoot "scripts/cli/render_help.py"
+        $scriptArgs = @("--mode", "main") + (Get-RenderHelpCommonArgs)
+        $output = Run-Python -ScriptPath $renderHelp -ScriptArgs $scriptArgs
+        if ($global:LASTEXITCODE -eq 0) {
+            $output | ForEach-Object { Write-Output $_ }
+            return
         }
     }
+    Show-UsageFallback
+}
+
+function Show-CommandUsage {
+    param([string]$command = "")
+
+    $resolved = Resolve-CommandAlias -CommandName ([string]$command)
+    if ($resolved -in @("", "help", "-h", "--help")) {
+        Show-Usage
+        return
+    }
+
+    if (Test-HelpPythonAvailable) {
+        $renderHelp = Join-Path $RepoRoot "scripts/cli/render_help.py"
+        $scriptArgs = @("--mode", "command", "--command", $resolved, "--quiet-unknown") + (Get-RenderHelpCommonArgs)
+        $output = Run-Python -ScriptPath $renderHelp -ScriptArgs $scriptArgs
+        if ($global:LASTEXITCODE -eq 0) {
+            $output | ForEach-Object { Write-Output $_ }
+            return
+        }
+        if ($global:LASTEXITCODE -eq 2) {
+            $suggestion = Get-CommandSuggestion -InputCommand $resolved
+            Write-UnknownCommandMessage -Message "Unknown command: $resolved" -Suggestion $suggestion
+            throw "Unknown command: $resolved"
+        }
+    }
+
+    if ($resolved -eq "delta") {
+        Invoke-DeltaCommand -DeltaArgs @("help")
+        return
+    }
+
+    $known = Get-KnownCommands
+    if ($resolved -in ($known + @("plan", "apply", "rollback", "link", "wm", "wm bar", "komorebi"))) {
+        Write-UiSection -Title "oooconf $resolved"
+        Show-UsageFallback
+        return
+    }
+
+    $suggestion = Get-CommandSuggestion -InputCommand $resolved
+    Write-UnknownCommandMessage -Message "Unknown command: $resolved" -Suggestion $suggestion
+    throw "Unknown command: $resolved"
 }
 
 function Require-PythonRuntime {

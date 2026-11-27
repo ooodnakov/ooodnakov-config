@@ -1,29 +1,22 @@
 #!/usr/bin/env bash
 # Sourced by scripts/setup/ooodnakov.sh; do not execute directly.
 
+_help_python_available() {
+  [ -f "$REPO_ROOT/scripts/cli/render_help.py" ] && {
+    (command -v uv >/dev/null 2>&1 && [ -f "$REPO_ROOT/pyproject.toml" ] && [ -z "${UV_RUN_RECURSION_DEPTH:-}" ]) ||
+      command -v python3 >/dev/null 2>&1
+  }
+}
+
 print_help_for_scope() {
   local scope="${1:-main}"
 
   case "$scope" in
-    shell)
-      handle_shell_command help
+    shell|color|delta|wm|komorebi)
+      command_usage "$scope"
       ;;
-    color)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf color [status|list|<theme>|dark|light]
-
-Set or inspect the oooconf CLI color theme and dark/light mode.
-Themes:
-  default, catppuccin, gruvbox, nord, tokyonight, noctalia
-Modes:
-  dark, light
-Examples:
-  oooconf color status
-  oooconf color list
-  oooconf color catppuccin
-  oooconf color noctalia
-  oooconf color light
-EOF
+    wm.bar|"wm bar")
+      command_usage "wm bar"
       ;;
     *)
       usage
@@ -71,96 +64,58 @@ command_distance() {
   local left="$1"
   local right="$2"
 
-  awk -v left="$left" -v right="$right" '
-    BEGIN {
-      left_len = length(left)
-      right_len = length(right)
+  if [ "$left" = "$right" ]; then
+    printf '0\n'
+    return 0
+  fi
+  local diff=$(( ${#left} - ${#right} ))
+  [ "$diff" -lt 0 ] && diff=$(( -diff ))
+  printf '%s\n' $(( diff + 1 ))
+}
 
-      for (i = 0; i <= left_len; i++) {
-        dist[i, 0] = i
-      }
-      for (j = 0; j <= right_len; j++) {
-        dist[0, j] = j
-      }
-
-      for (i = 1; i <= left_len; i++) {
-        left_char = substr(left, i, 1)
-        for (j = 1; j <= right_len; j++) {
-          right_char = substr(right, j, 1)
-          cost = (left_char == right_char) ? 0 : 1
-
-          deletion = dist[i - 1, j] + 1
-          insertion = dist[i, j - 1] + 1
-          substitution = dist[i - 1, j - 1] + cost
-
-          best = deletion
-          if (insertion < best) {
-            best = insertion
-          }
-          if (substitution < best) {
-            best = substitution
-          }
-          dist[i, j] = best
-        }
-      }
-
-      print dist[left_len, right_len]
-    }
-  '
+_fallback_suggest_from_list() {
+  local input="$1"
+  shift
+  local candidate word
+  [ -n "$input" ] || return 0
+  for candidate in "$@"; do
+    for word in $candidate; do
+      case "$word" in
+        "$input") printf '%s\n' "$word"; return 0 ;;
+      esac
+    done
+  done
+  for candidate in "$@"; do
+    for word in $candidate; do
+      case "$word" in
+        "$input"*|*"$input"*) printf '%s\n' "$word"; return 0 ;;
+      esac
+    done
+  done
+  return 0
 }
 
 suggest_command() {
   local input="$1"
-  local best_command=""
-  local best_distance=999
-  local candidate distance threshold
 
-  for candidate in "${KNOWN_COMMANDS[@]}"; do
-    distance="$(command_distance "$input" "$candidate")"
-    if [ "$distance" -lt "$best_distance" ]; then
-      best_distance="$distance"
-      best_command="$candidate"
-    fi
-  done
-
-  threshold=3
-  if [ "${#input}" -le 4 ] && [ "$threshold" -gt 2 ]; then
-    threshold=2
+  if [ -n "$input" ] && _help_python_available; then
+    run_python "$REPO_ROOT/scripts/cli/render_help.py" \
+      --mode suggest --repo-root "$REPO_ROOT" --platform unix --input "$input" 2>/dev/null && return 0
   fi
 
-  if [ "$best_distance" -le "$threshold" ]; then
-    printf '%s\n' "$best_command"
-  fi
-
-  return 0
+  _fallback_suggest_from_list "$input" "${KNOWN_COMMANDS[@]}"
 }
 
 suggest_from_list() {
   local input="$1"
   shift
-  local candidates=("$@")
-  local best_match=""
-  local best_distance=999
-  local candidate distance threshold
 
-  for candidate in "${candidates[@]}"; do
-    distance="$(command_distance "$input" "$candidate")"
-    if [ "$distance" -lt "$best_distance" ]; then
-      best_distance="$distance"
-      best_match="$candidate"
-    fi
-  done
-
-  threshold=3
-  if [ "${#input}" -le 4 ] && [ "$threshold" -gt 2 ]; then
-    threshold=2
+  if [ -n "$input" ] && [ "$#" -gt 0 ] && _help_python_available; then
+    run_python "$REPO_ROOT/scripts/cli/render_help.py" \
+      --mode suggest --repo-root "$REPO_ROOT" --input "$input" --candidates "$@" 2>/dev/null && return 0
   fi
 
-  if [ "$best_distance" -le "$threshold" ]; then
-    printf '%s\n' "$best_match"
-  fi
-
-  return 0
+  _fallback_suggest_from_list "$input" "$@"
 }
 
 print_version() {
@@ -171,505 +126,64 @@ print_version() {
   fi
 }
 
-usage() {
-  ui_banner
-  ui_spacer
-  printf '%s\n' "$(ui_colorize "section" "Usage: oooconf [global options] <command> [command options]")"
-  printf '%s\n' "$(ui_colorize "muted" "A reproducible cross-platform dotfiles manager with setup, health checks, secrets, and shell tooling.")"
-
-  ui_spacer
-  ui_separator
-  ui_section_fancy "version" "Global options"
+_usage_fallback() {
   cat <<EOF
-  -C, --repo-root PATH  run against a specific repo checkout
-      --profile NAME    select minimal, terminal, workstation, or developer
-  -h, --help            show this help
-  -n, --dry-run         add --dry-run to install or update
-      --yes-optional    auto-accept optional dependency installs
-      --skip-deps       skip dependency installation
-  -V, --version         show CLI version information
-      --print-repo-root print the resolved repo root and exit
-EOF
+Usage: oooconf [global options] <command> [command options]
 
-  ui_spacer
-  ui_separator
-  ui_section_fancy "install" "Setup"
-  ui_command_row "bootstrap" "clone/update repo then run install"
-  ui_command_row "install" "apply managed config and optional dependency installs"
-  ui_command_row "deps" "install optional dependencies only"
-  ui_command_row "update" "pull repo with --ff-only, then re-run install"
-
-  ui_spacer
-  ui_section_fancy "doctor" "Inspect & Validate"
-  ui_command_row "doctor" "validate managed symlinks, shell runtimes, and required commands"
-  ui_command_row "status" "summarize profile, links, dependencies, transactions, and drift"
-  ui_command_row "snapshot" "export, inspect, or apply portable settings"
-  ui_command_row "plan" "build a validated text or JSON operation plan"
-  ui_command_row "apply" "transactionally apply managed links"
-  ui_command_row "rollback" "roll back the latest eligible link transaction"
-  ui_command_row "dry-run" "preview install flow without mutating filesystem"
-  ui_command_row "version" "print CLI version and repo root"
-
-  ui_spacer
-  ui_section_fancy "lock" "Manage State"
-  ui_command_row "delete" "remove managed links and restore latest backups"
-  ui_command_row "remove" "remove managed links only (no backup restore)"
-  ui_command_row "lock" "regenerate dependency lock artifacts from pinned refs"
-  ui_command_row "update-pins" "compare/update pinned refs and refresh lock artifacts"
-  ui_command_row "completions" "regenerate tracked shell completions (autogen + oooconf)"
-  ui_command_row "link" "inspect or manage links from the symlink manifest"
-
-  ui_spacer
-  ui_section_fancy "shell" "Shell / Secrets / Agents"
-  ui_command_row "shell" "manage local shell preferences such as forgit aliases"
-  ui_command_row "color" "set a unified oooconf CLI color theme"
-  ui_command_row "delta" "inject or manage git-delta gitconfig"
-  ui_command_row "secrets" "sync or validate local secret env files"
-  ui_command_row "env" "set machine-local environment variables"
-  ui_command_row "agents" "detect/sync/doctor/update AGENTS.md and agent CLI workflows"
-  ui_command_row "fleet" "sync this repo across SSH fleet hosts"
-
-  ui_spacer
-  ui_separator
-  cat <<EOF | ui_render_help_block
-Aliases:
-  check -> doctor
-  preview -> dry-run
-  upgrade -> update
-Getting help:
-  oooconf --help                     show this message
-  oooconf help <command>             show command-specific help
-  oooconf help secrets               show secrets subcommand help
-UI controls:
-  OOOCONF_COLOR=always|never|auto    override color output
-  OOOCONF_ASCII=1                    force ASCII icons and borders
-  OOOCONF_THEME=<theme>              set the CLI color theme for this run
-  Nerd Font icons render automatically on UTF-8 terminals; ASCII tags are
-  used when output is redirected or the glyphs are unavailable.
-Common workflows:
-  # Initial setup on a new machine:
-  oooconf bootstrap
-  # Preview what install would do:
-  oooconf dry-run
-  # Apply config and install dependencies:
-  oooconf install
-  oooconf deps
-  # Check if everything is set up correctly:
-  oooconf doctor
-  # Update to latest config:
-  oooconf update
-Repo root:
-  $REPO_ROOT
+Setup: bootstrap, install, deps, update
+Inspect: doctor, status, snapshot, plan, apply, rollback, dry-run, version
+Manage: delete, remove, lock, update-pins, completions, link
+Tools: shell, color, delta, secrets, env, agents, fleet, wm
+Aliases: check -> doctor, preview -> dry-run, upgrade -> update
+Repo root: $REPO_ROOT
 EOF
 }
 
+usage() {
+  if _help_python_available; then
+    run_python "$REPO_ROOT/scripts/cli/render_help.py" \
+      --mode main --repo-root "$REPO_ROOT" --platform unix && return 0
+  fi
+  _usage_fallback
+}
+
 command_usage() {
-  local command="$1"
+  local command="${1:-}"
   command="$(resolve_command_alias "$command")"
-  ui_section "oooconf $command"
 
   case "$command" in
-    bootstrap)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf bootstrap
-
-Clone or update the configured repo checkout, then run the install flow.
-This is the recommended first command on a new machine. It handles repo
-cloning (if missing), pulls latest changes, and runs the full install.
-Environment overrides:
-  OOODNAKOV_CONFIG_DIR          custom config directory
-  OOODNAKOV_CONFIG_BRANCH       git branch to checkout (default: main)
-  OOODNAKOV_CONFIG_REPO_URL     SSH repo URL for git clone
-  OOODNAKOV_CONFIG_HTTPS_REPO_URL HTTPS repo URL for git clone
-  OOODNAKOV_INTERACTIVE         set to "never" to skip all prompts
-Examples:
-  oooconf bootstrap
-  OOODNAKOV_INTERACTIVE=never oooconf bootstrap
-EOF
-      ;;
-    install)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf install [--dry-run] [--yes-optional] [--skip-deps] [--profile NAME] [--minimal] [--min-dep]
-
-Apply managed config and optional dependency installation.
-Creates symlinks from tracked config in home/ to their target locations,
-backing up any replaced files. Optionally installs dependencies when
-allowed.
-Examples:
-  oooconf install                      # interactive dependency prompts
-  oooconf install --yes-optional       # auto-accept all optional installs
-  oooconf install --skip-deps          # apply config without dependency installs
-  oooconf install --profile terminal   # apply only terminal-profile managed links
-  oooconf install --minimal            # minimal profile links (sparse checkout safe)
-  oooconf install --minimal --min-dep  # minimal links plus minimal dependencies
-  oooconf install --dry-run            # preview without making changes
-EOF
-      ;;
-    deps)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf deps [--dry-run] [--all] [--latest] [--min-dep] [dependency-key...]
-
-Install optional dependencies only. Without dependency keys, an interactive
-gum-based multi-select picker is used when available.
-GitHub release installs are tracked by marcosnils/bin. Use --latest to run
-Topgrade with bounded retries; it invokes `bin update` and reports individual
-manager failures as warnings. Set OOODNAKOV_DEPS_LATEST_STRICT=1 to fail instead.
-Dependency keys match those defined in deps.lock.json. Common keys include:
-bat, delta, eza, fd, fzf, gum, glow, rg, yazi, ffmpeg, jq, p7zip, poppler, zoxide, and others.
-Examples:
-  oooconf deps                         # interactive picker (when gum available)
-  oooconf deps <key...>                # specific tools (see optional-deps.toml for keys)
-  oooconf deps --dry-run               # preview installation
-  oooconf deps --all                   # install all dependency keys
-  oooconf deps --min-dep               # install only the [minimal] dependency set
-  oooconf deps --latest <key...>       # update manager-backed tools to latest
-EOF
-      ;;
-    update)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf update [--dry-run] [--yes-optional] [--no-deps] [--profile NAME]
-
-Pull the repo with --ff-only, then re-run the install flow.
-Use this to update your config to the latest tracked state. It performs
-a fast-forward pull only, failing if local changes would prevent it.
-Examples:
-  oooconf update                       # pull and reinstall
-  oooconf update --yes-optional        # also install missing dependencies
-  oooconf update --no-deps             # skip optional dependency installation
-  oooconf update --dry-run             # preview pull and install
-EOF
-      ;;
-    doctor)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf doctor [--format text|json] [--profile NAME]
-
-Emit stable, versioned checks with severity and remediation. Exits non-zero when
-one or more checks have error status.
-Examples:
-  oooconf doctor                       # run all checks
-  oooconf doctor --format json         # machine-readable contract
-EOF
-      ;;
-    status)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf status [--format text|json] [--profile NAME]
-
-Summarize the selected profile, managed links, dependency availability,
-incomplete transactions, and generated artifact drift without mutation.
-EOF
-      ;;
-    snapshot)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf snapshot <export|inspect|apply> [options]
-
-Export only allowlisted portable preferences and capabilities to TOML, validate
-and preview an import, or apply it through the planner and transaction executor.
-Examples:
-  oooconf snapshot export --profile terminal --output terminal.toml
-  oooconf snapshot inspect terminal.toml --format json
-  oooconf snapshot apply terminal.toml
-EOF
-      ;;
-    dry-run)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf dry-run [--format text|json] [--scope install|links] [--profile NAME] [dependency-key...]
-
-Compatibility alias for `oooconf plan`. Builds a validated operation plan without
-changing the filesystem.
-Examples:
-  oooconf dry-run                      # preview install
-  oooconf dry-run --format json        # emit versioned JSON
-EOF
-      ;;
-    plan)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf plan [--format text|json] [--scope install|links] [--profile NAME] [dependency-key...]
-
-Build a deterministic, validated operation plan without changing the filesystem.
-JSON output is versioned for automation. Dependency keys are validated against the
-shared optional dependency catalog.
-
-Examples:
-  oooconf plan
-  oooconf plan --format json
-  oooconf plan --scope links
-  oooconf plan --profile workstation
-  oooconf plan bat zoxide --format json
-EOF
-      ;;
-    apply)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf apply [--platform linux|macos|windows] [--profile NAME]
-
-Validate and transactionally apply managed links. The command uses an exclusive
-cross-process lock and writes an atomic journal under the oooconf state directory.
-An identical second apply is a no-op.
-
-Examples:
-  oooconf apply
-  oooconf apply --platform linux
-EOF
-      ;;
-    rollback)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf rollback --last
-
-Reverse the latest eligible managed-link transaction. Rollback removes only links
-created by that transaction, restores its backups, and refuses to delete or replace
-user-modified targets.
-
-Examples:
-  oooconf rollback --last
-EOF
-      ;;
-    delete)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf delete [--dry-run]
-
-Remove managed links and restore the latest backups when available.
-Use this to undo the managed config and return to your previous state.
-Backup files are stored in ~/.local/state/ooodnakov-config/backups/.
-Examples:
-  oooconf delete                       # restore from backups
-  oooconf delete --dry-run            # preview without making changes
-EOF
-      ;;
-    remove)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf remove [--dry-run]
-
-Remove managed links without restoring backups.
-Use this when you want to cleanly remove the managed config without
-attempting to restore previous configurations.
-Examples:
-  oooconf remove                       # clean removal
-  oooconf remove --dry-run            # preview without making changes
-EOF
-      ;;
-    lock)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf lock [--dry-run]
-
-Regenerate dependency lock artifacts from managed tool refs.
-Reads pinned versions from scripts/optional-deps.toml and writes
-the resolved lock file to deps.lock.json.
-Examples:
-  oooconf lock                         # regenerate lock artifact
-  oooconf lock --dry-run              # preview without making changes
-EOF
-      ;;
-    update-pins)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf update-pins [--apply] [--offline] [--dry-run]
-
-Compare pinned git refs in scripts/optional-deps.toml to upstream HEAD.
-Without --apply, reports differences and refreshes lock artifacts. With --apply,
-updates pinned refs in the catalog and regenerates lock artifacts.
-Examples:
-  oooconf update-pins                  # check for pin drift
-  oooconf update-pins --apply          # update pins and regenerate lock
-  oooconf update-pins --offline --dry-run # validate local catalog parsing
-EOF
-      ;;
-    completions)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf completions [--dry-run]
-
-Regenerate completion files:
-  - autogen zsh completions under home/.config/ooodnakov/zsh/completions/autogen
-  - oooconf command completions for zsh and PowerShell
-  - PowerShell tool-completion cache under ~/.cache/ooodnakov-config/completions
-This does not install dependencies; it only rebuilds completion files.
-Examples:
-  oooconf completions                  # rebuild tracked completion files
-  oooconf completions --dry-run        # preview generation actions
-EOF
-      ;;
-    link)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf link [--dry-run]
-
-Create or update symlinks from tracked config in home/ to their target
-locations, backing up any replaced files. Reads from links.toml manifest
-with auto-discovery for home/.config, home/.local, and home/.glzr.
-Examples:
-  oooconf link                       # create/update all manifest links
-  oooconf link --dry-run            # preview without making changes
-EOF
-      ;;
-    agents)
-      cat <<'EOF' | ui_render_help_block
-
-Usage: oooconf agents <detect|sync|doctor|install|provider|update|mcp|rtk|skills> [options]
-
-Manage shared AGENTS.md instructions and validate configured agent tooling.
-Subcommands:
-  detect [--json]        detect configured agent CLIs on PATH
-  sync [--check] [--agents A...] [--select] [--materialize-secrets]
-                         sync managed policy/MCP blocks into global agent configs
-  doctor [--strict-config-paths]
-                         verify managed blocks and default agent config paths
-  install [<agent> ...] [--all|--missing] [--check]
-                         install missing, selected, or all configured agent CLIs
-  update [--check]       update installed agent CLIs (pnpm-based tools use pnpm)
-  provider sync minimax [--check] [--region global|china] [--agents A...] [--select]
-                         configure MiniMax-M2.7 backends for Claude Code, OpenCode, and Codex CLI
-  mcp sync [--check] [--servers S...] [--select]
-  mcp status             clone/pull managed MCP servers; show status
-  mcp add [--name N] [--json JSON] [--multi] [--preview] [--sync-now]
-                         add MCP JSON entries to shared config
-  rtk init [--check]     initialize RTK hooks for detected agents
-  skills sync [--check] [--agents A...] [--select]
-                         sync configured skill specs across agents
-  skills view [--check] [--json]
-                         list global shared skills catalog via pnpm dlx
-  skills add <source> [--agent gemini] [--sync-now]
-                         add one shared skill source
-Examples:
-  oooconf agents detect
-  oooconf agents sync --check
-  oooconf agents sync --agents claude
-  oooconf agents install --check
-  oooconf agents install codex gemini
-  oooconf agents mcp status
-  oooconf agents provider sync minimax --agents codex
-  oooconf agents skills view --json
-EOF
-      ;;
-    fleet)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf fleet sync [HOST...] [--all] [--repo-path PATH] [--branch NAME]
-                         [--jobs N] [--resolve] [--no-push] [--format text|json]
-                         [--dry-run]
-
-Pull this repo's latest changes on SSH fleet hosts.
-Per host: stash local work, rebase onto the remote branch, restore the stash,
-push commits that exist only on that host, then run oooconf update --no-deps.
-An omp agent is only spawned when --resolve is passed.
-Hosts:
-  HOST...                SSH config aliases from ~/.ssh/config and included files
-  --all                  select every host alias; wildcard patterns are skipped
-Checks (per host, before anything else runs):
-  ssh reachable, user is not root, the repo path exists, the machine is not
-  this one; aliases sharing a HostName and Port are deduped and skipped.
-Options:
-  --repo-path PATH       remote repo path (default: oooconf --print-repo-root)
-  --branch NAME          remote branch (default: checked-out branch's upstream)
-  --jobs N               parallel hosts (default: 4)
-  --resolve              after the run, let omp fix unfinished hosts: one host
-                         gets a remote agent, several get one local agent that
-                         ssh's out; the agent receives each host's status
-  --no-push              never push commits that exist only on the host
-  --format text|json     output format (default: text)
-  --dry-run              inspect repo/branch/dirty/ahead/behind only
-Output:
-  live per-step activity (connecting, preflight, repo, fetch, stash, pull,
-  push, link refresh) as an in-place spinner with oooconf colors and Nerd
-  Font icons; when stdout is piped (or OOOCONF_UI=stdout) each step prints on
-  its own line. PowerShell pipes native output, so an attached console still
-  gets live colored output. Then one status line per host, then the summary.
-  --format json prints only the JSON document.
-Transport:
-  one persistent ssh session per host (sh -l), so every step shares a single
-  connection; a transient connection error is retried once per call. Each
-  command prepends ~/.local/bin, ~/.bun/bin, ~/.cargo/bin, ~/.local/share/pnpm
-  and ~/bin to PATH, because a non-interactive login sh often lacks the user
-  bins that hold oooconf, omp, and bun.
-Safety:
-  Without --resolve, a conflict keeps the stash in place and stops before update.
-  With --resolve the streamed per-host status is followed by the agent, which
-  fixes conflicts; the sync then restores the stash, pushes host-only commits,
-  and re-runs the links.
-  --dry-run performs no fetch, stash, pull, push, or link refresh.
-  A spawned omp agent is announced, its output is streamed and rendered as
-  Markdown (headings, lists, tables, fenced code, emphasis), and the command
-  waits for it to finish before continuing.
-Exit codes:
-  0 ok, dry-run, and skipped hosts       2 at least one conflict       1 failure
-Examples:
-  oooconf fleet sync --all --format json
-  oooconf fleet sync orange site
-  oooconf fleet sync --all --resolve
-  oooconf fleet sync site --dry-run
-EOF
-      ;;
-    secrets)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf secrets <sync|doctor|list|status|login|unlock|logout|add|remove> [options]
-
-Render or validate local secret env files from the tracked template.
-Examples:
-  oooconf secrets                      # show current sync/session status
-  oooconf secrets login                # choose login method, then unlock prompt
-  oooconf secrets login --method apikey
-  oooconf secrets unlock               # prompt for password and save session
-  oooconf secrets unlock 'your-password'
-  eval "$(oooconf secrets unlock --shell zsh)"
-  oooconf secrets sync
-  oooconf secrets sync --dry-run
-  oooconf secrets ls                   # alias for list
-  oooconf secrets list
-  oooconf secrets list --resolved
-  oooconf secrets status
-  oooconf secrets doctor
-  oooconf secrets logout
-  oooconf secrets add GITHUB_TOKEN bw://item/abc123/password
-  oooconf secrets add SOME_URL https://example.com
-  oooconf secrets rm GITHUB_TOKEN      # alias for remove
-  oooconf secrets remove GITHUB_TOKEN
-Environment overrides:
-  OOODNAKOV_SECRETS_BACKEND
-  OOODNAKOV_BW_SERVER
-EOF
-      ;;
-    env)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf env [KEY VALUE] [--secrets]
-
-Add or update KEY in the preserved LOCAL OVERRIDES blocks of env.zsh and env.ps1.
-With no arguments, prompt for the name and hidden value, then optionally upload it
-to Bitwarden (the default is no).
-Examples:
-  oooconf env SUPER_TOKEN dsadadasasdasddas
-  oooconf env SUPER_TOKEN dsadadasasdasddas --secrets
-  oooconf env                            # interactive flow
-  oooconf env help
-EOF
-      ;;
-    minimal)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf minimal [--min-dep] [--dry-run]
-
-Link the minimal shell profile (sparse-checkout friendly). Dependencies are
-installed only with --min-dep, which installs the [minimal] key set.
-Examples:
-  oooconf minimal                      # minimal config, no dependency installs
-  oooconf minimal --min-dep            # minimal config plus minimal dependencies
-  oooconf minimal --dry-run            # preview without making changes
-EOF
-      ;;
-    shell)
-      handle_shell_command help
-      ;;
-    color)
-      handle_color_command help
-      ;;
-    delta)
-      handle_delta_command help
-      ;;
-    version)
-      cat <<'EOF' | ui_render_help_block
-Usage: oooconf version
-
-Print the CLI version (git describe or commit SHA) and resolved repo root.
-Examples:
-  oooconf version                      # show version and repo path
-EOF
-      ;;
     ""|-h|--help|help)
       usage
+      return 0
+      ;;
+  esac
+
+  if _help_python_available; then
+    local rc=0
+    run_python "$REPO_ROOT/scripts/cli/render_help.py" \
+      --mode command --command "$command" --repo-root "$REPO_ROOT" --platform unix --quiet-unknown || rc=$?
+    if [ "$rc" -eq 0 ]; then
+      return 0
+    fi
+    if [ "$rc" -eq 2 ]; then
+      local suggestion=""
+      suggestion="$(suggest_command "$command")"
+      report_unknown_command "Unknown command: $command" "$suggestion"
+      return 1
+    fi
+  fi
+
+  case "$command" in
+    shell) handle_shell_command help ;;
+    color) handle_color_command help ;;
+    delta) handle_delta_command help ;;
+    wm) handle_wm_command help ;;
+    bootstrap|install|deps|update|doctor|status|snapshot|plan|apply|rollback|dry-run|delete|remove|lock|update-pins|completions|link|agents|fleet|secrets|env|minimal|version|komorebi|"wm bar")
+      ui_section "oooconf $command"
+      _usage_fallback
       ;;
     *)
+      local suggestion=""
       suggestion="$(suggest_command "$command")"
       report_unknown_command "Unknown command: $command" "$suggestion"
       return 1

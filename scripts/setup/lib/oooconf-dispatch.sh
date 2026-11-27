@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Sourced by scripts/setup/ooodnakov.sh; do not execute directly.
+# Flag variables (dry_run_requested, yes_optional_requested, skip_deps_requested,
+# all_deps_requested, latest_deps_requested) are initialized in scripts/setup/ooodnakov.sh.
+# shellcheck disable=SC2154
 
 require_repo_script() {
   local script_path="$1"

@@ -285,7 +285,7 @@ ui_path_rel() {
   local path="$1"
   case "$path" in
     "$HOME") printf '~' ;;
-    "$HOME"/*) printf '~/%s' "${path#"$HOME"/}" ;;
+    "$HOME"/*) printf '%s/%s' '~' "${path#"$HOME"/}" ;;
     *) printf '%s' "$path" ;;
   esac
 }
@@ -304,18 +304,18 @@ ui_path() {
 }
 
 ui_path_root() {
-  local path first rest
+  local path first rest tilde="~"
   path="$(ui_path_rel "$1")"
   path="${path%/}"
   case "$path" in
-    "~/"*)
-      rest="${path#\~/}"
+    "$tilde"/*)
+      rest="${path#"$tilde"/}"
       first="${rest%%/*}"
       if [ "$first" = ".local" ] && [ "$rest" != "$first" ]; then
         rest="${rest#*/}"
-        printf '~/.local/%s\n' "${rest%%/*}"
+        printf '%s/.local/%s\n' '~' "${rest%%/*}"
       else
-        printf '~/%s\n' "$first"
+        printf '%s/%s\n' '~' "$first"
       fi
       ;;
     /*)
